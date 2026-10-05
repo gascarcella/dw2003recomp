@@ -26,16 +26,21 @@ GOLDEN_DIR = ROOT / "tests/golden"
 KNOWN = ROOT / "tests/host/known_mismatches.json"   # [{"where": "<family>/<case prefix>", "reason": ...}]: documented findings
 OUT_DEFAULT = ROOT / "build/host"
 # PS1 struct facts the remap needs: buffer name -> (host layout key of its first field after the pointer-bearing
-# prefix, that field's PS1 offset, the other fields to verify shift by the same amount[, pointer fields]). Pointer fields
-# ({PS1 offset: (host layout key, target buffer)}) hold the PS1 scratch address of another buffer of the case; the host
-# stores that buffer's host address there instead (P command). A target "@<function>" is a method: the PS1 word is 0
-# (left 0) or that function's address (config/*.symbols.txt), and the host stores its own function; such a field may
-# also lie past the prefix (CardgameGame.get_score).
+# prefix, that field's PS1 offset, the other fields to verify shift by the same amount[, pointer fields[, segments]]).
+# Pointer fields ({PS1 offset: (host layout key, target buffer)}) hold the PS1 scratch address of another buffer of the
+# case; the host stores that buffer's host address there instead (P command). A target "@<function>" is a method: the
+# PS1 word is 0 (left 0) or that function's address (config/*.symbols.txt), and the host stores its own function; such a
+# field may also lie past the prefix (CardgameGame.get_score). Segments ({PS1 offset: host layout key}): a pointer field
+# in the middle of the tail (CardgameGame.opponents at 0x2F0, a struct pointer since session 15) is wider on the host, so
+# the fields after it shift by more than the prefix does; each such field is one PS1 word, zero in every fixture (dropped:
+# the host's field stays NULL) unless listed under the pointer fields, and the segment after it is named by its first
+# field. The fields to verify are checked against the segment they lie in.
 BUFFER_LAYOUTS = {"game": ("CardgameGame.card_ids", 0x50,
                            {"CardgameGame.cpu_cards": 0x35C, "CardgameGame.selectable": 0x446, "CardgameGame.players": 0x59C,
                             "CardgameGame.slots": 0x72C, "CardgameGame.marked": 0x46F, "CardgameGame.display": 0x498,
-                            "CardgameGame.turns": 0x580},
-                           {0x820: ("CardgameGame.get_score", "@cardgame_cpu_get_score")}),
+                            "CardgameGame.turns": 0x580, "CardgameGame.prize": 0x2EC},
+                           {0x820: ("CardgameGame.get_score", "@cardgame_cpu_get_score")},
+                           {0x2F4: "CardgameGame.effect_state"}),
                   "train_session": ("StgtrainSession.layer", 0x54, {"StgtrainSession.digimon": 0x5C, "StgtrainSession.bonus": 0xD8},
                                     {0x50: ("StgtrainSession.main", "train_main"), 0x24: ("Object.children", "session_data")}),
                   "train_main": ("StgtrainMain.layer", 0x50, {"StgtrainMain.level": 0x7C}),
@@ -191,24 +196,38 @@ def buffer_addresses(buffers):
     return places
 
 
-def buffer_shift(host, name):
-    """(PS1 offset where the remapped part starts, host shift), or None for a buffer laid out alike on both."""
+def buffer_segments(host, name):
+    """The pointer-free runs of a BUFFER_LAYOUTS buffer: [(PS1 offset, host offset)] in order, each running up to the
+    pointer word before the next one; None for a buffer laid out alike on both."""
     if name not in BUFFER_LAYOUTS:
         return None
-    key, ps1_off, others = BUFFER_LAYOUTS[name][:3]
-    shift = host.offsets[key] - ps1_off
+    layout = BUFFER_LAYOUTS[name]
+    key, ps1_off, others = layout[:3]
+    segments = [(ps1_off, host.offsets[key])]
+    segments += sorted((off, host.offsets[k]) for off, k in (layout[4] if len(layout) > 4 else {}).items())
     for k, off in others.items():
-        if host.offsets[k] - off != shift:
-            raise RuntimeError(f"{name}: {k} shifts by {host.offsets[k] - off}, {key} by {shift}")
-    return ps1_off, shift
+        where = segment_offset(segments, off)
+        if host.offsets[k] != where:
+            raise RuntimeError(f"{name}: {k} is at {host.offsets[k]} on the host, its segment puts it at {where}")
+    return segments
+
+
+def segment_offset(segments, offset):
+    """A PS1 offset of a remapped buffer moved to the host; None before the first segment or in the pointer word
+    between two segments."""
+    for i, (ps1, hst) in enumerate(segments):
+        end = segments[i + 1][0] - 4 if i + 1 < len(segments) else None
+        if ps1 <= offset and (end is None or offset < end):
+            return hst + offset - ps1
+    return None
 
 
 def remap_buffer(host, name, data, places):
-    """A PS1-layout fixture buffer, laid out as the host compiled the struct (pointer-bearing prefix wider); returns the
-    bytes and the pointer fields to patch [(host offset, target buffer)]."""
+    """A PS1-layout fixture buffer, laid out as the host compiled the struct (pointer-bearing prefix and pointer words
+    wider); returns the bytes and the pointer fields to patch [(host offset, target buffer)]."""
     if name not in BUFFER_LAYOUTS:
         return data, []
-    ps1_off, shift = buffer_shift(host, name)
+    segments = buffer_segments(host, name)
     pointers = BUFFER_LAYOUTS[name][3] if len(BUFFER_LAYOUTS[name]) > 3 else {}
     data = bytearray(data)
     patches = []
@@ -225,11 +244,16 @@ def remap_buffer(host, name, data, places):
             raise RuntimeError(f"{name}+{off:#x}: {value:#x} is not the address of buffer {target}")
         data[off:off + 4] = bytes(4)
         patches.append((host.offsets[key], target))
-    if data[:ps1_off] != bytes(ps1_off):
+    if data[:segments[0][0]] != bytes(segments[0][0]):
         raise RuntimeError(f"{name}: the pointer-bearing prefix is not zero; cannot remap")
-    out = bytes(ps1_off + shift) + bytes(data[ps1_off:])
+    out = bytearray()
+    for i, (ps1, hst) in enumerate(segments):
+        end = segments[i + 1][0] - 4 if i + 1 < len(segments) else len(data)
+        if i and data[ps1 - 4:ps1] != bytes(4):
+            raise RuntimeError(f"{name}+{ps1 - 4:#x}: the pointer word before a segment is not zero; cannot remap")
+        out += bytes(hst - len(out)) + data[ps1:end]
     end = max([off + host.offsets["sizeof(pointer)"] for off, _ in patches] + [len(out)])
-    return out + bytes(end - len(out)), patches
+    return bytes(out) + bytes(end - len(out)), patches
 
 
 def pointer_buffer(host, name, data, places):
@@ -301,10 +325,39 @@ def read_offset(host, symbol, offset):
     if symbol.startswith("buf:" + OBJECT_PREFIX) and offset >= OBJECT_POINTERS[1]:
         return offset - OBJECT_POINTERS[1] + host.offsets["sizeof(Object)"]
     if symbol.startswith("buf:"):
-        s = buffer_shift(host, symbol[4:])
-        if s and offset >= s[0]:
-            return offset + s[1]
+        segments = buffer_segments(host, symbol[4:])
+        if segments and offset >= segments[0][0]:
+            where = segment_offset(segments, offset)
+            if where is None:
+                raise RuntimeError(f"{symbol}+{offset:#x}: a read of the pointer word between two segments")
+            return where
     return offset
+
+
+def read_bytes(host, symbol, offset, size):
+    """A read's bytes on the host (hex), in the PS1's layout: a range of a remapped buffer that spans the pointer word
+    between two segments is read piece by piece, the word standing for the host's pointer (zero when it is NULL, else
+    0xFFFFFFFF: a PS1 address the host cannot reproduce, a mismatch to explain)."""
+    segments = buffer_segments(host, symbol[4:]) if symbol.startswith("buf:") else None
+    if not segments or len(segments) == 1 or offset < segments[0][0]:
+        return host.ask(f"D {symbol} {read_offset(host, symbol, offset)} {size}")
+    end, out = offset + size, ""
+    for i, (ps1, hst) in enumerate(segments):
+        last = i + 1 == len(segments)
+        seg_end = end if last else segments[i + 1][0] - 4
+        lo, hi = max(offset, ps1), min(end, seg_end)
+        if lo < hi:
+            out += host.ask(f"D {symbol} {hst + lo - ps1} {hi - lo}")
+        if last or end <= seg_end:
+            break
+        if offset >= seg_end + 4:          # the read starts in a later segment
+            continue
+        if offset > seg_end or end < seg_end + 4:
+            raise RuntimeError(f"{symbol}+{offset:#x}: a read that cuts the pointer word at {seg_end:#x}")
+        gap_lo = hst + seg_end - ps1       # the host's pointer (and its padding) up to the next segment
+        gap = host.ask(f"D {symbol} {gap_lo} {segments[i + 1][1] - gap_lo}")
+        out += "00000000" if int(gap, 16) == 0 else "ffffffff"
+    return out
 
 
 def apply_writes(host, writes, files, skipped, places=None, deferred=None):
@@ -389,7 +442,7 @@ def replay_family(host, g, verbose=False):
             if got != call["ret"]:
                 mismatches.append((where, "ret", call["ret"], got, call.get("comment", "")))
             for r in call.get("reads", []):
-                hx = host.ask(f"D {r['symbol']} {read_offset(host, r['symbol'], r['offset'])} {r['size']}")
+                hx = read_bytes(host, r["symbol"], r["offset"], r["size"])
                 if "sha1" in r:
                     exp, act = r["sha1"], hashlib.sha1(bytes.fromhex(hx)).hexdigest()
                 else:
