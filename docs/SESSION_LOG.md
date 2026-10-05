@@ -20,8 +20,14 @@ Newest first. One short entry per session: goal, result, next steps.
   `tests/README.md` (the port is `port/`), `scripts/publish_snapshot.sh` (one commit + proofs), `.github/workflows/ci.yml`
   (unrun). Verified: `check_emulator.sh --bios retail` through the lookup; the snapshot (929 files, 19.8 MB, clean) built
   beside a simulated data checkout (this repo's `gamedata/` and `tools/prebuilt/` linked under `../dw2003-gamedata`): a cold `scripts/setup.sh` (binutils built from source, the disc and the emulator taken from the data checkout), `worktree_init.sh`, `build.sh --check` (all 2,100 outputs match their SHA-1) and `scripts/test.sh` (4 layers passed, 0 skipped) in 5 min 50 s.
-- **Next (user):** checklist steps 2 and 6 (rename, create, fix remotes, push the snapshot, trim this repo); then the
-  port plan's section 4 and M0 in `port/`.
+- **Published (same session):** the user renamed the private repository to `dw2003-gamedata` and created the empty public
+  `dw2003recomp`; the two data-contents DECISIONS entries were generalised (user decision); `scripts/publish_snapshot.sh`
+  took the snapshot of `main` at `e446f0e` and it was pushed as this repository's initial commit `c1ca6f2`. The tag could
+  not be pushed from the cloud session (the proxy refuses tag pushes and ref writes: HTTP 403), so the user creates it.
+  The private repository was trimmed at its tip to `gamedata/` + `tools/prebuilt/` + a README (history kept). From here
+  on, this public repository is the working repository and its commits carry no session links (user decision).
+- **Next (user):** the tag, the deploy-key secret for CI, a cloud environment with both repositories; then the port plan's
+  section 4 and M0 in `port/`.
 
 ## 2026-10-05: Session 11 (branch claude/vigilant-lovelace-oed6n1): the reference tests to "good shape"
 - **Goal:** a reference suite that pins most of what the game does for the port (the user's unattended brief: coverage

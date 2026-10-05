@@ -164,21 +164,21 @@ replaces its item 9, the other ten remain.
    `$DW3_GAMEDATA`; `.gitignore` loses the `!/gamedata/` lines; `CLAUDE.md` loses the exception; the two DECISIONS
    sentences go; `tests/README.md` says where the port lives; `scripts/test.sh` green and `build.sh --check` byte-identical
    with the data in the sibling checkout.
-2. **Rename, then create (user, GitHub settings):** push everything from the current session first. Rename this repo
+2. **Done 2026-10-05.** Rename, then create (user, GitHub settings): push everything from the current session first. Rename this repo
    (`dw2003recomp` -> `dw2003-gamedata`): GitHub redirects the old URL, so existing clones keep working. Then create the
    new empty public `dw2003recomp`: from that moment the old name points at the **new** repo, so any clone still using the
    old URL (this cloud session's `origin`, local checkouts, worktrees) must `git remote set-url origin
    git@github.com:<user>/dw2003-gamedata.git` before its next push, or it pushes game data into the public repo. Install
    the Claude GitHub App on the new repo; the next cloud session selects both repos.
-3. **Snapshot:** on the prepared tree of step 1, `git ls-files` minus `gamedata/` and `tools/prebuilt/` copied into a fresh
+3. **Done 2026-10-05 (`c1ca6f2`, from `e446f0e`).** Snapshot: on the prepared tree of step 1, `git ls-files` minus `gamedata/` and `tools/prebuilt/` copied into a fresh
    `git init`, one commit ("Initial public snapshot of the matching milestone"), its README naming the private commit it
    was taken from. Prove it: `git rev-list --objects --all` shows no `gamedata/` or `tools/prebuilt/` path and no blob
    over 1 MB (the largest public file is `tests/golden/fightstg_rules.json`, 2.1 MB: whitelist it).
-4. **Verify the snapshot:** clone it, put the data checkout beside it, run `scripts/setup.sh && scripts/build.sh --check &&
+4. **Done (session 12: cold setup, 2,100 outputs byte-identical, 4 test layers green).** Verify the snapshot: clone it, put the data checkout beside it, run `scripts/setup.sh && scripts/build.sh --check &&
    scripts/test.sh`; the SHA-1s are the proof.
 5. **Hash references:** the docs cite `a424d38` and `0804d5b`, which exist only in the private history; the public docs
    say so once (section 1 of the README's history note) and keep them, since the private repo stays as the archive.
-6. **Publish:** push to the new repo, tag `v0.1-matching-closed` on the initial commit, enable CI with the data-repo
+6. **Partly done:** `main` pushed, the private repository trimmed. **User:** the tag (refused through the proxy), the CI secret, the environment. Publish: push to the new repo, tag `v0.1-matching-closed` on the initial commit, enable CI with the data-repo
    secret, README notice "pull requests closed by policy until the port exists". Trim this repo at its tip to
    `gamedata/` + `tools/prebuilt/` + READMEs (one commit, history kept). Switch the cloud environment to both repos.
 7. **Port:** decide `PC_PORT_PLAN.md` section 4, then M0 in `port/`.

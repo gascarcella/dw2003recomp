@@ -99,11 +99,12 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   (a constant in a variable before a `LOOP_BARRIER`), `stcrdshp_update_buy` (`q - -count`). `grep -rn "FAKE:" src`.
 
 ## Blocked / needs user
-- **Going public** (`docs/OPEN_SOURCE_PLAN.md`, decided in session 12, DECISIONS "Going public"): step 1 (this branch)
-  is done: `scripts/gamedata_dir.sh` and the `DW3_GAMEDATA` plumbing, LICENSE, README notice, CLAUDE.md rule,
-  `scripts/publish_snapshot.sh`, `.github/workflows/ci.yml` (not yet run). **Needs the user:** steps 2 and 6 of the
-  checklist: push, rename this repo to `dw2003-gamedata`, create the empty public `dw2003recomp`, fix every clone's
-  `origin` before its next push, install the GitHub App; then the snapshot is pushed and this repo trimmed to the data.
+- **Going public is done** except two GitHub steps for the user (`docs/OPEN_SOURCE_PLAN.md` section 5; DECISIONS "Going
+  public"): this public repository started on 2026-10-05 as a clean snapshot of the private history's `e446f0e`; the
+  private repository is now the data checkout `dw2003-gamedata`. **Needs the user:** the tag `v0.1-matching-closed` on the
+  initial commit (`c1ca6f2`; tag pushes are refused through the cloud session's proxy), the repository description, the
+  `GAMEDATA_DEPLOY_KEY` secret for `.github/workflows/ci.yml` (a read-only deploy key of `dw2003-gamedata`), and a cloud
+  environment that selects both repositories. CI has not run yet.
 - **PC-port decisions** (`docs/PC_PORT_PLAN.md` section 4): needed before any port code.
 - **Mechanics sources:** `docs/MECHANICS.md` "Sources wanted" lists the GameFAQs/StrategyWiki URLs the cloud session
   cannot reach; fetched text (or a local copy) would let the tests get names and expected behaviours from written sources.
