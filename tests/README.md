@@ -19,6 +19,10 @@ each layer is in `docs/STATUS.md`.
   prove it with a golden and ask before touching the source.
 - **One entry point:** `scripts/test.sh` runs every layer that is available on this machine (emulator and disc present,
   host compiler present) and exits non-zero on the first failure. It runs headless with `DW3_JOBS=1`, as cloud sessions do.
+  Before the layers it runs the PC port's host-compile gate (`tools/port_inventory.py probe` and `link`, ~5 s: every unit
+  compiles at `-m64` with no pointer/int cast, implicit declaration or incompatible pointer type, and no global is defined
+  twice; `--no-probe` skips it). The gate needs only the host gcc and nm (no disc, not even `include/asm_generated/`), so
+  CI also runs it in its disc-free part (`.github/workflows/ci.yml`, Ubuntu's GCC 13).
 - **Every golden and expected file is tagged** with the commit of the matching tree that produced it, the emulator build
   (`tools/redux/app/.../version.json`: `bf4c9ceb`, build 359) and the BIOS (name and SHA-1). Bumping the emulator is a
   decision (DECISIONS "PCSX-Redux pinned"); OpenBIOS is the default and the retail BIOS a cross-check only, never the
@@ -95,9 +99,8 @@ followed by the zeros of its last sector, not by the previous overlay's bytes (`
 ### Host-side replay (`tests/host/`)
 
 `tests/host/replay.py` compiles `src/main/{pad,memcard,gamestate,records,card}.c`, `src/fightstg/fightstg_8008D3B4.c`,
-`src/cardgame/cardgame_cpu.c` (with the card game's other units `cardgame_80083E34.c`, `_80085DE8.c`, `_8009D6E0.c`, `_800954F8.c`, `_80096950.c` for the rules, the CPU's helpers and the board's data), `src/stfgtrep/stfgtrep_80082E70.c`, `src/stgtrain/stgtrain_{800861BC,80088100}.c`, `src/ststatus/ststatus_{8008E94C,800937A4,80099B6C}.c`, `src/stitshop/stitshop_800859C0.c`, `src/stcrdshp/stcrdshp_80088E24.c`, `src/main/{object,sprite}.c`, `src/stgdglab/stgdglab_8008EB30.c`, `src/wfightmn/wfightmn_800A6440.c`, `src/fieldstg/fieldstg_80083784.c` (FIELDSTG's battle table, data only), `src/fieldstg/fieldstg_80087DB0.c` (with `tests/host/fieldstg_protos.h` forced in: one
-function is called before its definition, which a modern gcc rejects), `src/fightstg/fightstg_80086A00.c` (the same with `tests/host/fightstg_protos.h`) and `src/main/heap.c` (its MIPS inline asm
-compiled away, its `heap_funcs` weak: the shims' libc heap wins) for this machine (`-m64 -std=gnu99 -fwrapv -fsigned-char -fno-strict-aliasing
+`src/cardgame/cardgame_cpu.c` (with the card game's other units `cardgame_80083E34.c`, `_80085DE8.c`, `_8009D6E0.c`, `_800954F8.c`, `_80096950.c` for the rules, the CPU's helpers and the board's data), `src/stfgtrep/stfgtrep_80082E70.c`, `src/stgtrain/stgtrain_{800861BC,80088100}.c`, `src/ststatus/ststatus_{8008E94C,800937A4,80099B6C}.c`, `src/stitshop/stitshop_800859C0.c`, `src/stcrdshp/stcrdshp_80088E24.c`, `src/main/{object,sprite}.c`, `src/stgdglab/stgdglab_8008EB30.c`, `src/wfightmn/wfightmn_800A6440.c`, `src/fieldstg/fieldstg_80083784.c` (FIELDSTG's battle table, data only), `src/fieldstg/fieldstg_80087DB0.c`, `src/fightstg/fightstg_80086A00.c` and `src/main/heap.c` (the MIPS inline asm of
+`include/port.h`'s scratchpad-stack macros compiled away, its `heap_funcs` weak: the shims' libc heap wins) for this machine (`-m64 -std=gnu99 -fwrapv -fsigned-char -fno-strict-aliasing
 -DNON_MATCHING`, `INCLUDE_ASM` empty, the GTE macros no-ops, `tests/host/shims.c` for the heap, files, time and sound, the rest of
 the game's externals resolved to 0 by the linker; the stack zeroed before each call, so uninitialised locals read 0) into `build/host/replay`, then drives every golden case through it
 over stdin and compares each return value and read with the original's. Mismatches are findings (`tests/host/FINDINGS.md`);
