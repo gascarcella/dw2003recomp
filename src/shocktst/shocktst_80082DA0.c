@@ -578,8 +578,6 @@ void shocktst_convert_table(ShockLoader *obj) {
     }
 }
 #else
-INCLUDE_RODATA("asm/shocktst/nonmatchings/shocktst_80082DA0", D_SHOCKTST_80082D40);
-
 INCLUDE_ASM("asm/shocktst/nonmatchings/shocktst_80082DA0", shocktst_convert_table);
 #endif
 
