@@ -125,7 +125,7 @@ void wstag220_choice_1512_update(WstagChoice *obj, WstagChoiceData *data) {
 }
 
 Object *wstag220_event_1512_start(void) {
-    return object_new(wstag220_choice_1512_update, 0x64, 0x14);
+    return object_new(wstag220_choice_1512_update, sizeof(WstagChoice), sizeof(WstagChoiceData));
 }
 
 void wstag220_choice_1514_update(WstagChoice *obj, WstagChoiceData *data) {
@@ -237,7 +237,7 @@ void wstag220_choice_1514_update(WstagChoice *obj, WstagChoiceData *data) {
 }
 
 Object *wstag220_event_1514_start(void) {
-    return object_new(wstag220_choice_1514_update, 0x64, 0x14);
+    return object_new(wstag220_choice_1514_update, sizeof(WstagChoice), sizeof(WstagChoiceData));
 }
 
 void wstag220_choice_1516_update(WstagChoice *obj, WstagChoiceData *data) {
@@ -349,7 +349,7 @@ void wstag220_choice_1516_update(WstagChoice *obj, WstagChoiceData *data) {
 }
 
 Object *wstag220_event_1516_start(void) {
-    return object_new(wstag220_choice_1516_update, 0x64, 0x14);
+    return object_new(wstag220_choice_1516_update, sizeof(WstagChoice), sizeof(WstagChoiceData));
 }
 
 void wstag220_update(WstagObject *obj) {

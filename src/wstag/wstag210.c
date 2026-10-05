@@ -176,7 +176,7 @@ void wstag210_menu_update(WstagMenu *obj, WstagMenuData *data) {
 }
 
 Object *wstag210_event_8_start(void) {
-    return object_new(wstag210_menu_update, 0x84, 0x28);
+    return object_new(wstag210_menu_update, sizeof(WstagMenu), sizeof(WstagMenuData));
 }
 
 void wstag210_choice_9_update(WstagChoice *obj, WstagChoiceData *data) {
@@ -288,7 +288,7 @@ void wstag210_choice_9_update(WstagChoice *obj, WstagChoiceData *data) {
 }
 
 Object *wstag210_event_9_start(void) {
-    return object_new(wstag210_choice_9_update, 0x64, 0x14);
+    return object_new(wstag210_choice_9_update, sizeof(WstagChoice), sizeof(WstagChoiceData));
 }
 
 void wstag210_choice_1510_update(WstagChoice *obj, WstagChoiceData *data) {
@@ -400,7 +400,7 @@ void wstag210_choice_1510_update(WstagChoice *obj, WstagChoiceData *data) {
 }
 
 Object *wstag210_event_1510_start(void) {
-    return object_new(wstag210_choice_1510_update, 0x64, 0x14);
+    return object_new(wstag210_choice_1510_update, sizeof(WstagChoice), sizeof(WstagChoiceData));
 }
 
 void wstag210_update(WstagObject *obj, WstagEventData *data) {

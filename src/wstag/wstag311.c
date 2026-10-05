@@ -110,7 +110,7 @@ void wstag311_anim4_update(WstagAnim4Object *obj) {
 }
 
 Object *wstag311_anim4_create(void) {
-    return object_new(wstag311_anim4_update, 0x60, 0);
+    return object_new(wstag311_anim4_update, sizeof(WstagAnim4Object), 0);
 }
 
 s32 wstag311_gate_anim_advance(WstagSpriteAnim *sa, WstagAnimKey *keys, s32 once, s32 depth) {

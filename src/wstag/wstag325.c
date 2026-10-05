@@ -62,7 +62,7 @@ void wstag325_sprite_switch_update(Object *obj) {
 }
 
 Object *wstag325_sprite_switch_create(s32 arg0) {
-    return object_create(wstag325_sprite_switch_update, 0x50, 0, arg0);
+    return object_create(wstag325_sprite_switch_update, sizeof(Object), 0, arg0);
 }
 
 void wstag325_sprite_switch_message(Object *obj, s32 id) {

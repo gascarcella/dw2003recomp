@@ -91,7 +91,7 @@ void wstag481_seq_update(WstagSeqObject *obj) {
 }
 
 Object *wstag481_seq_create(void) {
-    return object_new(wstag481_seq_update, 0x78, 0);
+    return object_new(wstag481_seq_update, sizeof(WstagSeqObject), 0);
 }
 
 void wstag481_update(WstagObject *obj, Object **data) {

@@ -61,7 +61,7 @@ void wstag815_backdrop_update(Object *obj) {
 
 
 Object *wstag815_backdrop_new(void) {
-    return object_new(wstag815_backdrop_update, 0x60, 0);
+    return object_new(wstag815_backdrop_update, sizeof(Object) + 0x10, 0); /* the 0x10 extra bytes are unused */
 }
 
 void wstag815_update(WstagObject *obj, WstagObjSpawnData *data) {

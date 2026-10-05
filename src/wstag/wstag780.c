@@ -256,7 +256,7 @@ void wstag780_gauge_update(Wstag780Gauge *obj) {
 }
 
 Object *wstag780_gauge_create(s32 arg0) {
-    return object_create(wstag780_gauge_update, 0x54, 0, arg0);
+    return object_create(wstag780_gauge_update, sizeof(Wstag780Gauge), 0, arg0);
 }
 
 s32 wstag780_anim_loop(WstagAnim *anim, WstagAnimKey *keys, s32 depth) {

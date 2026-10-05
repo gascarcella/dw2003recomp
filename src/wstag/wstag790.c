@@ -161,7 +161,7 @@ void wstag790_glow_message(Object *obj, s32 msg) {
 
 
 Object *wstag790_glow_create(s32 arg0) {
-    return object_create(wstag790_glow_update, 0x5C, 0, arg0);
+    return object_create(wstag790_glow_update, sizeof(Wstag790Glow), 0, arg0);
 }
 
 void wstag790_update(WstagObject *obj, Wstag790Data *data) {

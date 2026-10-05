@@ -153,7 +153,7 @@ Wstag785Gate *wstag785_gate_new(void) {
 }
 
 Object *wstag785_gate_create(s32 arg0) {
-    return object_create(wstag785_gate_update, 0x6C, 0, arg0);
+    return object_create(wstag785_gate_update, sizeof(Wstag785Gate), 0, arg0);
 }
 
 void wstag785_mark_draw(Wstag785Mark *obj, s32 frame) {

@@ -46,7 +46,7 @@ void wstag949_parallax_update(Object *obj) {
 }
 
 Object *wstag949_parallax_new(void) {
-    return object_new(wstag949_parallax_update, 0x50, 0);
+    return object_new(wstag949_parallax_update, sizeof(Object), 0);
 }
 
 void wstag949_update(WstagObject *obj, Object **data) {

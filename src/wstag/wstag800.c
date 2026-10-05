@@ -341,7 +341,7 @@ void wstag800_countdown_update(WstagObject *obj, WstagEventData *data) {
 }
 
 Object *wstag800_countdown_new(void) {
-    return object_new(wstag800_countdown_update, 0x54, 0x4);
+    return object_new(wstag800_countdown_update, sizeof(WstagObject), sizeof(FieldstgEvent *)); /* data: the event only */
 }
 
 void wstag800_update(WstagObject *obj, Wstag800Data *data) {

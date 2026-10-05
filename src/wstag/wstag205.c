@@ -104,7 +104,7 @@ void wstag205_sprites_update(Wstag205Sprites *obj) {
 }
 
 Object *wstag205_sprites_new(void) {
-    return object_new(wstag205_sprites_update, 0xC8, 0);
+    return object_new(wstag205_sprites_update, sizeof(Wstag205Sprites), 0);
 }
 
 void wstag205_update(WstagObject *obj, WstagEventData *data) {
