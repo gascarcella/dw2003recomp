@@ -46,7 +46,7 @@ void wfightmn_loader_update(Object *obj) {
 
                     tim_init(&tim);
                     tim.set_image_pos(0x140, 0x100);
-                    tim.load_all(cdload_module.files.get_file(0x79E));
+                    tim.load_all((s32 *)cdload_module.files.get_file(0x79E));
                     obj->next_substep(obj);
                 }
                 break;
@@ -56,7 +56,7 @@ void wfightmn_loader_update(Object *obj) {
 
                     tim_init(&tim);
                     tim.set_image_pos(0x1C0, 0x100);
-                    tim.load_all(cdload_module.files.get_file(0x7AE));
+                    tim.load_all((s32 *)cdload_module.files.get_file(0x7AE));
                     obj->next_substep(obj);
                 }
                 break;
@@ -66,7 +66,7 @@ void wfightmn_loader_update(Object *obj) {
 
                     tim_init(&tim);
                     tim.set_image_pos(0x200, 0x100);
-                    tim.load_all(cdload_module.files.get_file(0x7E1));
+                    tim.load_all((s32 *)cdload_module.files.get_file(0x7E1));
                     obj->next_substep(obj);
                 }
                 break;
@@ -76,7 +76,7 @@ void wfightmn_loader_update(Object *obj) {
 
                     tim_init(&tim);
                     tim.set_image_pos(0x240, 0x100);
-                    tim.load_all(cdload_module.files.get_file(0x7E3));
+                    tim.load_all((s32 *)cdload_module.files.get_file(0x7E3));
                     obj->next_substep(obj);
                 }
                 break;

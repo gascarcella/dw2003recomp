@@ -877,6 +877,8 @@ s32 fightstg_enemy_turn_find_target(FightstgEnemyTurn *obj) {
 
 INCLUDE_RODATA("asm/fightstg/nonmatchings/fightstg_80086A00", fightstg_player_reaction_pos);
 
+s32 fightstg_enemy_check_condition(u8 type, s16 value);
+
 /* The enemy's turn (side 0x10): flees at low HP, then shows its state (flags 8/2/4), or picks an action
  * (the first of its Digimon's three whose condition holds) and runs it: an attack, an item, a call for
  * help, a switch of members. */

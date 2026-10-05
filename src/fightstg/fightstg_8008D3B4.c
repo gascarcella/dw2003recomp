@@ -5527,7 +5527,9 @@ extern u32 fightstg_cursor_ot[2];
 
 /* Vsync callback of fightstg_cursor_update: copies the highlight into VRAM (cursor entry sel, and
  * restores entry drawn_sel). */
-void fightstg_cursor_copy_highlight(FightstgCursor *obj) {
+/* `arg` is gfx_module.vsync_arg, the cursor object as an s32 (PTR_TO_S32 in fightstg_cursor_update). */
+void fightstg_cursor_copy_highlight(s32 arg) {
+    FightstgCursor *obj = S32_TO_PTR(FightstgCursor *, arg);
     u32 *cont;
     s32 i;
     s32 y;
@@ -5598,7 +5600,7 @@ void fightstg_cursor_draw(FightstgCursor *obj) {
     }
 }
 
-void fightstg_cursor_copy_highlight(FightstgCursor *obj);
+void fightstg_cursor_copy_highlight(s32 arg);
 
 void fightstg_cursor_update(FightstgCursor *obj) {
     s32 pad;
@@ -5612,7 +5614,7 @@ void fightstg_cursor_update(FightstgCursor *obj) {
         switch (obj->base.step) {
         case 2:
         default:
-            gfx_module.vsync_callback = (void (*)(s32))fightstg_cursor_copy_highlight;
+            gfx_module.vsync_callback = fightstg_cursor_copy_highlight;
             gfx_module.vsync_arg = PTR_TO_S32(obj);
         case 0:
         case 1:

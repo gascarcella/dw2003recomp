@@ -56,13 +56,13 @@ void wfightts_load_images(void) {
     tim.set_image_pos(0, 0xF4);
     tim.load(cdload_module.get_subfile_by_id(0x4560000));
     tim.set_image_pos(0x140, 0x100);
-    tim.load_all(cdload_module.files.get_file(0x79E));
+    tim.load_all((s32 *)cdload_module.files.get_file(0x79E));
     tim.set_image_pos(0x1C0, 0x100);
-    tim.load_all(cdload_module.files.get_file(0x7AE));
+    tim.load_all((s32 *)cdload_module.files.get_file(0x7AE));
     tim.set_image_pos(0x200, 0x100);
-    tim.load_all(cdload_module.files.get_file(0x7E1));
+    tim.load_all((s32 *)cdload_module.files.get_file(0x7E1));
     tim.set_image_pos(0x240, 0x100);
-    tim.load_all(cdload_module.files.get_file(0x7E3));
+    tim.load_all((s32 *)cdload_module.files.get_file(0x7E3));
 }
 
 /* wfightts_main_update's object: a test battle's menus (menu: the last menu, 1..5) and their results. */
