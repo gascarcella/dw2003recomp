@@ -1688,3 +1688,27 @@ Each entry: date, decision, why, alternatives considered.
 - **Why:** one reviewable unit per session, CI (`build.sh --check`, `scripts/test.sh`) on the branch before it reaches
   `main`, and a public record of what changed and why now that the repo is public.
 - **Not changed:** outside pull requests stay closed by policy (README; "Going public"); the user closes them by hand.
+
+## 2026-10-05: PC port decisions (session 15)
+The user's answers to `docs/PC_PORT_PLAN.md` section 4 (asked item by item; every recommendation was taken):
+1. **Approach:** our own Psy-Q shim (`port/psyq/`) against the 123-function checklist. PsyCross is an MIT reference
+   only, not forked (this supersedes `PC_PORT_RESEARCH.md`'s "fork PsyCross for bring-up" leaning).
+2. **Renderer:** a VRAM-exact software GPU first (pixel-comparable with the emulator); a hardware renderer on the SDL3
+   GPU API later, on the same primitive stream.
+3. **SDL3**, pinned and built from source into `tools/` by a `setup.sh` step.
+4. **64-bit host**, with the measured cleanup (M0). **The `-m32` layout oracle is wanted for M1:** the user installs the
+   32-bit glibc headers system-wide themselves; an agent never runs sudo. Measured on the dev machine (Nobara, GCC
+   16.2): `gcc -m32` fails at link (`crt1.o` missing), `libgcc.i686` is present, the missing package is
+   `glibc-devel.i686` (`gcc-multilib` on Ubuntu, for CI). M0 does not need it.
+5. **Overlays:** static link with an overlay manager (`.data`/`.bss` snapshot and restore on load; late-bound addresses
+   through tables generated from the `config/` symbol files), not one shared library per overlay.
+6. **Sound:** our own SPU core and LIBSND reimplementation, checked against emulator SPU register-write traces. The
+   R3000 interpreter running the user's LIBSND stays the fallback.
+7. **Disc input:** LIBCD over the user's BIN/CUE, hash-checked; no extracted-files mode.
+8. **Licence:** unchanged from "Going public": MIT; the port admits only MIT/BSD/zlib code; emulators are external
+   test oracles, never linked or copied.
+9. **Layout:** unchanged from "Going public": `port/` in this repo, hook macros in `include/`, a few `#ifdef PC_PORT`
+   in `src/`, each verified byte-identical.
+10. **Movies:** our own MDEC + XA decoder (so no FFmpeg), not before M5.
+11. **Frame rate:** PAL 50 Hz by default, 60 Hz as an option through `records_60hz`.
+- **Session 15's scope (user's choice): M0 plus an M1 skeleton**, not M0 alone.

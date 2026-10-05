@@ -1,7 +1,7 @@
 # PC port plan (proposal)
 
-**Status: proposal for the user to decide, 2026-10-04 (agent port-plan).** Nothing in this file is decided yet.
-When a choice is made, record it in `docs/DECISIONS.md`. Background notes and ideas: `docs/PC_PORT_RESEARCH.md`.
+**Status: section 4 decided by the user on 2026-10-05 (session 15; DECISIONS "PC port decisions (session 15)"):
+every recommendation was taken.** The rest of the file is the proposal of 2026-10-04 (agent port-plan) as written. Background notes and ideas: `docs/PC_PORT_RESEARCH.md`.
 
 The numbers below were **measured on the code at `a424d38`** (end of session 7). The tools that produced them
 are described under "How this was measured"; at M0 they become a tracked `tools/port_inventory.py`.
@@ -378,32 +378,48 @@ Hardware renderer, enhancements, 60 Hz/NTSC option (the 2-byte patch, `records_6
 | Licence contamination | Decision 8 |
 
 ## 4. Decisions needed from the user
+**All decided on 2026-10-05 (session 15); each item's outcome is marked "Decided". Record: DECISIONS "PC port
+decisions (session 15)".**
 1. **Approach:** our own Psy-Q shim against the 123-function checklist, with PsyCross as an MIT reference *(recommended)*,
    or fork PsyCross for bring-up.
+   **Decided:** own shim (`port/psyq/`), PsyCross as an MIT reference only.
 2. **Renderer:** a VRAM-exact software GPU first, then a hardware renderer on the SDL3 GPU API *(recommended)*. Or go
    straight to OpenGL 3.3 / SDL3 GPU and skip exactness.
+   **Decided:** software GPU first, hardware renderer later.
 3. **SDL2 or SDL3:** SDL3 *(recommended: current major version, GPU API, gamepad and audio-stream APIs)*. SDL2 only
    if we fork PsyCross as it is.
+   **Decided:** SDL3, pinned and built into `tools/`.
 4. **32- or 64-bit host:** 64-bit *(recommended)*, with the measured cleanup (2.4, M0). Plus a headless `-m32` build
    as a layout oracle during M1, which needs `gcc-multilib` installed system-wide (sudo: your call; without it,
    rely on the probe and sanitizers).
+   **Decided:** 64-bit host; the `-m32` layout oracle is wanted for M1. The user installs the 32-bit glibc
+   headers themselves (on the Nobara dev machine `sudo dnf install glibc-devel.i686`, measured: `gcc -m32` does not link
+   without it; `gcc-multilib` is the Ubuntu/CI name). Not needed for M0.
 5. **Overlays:** static link with an overlay manager (data snapshot/restore, generated address tables)
    *(recommended)*, or one shared library per overlay.
+   **Decided:** static link with an overlay manager.
 6. **Sound:** our own SPU core and LIBSND reimplementation, checked against emulator SPU traces *(recommended)*; the
    interpreter running the user's LIBSND is the fallback.
+   **Decided:** own SPU core and LIBSND; the interpreter stays the fallback.
 7. **Disc input:** LIBCD over the user's BIN/CUE, hash-checked *(recommended)*, rather than extracted files.
+   **Decided:** the user's BIN/CUE, hash-checked.
 8. **Licensing:** pick the repo's licence before borrowing code. MIT *(recommended: matches the US decomp and
    PsyCross)*.
    - Under MIT, allow only MIT/BSD/zlib code in the port.
    - Emulators (GPL Mednafen/Beetle, PCSX-Redux; DuckStation is non-commercial/no-derivatives since 2024) are used
      only as external test oracles, never linked or copied.
    - FFmpeg (LGPL) only if dynamically linked, or not at all (own MDEC/XA decoder recommended).
+   **Decided:** MIT, only MIT/BSD/zlib code in the port, emulators as external oracles only (DECISIONS "Going
+   public"; confirmed unchanged). Own MDEC/XA decoder, so no FFmpeg.
 9. **Repo layout:** a `port/` directory in this repo (shim, platform layer, CMake), plus hook macros in
    `include/` and a few `#ifdef PC_PORT` in `src/`, each verified byte-identical *(recommended)*. Or a separate
    repo that uses this one as a submodule (no port code in `src/` at all, but the hooks still have to live here).
+   **Decided:** `port/` in this repo (DECISIONS "Going public"; confirmed unchanged).
 10. **Movies:** our own MDEC + XA decoder *(recommended)* or FFmpeg; either way not before M5.
+   **Decided:** own MDEC + XA decoder, not before M5.
 11. **Frame rate:** PAL 50 Hz by default (faithful EU), with 60 Hz as an option through `records_60hz`
     *(recommended)*.
+   **Decided:** PAL 50 Hz by default, 60 Hz as an option.
 
 ## How this was measured
 Scratch scripts (agent port-plan; to be tracked as `tools/port_inventory.py` at M0), run from the repo root after
