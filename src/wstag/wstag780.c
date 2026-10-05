@@ -311,7 +311,7 @@ void wstag780_spark_update(Wstag780Spark *obj) {
     case OBJECT_STATE_RUN:
         obj->frame = wstag780_anim_loop(&obj->anim, D_WSTAG780_800A8420[obj->base.key1].keys, 0);
         if (obj->frame != 0) {
-            layer->add_callback(layer, wstag780_spark_draw, obj, obj->y, 0);
+            layer->add_callback(layer, (WstagDrawCallback)wstag780_spark_draw, obj, obj->y, 0);
         }
         break;
     case OBJECT_STATE_DONE:

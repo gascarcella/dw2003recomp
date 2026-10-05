@@ -179,7 +179,7 @@ void wstag741_two_anim_update(WstagTwoAnimObject *obj) {
                 break;
             }
             if (obj->sprites[i].frame != 0) {
-                layer->add_callback(layer, wstag741_two_anim_draw, obj, obj->y + (i == 0 ? -0xF0 : 0x14), i);
+                layer->add_callback(layer, (WstagDrawCallback)wstag741_two_anim_draw, obj, obj->y + (i == 0 ? -0xF0 : 0x14), i);
             }
         }
         if (done == 2) {

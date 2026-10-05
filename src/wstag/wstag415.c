@@ -143,7 +143,7 @@ void wstag415_flyer_update(Wstag415Flyer *obj) {
             }
         }
         if (obj->frame != 0) {
-            layer->add_callback(layer, wstag415_flyer_draw, obj, obj->y, 0);
+            layer->add_callback(layer, (WstagDrawCallback)wstag415_flyer_draw, obj, obj->y, 0);
         }
         if (obj->y >= 0x245) {
             obj->base.set_state(obj, OBJECT_STATE_END);

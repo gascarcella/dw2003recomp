@@ -722,10 +722,10 @@ void wstag310_two_sprite_update(WstagTwoSpriteObject *obj) {
             obj->base.set_state(obj, OBJECT_STATE_END);
         }
         if (obj->sprites[0].frame != 0 && wstag310_is_on_screen(obj->x, obj->y, 0x20, 0x20)) {
-            layer->add_callback(layer, wstag310_two_sprite_draw, obj, obj->y, 0);
+            layer->add_callback(layer, (WstagDrawCallback)wstag310_two_sprite_draw, obj, obj->y, 0);
         }
         if (obj->sprites[1].frame != 0 && wstag310_is_on_screen(obj->x, obj->y - 0x20, 0x20, 0x40)) {
-            layer->add_callback(layer, wstag310_two_sprite_draw, obj, obj->y + 0x12, 1);
+            layer->add_callback(layer, (WstagDrawCallback)wstag310_two_sprite_draw, obj, obj->y + 0x12, 1);
         }
         break;
     case OBJECT_STATE_DONE:
@@ -832,7 +832,7 @@ void wstag310_two_sprite2_update(WstagTwoSpriteObject *obj) {
         obj->sprites[0].frame = obj->frame;
         obj->sprites[0].palette = wstag310_anim_advance2(&obj->palette_anim, D_WSTAG310_800A858C, 0, 0);
         if (obj->sprites[0].frame != 0 && wstag310_is_on_screen2(obj->x, obj->y, 0x20, 0x20)) {
-            layer->add_callback(layer, wstag310_two_sprite2_draw, obj, obj->y, 0);
+            layer->add_callback(layer, (WstagDrawCallback)wstag310_two_sprite2_draw, obj, obj->y, 0);
         }
         break;
     case OBJECT_STATE_DONE:
@@ -863,10 +863,10 @@ void wstag310_two_sprite2_update(WstagTwoSpriteObject *obj) {
             obj->base.set_state(obj, OBJECT_STATE_RUN);
         }
         if (obj->sprites[0].frame != 0 && wstag310_is_on_screen2(obj->x, obj->y, 0x20, 0x20)) {
-            layer->add_callback(layer, wstag310_two_sprite2_draw, obj, obj->y, 0);
+            layer->add_callback(layer, (WstagDrawCallback)wstag310_two_sprite2_draw, obj, obj->y, 0);
         }
         if (obj->sprites[1].frame != 0 && wstag310_is_on_screen2(obj->x, obj->y - 0x20, 0x20, 0x40)) {
-            layer->add_callback(layer, wstag310_two_sprite2_draw, obj, obj->y + 0x12, 1);
+            layer->add_callback(layer, (WstagDrawCallback)wstag310_two_sprite2_draw, obj, obj->y + 0x12, 1);
         }
         break;
     case OBJECT_STATE_END:
