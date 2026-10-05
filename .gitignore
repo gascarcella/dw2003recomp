@@ -51,7 +51,7 @@ sdk/
 *.OBJ
 
 # --- Misc ---
-__pycache__/
+__pycache__
 *.pyc
 .splat_cache
 /.splat
