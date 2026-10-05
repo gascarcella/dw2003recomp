@@ -73,7 +73,12 @@ void *object_create(void (*func)(), s32 size, s32 data_size, s32 kind) {
 
     if (data_size != 0) {
         obj->children = heap_funcs.alloc_zero(data_size, 2);
+#ifndef PC_PORT
         obj->child_count = data_size / 4;
+#else
+        /* The block is scanned as pointers by object_destroy; the callers size it in sizeof(T *) units. */
+        obj->child_count = data_size / sizeof(void *);
+#endif
     }
     obj->set_state = object_set_state;
     obj->set_step = object_set_step;
