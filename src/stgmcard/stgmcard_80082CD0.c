@@ -256,6 +256,7 @@ void stgmcard_root_update(Object *obj, StgmcardRootData *data) {
 
 /* The overlay's entry point (overlay_entries). */
 void stgmcard_create_root(void) {
+    /* PC_PORT: 0x58 = sizeof(Object) + 8 unused bytes; the update reads only the Object */
     object_new(stgmcard_root_update, 0x58, sizeof(StgmcardRootData));
 }
 
@@ -1068,6 +1069,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
         if (data->frame->is_open != 0) {
             if (obj->status == 1) {
                 if (stgmcard_module.header->magic != 0x33574D44) {
+                    /* PC_PORT: 0x44 bytes of the 0xD4-byte header (through slots[0] and 4 bytes of slots[1]): not a type's size */
                     heap_funcs.bzero(stgmcard_module.header, 0x44);
                     stgmcard_module.header->magic = 0x33574D44;
                     stgmcard_module.header->version = 4;
@@ -1619,7 +1621,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
         if (ret != 0) {
             if (ret == 1) {
                 if (++memcard_state.icon_frame > memcard_state.icon_frames - 1) {
-                    heap_funcs.bzero(stgmcard_module.header, 0xD4);
+                    heap_funcs.bzero(stgmcard_module.header, sizeof(StgmcardSaveHeader));
                     stgmcard_module.header->magic = 0x33574D44;
                     stgmcard_module.header->version = 4;
                     stgmcard_module.header->checksum =

@@ -2134,8 +2134,8 @@ void cardgame_board_set_lamps(CardgameBoard *obj, s32 flags) {
 }
 
 void cardgame_board_clear_lamps(CardgameBoard *obj) {
-    heap_funcs.bzero(obj->panels[0].lamps, 10);
-    heap_funcs.bzero(obj->panels[1].lamps, 10);
+    heap_funcs.bzero(obj->panels[0].lamps, sizeof(obj->panels[0].lamps));
+    heap_funcs.bzero(obj->panels[1].lamps, sizeof(obj->panels[1].lamps));
 }
 
 s32 cardgame_board_remove_card(CardgameBoard *obj, s32 i) {
