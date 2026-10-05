@@ -1679,3 +1679,12 @@ Each entry: date, decision, why, alternatives considered.
   the clean-room record).
 - **Why the inversion** (public working repo rather than a filtered mirror): one source of truth, no two-way sync, the
   public hashes are the ones the docs cite from the first public commit on; cloud sessions select both repos at start.
+
+## 2026-10-05: Pull requests for our own work (user decision, session 13)
+- **Decision:** from session 15 on, each session's work lands on `main` through a pull request: the session works on a
+  branch (usually a worktree), pushes it, opens a PR with `gh pr create`, waits for CI to be green, and the user reviews
+  and merges. Agents a session starts still merge into the session's branch (`scripts/merge_checkpoint.sh`); the
+  session's branch is what becomes the PR. Direct commits to `main` only when the user asks for it for that change.
+- **Why:** one reviewable unit per session, CI (`build.sh --check`, `scripts/test.sh`) on the branch before it reaches
+  `main`, and a public record of what changed and why now that the repo is public.
+- **Not changed:** outside pull requests stay closed by policy (README; "Going public"); the user closes them by hand.
