@@ -1784,6 +1784,15 @@ s16 message_decode_char(u8 *text, u8 arg1, MessageFont *font) {
     return 0x300;
 }
 
+/* The data block at 0x8004DC10 (DECISIONS "Data split per file": owner open; placed at the start of message's .data,
+ * where it fits the link order): a zero VECTOR, an identity MATRIX (D_8004DC20: FIGHTSTG points its models at it; no
+ * EXE code reads any of them) and the matrices scaling x, y and both by 2. In .data: explicitly zero-initialized. */
+VECTOR D_8004DC10 = { 0, 0, 0, 0 };
+MATRIX D_8004DC20 = { { { 0x1000, 0, 0 }, { 0, 0x1000, 0 }, { 0, 0, 0x1000 } }, { 0, 0, 0 } };
+MATRIX D_8004DC40 = { { { 0x2000, 0, 0 }, { 0, 0x1000, 0 }, { 0, 0, 0x1000 } }, { 0, 0, 0 } };
+MATRIX D_8004DC60 = { { { 0x1000, 0, 0 }, { 0, 0x2000, 0 }, { 0, 0, 0x1000 } }, { 0, 0, 0 } };
+MATRIX D_8004DC80 = { { { 0x2000, 0, 0 }, { 0, 0x2000, 0 }, { 0, 0, 0x1000 } }, { 0, 0, 0 } };
+
 /* The handlers that take only (obj, line) ignore the state. */
 #define MESSAGE_HANDLER(func) ((s32 (*)(MessageWindow *, MessageLine *, MessageDrawState *))(func))
 
