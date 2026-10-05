@@ -87,7 +87,7 @@ void overlay_run_object(Object *obj, s32 *result) {
 }
 
 Object *overlay_create_object(void) {
-    return object_new(overlay_run_object, 0x50, 4);
+    return object_new(overlay_run_object, sizeof(Object), sizeof(s32));
 }
 
 /* Loads the current stage's overlay (overlay_files) to main_overlay_base, unless it is already there. */

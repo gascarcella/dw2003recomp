@@ -125,7 +125,7 @@ void gfx_reset(void) {
                 i--;
             }
         }
-        heap_funcs.bzero(&gfx_module.packet, 0x18);
+        heap_funcs.bzero(&gfx_module.packet, (unsigned long)&((GfxModule *)0)->dispenvs - (unsigned long)&((GfxModule *)0)->packet);
         return;
     }
     gfx_module.buffer = 1;

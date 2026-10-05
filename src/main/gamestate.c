@@ -673,7 +673,7 @@ void gamestate_update_map_flags(void) {
 }
 
 void gamestate_new_game(void) {
-    heap_funcs.bzero(&gamestate_data, 0x26C4);
+    heap_funcs.bzero(&gamestate_data, (unsigned long)&((GamestateData *)0)->map);
     gamestate_data.map = 0x1600;
     gamestate_data.next_map = 0x1600;
     gamestate_data.digivolve_demo = 1;

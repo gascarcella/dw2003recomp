@@ -1273,7 +1273,7 @@ void message_box_frame_update(MessageBoxFrame *obj) {
 }
 
 MessageBoxFrame *message_box_frame_create(s32 arg0) {
-    MessageBoxFrame *obj = object_new(message_box_frame_update, 0x6C, 0);
+    MessageBoxFrame *obj = object_new(message_box_frame_update, sizeof(MessageBoxFrame), 0);
 
     obj->layer_id = arg0;
     sound_module.play(0x40019);
@@ -1326,7 +1326,7 @@ void message_box_update(Object *obj, MessageBoxData *data) {
 }
 
 Object *message_box_create(s32 arg0, u8 *text, s32 arg2) {
-    Object *obj = object_new(message_box_update, 0x50, 8);
+    Object *obj = object_new(message_box_update, sizeof(Object), sizeof(MessageBoxData));
     MessageBoxData *data = (MessageBoxData *)obj->children;
 
     data->window = message_create_window(arg0, 1, 0x12, 0xB0);
@@ -1451,7 +1451,7 @@ void message_dialog_frame_update(MessageDialogFrame *obj) {
 }
 
 MessageDialogFrame *message_dialog_frame_create(MessageDialog *arg0) {
-    MessageDialogFrame *obj = object_new(message_dialog_frame_update, 0x60, 0);
+    MessageDialogFrame *obj = object_new(message_dialog_frame_update, sizeof(MessageDialogFrame), 0);
 
     obj->dialog = arg0;
     return obj;
