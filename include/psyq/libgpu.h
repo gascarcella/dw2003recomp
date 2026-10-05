@@ -209,6 +209,7 @@ DRAWENV *SetDefDrawEnv(DRAWENV *env, s32 x, s32 y, s32 w, s32 h);
 void SetDrawEnv(DR_ENV *dr_env, DRAWENV *env);
 DISPENV *PutDispEnv(DISPENV *env);
 void LoadImage(RECT *rect, u32 *p);
+s32 MoveImage(RECT *rect, s32 x, s32 y);
 void DrawOTag(u32 *p);
 u32 *ClearOTag(u32 *ot, s32 n);
 u32 *BreakDraw(void);
