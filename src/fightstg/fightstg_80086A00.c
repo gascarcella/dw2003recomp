@@ -197,7 +197,7 @@ typedef struct FightstgPlayerReactionData {
     /* 0x4 */ FightstgScript *script;
 } FightstgPlayerReactionData; /* size 0x8 */
 
-extern SVECTOR fightstg_player_reaction_pos; /* {0, 120, 0x7FFF}: a screen position */
+extern const SVECTOR fightstg_player_reaction_pos; /* {0, 120, 0x7FFF}: a screen position */
 
 void fightstg_entrance_update(FightstgEntrance *obj, FightstgEntranceData *data);
 void fightstg_main_update(Object *obj, Object **data);
@@ -791,7 +791,7 @@ void fightstg_player_reaction_update(FightstgPlayerReaction *obj, FightstgPlayer
         switch (obj->base.step) {
         case 0:
             other->set(other, other->get_default(other));
-            data->effect = (Object *)fightstg_effect_create(0x33, &fightstg_player_reaction_pos);
+            data->effect = (Object *)fightstg_effect_create(0x33, (SVECTOR *)&fightstg_player_reaction_pos);
             sound_module.play(0x800429BF);
             obj->base.next_step(obj);
             /* fallthrough */
@@ -875,7 +875,7 @@ s32 fightstg_enemy_turn_find_target(FightstgEnemyTurn *obj) {
     return -1;
 }
 
-INCLUDE_RODATA("asm/fightstg/nonmatchings/fightstg_80086A00", fightstg_player_reaction_pos);
+const SVECTOR fightstg_player_reaction_pos = { 0, 120, 0x7FFF, 0 };
 
 s32 fightstg_enemy_check_condition(u8 type, s16 value);
 

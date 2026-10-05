@@ -15,9 +15,9 @@
 
 void wfightts_technique_menu_update();
 
-extern u8 wfightts_technique_name_0[]; /* the table's first string (its padding bytes are not 0) */
+extern const u8 wfightts_technique_name_0[16]; /* the table's first string (its padding bytes are not 0) */
 u8 *wfightts_technique_names[62] = { /* technique names */
-    wfightts_technique_name_0,
+    (u8 *)wfightts_technique_name_0,
     "\x83\x45\x83\x46\x83\x43\x83\x67\x81\x7C\x82\x50",
     "\x83\x4B\x81\x5B\x83\x68",
     "\x82\x72\x83\x5F\x83\x81\x81\x5B\x83\x57",
@@ -80,7 +80,9 @@ u8 *wfightts_technique_names[62] = { /* technique names */
     "\x83\x57\x83\x87\x83\x4F\x83\x8C\x83\x58\x81\x7C\x82\x53",
     "\x83\x57\x83\x87\x83\x4F\x83\x8C\x83\x58\x81\x7C\x82\x54",
 };
-INCLUDE_RODATA("asm/wfightts/nonmatchings/wfightts_800A8798", wfightts_technique_name_0);
+/* the table's first string, as an array: the bytes after its NUL are the non-zero fill psylink left at
+ * the end of the original object's .rodata, so a string literal cannot reproduce them */
+const u8 wfightts_technique_name_0[16] = { 0x83, 0x45, 0x83, 0x46, 0x83, 0x43, 0x83, 0x67, 0x81, 0x7C, 0x82, 0x4F, 0x00, 0xF8, 0x40, 0x00 };
 WfighttsMenuState wfightts_technique_menu_state; /* the menu's state */
 
 /* Picks a technique of either side's Digimon (data block: 2 x 14 windows): left/right pick the side, up/down the
