@@ -50,7 +50,7 @@ typedef struct {
     u8 r0, g0, b0, code;
 } P_TAG;
 
-#define setaddr(p, _addr) (((P_TAG *)(p))->addr = (u32)(_addr))
+#define setaddr(p, _addr) (((P_TAG *)(p))->addr = PTR_TO_U32(_addr))
 #define getaddr(p) (u32)(((P_TAG *)(p))->addr)
 #define addPrim(ot, p) setaddr(p, getaddr(ot)), setaddr(ot, p)
 #define setlen(p, _len) (((P_TAG *)(p))->len = (u8)(_len))
