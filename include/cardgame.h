@@ -345,7 +345,7 @@ typedef struct CardgameGame {
     /* 0x2E9 */ s8 opponent_level; /* CardgameOpponent.level */
     /* 0x2EA */ s16 deck_sel; /* the player's saved deck chosen (gamestate_data.decks) */
     /* 0x2EC */ s32 prize; /* the item won (cardgame_prize_items) */
-    /* 0x2F0 */ s32 opponents; /* file 0x7A4 */
+    /* 0x2F0 */ struct CardgameOpponent *opponents; /* file 0x7A4 (cardgame_8009D6E0.c) */
     /* 0x2F4 */ u8 effect_state; /* 0: the phases run, 1: an effect runs, 2: its result is resolved, 3: the in-game menu */
     /* 0x2F5 */ u8 first_side;
     /* 0x2F6 */ u8 prev_phase;
