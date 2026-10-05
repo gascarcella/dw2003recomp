@@ -69,6 +69,7 @@ int main(void) {
     SetGraphDebug(0);
     param[0] = 0x80;
     while (CdControl(0xE, param, 0) == 0) {
+        PLATFORM_WAIT();
     }
     VSync(3);
     CdControlB(9, 0, 0);
@@ -89,7 +90,7 @@ int main(void) {
             main_object = overlay_create_object();
         }
         main_object = heap_objects.try_run(main_object);
-        gfx_module.funcs.end_frame((s32)main_object);
+        gfx_module.funcs.end_frame(PTR_TO_S32(main_object));
         pad_state.update();
         pad_random.next();
         cdload_module.update();
@@ -97,6 +98,13 @@ int main(void) {
     }
 }
 
-INCLUDE_RODATA("asm/main/nonmatchings/main", main_overlay_base);
+/* .rodata: a const this small would go to .sdata at -G8, so the PS1 build names the section. */
+#ifndef PC_PORT
+#define MAIN_RODATA __attribute__((section(".rodata")))
+#else
+#define MAIN_RODATA
+#endif
 
-INCLUDE_RODATA("asm/main/nonmatchings/main", main_file_base);
+u8 *const main_overlay_base MAIN_RODATA = SLOT_PTR(1, u8 *, 0x80082CB0);
+
+u32 *const main_file_base MAIN_RODATA = SLOT_PTR(2, u32 *, 0x800A5DE0);

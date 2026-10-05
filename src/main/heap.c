@@ -55,11 +55,11 @@ void heap_init(void) {
     HeapBlock *first;
     HeapBlock *last;
 
-    heap_funcs.end = (HeapBlock *)0x801FF000;
-    last = (HeapBlock *)0x801FF000 - 1;
+    heap_funcs.end = HEAP_END(HeapBlock *);
+    last = HEAP_END(HeapBlock *) - 1;
     first = D_8005CB50;
     heap_funcs.first = first;
-    heap_funcs.size = 0x801FF000 - (u32)first;
+    heap_funcs.size = HEAP_SIZE_FROM(first);
     first->prev = first;
     first->next = last;
     first->state = 0;
@@ -272,15 +272,6 @@ Object *heap_find_object(s32 kind, s32 key1, s32 key2) {
     return heap_find_next_object();
 }
 
-/* Moves the stack into the scratchpad (the original's inline asm): saves $sp at `top` and sets $sp
- * 16 bytes below it; RESTORE_STACK() returns to the saved stack. */
-#define SET_SCRATCHPAD_STACK(top)                                                                  \
-    __asm__ volatile("addu $8, %0, $0\n\tsw $29, 0($8)\n\taddiu $8, $8, -16\n\taddu $29, $8, $0" \
-                     :                                                                             \
-                     : "r"(top)                                                                    \
-                     : "$8", "memory")
-#define RESTORE_STACK() __asm__ volatile("addiu $29, $29, 16\n\tlw $29, 0($29)" : : : "memory")
-
 /* Runs one object for a frame (on the scratchpad stack): update(obj, children), unless it is paused
  * (state 1 with `paused` set: a positive value becomes -1). An object in state 3 (OBJECT_STATE_END) ends:
  * destroy(obj), returns NULL. Otherwise run_children (heap_run_children: its children) runs, except while
@@ -288,7 +279,7 @@ Object *heap_find_object(s32 kind, s32 key1, s32 key2) {
 Object *heap_run_object(Object *obj) {
     s32 end = obj->state == OBJECT_STATE_END;
 
-    SET_SCRATCHPAD_STACK(0x1F8003FC);
+    PORT_SCRATCHPAD_STACK_ENTER(0x1F8003FC);
     if (obj->state == OBJECT_STATE_RUN && obj->paused != 0) {
         if (obj->paused > 0) {
             obj->paused = -1;
@@ -296,7 +287,7 @@ Object *heap_run_object(Object *obj) {
     } else {
         obj->update(obj, obj->children);
     }
-    RESTORE_STACK();
+    PORT_SCRATCHPAD_STACK_LEAVE();
     if (!end) {
         if (obj->state != OBJECT_STATE_RUN || obj->paused == 0) {
             heap_objects.run_children(obj);

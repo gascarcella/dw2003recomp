@@ -141,7 +141,7 @@ extern MessageDialogLayout message_dialog_layouts[];
 extern s32 (*message_control_handlers[])(MessageWindow *obj, MessageLine *line, MessageDrawState *state);
 
 /* "メッセージがせっていされていません" (no message has been set); in message_draw_window's .rodata for now */
-extern u8 message_no_text[];
+extern const u8 message_no_text[];
 
 void message_copy_line_text(MessageWindow *obj, MessageLine *line, u8 *text);
 void message_set_line_number(MessageWindow *obj, s32 line, s32 value);
@@ -293,7 +293,7 @@ void message_set_line_text(MessageWindow *obj, u8 *text, s32 arg2, s32 line) {
     obj->lines[line].is_sjis = 0;
 }
 
-INCLUDE_RODATA("asm/main/nonmatchings/message", message_no_text);
+const u8 message_no_text[] = "\x83\x81\x83\x62\x83\x5A\x81\x5B\x83\x57\x82\xAA\x82\xB9\x82\xC1\x82\xC4\x82\xA2\x82\xB3\x82\xEA\x82\xC4\x82\xA2\x82\xDC\x82\xB9\x82\xF1";
 
 void message_draw_window(MessageWindow *obj) {
     MessageDrawState state;
@@ -827,7 +827,7 @@ s32 message_code_insert_line(MessageWindow *obj, MessageLine *line, MessageDrawS
 
     if (obj->lines[n].text == NULL) {
         /* "メッセージがせっていされていません" (no message has been set) */
-        message_set_ext_line_text(obj, message_no_text, n);
+        message_set_ext_line_text(obj, (u8 *)message_no_text, n);
         return 0x8003;
     }
     if (obj->lines[n].pos >= obj->lines[n].length) {
