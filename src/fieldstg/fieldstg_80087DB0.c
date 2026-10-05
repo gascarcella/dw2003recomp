@@ -1111,7 +1111,7 @@ void fieldstg_loader_update(Object *obj) {
 }
 
 Object *fieldstg_loader_create(s32 step) {
-    Object *obj = object_new(fieldstg_loader_update, 0x54, 0);
+    Object *obj = object_new(fieldstg_loader_update, 0x54, 0); /* PC_PORT: sizeof(Object) + 4; no field of the extra word is used */
 
     obj->key2 = step;
     return obj;
@@ -4730,7 +4730,7 @@ void fieldstg_find_stage(void) {
         entry = fieldstg_stages_2d;
     }
     id = gamestate_data.funcs.get_map();
-    heap_funcs.bzero(&fieldstg_stage, 0x64);
+    heap_funcs.bzero(&fieldstg_stage, 0x64); /* PC_PORT: the fields before return_pos (offsetof) */
     while (1) {
         if (entry->id == id) {
             fieldstg_stage.code_file = entry->file;
@@ -4761,7 +4761,7 @@ FieldstgBattleLists *fieldstg_find_battle_lists(FieldstgBattleLists *entries, s3
 }
 
 void fieldstg_timer_reset(void) {
-    heap_funcs.bzero(&fieldstg_timer, 8);
+    heap_funcs.bzero(&fieldstg_timer, 8); /* PC_PORT: frames and running, not the functions (offsetof) */
 }
 
 FieldstgActor *fieldstg_find_actor(s32 id) {
