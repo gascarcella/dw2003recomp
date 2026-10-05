@@ -1,0 +1,25 @@
+// WSTAG746 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag746_flash_update = 0x800A5DE0; // type:func
+wstag746_flash_new = 0x800A5FF4; // type:func
+wstag746_event_8000_start = 0x800A6024; // type:func
+wstag746_event_8001_start = 0x800A60A4; // type:func
+wstag746_event_8002_start = 0x800A6124; // type:func
+wstag746_update = 0x800A61AC; // type:func
+wstag746_start = 0x800A62B8; // type:func
+wstag746_anim_advance = 0x800A6314; // type:func
+wstag746_two_sprite_draw = 0x800A6434; // type:func
+wstag746_is_on_screen = 0x800A651C; // type:func
+wstag746_two_sprite_update = 0x800A65E0; // type:func
+wstag746_two_sprite_create = 0x800A6870; // type:func
+wstag746_event_1297_end = 0x800A68CC; // type:func
+wstag746_event_1298_end = 0x800A6918; // type:func
+wstag746_setup = 0x800A6964; // type:func
+D_WSTAG746_800A6CA0 = 0x800A6CA0; // size:0x18
+D_WSTAG746_800A6CB8 = 0x800A6CB8; // size:0x58
+wstag746_battle_lists = 0x800A6F20;
+wstag746_vram_places = 0x800A6F3C;
+wstag746_actors = 0x800A7180;
+wstag746_sprites = 0x800A7198;
+wstag746_map_events = 0x800A72A8;
+wstag746_funcs = 0x800A7500;
+wstag746_events = 0x800A7504;

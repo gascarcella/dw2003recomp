@@ -1,0 +1,98 @@
+# splat config for the tier-1 overlay AAA/PRO/STSTATUS.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: STSTATUS.PRO
+sha1: 1dea5c72f3f4187261298d0d7a1e1c7a06fadffe
+options:
+  basename: STSTATUS.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/STSTATUS.PRO
+  elf_path: build/ststatus/STSTATUS.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/ststatus
+  asm_path: asm/ststatus
+  src_path: src/ststatus
+  asset_path: assets/ststatus
+  ld_script_path: build/ststatus/STSTATUS.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/ststatus.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/ststatus/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/ststatus/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: ststatus
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_STSTATUS_<addr>, D_STSTATUS_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: STSTATUS_$VRAM
+    subsegments:
+      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"). The overlay is a set of status
+      # pages, each an object group in the same order (window init, text helper, draw, state machine with a
+      # jump table, update, create; the creates are in the page table ststatus_pages). Evidence:
+      # jump-table parity (82E4C, 8340C at 4 mod 8 after a table at 0; 83008, 834F0 at 0 after one at 4),
+      # and the page template's text helper (83914, 8519C, 8B944, 8ED04, 94144, 96744: the same code, each on
+      # its own data table), copied once per file like STDWTITL's callback. Sub-pages without that helper stay
+      # with the page next to them when nothing separates them (marked).
+      - [0x0,   .rodata, ststatus_80083558]   # 84238's
+      - [0x19C, .rodata, ststatus_80084F54]   # 85B6C's (4 mod 8: parity break), 8744C's
+      - [0x358, .rodata, ststatus_8008833C]   # 89BF0's (0 mod 8: parity break), 8D684's, 8DDB0's
+      - [0x588, .rodata, ststatus_8008E94C]   # 90264's, 92BC8's
+      - [0x75C, .rodata, ststatus_800937A4]   # 94FBC's (4 mod 8: parity break)
+      - [0x840, .rodata, ststatus_80096590]   # 9744C's (0 mod 8: parity break)
+      - [0x8A8,   c, ststatus_80083558]   # 0x80083558 .text: update_main 83558, entry 83654, page 83680..84C48
+                                          # (create 84C48), its fade object 84C90..84F10 (only 84238 uses it)
+      - [0x22A4,  c, ststatus_80084F54]   # 0x80084F54 page 84F54..86450 (own copy 8519C; parity: position in
+                                          # 84238..85B6C, chosen after the fade, at the page's init), sub-page
+                                          # 86498..882C8 (created by 8DDB0; maybe its own file: no evidence)
+      - [0x568C,  c, ststatus_8008833C]   # 0x8008833C sub-page 8833C..8B4CC (created by 8DDB0), page
+                                          # 8B520..8E8F8 (own copy 8B944). Parity puts the start in 8744C..89BF0;
+                                          # chosen after 86498's group ends with its create 882C8 (position strong)
+      - [0xBC9C,  c, ststatus_8008E94C]   # 0x8008E94C page 8E94C..91E4C (own copy 8ED04: moderate) and its
+                                          # sub-page 91E94..93678 (uses 8F0DC/8F2B4/8F4E8/8F55C; 90264 creates it)
+                                          # and 936EC (data 9A890 shared with 90264)
+      - [0x10AF4, c, ststatus_800937A4]   # 0x800937A4 page 937A4..96548 (own copy 94144; helpers 937A4..93A58
+                                          # before its init, all called by 96380/94FBC). Parity: position in
+                                          # 92BC8..94FBC, after 936EC (position strong)
+      - [0x138E0, c, ststatus_80096590]   # 0x80096590 page 96590..9824C (own copy 96744; parity: position strong),
+                                          # page 98294..99324 (no helper copy), scroll bar object 99430..99684
+                                          # (as STCRDDEK 88874), root object 996EC..99A80 (the page table 9A988)
+                                          # (one file: nothing separates them)
+      - [0x16EBC, c, ststatus_80099B6C]   # 0x80099B6C stage module: helper table in ststatus_module (load,
+                                          # loaded?, window open/step, lerp start/step, ...), the same tail as
+                                          # STCRDDEK 8A100 and STDWTITL 86DF8; then 9A670..9A6B8 (table 9B6EC)
+                                          # (position moderate)
+      # .data per file in link order (tools/data_owners.py -t ststatus; DECISIONS "Overlay .data/.bss per file"); no
+      # .bss. Every boundary is forced by references (each page's tables are referenced by its own file only), and
+      # agrees with the .text split; the page table 9A988 (all the pages' creates) is referenced by the root object
+      # (96590's), the stage module's tables 9A9C0.. are reached through ststatus_module (99B6C's).
+      - [0x17AD4, .data, ststatus_80083558]   # 0x8009A784 (after the last function's jr ra)
+      - [0x17AE8, .data, ststatus_80084F54]   # 0x8009A798
+      - [0x17B4C, .data, ststatus_8008833C]   # 0x8009A7FC
+      - [0x17BE0, .data, ststatus_8008E94C]   # 0x8009A890
+      - [0x17C8C, .data, ststatus_800937A4]   # 0x8009A93C
+      - [0x17CB4, .data, ststatus_80096590]   # 0x8009A964
+      - [0x17D10, .data, ststatus_80099B6C]   # 0x8009A9C0
+  - [0x18A48]

@@ -1,0 +1,352 @@
+{
+ "family": "sprite_draw",
+ "comment": "sprite_draw without scale or rotation into a scratch packet buffer: one opaque 4-bit cell (the hand check); the frame search (ID 2 at position 2 of the list) with three cells drawn last to first, negative offsets, the frame's CLUT row and the palette, blend mode 0; a frame whose cells change texture page (4-bit u 0 and 256, 8-bit u 200: u & 0x7F, the 8-bit CLUT base) with a DR_TPAGE between them; blend mode 2.",
+ "generator": "tests/golden/families/sprite_draw.py",
+ "oracle": {
+  "method": "lua-calls: tests/golden/oracle.lua hijacks the game at pad_update (-debugger -interpreter)",
+  "emulator": {
+   "name": "pcsx-redux",
+   "version": "bf4c9ceb",
+   "build_id": 359,
+   "changeset": "bf4c9cebdd1c649dd006736bb012fc7f1d6fd988"
+  },
+  "bios": {
+   "name": "openbios",
+   "sha1": "8f1269a22179433c8b22b4c804f11c0a076450c5"
+  },
+  "tree_commit": "49aff93d32a47c1561895a1d04b8b1b8b332a935",
+  "resident": "CNTY_SEL loaded: the EXE's code and data are resident"
+ },
+ "fixtures": {
+  "fixture_0": [
+   {
+    "symbol": "sprite_current",
+    "offset": 0,
+    "field": "sprite_current = the `sprite` buffer",
+    "hex": "00001880"
+   },
+   {
+    "symbol": "gfx_module",
+    "offset": 32,
+    "field": "gfx_module.packet = the `packet` buffer",
+    "hex": "b0001880"
+   }
+  ],
+  "fixture_1": [
+   {
+    "symbol": "sprite_current",
+    "offset": 0,
+    "field": "sprite_current = the `sprite` buffer",
+    "hex": "00001880"
+   },
+   {
+    "symbol": "gfx_module",
+    "offset": 32,
+    "field": "gfx_module.packet = the `packet` buffer",
+    "hex": "00011880"
+   }
+  ],
+  "fixture_2": [
+   {
+    "symbol": "sprite_current",
+    "offset": 0,
+    "field": "sprite_current = the `sprite` buffer",
+    "hex": "00001880"
+   },
+   {
+    "symbol": "gfx_module",
+    "offset": 32,
+    "field": "gfx_module.packet = the `packet` buffer",
+    "hex": "e0001880"
+   }
+  ]
+ },
+ "cases": [
+  {
+   "name": "one_cell_opaque",
+   "comment": "one 4-bit cell, opaque: SPRT 0x64 at (110, 70), clut 0x7841, then DR_TPAGE 0xE100021A",
+   "fixture": "fixture_0",
+   "buffers": {
+    "sprite": "0000000070001880800200000001000000000000e001000000010000ea0100000000000000000000808080000000000000000000000000000010000000100000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "ot": "ffffff00",
+    "bank": "0c0000001c00000020000000080010002000180010000100000000000000000001000000ffff00000a001400",
+    "packet": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+   },
+   "saves": [
+    [
+     "sprite_current",
+     4
+    ],
+    [
+     "gfx_module",
+     36
+    ]
+   ],
+   "calls": [
+    {
+     "func": "sprite_draw",
+     "args": [
+      {
+       "buf": "bank"
+      },
+      0,
+      100,
+      50
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2147811328,
+     "comment": "one 4-bit cell, opaque: SPRT 0x64 at (110, 70), clut 0x7841, then DR_TPAGE 0xE100021A",
+     "reads": [
+      {
+       "symbol": "buf:packet",
+       "offset": 3,
+       "size": 17,
+       "field": "primitive 0: SPRT (length byte, then its words)",
+       "hex": "04808080646e0046000810417820001800"
+      },
+      {
+       "symbol": "buf:packet",
+       "offset": 23,
+       "size": 5,
+       "field": "primitive 1: DR_TPAGE (length byte, then its words)",
+       "hex": "011a0200e1"
+      },
+      {
+       "symbol": "buf:packet",
+       "offset": 28,
+       "size": 8,
+       "field": "the 8 bytes after the last primitive (0xEE: nothing more written)",
+       "hex": "eeeeeeeeeeeeeeee"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "search_third_frame",
+   "comment": "ID 2 is third in the list: frame 2's three cells, last first (u 252, 40, 8: one page), offsets -16/-8 and 30/-40, CLUT row 2 + palette 3 + cell rows, blend mode 0 (semi-transparent, code 0x66)",
+   "fixture": "fixture_1",
+   "buffers": {
+    "sprite": "0000000070001880800200000001000000000000e001000000010000ea0100000300000000000000406080000000000000000000000000000010000000100000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "ot": "ffffff00",
+    "bank": "140000004000000044000000500000005c00000008001000200018001000010000002800000010001000200000000000fc00c8000800080000000300000000000509020001000000ffff00000000000001000100ffff0100040004000300020000000000f0fff8ff01000000000002001e00d8ff",
+    "packet": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+   },
+   "saves": [
+    [
+     "sprite_current",
+     4
+    ],
+    [
+     "gfx_module",
+     36
+    ]
+   ],
+   "calls": [
+    {
+     "func": "sprite_draw",
+     "args": [
+      {
+       "buf": "bank"
+      },
+      2,
+      50,
+      60
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2147811328,
+     "comment": "ID 2 is third in the list: frame 2's three cells, last first (u 252, 40, 8: one page), offsets -16/-8 and 30/-40, CLUT row 2 + palette 3 + cell rows, blend mode 0 (semi-transparent, code 0x66)",
+     "reads": [
+      {
+       "symbol": "buf:packet",
+       "offset": 3,
+       "size": 17,
+       "field": "primitive 0: SPRT (length byte, then its words)",
+       "hex": "044060806650001400fcc8007a08000800"
+      },
+      {
+       "symbol": "buf:packet",
+       "offset": 23,
+       "size": 17,
+       "field": "primitive 1: SPRT (length byte, then its words)",
+       "hex": "044060806632003c002800427910001000"
+      },
+      {
+       "symbol": "buf:packet",
+       "offset": 43,
+       "size": 17,
+       "field": "primitive 2: SPRT (length byte, then its words)",
+       "hex": "0440608066220034000810817920001800"
+      },
+      {
+       "symbol": "buf:packet",
+       "offset": 63,
+       "size": 5,
+       "field": "primitive 3: DR_TPAGE (length byte, then its words)",
+       "hex": "011a0200e1"
+      },
+      {
+       "symbol": "buf:packet",
+       "offset": 68,
+       "size": 8,
+       "field": "the 8 bytes after the last primitive (0xEE: nothing more written)",
+       "hex": "eeeeeeeeeeeeeeee"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "page_change",
+   "comment": "cells drawn 8-bit u 200 (u0 72, page x 740 -> 11, 8-bit, CLUT base 256/490), 4-bit u 256 (u0 0, x 704 -> 11), 4-bit u 0 (x 640 -> 10): a DR_TPAGE of the previous page at each change, the last one at the end",
+   "fixture": "fixture_2",
+   "buffers": {
+    "sprite": "0000000070001880800200000001000000000000e001000000010000ea0100000000000000000000808080000000000000000000000000000010000000100000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "ot": "ffffff00",
+    "bank": "0c000000380000003c00000000000000100010000000000000000001200010001000100000000000c80040001800180020000200010000000700000003000000ffff000000000000010010000000020020000000",
+    "packet": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+   },
+   "saves": [
+    [
+     "sprite_current",
+     4
+    ],
+    [
+     "gfx_module",
+     36
+    ]
+   ],
+   "calls": [
+    {
+     "func": "sprite_draw",
+     "args": [
+      {
+       "buf": "bank"
+      },
+      7,
+      0,
+      0
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2147811328,
+     "comment": "cells drawn 8-bit u 200 (u0 72, page x 740 -> 11, 8-bit, CLUT base 256/490), 4-bit u 256 (u0 0, x 704 -> 11), 4-bit u 0 (x 640 -> 10): a DR_TPAGE of the previous page at each change, the last one at the end",
+     "reads": [
+      {
+       "symbol": "buf:packet",
+       "offset": 3,
+       "size": 17,
+       "field": "primitive 0: SPRT (length byte, then its words)",
+       "hex": "0480808064200000004840127b18001800"
+      },
+      {
+       "symbol": "buf:packet",
+       "offset": 23,
+       "size": 5,
+       "field": "primitive 1: DR_TPAGE (length byte, then its words)",
+       "hex": "019b0200e1"
+      },
+      {
+       "symbol": "buf:packet",
+       "offset": 31,
+       "size": 17,
+       "field": "primitive 2: SPRT (length byte, then its words)",
+       "hex": "0480808064100000000020017810001000"
+      },
+      {
+       "symbol": "buf:packet",
+       "offset": 51,
+       "size": 5,
+       "field": "primitive 3: DR_TPAGE (length byte, then its words)",
+       "hex": "011b0200e1"
+      },
+      {
+       "symbol": "buf:packet",
+       "offset": 59,
+       "size": 17,
+       "field": "primitive 4: SPRT (length byte, then its words)",
+       "hex": "0480808064000000000000007810001000"
+      },
+      {
+       "symbol": "buf:packet",
+       "offset": 79,
+       "size": 5,
+       "field": "primitive 5: DR_TPAGE (length byte, then its words)",
+       "hex": "011a0200e1"
+      },
+      {
+       "symbol": "buf:packet",
+       "offset": 84,
+       "size": 8,
+       "field": "the 8 bytes after the last primitive (0xEE: nothing more written)",
+       "hex": "eeeeeeeeeeeeeeee"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "blend_mode2",
+   "comment": "blend mode 2: code 0x66, page abr bits 0x40; x0 -10, y0 320 (no clipping)",
+   "fixture": "fixture_0",
+   "buffers": {
+    "sprite": "0000000070001880800200000001000000000000e001000000010000ea0100000000000000000000808080000000000000000000000000000010000000100000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "ot": "ffffff00",
+    "bank": "0c0000001c00000020000000080010002000180010000100000000000000000001000000020000000a001400",
+    "packet": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+   },
+   "saves": [
+    [
+     "sprite_current",
+     4
+    ],
+    [
+     "gfx_module",
+     36
+    ]
+   ],
+   "calls": [
+    {
+     "func": "sprite_draw",
+     "args": [
+      {
+       "buf": "bank"
+      },
+      0,
+      -20,
+      300
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2147811328,
+     "comment": "blend mode 2: code 0x66, page abr bits 0x40; x0 -10, y0 320 (no clipping)",
+     "reads": [
+      {
+       "symbol": "buf:packet",
+       "offset": 3,
+       "size": 17,
+       "field": "primitive 0: SPRT (length byte, then its words)",
+       "hex": "0480808066f6ff40010810417820001800"
+      },
+      {
+       "symbol": "buf:packet",
+       "offset": 23,
+       "size": 5,
+       "field": "primitive 1: DR_TPAGE (length byte, then its words)",
+       "hex": "015a0200e1"
+      },
+      {
+       "symbol": "buf:packet",
+       "offset": 28,
+       "size": 8,
+       "field": "the 8 bytes after the last primitive (0xEE: nothing more written)",
+       "hex": "eeeeeeeeeeeeeeee"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

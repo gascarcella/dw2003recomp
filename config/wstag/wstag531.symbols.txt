@@ -1,0 +1,11 @@
+// WSTAG531 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag531_update = 0x800A5DE0; // type:func
+wstag531_start = 0x800A5E28; // type:func
+wstag531_setup = 0x800A5E84; // type:func
+wstag531_battle_lists = 0x800A61A8;
+wstag531_vram_places = 0x800A61C4;
+wstag531_actors = 0x800A6368;
+wstag531_sprites = 0x800A6380;
+wstag531_map_events = 0x800A6664;
+wstag531_funcs = 0x800A66F4;
+wstag531_events = 0x800A66F8;

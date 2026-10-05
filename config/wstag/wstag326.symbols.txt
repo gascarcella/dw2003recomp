@@ -1,0 +1,16 @@
+// WSTAG326 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag326_sprite_switch_update = 0x800A5DE0; // type:func
+wstag326_sprite_switch_create = 0x800A5F60; // type:func
+wstag326_sprite_switch_message = 0x800A5F90; // type:func
+wstag326_update = 0x800A5FC8; // type:func
+wstag326_start = 0x800A6068; // type:func
+wstag326_event_1281_end = 0x800A60C4; // type:func
+wstag326_event_1282_end = 0x800A6110; // type:func
+wstag326_setup = 0x800A615C; // type:func
+wstag326_battle_lists = 0x800A65B0;
+wstag326_vram_places = 0x800A65CC;
+wstag326_actors = 0x800A6794;
+wstag326_sprites = 0x800A67A4;
+wstag326_map_events = 0x800A68C4;
+wstag326_funcs = 0x800A68F4;
+wstag326_events = 0x800A68F8;

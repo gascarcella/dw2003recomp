@@ -1,0 +1,64 @@
+// Symbol names for AAA/PRO/STGMCARD.PRO (splat format). Tier-1 overlays share one address range,
+// so each overlay has its own symbol file; the EXE's names come from config/symbol_addrs.txt.
+
+// Game code: module structs and tables that splat would otherwise label inside (DECISIONS "Module state structs")
+stgmcard_module = 0x80088768; // size:0x38
+stgmcard_icon_clut = 0x800887A0;
+stgmcard_icon_frame_0 = 0x800887C0;
+stgmcard_icon_frame_1 = 0x80088840;
+stgmcard_icon_frame_2 = 0x800888C0;
+stgmcard_icon = 0x80088940;
+stgmcard_contents_windows = 0x80088088; // size:0x17C
+stgmcard_party_anims = 0x80088204; // size:0xE0
+stgmcard_slot_icons = 0x800882E4;
+stgmcard_slot_x = 0x80088304;
+stgmcard_status_messages = 0x80088310;
+stgmcard_map_names = 0x8008833C;
+stgmcard_map_areas = 0x800883A4;
+
+// Game code: names (DECISIONS "Naming conventions")
+stgmcard_root_update = 0x80082CD0; // type:func
+stgmcard_create_root = 0x80082DC8; // type:func
+stgmcard_fade_start = 0x80082DF4; // type:func
+stgmcard_fade_draw = 0x80082E7C; // type:func
+stgmcard_fade_update = 0x80082FC0; // type:func
+stgmcard_fade_create = 0x80083074; // type:func
+stgmcard_contents_open = 0x800830B8; // type:func
+stgmcard_contents_close = 0x800830E0; // type:func
+stgmcard_contents_fill = 0x8008316C; // type:func
+stgmcard_contents_update = 0x800836C4; // type:func
+stgmcard_contents_create = 0x80083B6C; // type:func
+stgmcard_frame_close = 0x80083BD8; // type:func
+stgmcard_frame_open = 0x80083C0C; // type:func
+stgmcard_frame_set_left_color = 0x80083C1C; // type:func
+stgmcard_frame_set_right_color = 0x80083C30; // type:func
+stgmcard_frame_set_pos = 0x80083C44; // type:func
+stgmcard_frame_update = 0x80083C50; // type:func
+stgmcard_frame_create = 0x80084058; // type:func
+stgmcard_slots_show = 0x8008410C; // type:func
+stgmcard_slots_select = 0x80084194; // type:func
+stgmcard_slots_hide = 0x800841FC; // type:func
+stgmcard_slots_move_cursor = 0x80084240; // type:func
+stgmcard_slots_open = 0x800842A0; // type:func
+stgmcard_slots_close = 0x800842E4; // type:func
+stgmcard_slots_reset = 0x80084328; // type:func
+stgmcard_slots_update = 0x800843D8; // type:func
+stgmcard_slots_create = 0x800849F0; // type:func
+stgmcard_screen_show_port = 0x80084A80; // type:func
+stgmcard_screen_report = 0x80084B20; // type:func
+stgmcard_screen_report_after_slots = 0x80084BF8; // type:func
+stgmcard_screen_refill = 0x80084C70; // type:func
+stgmcard_screen_close = 0x80084CA8; // type:func
+stgmcard_screen_run = 0x80084DCC; // type:func
+stgmcard_screen_draw = 0x80087368; // type:func
+stgmcard_screen_update = 0x80087534; // type:func
+stgmcard_screen_create = 0x80087798; // type:func
+stgmcard_main_update = 0x800877F0; // type:func
+stgmcard_main_create = 0x80087B08; // type:func
+stgmcard_init_save_header = 0x80087C18; // type:func
+stgmcard_is_loading = 0x80087DF0; // type:func
+stgmcard_free_buffers = 0x80087E78; // type:func
+stgmcard_start_fade = 0x80087EDC; // type:func
+stgmcard_update_fade = 0x80087F70; // type:func
+stgmcard_start_value = 0x80087FDC; // type:func
+stgmcard_step_value = 0x8008801C; // type:func

@@ -1,0 +1,11 @@
+// WSTAG360 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag360_update = 0x800A5DE0; // type:func
+wstag360_start = 0x800A5E28; // type:func
+wstag360_event_1457_end = 0x800A5E84; // type:func
+wstag360_setup = 0x800A5EB0; // type:func
+wstag360_vram_places = 0x800A601C;
+wstag360_actors = 0x800A6484;
+wstag360_sprites = 0x800A64C8;
+wstag360_map_events = 0x800A66E4;
+wstag360_funcs = 0x800A675C;
+wstag360_events = 0x800A6760;

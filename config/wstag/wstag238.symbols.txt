@@ -1,0 +1,8 @@
+// WSTAG238 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag238_update = 0x800A5DE0; // type:func
+wstag238_start = 0x800A5E28; // type:func
+wstag238_setup = 0x800A5E84; // type:func
+wstag238_vram_places = 0x800A5F5C;
+wstag238_sprites = 0x800A5FBC;
+wstag238_map_events = 0x800A6070;
+wstag238_funcs = 0x800A6100;

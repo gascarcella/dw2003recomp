@@ -1,0 +1,14 @@
+# Python tooling for the decomp (installed into tools/venv by scripts/setup.sh).
+splat64[mips]==0.50.0
+spimdisasm==1.42.4
+rabbitizer==1.16.2
+crunch64==0.6.2
+PyYAML==6.0.3
+pycparser==2.22
+colorama==0.4.6
+# Used by the pinned git tools in tools/ext (scripts/setup.sh "ext" step).
+graphviz==0.20.3        # m2c (requires ~=0.20.1)
+watchdog==6.0.0         # asm-differ
+levenshtein==0.27.5     # asm-differ, decomp-permuter
+cxxfilt==0.3.0          # asm-differ
+toml==0.10.2            # decomp-permuter

@@ -1,0 +1,14 @@
+// WSTAG954 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag954_anim_loop = 0x800A5DE0; // type:func
+wstag954_anim1_update = 0x800A5ED4; // type:func
+wstag954_anim1_create = 0x800A5FA8; // type:func
+wstag954_update = 0x800A5FD4; // type:func
+wstag954_start = 0x800A6038; // type:func
+wstag954_setup = 0x800A6094; // type:func
+D_WSTAG954_800A61A4 = 0x800A61A4; // size:0x8C
+wstag954_vram_places = 0x800A6230;
+wstag954_actors = 0x800A6444;
+wstag954_sprites = 0x800A6458;
+wstag954_map_events = 0x800A64D8;
+wstag954_funcs = 0x800A6610;
+wstag954_battle_lists = 0x800A6824;

@@ -1,0 +1,10 @@
+// WSTAG430 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag430_update = 0x800A5DE0; // type:func
+wstag430_start = 0x800A5E28; // type:func
+wstag430_setup = 0x800A5E84; // type:func
+wstag430_vram_places = 0x800A5FF0;
+wstag430_actors = 0x800A6874;
+wstag430_sprites = 0x800A6904;
+wstag430_map_events = 0x800A6A38;
+wstag430_funcs = 0x800A6A80;
+wstag430_events = 0x800A6A84;

@@ -1,0 +1,11 @@
+// WSTAG946 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag946_update = 0x800A5DE0; // type:func
+wstag946_start = 0x800A5E28; // type:func
+wstag946_event_1648_end = 0x800A5E84; // type:func
+wstag946_setup = 0x800A5EB0; // type:func
+wstag946_vram_places = 0x800A5FA8;
+wstag946_actors = 0x800A6114;
+wstag946_sprites = 0x800A612C;
+wstag946_map_events = 0x800A6348;
+wstag946_funcs = 0x800A63C0;
+wstag946_events = 0x800A63C4;

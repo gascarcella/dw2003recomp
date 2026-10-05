@@ -1,0 +1,10 @@
+// WSTAG931 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag931_update = 0x800A5DE0; // type:func
+wstag931_start = 0x800A5E28; // type:func
+wstag931_setup = 0x800A5E84; // type:func
+wstag931_vram_places = 0x800A5F7C;
+wstag931_actors = 0x800A61A0;
+wstag931_sprites = 0x800A61BC;
+wstag931_map_events = 0x800A62A8;
+wstag931_funcs = 0x800A6350;
+wstag931_events = 0x800A6354;

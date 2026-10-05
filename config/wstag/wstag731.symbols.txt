@@ -1,0 +1,14 @@
+// WSTAG731 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag731_anim_loop = 0x800A5DE0; // type:func
+wstag731_anim1_update = 0x800A5ED4; // type:func
+wstag731_anim1_create = 0x800A5F94; // type:func
+wstag731_update = 0x800A5FC0; // type:func
+wstag731_start = 0x800A6024; // type:func
+wstag731_setup = 0x800A6080; // type:func
+D_WSTAG731_800A61E4 = 0x800A61E4; // size:0x1C
+wstag731_vram_places = 0x800A6200;
+wstag731_actors = 0x800A67BC;
+wstag731_sprites = 0x800A67F0;
+wstag731_map_events = 0x800A6948;
+wstag731_funcs = 0x800A6978;
+wstag731_events = 0x800A697C;

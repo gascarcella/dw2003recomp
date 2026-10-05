@@ -1,0 +1,11 @@
+// WSTAG940 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag940_color = 0x800A5DE0;
+wstag940_update = 0x800A5DE4; // type:func
+wstag940_start = 0x800A5E2C; // type:func
+wstag940_setup = 0x800A5E88; // type:func
+wstag940_vram_places = 0x800A5FB4;
+wstag940_actors = 0x800A637C;
+wstag940_sprites = 0x800A63A4;
+wstag940_map_events = 0x800A6CB8;
+wstag940_funcs = 0x800A6EF8;
+wstag940_battle_lists = 0x800A710C;

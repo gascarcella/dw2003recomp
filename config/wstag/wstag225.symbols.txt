@@ -1,0 +1,17 @@
+// WSTAG225 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag225_sprite_anim_play_once = 0x800A5DE0; // type:func
+wstag225_sprite_anim_reset = 0x800A5EB8; // type:func
+wstag225_sprite_anim_update = 0x800A5EF0; // type:func
+wstag225_sprite_anim_message = 0x800A6174; // type:func
+wstag225_sprite_anim_create = 0x800A61E0; // type:func
+wstag225_sprite_anim_new = 0x800A6210; // type:func
+wstag225_update = 0x800A623C; // type:func
+wstag225_start = 0x800A62B4; // type:func
+wstag225_event_5_end = 0x800A6310; // type:func
+wstag225_setup = 0x800A6320; // type:func
+wstag225_vram_places = 0x800A6648;
+wstag225_actors = 0x800A69F0;
+wstag225_sprites = 0x800A6A34;
+wstag225_map_events = 0x800A6B0C;
+wstag225_funcs = 0x800A6B3C;
+wstag225_events = 0x800A6B40;

@@ -1,0 +1,40 @@
+// Symbol names for AAA/PRO/CNTY_SEL.PRO (splat format). Tier-1 overlays share one address range,
+// so each overlay has its own symbol file; the EXE's names come from config/symbol_addrs.txt.
+
+// Functions (src/cnty_sel/cnty_sel_80082CE8.c)
+cnty_sel_update_root = 0x80082CE8; // type:func
+cnty_sel_start = 0x80082E8C; // type:func
+cnty_sel_draw_bg = 0x80082EF0; // type:func
+cnty_sel_get_fade_level = 0x80082FC4; // type:func
+cnty_sel_draw_fade = 0x80083000; // type:func
+cnty_sel_update_bg = 0x80083184; // type:func
+cnty_sel_create_bg = 0x800832D8; // type:func
+cnty_sel_step_anim = 0x80083304; // type:func
+cnty_sel_draw_cursor = 0x800833DC; // type:func
+cnty_sel_set_cursor = 0x80083474; // type:func
+cnty_sel_update_cursor = 0x8008347C; // type:func
+cnty_sel_create_cursor = 0x80083594; // type:func
+cnty_sel_get_top_panel_scale = 0x800835CC; // type:func
+cnty_sel_draw_top_panel = 0x80083630; // type:func
+cnty_sel_update_top_panel = 0x800836DC; // type:func
+cnty_sel_create_top_panel = 0x80083804; // type:func
+cnty_sel_get_right_panel_scale = 0x80083830; // type:func
+cnty_sel_draw_right_panel = 0x80083894; // type:func
+cnty_sel_update_right_panel = 0x80083940; // type:func
+cnty_sel_create_right_panel = 0x80083A68; // type:func
+cnty_sel_get_bottom_panel_scale = 0x80083A94; // type:func
+cnty_sel_draw_bottom_panel = 0x80083B00; // type:func
+cnty_sel_update_bottom_panel = 0x80083BC0; // type:func
+cnty_sel_create_bottom_panel = 0x80083CEC; // type:func
+cnty_sel_update_menu = 0x80083D18; // type:func
+cnty_sel_create_menu = 0x80084394; // type:func
+cnty_sel_screen_rect = 0x800843C0;
+cnty_sel_vram_rect = 0x800843C8;
+cnty_sel_fade_rect = 0x800843D0;
+
+// Tables (splat writes base + offset for accesses inside them).
+cnty_sel_cursor_frames = 0x800843D8; // size:0x14
+cnty_sel_top_panel_zoom = 0x800843EC;
+cnty_sel_right_panel_zoom = 0x800843FC;
+cnty_sel_bottom_panel_zoom = 0x8008440C;
+cnty_sel_languages = 0x80084424;

@@ -1,0 +1,1472 @@
+{
+ "family": "wfightmn_enemy_ai",
+ "comment": "The enemy's choice on the fightstg_rules fixture: fightstg_enemy_check_condition's conditions at their boundaries (the RNG roll, the truncated HP thresholds, the party's Digimon list, another member, turns), fightstg_enemy_get_action's mapping and record lookup, fightstg_enemy_turn_find_target's call rules.",
+ "generator": "tests/golden/families/wfightmn_enemy_ai.py",
+ "oracle": {
+  "method": "lua-calls: tests/golden/oracle.lua hijacks the game at pad_update (-debugger -interpreter)",
+  "emulator": {
+   "name": "pcsx-redux",
+   "version": "bf4c9ceb",
+   "build_id": 359,
+   "changeset": "bf4c9cebdd1c649dd006736bb012fc7f1d6fd988"
+  },
+  "bios": {
+   "name": "openbios",
+   "sha1": "8f1269a22179433c8b22b4c804f11c0a076450c5"
+  },
+  "tree_commit": "49aff93d32a47c1561895a1d04b8b1b8b332a935",
+  "resident": "CNTY_SEL loaded: the EXE's code and data are resident"
+ },
+ "fixtures": {
+  "fixture_0": [
+   {
+    "symbol": "0x80082CB0",
+    "offset": 0,
+    "field": "overlay slot: FIGHTSTG.PRO",
+    "file": "extracted/disc/AAA/PRO/FIGHTSTG.PRO",
+    "size": 137968,
+    "sha1": "e56575e2066cf1898ac930f79d31b8a48674b8f9"
+   },
+   {
+    "symbol": "0x80190000",
+    "offset": 0,
+    "field": "SDIGIEDT.PRO, the enemy records (file 0x1CF)",
+    "file": "extracted/disc/AAA/PRO/SDIGIEDT.PRO",
+    "size": 13580,
+    "sha1": "79959dba99604edfbeabe2e66db7d7a15d1b8a3b"
+   },
+   {
+    "symbol": "cdload_module",
+    "offset": 1012,
+    "field": "cdload_module.entries[63] = {state 3 (loaded), id 0x1CF, buffer -> the file above}",
+    "hex": "03000000cf0100000000000000001980"
+   }
+  ],
+  "fixture_1": [
+   {
+    "symbol": "gamestate_data",
+    "offset": 112,
+    "field": "party = {0, 3, -1} (records_digimon indexes)",
+    "hex": "0000000003000000ffffffff"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 1924,
+    "field": "digimon[0].record.stats: level 20, HP 300/300, MP 100/100, stats [80, 60, 70, 90, 75, 10], resists [100, 100, 100, 100, 100, 100, 100]",
+    "hex": "140000002c012c016400640050003c0046005a004b000a006400640064006400640064006400000000000000"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 2856,
+    "field": "digimon[0].record.equipment = [0, 0, 0, 0, 0, 0]",
+    "hex": "000000000000000000000000"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 4888,
+    "field": "digimon[3].record.stats: level 25, HP 350/350, MP 120/120, stats [95, 70, 60, 80, 90, 20], resists [120, 80, 100, 100, 60, 150, 90]",
+    "hex": "190000005e015e01780078005f0046003c0050005a00140078005000640064003c0096005a00000000000000"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 5820,
+    "field": "digimon[3].record.equipment = [0, 0, 0, 0, 0, 0]",
+    "hex": "000000000000000000000000"
+   },
+   {
+    "symbol": "fightstg_battle",
+    "offset": 8,
+    "field": "fightstg_battle.state: current {0,0}; members[0] Kotemon 300 HP, #3 350 HP; members[1] 0x20 400 HP, 0xD9 800 HP (item 357)",
+    "hex": "00000000000000007f017f0100002c012c016400640000000000000000000000ffff0000000000000300030000005e015e017800780000000000000000000000ffff000000000000000000000000000000000000000000000000000000000000ffff000000000000200020000000900190013200320000000000000000000000ffff000000000000d900d90000002003200364006400000000000000000000006501000000000000000000000000000000000000000000000000000000000000ffff000000000000000000000000000000000000"
+   },
+   {
+    "symbol": "records_state",
+    "offset": 24,
+    "field": "records_state.enemies: 0x20 level 18 scale 16; 0xD9 level 30 scale 24",
+    "hex": "200000001200900132001000d90000001e00200364001800000000000000000000000000"
+   },
+   {
+    "symbol": "records_state",
+    "offset": 62,
+    "field": "records_state.blocked = all 0",
+    "hex": "000000000000000000000000"
+   },
+   {
+    "symbol": "fightstg_rules",
+    "offset": 0,
+    "field": "fightstg_rules.stats[2] = 0 (the function table after them stays)",
+    "hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+   },
+   {
+    "symbol": "pad_random",
+    "offset": 0,
+    "field": "pad_random.index = 0",
+    "hex": "00000000"
+   }
+  ]
+ },
+ "cases": [
+  {
+   "name": "setup_fightstg",
+   "comment": "setup, kept for the family: the overlay and the enemy file; nothing is restored",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "fightstg_rules_get_field_bonus",
+     "args": [
+      1000,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "smoke: no field element yet (the slot's data is the file's), so 0"
+    }
+   ]
+  },
+  {
+   "name": "cond1_roll_under",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_check_condition",
+     "args": [
+      1,
+      32
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "next() % 128 = 31 < 32: 1",
+     "writes": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "field": "pad_random.index = 75",
+       "hex": "4b000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "4c000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "cond1_roll_equal",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_check_condition",
+     "args": [
+      1,
+      32
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "next() % 128 = 32: 0",
+     "writes": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "field": "pad_random.index = 25",
+       "hex": "19000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "1a000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "cond2_hp_under",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_check_condition",
+     "args": [
+      2,
+      26
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "450 / 100 * (26 * 100 / 128) = 80 > 79: 1",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 112,
+       "field": "members[1][0] = {'digimon': 32, 'max_hp': 450, 'max_mp': 50, 'hp': 79}",
+       "hex": "200020000000c2014f003200320000000000000000000000ffff000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "cond2_hp_at",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_check_condition",
+     "args": [
+      2,
+      26
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "80 > 80 is false: 0 (an exact 91 or 90 would say 1)",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 112,
+       "field": "members[1][0] = {'digimon': 32, 'max_hp': 450, 'max_mp': 50, 'hp': 80}",
+       "hex": "200020000000c20150003200320000000000000000000000ffff000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "cond2_small_max",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_check_condition",
+     "args": [
+      2,
+      26
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "max_hp 99: 99 / 100 = 0, 0 > 0 is false even at hp 0",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 112,
+       "field": "members[1][0] = {'digimon': 32, 'max_hp': 99, 'max_mp': 50, 'hp': 0}",
+       "hex": "200020000000630000003200320000000000000000000000ffff000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "cond3_hp_at",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_check_condition",
+     "args": [
+      3,
+      26
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "80 <= 80: 1",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 112,
+       "field": "members[1][0] = {'digimon': 32, 'max_hp': 450, 'max_mp': 50, 'hp': 80}",
+       "hex": "200020000000c20150003200320000000000000000000000ffff000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "cond6_party_hp",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_check_condition",
+     "args": [
+      6,
+      64
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "the party's member: 300 / 100 * 50 = 150 > 149: 1 (the enemy's 400/400 would be 0)",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 16,
+       "field": "members[0][0] = {'digimon': 383, 'max_hp': 300, 'max_mp': 100, 'hp': 149}",
+       "hex": "7f017f0100002c0195006400640000000000000000000000ffff000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "cond8_index7",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_check_condition",
+     "args": [
+      8,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "party Digimon 0x1F = records_digimon[7].id: 1",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 16,
+       "field": "members[0][0] = {'digimon': 31, 'max_hp': 300, 'max_mp': 100}",
+       "hex": "1f001f0000002c012c016400640000000000000000000000ffff000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "cond8_index8",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_check_condition",
+     "args": [
+      8,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "party Digimon 0x182 = records_digimon[8].id: past the 8 searched, 0",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 16,
+       "field": "members[0][0] = {'digimon': 386, 'max_hp': 300, 'max_mp': 100}",
+       "hex": "8201820100002c012c016400640000000000000000000000ffff000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "cond10_other",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_check_condition",
+     "args": [
+      10,
+      217
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "enemy 1 is 0xD9, alive: 1",
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "cond10_self",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_check_condition",
+     "args": [
+      10,
+      32
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "0x20 is the current member itself (slot 0), not counted: 0",
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "cond10_any_dead",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_check_condition",
+     "args": [
+      10,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "value 0 (any), the only other member at 0 HP: 0",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 144,
+       "field": "members[1][1] = {'digimon': 217, 'max_hp': 800, 'max_mp': 100, 'item': 357, 'hp': 0}",
+       "hex": "d900d90000002003000064006400000000000000000000006501000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "cond18_turn0",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_check_condition",
+     "args": [
+      18,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "turns 0: 0 % 2 == 0: 1",
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "cond18_turn3",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_check_condition",
+     "args": [
+      18,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "turns 3: 3 % 2 = 1: 0",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 112,
+       "field": "members[1][0] = {'digimon': 32, 'max_hp': 400, 'max_mp': 50, 'turns': 3}",
+       "hex": "200020000300900190013200320000000000000000000000ffff000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "action_tech2_current1",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_get_action",
+     "args": [
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 182,
+     "v0": 182,
+     "comment": "type 2, current enemy 1 (0xD9): its record's tech_2, 182",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 8,
+       "field": "state.current = {0, 1}",
+       "hex": "0000000001000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "action_call_any",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_get_action",
+     "args": [
+      8
+     ],
+     "ret_type": "s32",
+     "ret": -5,
+     "v0": 4294967291,
+     "comment": "type 8: -5 (call any member); 4..8 are -1..-5"
+    }
+   ]
+  },
+  {
+   "name": "call_member1",
+   "comment": "FightstgEnemyTurn.action = -3",
+   "fixture": "fixture_1",
+   "buffers": {
+    "enemy_turn": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fdffffff00000000"
+   },
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_turn_find_target",
+     "args": [
+      {
+       "buf": "enemy_turn"
+      }
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "action -3: member 1 (0xD9) alive, another Digimon: 1",
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "call_same_digimon",
+   "comment": "FightstgEnemyTurn.action = -3",
+   "fixture": "fixture_1",
+   "buffers": {
+    "enemy_turn": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fdffffff00000000"
+   },
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_turn_find_target",
+     "args": [
+      {
+       "buf": "enemy_turn"
+      }
+     ],
+     "ret_type": "s32",
+     "ret": -1,
+     "v0": 4294967295,
+     "comment": "action -3: member 1 is a second 0x20, the current member's Digimon: -1",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 144,
+       "field": "members[1][1] = {'digimon': 32, 'max_hp': 800, 'max_mp': 100, 'item': 357}",
+       "hex": "2000200000002003200364006400000000000000000000006501000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "call_any_one",
+   "comment": "FightstgEnemyTurn.action = -5",
+   "fixture": "fixture_1",
+   "buffers": {
+    "enemy_turn": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fbffffff00000000"
+   },
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_turn_find_target",
+     "args": [
+      {
+       "buf": "enemy_turn"
+      }
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "action -5: one other live member (1): 1, no draw",
+     "writes": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "field": "pad_random.index = 1",
+       "hex": "01000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "01000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "call_any_two",
+   "comment": "FightstgEnemyTurn.action = -5",
+   "fixture": "fixture_1",
+   "buffers": {
+    "enemy_turn": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fbffffff00000000"
+   },
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_enemy_turn_find_target",
+     "args": [
+      {
+       "buf": "enemy_turn"
+      }
+     ],
+     "ret_type": "s32",
+     "ret": 2,
+     "v0": 2,
+     "comment": "action -5: members 1 and 2: found[next() & 1], draw 1151: 2",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 176,
+       "field": "members[1][2] = {'digimon': 3, 'max_hp': 200, 'max_mp': 10}",
+       "hex": "030003000000c800c8000a000a0000000000000000000000ffff000000000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "field": "pad_random.index = 1",
+       "hex": "01000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "02000000"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

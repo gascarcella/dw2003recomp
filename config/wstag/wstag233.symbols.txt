@@ -1,0 +1,13 @@
+// WSTAG233 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag233_anim_loop = 0x800A5DE0; // type:func
+wstag233_anim2_update = 0x800A5ED4; // type:func
+wstag233_anim2_create = 0x800A5FCC; // type:func
+wstag233_update = 0x800A5FF8; // type:func
+wstag233_start = 0x800A605C; // type:func
+wstag233_setup = 0x800A60B8; // type:func
+D_WSTAG233_800A61C8 = 0x800A61C8; // size:0x50
+D_WSTAG233_800A6218 = 0x800A6218; // size:0x50
+wstag233_battle_lists = 0x800A6478;
+wstag233_vram_places = 0x800A6494;
+wstag233_sprites = 0x800A64F4;
+wstag233_funcs = 0x800A664C;

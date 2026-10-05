@@ -1,0 +1,12 @@
+// WSTAG340 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag340_color = 0x800A5DE0;
+wstag340_update = 0x800A5DE4; // type:func
+wstag340_start = 0x800A5E2C; // type:func
+wstag340_setup = 0x800A5E88; // type:func
+wstag340_battle_lists = 0x800A64C8;
+wstag340_vram_places = 0x800A6500;
+wstag340_actors = 0x800A67C4;
+wstag340_sprites = 0x800A67DC;
+wstag340_map_events = 0x800A6AF4;
+wstag340_funcs = 0x800A6B9C;
+wstag340_events = 0x800A6BA0;

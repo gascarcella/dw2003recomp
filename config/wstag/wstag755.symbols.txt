@@ -1,0 +1,14 @@
+// WSTAG755 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag755_color = 0x800A5DE0;
+wstag755_update = 0x800A5DE4; // type:func
+wstag755_start = 0x800A5E6C; // type:func
+wstag755_event_780_end = 0x800A5EC8; // type:func
+wstag755_event_781_end = 0x800A5F14; // type:func
+wstag755_setup = 0x800A5F4C; // type:func
+wstag755_battle_lists = 0x800A63F8;
+wstag755_vram_places = 0x800A6414;
+wstag755_actors = 0x800A67B8;
+wstag755_sprites = 0x800A67F0;
+wstag755_map_events = 0x800A697C;
+wstag755_funcs = 0x800A6A6C;
+wstag755_events = 0x800A6A70;

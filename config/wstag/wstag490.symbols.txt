@@ -1,0 +1,16 @@
+// WSTAG490 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag490_color = 0x800A5DE0;
+wstag490_update = 0x800A5DE4; // type:func
+wstag490_start = 0x800A5EC8; // type:func
+wstag490_event_1267_end = 0x800A5F24; // type:func
+wstag490_event_1268_end = 0x800A5F70; // type:func
+wstag490_event_1277_end = 0x800A5FBC; // type:func
+wstag490_event_1278_end = 0x800A6008; // type:func
+wstag490_setup = 0x800A6054; // type:func
+wstag490_battle_lists = 0x800A6584;
+wstag490_vram_places = 0x800A65A0;
+wstag490_actors = 0x800A687C;
+wstag490_sprites = 0x800A68A4;
+wstag490_map_events = 0x800A6E34;
+wstag490_funcs = 0x800A6F24;
+wstag490_events = 0x800A6F28;

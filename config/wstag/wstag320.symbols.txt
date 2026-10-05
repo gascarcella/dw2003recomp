@@ -1,0 +1,13 @@
+// WSTAG320 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag320_color = 0x800A5DE0;
+wstag320_update = 0x800A5DE4; // type:func
+wstag320_start = 0x800A5E88; // type:func
+wstag320_event_290_end = 0x800A5EE4; // type:func
+wstag320_setup = 0x800A5F10; // type:func
+wstag320_battle_lists = 0x800A63B0;
+wstag320_vram_places = 0x800A63CC;
+wstag320_actors = 0x800A6858;
+wstag320_sprites = 0x800A689C;
+wstag320_map_events = 0x800A71B0;
+wstag320_funcs = 0x800A7270;
+wstag320_events = 0x800A7274;

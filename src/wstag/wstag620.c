@@ -1,0 +1,998 @@
+#include "wstag.h"
+
+/* WSTAG620: stage 0x255 (fieldstg_stages). */
+
+/* An object that runs four sprite animations (types 1-4). */
+typedef struct WstagAnimSlotObject {
+    /* 0x00 */ Object base;
+    /* 0x50 */ WstagAnimSlot slots[4];
+} WstagAnimSlotObject; /* size 0x80 */
+
+extern WstagAnimEntry D_WSTAG620_800A7648[4][4];
+extern WstagFuncs wstag620_funcs;
+extern FieldstgBattleLists wstag620_battle_lists;
+extern FieldstgVramPlace wstag620_vram_places[];
+extern FieldstgPlacedActor *wstag620_actors[];
+extern FieldstgSprite wstag620_sprites[];
+extern FieldstgMapEvent wstag620_map_events[];
+extern FieldstgEventDef wstag620_events[];
+void wstag620_update();
+void wstag620_anim_slot_update(WstagAnimSlotObject *obj);
+
+s32 wstag620_slot_anim_advance(WstagAnimSlot *slot, WstagAnimKey *keys, s32 once, s32 depth) {
+    WstagAnimKey *key = &keys[slot->anim.key];
+    s32 step = gfx_module.funcs.get_frame_ticks();
+
+    if (step >= 5) {
+        step = 4;
+    }
+    if (depth == 0) {
+        slot->anim.time -= step;
+    }
+    if (slot->anim.time <= 0) {
+        key++;
+        slot->anim.key++;
+        slot->anim.time += key->time;
+        if (once) {
+            if (key->frame == 0xFF) {
+                return 0xFF;
+            }
+        } else if (key->frame == 0xFF) {
+            key = keys;
+            slot->anim.key = 0;
+            slot->anim.time += key->time;
+        }
+        wstag620_slot_anim_advance(slot, keys, once, depth + 1);
+    }
+    return key->frame;
+}
+
+void wstag620_anim_slot_update(WstagAnimSlotObject *obj) {
+    FieldstgSprite *sprite;
+    s32 i;
+    s32 frame;
+    s32 n;
+    FieldstgSprite *spr;
+
+    switch (obj->base.state) {
+    case OBJECT_STATE_INIT:
+    default:
+        obj->base.next_state(obj);
+        n = 0;
+        for (spr = fieldstg_stage.sprites; spr->present != 0; spr++) {
+            if (spr->type - 1 < 4U) {
+                obj->slots[n++].sprite = spr;
+            }
+        }
+        obj->slots[3].sets_sprite = 1;
+        obj->slots[3].sound_pending = 1;
+        obj->slots[0].entry = 2;
+        obj->slots[1].entry = 2;
+        obj->slots[0].sets_sprite = 0;
+        obj->slots[1].sets_sprite = 0;
+        obj->slots[2].sets_sprite = 0;
+        obj->slots[2].entry = 1;
+        obj->slots[3].entry = 1;
+        obj->slots[0].anim.key = 0;
+        obj->slots[0].anim.time = D_WSTAG620_800A7648[0][2].keys[0].time;
+        obj->slots[1].anim.key = 0;
+        obj->slots[1].anim.time = D_WSTAG620_800A7648[1][2].keys[0].time;
+        obj->slots[2].anim.key = 0;
+        obj->slots[2].anim.time = D_WSTAG620_800A7648[2][1].keys[0].time;
+        obj->slots[3].anim.key = 0;
+        obj->slots[3].anim.time = D_WSTAG620_800A7648[3][1].keys[0].time;
+        break;
+    case OBJECT_STATE_RUN:
+        for (i = 0; i < 4; i++) {
+            sprite = obj->slots[i].sprite;
+            if (obj->slots[i].entry != 0) {
+                frame = wstag620_slot_anim_advance(&obj->slots[i], D_WSTAG620_800A7648[i][obj->slots[i].entry].keys,
+                                               D_WSTAG620_800A7648[i][obj->slots[i].entry].once, 0);
+                switch (frame) {
+                case 0xFF:
+                    if (D_WSTAG620_800A7648[i][obj->slots[i].entry].next == 0) {
+                        obj->slots[i].entry = 0;
+                        sprite->shown = 0;
+                    } else {
+                        obj->slots[i].entry = D_WSTAG620_800A7648[i][obj->slots[i].entry].next;
+                        obj->slots[i].anim.key = 0;
+                        obj->slots[i].anim.time = D_WSTAG620_800A7648[i][obj->slots[i].entry].keys[0].time;
+                    }
+                    break;
+                case 0x12C:
+                    sprite->shown = 0;
+                    break;
+                default:
+                    sprite->shown = 1;
+                    if (obj->slots[i].sets_sprite == 0) {
+                        sprite->frame = frame;
+                    } else {
+                        if (frame == 0x34 && obj->slots[i].sound_pending == 1) {
+                            sound_module.play(0x540001);
+                            obj->slots[i].sound_pending = 0;
+                        }
+                        sprite->sprite = frame;
+                    }
+                    break;
+                }
+            } else {
+                sprite->shown = 0;
+            }
+        }
+        break;
+    case OBJECT_STATE_DONE:
+    case OBJECT_STATE_END:
+        break;
+    }
+}
+
+Object *wstag620_anim_slot_create(s32 arg0) {
+    return object_create(wstag620_anim_slot_update, 0x80, 0, arg0);
+}
+
+void wstag620_update(WstagObject *obj, WstagEventData *data) {
+    switch (obj->base.state) {
+    case OBJECT_STATE_INIT:
+    default:
+        if (gamestate_data.progress == 0x13 && gamestate_flags.get_flag(0x403B, 0)) {
+            data->event = fieldstg_event_start(0x214);
+        } else if (gamestate_data.progress == 0x13 && gamestate_flags.get_flag(0x403B, 1)) {
+            data->event = fieldstg_event_start(0x216);
+        } else if (gamestate_flags.get_flag(0x403A, 0) && gamestate_flags.get_flag(0x1C1B, 1)) {
+            data->event = fieldstg_event_start(0x21C);
+        } else if (gamestate_data.progress == 0x14 && gamestate_flags.get_flag(0x4003, 1)) {
+            data->event = fieldstg_event_start(0x227);
+        }
+        obj->base.next_state(obj);
+        break;
+    case OBJECT_STATE_RUN:
+    case OBJECT_STATE_DONE:
+    case OBJECT_STATE_END:
+        break;
+    }
+}
+
+WstagObject *wstag620_start(void *arg0) {
+    WstagObject *obj = object_new(wstag620_update, sizeof(WstagObject), sizeof(WstagEventData));
+
+    obj->manager = arg0;
+    wstag620_funcs.setup();
+    return obj;
+}
+
+void wstag620_event_532_end(void) {
+    gamestate_flags.set_flag(0x403B, 1);
+    gamestate_flags.set_flag(0x7400, 1);
+}
+
+void wstag620_event_534_end(void) {
+    gamestate_data.progress = 0x14;
+}
+
+void wstag620_event_540_end(void) {
+    gamestate_flags.set_flag(0x1C1C, 1);
+    gamestate_flags.set_flag(0x403A, 1);
+}
+
+void wstag620_event_551_end(void) {
+    gamestate_data.progress = 0x15;
+}
+
+void wstag620_setup(void) {
+    fieldstg_stage.background_file = 0x488;
+    fieldstg_stage.sprite_file = 0x04890000;
+    fieldstg_stage.sprites = wstag620_sprites;
+    fieldstg_stage.map_events = wstag620_map_events;
+    fieldstg_stage.mask_file = 0x487;
+    fieldstg_stage.talk_file = records_language + 0xD3;
+    fieldstg_stage.start_pos = (GamestatePos){ 0x20200, 0x17800 };
+    fieldstg_stage.start_dir = 0;
+    fieldstg_stage.vram_places = wstag620_vram_places;
+    fieldstg_stage.music = 0x15;
+    fieldstg_stage.sound = 0x60540000;
+    fieldstg_stage.actors = wstag620_actors;
+    fieldstg_stage.events = wstag620_events;
+    fieldstg_stage.battle_lists = &wstag620_battle_lists;
+    fieldstg_attr.set_file(0, 0x04890001);
+    fieldstg_attr.set_file(7, 0x04890002);
+    fieldstg_attr.init_layer(0);
+}
+
+/* The stage's .data (tools/wstag_data.py). */
+void wstag620_setup(void);
+
+s16 D_WSTAG620_800A652C[1116] = {
+    FIELDSTG_EVENT_CAMERA_FOLLOW(1, 1),
+    FIELDSTG_EVENT_PLACE(1, 448, 393),
+    FIELDSTG_EVENT_ANIM(1, 1, 1),
+    FIELDSTG_EVENT_PLACE(101, 449, 360),
+    FIELDSTG_EVENT_ANIM(101, 1, 0),
+    FIELDSTG_EVENT_PLACE(104, 400, 376),
+    FIELDSTG_EVENT_ANIM(104, 1, 7),
+    FIELDSTG_EVENT_WAIT(120),
+    FIELDSTG_EVENT_ANIM(1, 58, 1),
+    FIELDSTG_EVENT_WAIT(90),
+    FIELDSTG_EVENT_DIALOG(0, 1, 1, 3),
+    FIELDSTG_EVENT_ANIM(1, 1, 1),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(1, 1, 1),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_ANIM(0x323, 805, 1),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_ANIM(0x323, 806, 1),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_ANIM(1, 1, 3),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 2, 1, 3),
+    FIELDSTG_EVENT_ANIM(1, 7, 3),
+    FIELDSTG_EVENT_ANIM(101, 1, 1),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(1, 1, 3),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_CAMERA_MOVE(0, 420, 376),
+    FIELDSTG_EVENT_DIALOG(0, 3, 104, 0),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 4, 1, 3),
+    FIELDSTG_EVENT_ANIM(1, 7, 3),
+    FIELDSTG_EVENT_ANIM(101, 1, 0),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(1, 1, 3),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 5, 104, 0),
+    FIELDSTG_EVENT_ANIM(101, 1, 1),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 6, 1, 3),
+    FIELDSTG_EVENT_ANIM(1, 7, 3),
+    FIELDSTG_EVENT_ANIM(101, 1, 0),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(1, 1, 3),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 33, 104, 0),
+    FIELDSTG_EVENT_ANIM(101, 1, 1),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 7, 101, 2),
+    FIELDSTG_EVENT_ANIM(1, 1, 4),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 8, 104, 0),
+    FIELDSTG_EVENT_ANIM(1, 1, 3),
+    FIELDSTG_EVENT_ANIM(104, 1, 6),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 9, 101, 2),
+    FIELDSTG_EVENT_ANIM(1, 1, 4),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 10, 104, 0),
+    FIELDSTG_EVENT_ANIM(1, 1, 3),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 11, 101, 2),
+    FIELDSTG_EVENT_ANIM(1, 1, 4),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 12, 1, 4),
+    FIELDSTG_EVENT_ANIM(0x32D, 873, 1),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(0x323, 805, 1),
+    FIELDSTG_EVENT_ANIM(0x324, 805, 101),
+    FIELDSTG_EVENT_ANIM(0x325, 805, 104),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_ANIM(0x323, 806, 1),
+    FIELDSTG_EVENT_ANIM(0x324, 806, 101),
+    FIELDSTG_EVENT_ANIM(0x325, 806, 104),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_CAMERA_MOVE(0, 448, 403),
+    FIELDSTG_EVENT_ANIM(1, 1, 7),
+    FIELDSTG_EVENT_ANIM(101, 1, 7),
+    FIELDSTG_EVENT_ANIM(104, 1, 7),
+    FIELDSTG_EVENT_PLACE(152, 648, 444),
+    FIELDSTG_EVENT_ANIM(152, 1, 3),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_PLACE(11, 648, 444),
+    FIELDSTG_EVENT_ANIM(11, 1, 3),
+    FIELDSTG_EVENT_WALK(152, 616, 428, 3),
+    FIELDSTG_EVENT_WAIT_WALK(152),
+    FIELDSTG_EVENT_WALK(11, 616, 428, 3),
+    FIELDSTG_EVENT_WALK(152, 584, 412, 3),
+    FIELDSTG_EVENT_PLACE(194, 648, 444),
+    FIELDSTG_EVENT_ANIM(194, 1, 3),
+    FIELDSTG_EVENT_WAIT_WALK(152),
+    FIELDSTG_EVENT_WALK(11, 584, 412, 3),
+    FIELDSTG_EVENT_PLACE(69, 648, 444),
+    FIELDSTG_EVENT_ANIM(69, 1, 3),
+    FIELDSTG_EVENT_WALK(152, 552, 396, 3),
+    FIELDSTG_EVENT_WALK(194, 616, 428, 3),
+    FIELDSTG_EVENT_WAIT_WALK(152),
+    FIELDSTG_EVENT_WALK(11, 552, 396, 3),
+    FIELDSTG_EVENT_WALK(69, 616, 428, 3),
+    FIELDSTG_EVENT_WALK(152, 520, 412, 1),
+    FIELDSTG_EVENT_WALK(194, 584, 412, 3),
+    FIELDSTG_EVENT_WAIT_WALK(69),
+    FIELDSTG_EVENT_WALK(11, 520, 412, 1),
+    FIELDSTG_EVENT_WALK(69, 584, 412, 3),
+    FIELDSTG_EVENT_WALK(152, 496, 423, 3),
+    FIELDSTG_EVENT_WALK(194, 552, 396, 1),
+    FIELDSTG_EVENT_WAIT_WALK(69),
+    FIELDSTG_EVENT_WALK(11, 514, 414, 3),
+    FIELDSTG_EVENT_WALK(69, 552, 396, 3),
+    FIELDSTG_EVENT_ANIM(152, 1, 3),
+    FIELDSTG_EVENT_WALK(194, 533, 405, 3),
+    FIELDSTG_EVENT_WAIT_WALK(69),
+    FIELDSTG_EVENT_DIALOG(1, 13, 104, 2),
+    FIELDSTG_EVENT_DIALOG(0, 14, 1, 1),
+    FIELDSTG_EVENT_ANIM(1, 7, 7),
+    FIELDSTG_EVENT_ANIM(11, 1, 3),
+    FIELDSTG_EVENT_ANIM(69, 1, 3),
+    FIELDSTG_EVENT_ANIM(152, 1, 3),
+    FIELDSTG_EVENT_ANIM(194, 1, 3),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(1, 1, 7),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 15, 11, 1),
+    FIELDSTG_EVENT_ANIM(11, 7, 3),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(11, 1, 3),
+    FIELDSTG_EVENT_ANIM(0x323, 805, 1),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_ANIM(0x323, 806, 1),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 16, 1, 2),
+    FIELDSTG_EVENT_ANIM(1, 7, 7),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(1, 1, 3),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_ANIM(101, 1, 1),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 17, 104, 2),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 18, 152, 1),
+    FIELDSTG_EVENT_ANIM(1, 1, 7),
+    FIELDSTG_EVENT_ANIM(101, 1, 7),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 19, 104, 2),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 20, 152, 1),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(0x323, 805, 1),
+    FIELDSTG_EVENT_ANIM(0x324, 805, 11),
+    FIELDSTG_EVENT_ANIM(0x325, 805, 101),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_ANIM(0x323, 806, 1),
+    FIELDSTG_EVENT_ANIM(0x324, 806, 11),
+    FIELDSTG_EVENT_ANIM(0x325, 806, 101),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_ANIM(1, 1, 3),
+    FIELDSTG_EVENT_ANIM(101, 1, 1),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_ANIM(104, 72, 7),
+    FIELDSTG_EVENT_ANIM(0x323, 807, 104),
+    FIELDSTG_EVENT_WAIT(90),
+    FIELDSTG_EVENT_ANIM(0x323, 806, 104),
+    FIELDSTG_EVENT_WAIT(90),
+    FIELDSTG_EVENT_DIALOG(0, 21, 104, 2),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_WALK(104, 432, 392, 7),
+    FIELDSTG_EVENT_WAIT_WALK(104),
+    FIELDSTG_EVENT_ANIM(1, 1, 1),
+    FIELDSTG_EVENT_ANIM(11, 1, 2),
+    FIELDSTG_EVENT_ANIM(69, 1, 2),
+    FIELDSTG_EVENT_ANIM(101, 1, 1),
+    FIELDSTG_EVENT_WALK(104, 384, 416, 1),
+    FIELDSTG_EVENT_ANIM(152, 1, 2),
+    FIELDSTG_EVENT_ANIM(194, 1, 2),
+    FIELDSTG_EVENT_WAIT_WALK(104),
+    FIELDSTG_EVENT_ANIM(104, 1, 3),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_ANIM(104, 73, 3),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_ANIM(0x351, 821, 1),
+    FIELDSTG_EVENT_WAIT(138),
+    FIELDSTG_EVENT_ANIM(1, 1, 6),
+    FIELDSTG_EVENT_ANIM(11, 1, 4),
+    FIELDSTG_EVENT_ANIM(69, 1, 3),
+    FIELDSTG_EVENT_ANIM(101, 1, 7),
+    FIELDSTG_EVENT_ANIM(104, 1, 6),
+    FIELDSTG_EVENT_ANIM(152, 1, 4),
+    FIELDSTG_EVENT_PLACE(153, 513, 374),
+    FIELDSTG_EVENT_ANIM(153, 1, 0),
+    FIELDSTG_EVENT_ANIM(194, 1, 3),
+    FIELDSTG_EVENT_WAIT(90),
+    FIELDSTG_EVENT_ANIM(0x323, 805, 101),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_ANIM(0x323, 806, 101),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_CAMERA_FOLLOW(0, 152),
+    FIELDSTG_EVENT_DIALOG(0, 22, 152, 1),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_CAMERA_FOLLOW(0, 1),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_PLACE(153, 0, 0),
+    FIELDSTG_EVENT_ANIM(153, 1, 0),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_ANIM(11, 1, 3),
+    FIELDSTG_EVENT_ANIM(69, 1, 7),
+    FIELDSTG_EVENT_ANIM(152, 1, 7),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_WALK(152, 520, 436, 7),
+    FIELDSTG_EVENT_WAIT_WALK(152),
+    FIELDSTG_EVENT_WALK(152, 576, 408, 5),
+    FIELDSTG_EVENT_WAIT_WALK(152),
+    FIELDSTG_EVENT_WALK(69, 641, 441, 7),
+    FIELDSTG_EVENT_WALK(152, 656, 448, 7),
+    FIELDSTG_EVENT_ANIM(194, 1, 2),
+    FIELDSTG_EVENT_WAIT_WALK(69),
+    FIELDSTG_EVENT_DIALOG(0, 23, 194, 0),
+    FIELDSTG_EVENT_PLACE(69, 0, 0),
+    FIELDSTG_EVENT_ANIM(69, 1, 0),
+    FIELDSTG_EVENT_PLACE(152, 0, 0),
+    FIELDSTG_EVENT_ANIM(152, 1, 0),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(0x323, 805, 11),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_ANIM(0x323, 806, 11),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_WALK(1, 432, 400, 5),
+    FIELDSTG_EVENT_WALK(11, 456, 388, 1),
+    FIELDSTG_EVENT_ANIM(101, 1, 0),
+    FIELDSTG_EVENT_WALK(104, 408, 404, 5),
+    FIELDSTG_EVENT_WAIT_WALK(11),
+    FIELDSTG_EVENT_DIALOG(0, 24, 11, 2),
+    FIELDSTG_EVENT_ANIM(11, 7, 1),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_CAMERA_MOVE(0, 432, 400),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_WALK(1, 400, 385, 3),
+    FIELDSTG_EVENT_WALK(11, 424, 372, 3),
+    FIELDSTG_EVENT_ANIM(101, 1, 1),
+    FIELDSTG_EVENT_ANIM(104, 1, 4),
+    FIELDSTG_EVENT_WALK(194, 514, 414, 3),
+    FIELDSTG_EVENT_WAIT_WALK(11),
+    FIELDSTG_EVENT_WALK(1, 416, 376, 7),
+    FIELDSTG_EVENT_WALK(11, 432, 368, 7),
+    FIELDSTG_EVENT_ANIM(194, 1, 3),
+    FIELDSTG_EVENT_WAIT_WALK(1),
+    FIELDSTG_EVENT_DIALOG(0, 25, 194, 1),
+    FIELDSTG_EVENT_ANIM(1, 1, 7),
+    FIELDSTG_EVENT_ANIM(11, 1, 7),
+    FIELDSTG_EVENT_ANIM(101, 1, 7),
+    FIELDSTG_EVENT_ANIM(104, 1, 6),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_ANIM(0x323, 805, 104),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_ANIM(0x323, 806, 104),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 26, 104, 1),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WALK(104, 448, 384, 5),
+    FIELDSTG_EVENT_WAIT_WALK(104),
+    FIELDSTG_EVENT_WALK(104, 464, 392, 7),
+    FIELDSTG_EVENT_ANIM(194, 74, 3),
+    FIELDSTG_EVENT_WAIT_WALK(104),
+    FIELDSTG_EVENT_PLACE(331, 514, 414),
+    FIELDSTG_EVENT_ANIM(331, 1, 3),
+    FIELDSTG_EVENT_ANIM(0x32D, 875, 1),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_PLACE(331, 0, 0),
+    FIELDSTG_EVENT_ANIM(331, 1, 0),
+    FIELDSTG_EVENT_PLACE(332, 464, 392),
+    FIELDSTG_EVENT_ANIM(332, 1, 7),
+    FIELDSTG_EVENT_ANIM(0x32D, 898, 1),
+    FIELDSTG_EVENT_WAIT(48),
+    FIELDSTG_EVENT_DIALOG(1, 28, 11, 0),
+    FIELDSTG_EVENT_DIALOG(0, 27, 104, 3),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_PLACE(104, 0, 0),
+    FIELDSTG_EVENT_ANIM(104, 1, 0),
+    FIELDSTG_EVENT_PLACE(317, 464, 391),
+    FIELDSTG_EVENT_ANIM(317, 1, 7),
+    FIELDSTG_EVENT_WAIT(150),
+    FIELDSTG_EVENT_PLACE(332, 0, 0),
+    FIELDSTG_EVENT_ANIM(332, 1, 3),
+    FIELDSTG_EVENT_ANIM(0x32D, 902, 1),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 29, 1, 0),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 30, 194, 1),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(194, 74, 3),
+    FIELDSTG_EVENT_WAIT(36),
+    FIELDSTG_EVENT_ANIM(0x32D, 876, 1),
+    FIELDSTG_EVENT_WAIT(48),
+    FIELDSTG_EVENT_ANIM(194, 74, 3),
+    FIELDSTG_EVENT_WAIT(24),
+    FIELDSTG_EVENT_ANIM(0x32D, 876, 1),
+    FIELDSTG_EVENT_WAIT(12),
+    FIELDSTG_EVENT_ANIM(0x32D, 876, 1),
+    FIELDSTG_EVENT_WAIT(48),
+    FIELDSTG_EVENT_DIALOG(0, 31, 194, 1),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(0x323, 805, 1),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_ANIM(0x323, 806, 1),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_WALK(1, 440, 388, 7),
+    FIELDSTG_EVENT_WAIT_WALK(1),
+    FIELDSTG_EVENT_DIALOG(0, 32, 1, 1),
+    FIELDSTG_EVENT_ANIM(1, 12, 7),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(1, 1, 7),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_END,
+};
+s16 D_WSTAG620_800A6DE4[294] = {
+    FIELDSTG_EVENT_PLACE(1, 448, 392),
+    FIELDSTG_EVENT_ANIM(1, 1, 7),
+    FIELDSTG_EVENT_PLACE(11, 432, 368),
+    FIELDSTG_EVENT_ANIM(11, 1, 7),
+    FIELDSTG_EVENT_PLACE(101, 448, 360),
+    FIELDSTG_EVENT_ANIM(101, 1, 7),
+    FIELDSTG_EVENT_PLACE(157, 416, 376),
+    FIELDSTG_EVENT_ANIM(157, 1, 7),
+    FIELDSTG_EVENT_PLACE(194, 514, 414),
+    FIELDSTG_EVENT_ANIM(194, 1, 3),
+    FIELDSTG_EVENT_PLACE(317, 416, 376),
+    FIELDSTG_EVENT_ANIM(317, 1, 7),
+    FIELDSTG_EVENT_WAIT(120),
+    FIELDSTG_EVENT_DIALOG(0, 1, 194, 1),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WALK(194, 552, 396, 5),
+    FIELDSTG_EVENT_WAIT_WALK(194),
+    FIELDSTG_EVENT_WALK(194, 640, 440, 7),
+    FIELDSTG_EVENT_WAIT_WALK(194),
+    FIELDSTG_EVENT_CAMERA_MOVE(0, 448, 370),
+    FIELDSTG_EVENT_PLACE(194, 0, 0),
+    FIELDSTG_EVENT_ANIM(194, 1, 0),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_ANIM(101, 1, 0),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 2, 101, 2),
+    FIELDSTG_EVENT_ANIM(1, 1, 4),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 3, 11, 0),
+    FIELDSTG_EVENT_ANIM(1, 1, 3),
+    FIELDSTG_EVENT_ANIM(11, 7, 1),
+    FIELDSTG_EVENT_ANIM(101, 1, 1),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(11, 1, 1),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 4, 317, 1),
+    FIELDSTG_EVENT_ANIM(157, 1, 5),
+    FIELDSTG_EVENT_ANIM(317, 1, 5),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 5, 1, 3),
+    FIELDSTG_EVENT_ANIM(1, 12, 3),
+    FIELDSTG_EVENT_ANIM(11, 1, 7),
+    FIELDSTG_EVENT_ANIM(101, 1, 0),
+    FIELDSTG_EVENT_ANIM(157, 1, 7),
+    FIELDSTG_EVENT_ANIM(317, 1, 7),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(1, 1, 3),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 6, 11, 0),
+    FIELDSTG_EVENT_ANIM(11, 7, 7),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(11, 1, 7),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 7, 101, 2),
+    FIELDSTG_EVENT_ANIM(1, 1, 4),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 8, 1, 1),
+    FIELDSTG_EVENT_ANIM(1, 7, 3),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(1, 1, 3),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 9, 1, 1),
+    FIELDSTG_EVENT_ANIM(1, 7, 3),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(1, 1, 3),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 10, 11, 0),
+    FIELDSTG_EVENT_ANIM(11, 7, 7),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(11, 1, 7),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 11, 101, 2),
+    FIELDSTG_EVENT_ANIM(1, 1, 4),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(1, 1, 7),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_WALK(1, 528, 432, 7),
+    FIELDSTG_EVENT_WAIT_WALK(1),
+    FIELDSTG_EVENT_WALK(1, 576, 408, 7),
+    FIELDSTG_EVENT_WAIT_WALK(1),
+    FIELDSTG_EVENT_WALK(1, 640, 440, 7),
+    FIELDSTG_EVENT_WAIT(6),
+    FIELDSTG_EVENT_GOTO_MAP(0x254, 724, 196, 7),
+    FIELDSTG_EVENT_END,
+};
+s16 D_WSTAG620_800A7030[379] = {
+    FIELDSTG_EVENT_CAMERA_FOLLOW(1, 2),
+    FIELDSTG_EVENT_PLACE(2, 616, 428),
+    FIELDSTG_EVENT_ANIM(2, 1, 3),
+    FIELDSTG_EVENT_PLACE(11, 472, 381),
+    FIELDSTG_EVENT_ANIM(11, 1, 1),
+    FIELDSTG_EVENT_PLACE(101, 432, 260),
+    FIELDSTG_EVENT_ANIM(101, 1, 3),
+    FIELDSTG_EVENT_PLACE(317, 449, 392),
+    FIELDSTG_EVENT_ANIM(317, 1, 5),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_WALK(2, 552, 396, 3),
+    FIELDSTG_EVENT_WAIT_WALK(2),
+    FIELDSTG_EVENT_ANIM(2, 1, 3),
+    FIELDSTG_EVENT_ANIM(0x323, 805, 11),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_ANIM(2, 1, 2),
+    FIELDSTG_EVENT_ANIM(11, 1, 6),
+    FIELDSTG_EVENT_ANIM(317, 1, 6),
+    FIELDSTG_EVENT_ANIM(0x323, 806, 11),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 1, 11, 2),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 2, 2, 2),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 3, 11, 2),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_ANIM(0x323, 805, 317),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_ANIM(0x323, 806, 317),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 4, 317, 3),
+    FIELDSTG_EVENT_ANIM(317, 1, 5),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 5, 11, 2),
+    FIELDSTG_EVENT_ANIM(11, 1, 1),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 6, 2, 2),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_ANIM(0x323, 805, 11),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_ANIM(0x323, 806, 11),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 7, 11, 2),
+    FIELDSTG_EVENT_ANIM(11, 1, 6),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_CAMERA_MOVE(0, 498, 320),
+    FIELDSTG_EVENT_DIALOG(0, 20, 101, 3),
+    FIELDSTG_EVENT_ANIM(101, 1, 7),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 8, 2, 2),
+    FIELDSTG_EVENT_ANIM(2, 1, 3),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 9, 101, 3),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 10, 11, 2),
+    FIELDSTG_EVENT_ANIM(11, 7, 4),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(11, 1, 0),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 11, 101, 3),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 12, 317, 2),
+    FIELDSTG_EVENT_ANIM(317, 1, 4),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 13, 11, 2),
+    FIELDSTG_EVENT_ANIM(2, 1, 2),
+    FIELDSTG_EVENT_ANIM(11, 1, 6),
+    FIELDSTG_EVENT_ANIM(317, 1, 6),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 14, 101, 3),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 15, 2, 2),
+    FIELDSTG_EVENT_ANIM(2, 1, 3),
+    FIELDSTG_EVENT_ANIM(11, 1, 4),
+    FIELDSTG_EVENT_ANIM(317, 1, 4),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 16, 101, 3),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_ANIM(0x323, 805, 2),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_ANIM(0x323, 806, 2),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 17, 2, 2),
+    FIELDSTG_EVENT_ANIM(11, 1, 6),
+    FIELDSTG_EVENT_ANIM(317, 1, 6),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 18, 101, 3),
+    FIELDSTG_EVENT_ANIM(11, 1, 4),
+    FIELDSTG_EVENT_ANIM(317, 1, 4),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 19, 2, 2),
+    FIELDSTG_EVENT_ANIM(11, 1, 6),
+    FIELDSTG_EVENT_ANIM(317, 1, 6),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_ANIM(2, 1, 7),
+    FIELDSTG_EVENT_ANIM(11, 1, 7),
+    FIELDSTG_EVENT_ANIM(317, 1, 7),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_WALK(2, 616, 428, 7),
+    FIELDSTG_EVENT_WAIT(6),
+    FIELDSTG_EVENT_GOTO_MAP(0x254, 724, 196, 7),
+    FIELDSTG_EVENT_END,
+};
+s16 D_WSTAG620_800A7328[228] = {
+    FIELDSTG_EVENT_CAMERA_MOVE(1, 430, 305),
+    FIELDSTG_EVENT_PLACE(2, 552, 396),
+    FIELDSTG_EVENT_ANIM(2, 1, 3),
+    FIELDSTG_EVENT_PLACE(11, 472, 381),
+    FIELDSTG_EVENT_ANIM(11, 1, 4),
+    FIELDSTG_EVENT_PLACE(101, 432, 260),
+    FIELDSTG_EVENT_ANIM(101, 1, 7),
+    FIELDSTG_EVENT_PLACE(102, 494, 232),
+    FIELDSTG_EVENT_ANIM(102, 1, 5),
+    FIELDSTG_EVENT_PLACE(103, 386, 416),
+    FIELDSTG_EVENT_ANIM(103, 1, 3),
+    FIELDSTG_EVENT_PLACE(317, 449, 392),
+    FIELDSTG_EVENT_ANIM(317, 1, 4),
+    FIELDSTG_EVENT_WAIT(120),
+    FIELDSTG_EVENT_DIALOG(0, 1, 101, 1),
+    FIELDSTG_EVENT_ANIM(2, 1, 2),
+    FIELDSTG_EVENT_ANIM(11, 1, 1),
+    FIELDSTG_EVENT_ANIM(101, 1, 1),
+    FIELDSTG_EVENT_ANIM(317, 1, 1),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 2, 101, 1),
+    FIELDSTG_EVENT_ANIM(2, 1, 3),
+    FIELDSTG_EVENT_ANIM(11, 1, 4),
+    FIELDSTG_EVENT_ANIM(101, 1, 5),
+    FIELDSTG_EVENT_ANIM(317, 1, 4),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(101, 1, 7),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(1, 3, 102, 3),
+    FIELDSTG_EVENT_DIALOG(0, 4, 103, 2),
+    FIELDSTG_EVENT_ANIM(102, 1, 1),
+    FIELDSTG_EVENT_ANIM(103, 1, 5),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(102, 1, 5),
+    FIELDSTG_EVENT_ANIM(103, 1, 3),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 5, 101, 3),
+    FIELDSTG_EVENT_ANIM(101, 1, 7),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 6, 11, 2),
+    FIELDSTG_EVENT_ANIM(11, 7, 4),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(11, 1, 4),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 7, 101, 3),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(2, 1, 2),
+    FIELDSTG_EVENT_ANIM(11, 1, 6),
+    FIELDSTG_EVENT_ANIM(101, 1, 5),
+    FIELDSTG_EVENT_ANIM(317, 1, 6),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_CAMERA_FOLLOW(0, 11),
+    FIELDSTG_EVENT_DIALOG(0, 9, 11, 0),
+    FIELDSTG_EVENT_ANIM(11, 7, 6),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(11, 1, 6),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 10, 2, 1),
+    FIELDSTG_EVENT_ANIM(2, 7, 2),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(2, 1, 2),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_GOTO_MAP(0x256, 552, 396, 3),
+    FIELDSTG_EVENT_END,
+};
+WstagAnimKey D_WSTAG620_800A74F0[9] = {
+    { 0, 6 }, { 1, 6 }, { 2, 6 }, { 1, 6 }, { 0, 6 }, { 1, 6 }, { 2, 6 }, { 1, 6 }, { 255, 0 },
+};
+WstagAnimKey D_WSTAG620_800A7514[19] = {
+    { 0, 6 }, { 0, 6 }, { 0, 6 }, { 1, 6 }, { 2, 6 }, { 3, 6 }, { 4, 6 }, { 5, 6 }, { 6, 6 }, { 7, 6 }, { 6, 6 },
+    { 5, 6 }, { 4, 6 }, { 3, 6 }, { 2, 6 }, { 1, 6 }, { 0, 6 }, { 0, 6 }, { 255, 999 },
+};
+WstagAnimKey D_WSTAG620_800A7560[9] = {
+    { 0, 6 }, { 1, 6 }, { 2, 6 }, { 1, 6 }, { 0, 6 }, { 1, 6 }, { 2, 6 }, { 1, 6 }, { 255, 0 },
+};
+WstagAnimKey D_WSTAG620_800A7584[5] = { { 0, 12 }, { 1, 12 }, { 2, 12 }, { 1, 12 }, { 255, 0 } };
+WstagAnimKey D_WSTAG620_800A7598[10] = {
+    { 2, 12 }, { 3, 12 }, { 4, 12 }, { 5, 12 }, { 6, 12 }, { 7, 12 }, { 8, 12 }, { 9, 12 }, { 10, 12 },
+    { 255, 999 },
+};
+WstagAnimKey D_WSTAG620_800A75C0[5] = { { 9, 12 }, { 10, 12 }, { 9, 12 }, { 8, 12 }, { 255, 0 } };
+WstagAnimKey D_WSTAG620_800A75D4[18] = {
+    { 300, 90 }, { 0, 6 }, { 1, 6 }, { 2, 6 }, { 3, 6 }, { 4, 6 }, { 3, 6 }, { 4, 6 }, { 3, 6 }, { 4, 6 }, { 3, 6 },
+    { 2, 6 }, { 1, 6 }, { 2, 6 }, { 1, 6 }, { 2, 6 }, { 1, 6 }, { 255, 999 },
+};
+WstagAnimKey D_WSTAG620_800A761C[11] = {
+    { 300, 108 }, { 50, 6 }, { 51, 6 }, { 52, 6 }, { 53, 6 }, { 54, 6 }, { 56, 6 }, { 57, 6 }, { 58, 6 }, { 59, 6 },
+    { 255, 999 },
+};
+WstagAnimEntry D_WSTAG620_800A7648[4][4] = {
+    { { NULL, 0, 0 }, { D_WSTAG620_800A74F0, 0, 0 }, { D_WSTAG620_800A7514, 1, 3 }, { D_WSTAG620_800A7560, 0, 0 } },
+    { { NULL, 0, 0 }, { D_WSTAG620_800A7584, 0, 0 }, { D_WSTAG620_800A7598, 1, 3 }, { D_WSTAG620_800A75C0, 0, 0 } },
+    { { NULL, 0, 0 }, { D_WSTAG620_800A75D4, 1, 0 }, { NULL, 0, 0 }, { NULL, 0, 0 } },
+    { { NULL, 0, 0 }, { D_WSTAG620_800A761C, 1, 0 }, { NULL, 0, 0 }, { NULL, 0, 0 } },
+};
+FieldstgListedBattle D_WSTAG620_800A76C8 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A76D4 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A76E0 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A76EC = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A76F8 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A7704 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A7710 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A771C = { 0, 0, 0x60040000 };
+FieldstgBattleList D_WSTAG620_800A7728 = {
+    3,
+    { &D_WSTAG620_800A76C8, &D_WSTAG620_800A76D4, &D_WSTAG620_800A76E0, &D_WSTAG620_800A76EC, &D_WSTAG620_800A76F8,
+        &D_WSTAG620_800A7704, &D_WSTAG620_800A7710, &D_WSTAG620_800A771C },
+};
+FieldstgListedBattle D_WSTAG620_800A774C = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A7758 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A7764 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A7770 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A777C = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A7788 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A7794 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A77A0 = { 0, 0, 0x60040000 };
+FieldstgBattleList D_WSTAG620_800A77AC = {
+    0,
+    { &D_WSTAG620_800A774C, &D_WSTAG620_800A7758, &D_WSTAG620_800A7764, &D_WSTAG620_800A7770, &D_WSTAG620_800A777C,
+        &D_WSTAG620_800A7788, &D_WSTAG620_800A7794, &D_WSTAG620_800A77A0 },
+};
+FieldstgListedBattle D_WSTAG620_800A77D0 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A77DC = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A77E8 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A77F4 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A7800 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A780C = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A7818 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A7824 = { 0, 0, 0x60040000 };
+FieldstgBattleList D_WSTAG620_800A7830 = {
+    0,
+    { &D_WSTAG620_800A77D0, &D_WSTAG620_800A77DC, &D_WSTAG620_800A77E8, &D_WSTAG620_800A77F4, &D_WSTAG620_800A7800,
+        &D_WSTAG620_800A780C, &D_WSTAG620_800A7818, &D_WSTAG620_800A7824 },
+};
+FieldstgListedBattle D_WSTAG620_800A7854 = { 188, 18, 0x60080000 };
+FieldstgListedBattle D_WSTAG620_800A7860 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A786C = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A7878 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A7884 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A7890 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A789C = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG620_800A78A8 = { 0, 0, 0x60040000 };
+FieldstgBattleList D_WSTAG620_800A78B4 = {
+    0,
+    { &D_WSTAG620_800A7854, &D_WSTAG620_800A7860, &D_WSTAG620_800A786C, &D_WSTAG620_800A7878, &D_WSTAG620_800A7884,
+        &D_WSTAG620_800A7890, &D_WSTAG620_800A789C, &D_WSTAG620_800A78A8 },
+};
+FieldstgBattleLists wstag620_battle_lists = {
+    172, 0, 0, { &D_WSTAG620_800A7728, &D_WSTAG620_800A77AC, &D_WSTAG620_800A7830 }, &D_WSTAG620_800A78B4,
+};
+FieldstgVramPlace wstag620_vram_places[22] = {
+    { 512, 256, 540, 422, 112, 166, 560, 510 }, { 512, 256, 512, 256, 0, 0, 544, 510 },
+    { 512, 256, 534, 312, 88, 56, 512, 509 }, { 512, 256, 520, 444, 32, 188, 528, 509 },
+    { 512, 256, 528, 444, 64, 188, 544, 509 }, { 512, 256, 512, 444, 0, 188, 560, 509 },
+    { 320, 256, 374, 416, 216, 160, 352, 502 }, { 320, 256, 344, 424, 96, 168, 352, 501 },
+    { 320, 256, 372, 336, 208, 80, 368, 501 }, { 320, 256, 344, 384, 96, 128, 352, 500 },
+    { 320, 256, 352, 384, 128, 128, 368, 500 }, { 320, 256, 320, 408, 0, 152, 320, 499 },
+    { 320, 256, 376, 296, 224, 40, 336, 499 }, { 320, 256, 328, 408, 32, 152, 352, 499 },
+    { 320, 256, 352, 440, 128, 184, 368, 499 }, { 320, 256, 320, 448, 0, 192, 320, 498 },
+    { 320, 256, 328, 448, 32, 192, 336, 498 }, { 320, 256, 336, 448, 64, 192, 352, 498 },
+    { 320, 256, 336, 408, 64, 152, 320, 497 }, { 320, 256, 368, 448, 192, 192, 336, 497 },
+    { 320, 256, 326, 480, 24, 224, 352, 497 }, { 320, 256, 348, 336, 112, 80, 368, 497 },
+};
+u16 D_WSTAG620_800A7A54[4] = { 0x1C1C, 0, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7A5C[4] = { 0x1C1C, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7A64[4] = { 0x1C1C, 0, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7A6C[4] = { 0x1C1C, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7A74[4] = { 0x1C1C, 0, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7A7C[4] = { 0x1C1C, 1, 0xFFFF, 0 };
+FieldstgTalk D_WSTAG620_800A7A84[3] = {
+    { D_WSTAG620_800A7A54, NULL, 766 }, { D_WSTAG620_800A7A5C, NULL, 769 }, { NULL, NULL, 0 },
+};
+FieldstgTalk D_WSTAG620_800A7AA8[3] = {
+    { D_WSTAG620_800A7A64, NULL, 765 }, { D_WSTAG620_800A7A6C, NULL, 768 }, { NULL, NULL, 0 },
+};
+FieldstgTalk D_WSTAG620_800A7ACC[2] = { { NULL, NULL, 823 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG620_800A7AE4[2] = { { NULL, NULL, 772 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG620_800A7AFC[2] = { { NULL, NULL, 825 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG620_800A7B14[3] = {
+    { D_WSTAG620_800A7A74, NULL, 767 }, { D_WSTAG620_800A7A7C, NULL, 770 }, { NULL, NULL, 0 },
+};
+u16 D_WSTAG620_800A7B38[4] = { 0x6013, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7B40[4] = { 0x6013, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7B48[4] = { 0x7007, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7B50[4] = { 0x6013, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7B58[4] = { 0x6013, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7B60[4] = { 0x6014, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7B68[4] = { 0x6015, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7B70[6] = { 0x6015, 1, 0x403D, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7B7C[4] = { 0x6014, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7B84[6] = { 0x6015, 1, 0x403D, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7B90[4] = { 0x6014, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7B98[4] = { 0x6013, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7BA0[4] = { 0x6013, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7BA8[4] = { 0x6013, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7BB0[4] = { 0x6013, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7BB8[4] = { 0x6013, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7BC0[4] = { 0x7007, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7BC8[4] = { 0x6013, 1, 0xFFFF, 0 };
+u16 D_WSTAG620_800A7BD0[4] = { 0x6013, 1, 0xFFFF, 0 };
+FieldstgPlacedActor D_WSTAG620_800A7BD8 = { D_WSTAG620_800A7B38, NULL, 1, 4, 0, 0, 0 };
+FieldstgPlacedActor D_WSTAG620_800A7BEC = { D_WSTAG620_800A7B40, NULL, 11, 5, 0, 0, 0 };
+FieldstgPlacedActor D_WSTAG620_800A7C00 = { D_WSTAG620_800A7B48, D_WSTAG620_800A7A84, 11, 5, 472, 381, 1 };
+FieldstgPlacedActor D_WSTAG620_800A7C14 = { D_WSTAG620_800A7B50, NULL, 69, 6, 0, 0, 1 };
+FieldstgPlacedActor D_WSTAG620_800A7C28 = { D_WSTAG620_800A7B58, NULL, 101, 7, 0, 0, 1 };
+FieldstgPlacedActor D_WSTAG620_800A7C3C = { D_WSTAG620_800A7B60, D_WSTAG620_800A7AA8, 101, 7, 432, 260, 3 };
+FieldstgPlacedActor D_WSTAG620_800A7C50 = { D_WSTAG620_800A7B68, D_WSTAG620_800A7ACC, 101, 7, 432, 260, 3 };
+FieldstgPlacedActor D_WSTAG620_800A7C64 = { D_WSTAG620_800A7B70, D_WSTAG620_800A7AE4, 102, 8, 496, 424, 3 };
+FieldstgPlacedActor D_WSTAG620_800A7C78 = { D_WSTAG620_800A7B7C, NULL, 102, 8, 0, 0, 1 };
+FieldstgPlacedActor D_WSTAG620_800A7C8C = { D_WSTAG620_800A7B84, D_WSTAG620_800A7AFC, 103, 9, 533, 405, 3 };
+FieldstgPlacedActor D_WSTAG620_800A7CA0 = { D_WSTAG620_800A7B90, NULL, 103, 9, 0, 0, 1 };
+FieldstgPlacedActor D_WSTAG620_800A7CB4 = { D_WSTAG620_800A7B98, NULL, 104, 10, 0, 0, 1 };
+FieldstgPlacedActor D_WSTAG620_800A7CC8 = { D_WSTAG620_800A7BA0, NULL, 152, 11, 0, 0, 1 };
+FieldstgPlacedActor D_WSTAG620_800A7CDC = { D_WSTAG620_800A7BA8, NULL, 153, 12, 0, 0, 1 };
+FieldstgPlacedActor D_WSTAG620_800A7CF0 = { NULL, NULL, 154, 13, 641, 350, 0 };
+FieldstgPlacedActor D_WSTAG620_800A7D04 = { NULL, NULL, 155, 14, 593, 325, 1 };
+FieldstgPlacedActor D_WSTAG620_800A7D18 = { NULL, NULL, 156, 15, 545, 301, 2 };
+FieldstgPlacedActor D_WSTAG620_800A7D2C = { D_WSTAG620_800A7BB0, NULL, 194, 16, 0, 0, 1 };
+FieldstgPlacedActor D_WSTAG620_800A7D40 = { D_WSTAG620_800A7BB8, NULL, 317, 17, 0, 0, 0 };
+FieldstgPlacedActor D_WSTAG620_800A7D54 = { D_WSTAG620_800A7BC0, D_WSTAG620_800A7B14, 317, 17, 449, 392, 5 };
+FieldstgPlacedActor D_WSTAG620_800A7D68 = { D_WSTAG620_800A7BC8, NULL, 331, 18, 0, 0, 1 };
+FieldstgPlacedActor D_WSTAG620_800A7D7C = { D_WSTAG620_800A7BD0, NULL, 332, 19, 0, 0, 1 };
+FieldstgPlacedActor *wstag620_actors[23] = {
+    &D_WSTAG620_800A7BD8, &D_WSTAG620_800A7BEC, &D_WSTAG620_800A7C00, &D_WSTAG620_800A7C14, &D_WSTAG620_800A7C28,
+    &D_WSTAG620_800A7C3C, &D_WSTAG620_800A7C50, &D_WSTAG620_800A7C64, &D_WSTAG620_800A7C78, &D_WSTAG620_800A7C8C,
+    &D_WSTAG620_800A7CA0, &D_WSTAG620_800A7CB4, &D_WSTAG620_800A7CC8, &D_WSTAG620_800A7CDC, &D_WSTAG620_800A7CF0,
+    &D_WSTAG620_800A7D04, &D_WSTAG620_800A7D18, &D_WSTAG620_800A7D2C, &D_WSTAG620_800A7D40, &D_WSTAG620_800A7D54,
+    &D_WSTAG620_800A7D68, &D_WSTAG620_800A7D7C, NULL,
+};
+FieldstgSprite wstag620_sprites[13] = {
+    { 0, 1, 0x40, 2, 0x3D, 0, 0, 0, 0, 0, 335, 351, 0, 0 }, { 0, 2, 0x40, 2, 0x3E, 0, 0, 0, 0, 0, 345, 372, 0, 0 },
+    { 0, 3, 0x40, 2, 0x3C, 0, 0, 0, 0, 0, 477, 356, 0, 0 }, { 0, 4, 0x40, 2, 0x32, 0, 0, 0, 0, 0, 489, 350, 0, 0 },
+    { 1, 0, 0x40, 2, 0x40, 2, 0, 3, 6, 0, 521, 212, 0, 0 }, { 1, 0, 0x40, 2, 0x40, 2, 0, 3, 6, 0, 569, 236, 0, 0 },
+    { 1, 0, 0x40, 2, 0x41, 2, 0, 3, 6, 0, 617, 260, 0, 0 }, { 1, 0, 0x40, 2, 0x43, 2, 0, 5, 6, 0, 392, 163, 0, 0 },
+    { 1, 0, 0x40, 2, 0x44, 2, 0, 5, 6, 0, 369, 205, 0, 0 }, { 1, 0, 0x40, 6, 0x3F, 2, 0, 3, 6, 0, 360, 389, 0, 0 },
+    { 1, 0, 0x40, 6, 0x42, 2, 0, 5, 6, 0, 361, 186, 0, 0 }, { 1, 0, 0x40, 4, 0, 0, 0, 0, 0, 0, 377, 371, 399, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+};
+FieldstgMapEvent wstag620_map_events[4] = {
+    { 0xFFFF, 0, 0xFFFF, 0, 1, 0x254, 0x2D4, 0xC4, 7, 0, 0, 0 },
+    { 0xFFFF, 0, 0xFFFF, 0, 3, 5, 0x1D0, 0xF8, 0, 0, 0, 0 },
+    { 0xFFFF, 0, 0xFFFF, 0, 2, 5, 0x1E0, 0x150, 0, 0, 0, 0 }, { 0xFFFF, 0, 0xFFFF, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+};
+WstagFuncs wstag620_funcs = { wstag620_setup };
+FieldstgEventDef wstag620_events[5] = {
+    { 532, D_WSTAG620_800A652C, 0x0143000F, NULL, wstag620_event_532_end },
+    { 534, D_WSTAG620_800A6DE4, 0x01430010, NULL, wstag620_event_534_end },
+    { 540, D_WSTAG620_800A7030, 0x01430016, NULL, wstag620_event_540_end },
+    { 551, D_WSTAG620_800A7328, 0x01430017, NULL, wstag620_event_551_end }, { -1, NULL, 0, NULL, NULL },
+};

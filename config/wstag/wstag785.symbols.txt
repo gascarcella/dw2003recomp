@@ -1,0 +1,23 @@
+// WSTAG785 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag785_color = 0x800A5DE0;
+wstag785_anim_advance = 0x800A5DE4; // type:func
+wstag785_gate_update = 0x800A5F04; // type:func
+wstag785_gate_new = 0x800A61A4; // type:func
+wstag785_gate_create = 0x800A61D8; // type:func
+wstag785_mark_draw = 0x800A6208; // type:func
+wstag785_mark_update = 0x800A62B4; // type:func
+wstag785_mark_create = 0x800A6510; // type:func
+wstag785_mark_message = 0x800A6540; // type:func
+wstag785_update = 0x800A660C; // type:func
+wstag785_start = 0x800A66B0; // type:func
+wstag785_event_1_end = 0x800A670C; // type:func
+wstag785_setup = 0x800A671C; // type:func
+D_WSTAG785_800A7118 = 0x800A7118; // size:0x3C
+D_WSTAG785_800A7154 = 0x800A7154; // size:0x34
+D_WSTAG785_800A7188 = 0x800A7188; // size:0x1C
+D_WSTAG785_800A71A4 = 0x800A71A4; // size:0x1C
+wstag785_vram_places = 0x800A71C0;
+wstag785_actors = 0x800A73D0;
+wstag785_sprites = 0x800A7404;
+wstag785_funcs = 0x800A75D8;
+wstag785_events = 0x800A75DC;

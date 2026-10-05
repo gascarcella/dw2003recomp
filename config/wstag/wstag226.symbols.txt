@@ -1,0 +1,17 @@
+// WSTAG226 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag226_sprite_anim_play_once = 0x800A5DE0; // type:func
+wstag226_sprite_anim_reset = 0x800A5EB8; // type:func
+wstag226_sprite_anim_update = 0x800A5EF0; // type:func
+wstag226_sprite_anim_message = 0x800A6164; // type:func
+wstag226_sprite_anim_create = 0x800A61CC; // type:func
+wstag226_sprite_anim_new = 0x800A61FC; // type:func
+wstag226_update = 0x800A6228; // type:func
+wstag226_start = 0x800A62C8; // type:func
+wstag226_event_935_end = 0x800A6324; // type:func
+wstag226_setup = 0x800A6334; // type:func
+wstag226_vram_places = 0x800A68DC;
+wstag226_actors = 0x800A6C4C;
+wstag226_sprites = 0x800A6C80;
+wstag226_map_events = 0x800A6D58;
+wstag226_funcs = 0x800A6D88;
+wstag226_events = 0x800A6D8C;

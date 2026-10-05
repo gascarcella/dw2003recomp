@@ -1,0 +1,14 @@
+// WSTAG421 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag421_update = 0x800A5DE0; // type:func
+wstag421_start = 0x800A5F1C; // type:func
+wstag421_event_740_end = 0x800A5F78; // type:func
+wstag421_event_741_end = 0x800A5FC4; // type:func
+wstag421_event_743_end = 0x800A6010; // type:func
+wstag421_setup = 0x800A6020; // type:func
+wstag421_battle_lists = 0x800A6524;
+wstag421_vram_places = 0x800A6540;
+wstag421_actors = 0x800A6BAC;
+wstag421_sprites = 0x800A6C0C;
+wstag421_map_events = 0x800A6E94;
+wstag421_funcs = 0x800A6F6C;
+wstag421_events = 0x800A6F70;

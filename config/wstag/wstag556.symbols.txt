@@ -1,0 +1,10 @@
+// WSTAG556 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag556_update = 0x800A5DE0; // type:func
+wstag556_start = 0x800A5E28; // type:func
+wstag556_setup = 0x800A5E84; // type:func
+wstag556_battle_lists = 0x800A61A0;
+wstag556_vram_places = 0x800A61BC;
+wstag556_actors = 0x800A682C;
+wstag556_sprites = 0x800A6878;
+wstag556_map_events = 0x800A691C;
+wstag556_funcs = 0x800A69C4;

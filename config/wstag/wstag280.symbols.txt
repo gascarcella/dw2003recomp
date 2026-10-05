@@ -1,0 +1,14 @@
+// WSTAG280 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag280_choice_update = 0x800A5E10; // type:func
+wstag280_event_1522_start = 0x800A63CC; // type:func
+wstag280_update = 0x800A63F8; // type:func
+wstag280_start = 0x800A64B8; // type:func
+wstag280_setup = 0x800A6514; // type:func
+wstag280_fade_start = 0x800A6608; // type:func
+wstag280_fade_update = 0x800A669C; // type:func
+wstag280_vram_places = 0x800A68E4;
+wstag280_actors = 0x800A7568;
+wstag280_sprites = 0x800A7634;
+wstag280_map_events = 0x800A78BC;
+wstag280_funcs = 0x800A7934;
+wstag280_events = 0x800A7940;

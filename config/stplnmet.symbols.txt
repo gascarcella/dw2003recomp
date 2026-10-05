@@ -1,0 +1,80 @@
+// Symbol names for AAA/PRO/STPLNMET.PRO (splat format). Tier-1 overlays share one address range,
+// so each overlay has its own symbol file; the EXE's names come from config/symbol_addrs.txt.
+
+// Module structs and tables (sizes: splat writes base + offset for accesses inside them).
+stplnmet_key_buttons = 0x80089A14; // size:0x3C
+stplnmet_arrow_palettes = 0x80089A50;
+stplnmet_partner_cursor_palettes = 0x80089A68;
+stplnmet_tab_x = 0x80089A80;
+stplnmet_digimon_anims = 0x80089A8C;
+stplnmet_partner_sets = 0x80089B6C;
+stplnmet_funcs = 0x80089B90; // size:0x20
+stplnmet_keyboard = 0x80089BB0; // size:0xC
+
+// Functions.
+// stplnmet_80082F58.c: display setup, entry point, scenery objects.
+stplnmet_setup_layer = 0x80082F58; // type:func
+stplnmet_update_main = 0x80082FCC; // type:func
+stplnmet_start = 0x80083118; // type:func
+stplnmet_bg_update = 0x80083144; // type:func
+stplnmet_bg_load = 0x80083310; // type:func
+stplnmet_bg_set_layer = 0x80083398; // type:func
+stplnmet_bg_create = 0x800833A4; // type:func
+stplnmet_sparkle_update = 0x800833E8; // type:func
+stplnmet_sparkle_create = 0x800835C4; // type:func
+stplnmet_figure_update = 0x800835F0; // type:func
+stplnmet_figure_create = 0x80083748; // type:func
+stplnmet_message_update = 0x80083774; // type:func
+stplnmet_message_create = 0x80083D38; // type:func
+// stplnmet_80083D70.c: the name entry (STDGNAME's, with one field less and a pause method).
+stplnmet_window_anim_start = 0x80083D70; // type:func
+stplnmet_window_anim_update = 0x80083E04; // type:func
+stplnmet_entry_create_windows = 0x80083E70; // type:func
+stplnmet_entry_show_text = 0x80084060; // type:func
+stplnmet_entry_draw = 0x8008438C; // type:func
+stplnmet_entry_run = 0x80084D10; // type:func
+stplnmet_entry_update = 0x80085A70; // type:func
+stplnmet_entry_set_texture_pos = 0x80085BB0; // type:func
+stplnmet_entry_set_name = 0x80085BBC; // type:func
+stplnmet_entry_get_name = 0x80085C50; // type:func
+stplnmet_entry_close = 0x80085D50; // type:func
+stplnmet_entry_pause = 0x80085D5C; // type:func
+stplnmet_entry_create = 0x80085E10; // type:func
+// stplnmet_80085ECC.c: the confirmation, the partner choice, the main object and the helpers of stplnmet_funcs.
+stplnmet_confirm_create_windows = 0x80085ECC; // type:func
+stplnmet_confirm_show_text = 0x80086074; // type:func
+stplnmet_confirm_draw = 0x800862F0; // type:func
+stplnmet_confirm_run = 0x800869C8; // type:func
+stplnmet_confirm_pause = 0x80086E40; // type:func
+stplnmet_confirm_close = 0x80086EAC; // type:func
+stplnmet_confirm_update = 0x80086EB8; // type:func
+stplnmet_confirm_create = 0x80086F60; // type:func
+stplnmet_partner_create_windows = 0x80086FC0; // type:func
+stplnmet_partner_show_text = 0x80087190; // type:func
+stplnmet_partner_draw = 0x80087444; // type:func
+stplnmet_partner_run = 0x80087774; // type:func
+stplnmet_partner_pause = 0x800879E0; // type:func
+stplnmet_partner_update = 0x80087A30; // type:func
+stplnmet_partner_create = 0x80087AC0; // type:func
+stplnmet_main_create_windows = 0x80087B14; // type:func
+stplnmet_main_show_tabs = 0x80087BF4; // type:func
+stplnmet_main_run = 0x80087C9C; // type:func
+stplnmet_main_draw = 0x80088070; // type:func
+stplnmet_main_update = 0x80088138; // type:func
+stplnmet_main_create = 0x800882A4; // type:func
+stplnmet_load_files = 0x800882E0; // type:func
+stplnmet_is_loading = 0x80088398; // type:func
+stplnmet_anim_start = 0x80088438; // type:func
+stplnmet_anim_update = 0x800884CC; // type:func
+stplnmet_tween_start = 0x80088538; // type:func
+stplnmet_tween_update = 0x80088578; // type:func
+stplnmet_bg_wrap_x = 0x800885E4;
+stplnmet_figure_frames = 0x800885EC;
+stplnmet_name_glyphs = 0x800886D4;
+stplnmet_name_glyphs_ext = 0x800890B8;
+stplnmet_key_tabs_jpn = 0x800895A0;
+stplnmet_key_pages_jpn = 0x800895C4;
+stplnmet_key_tabs_latin = 0x8008983C;
+stplnmet_key_pages_latin = 0x80089848;
+stplnmet_name_font = 0x8008991C;
+stplnmet_entry_anims = 0x80089934;

@@ -1,0 +1,13 @@
+// WSTAG830 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag830_color = 0x800A5DE0;
+wstag830_set_exits = 0x800A5DE4; // type:func
+wstag830_update = 0x800A5EE4; // type:func
+wstag830_start = 0x800A5F58; // type:func
+wstag830_setup = 0x800A5FB4; // type:func
+wstag830_exits = 0x800A6170;
+wstag830_battle_lists = 0x800A65A0;
+wstag830_vram_places = 0x800A65D8;
+wstag830_actors = 0x800A665C;
+wstag830_sprites = 0x800A6664;
+wstag830_map_events = 0x800A67F0;
+wstag830_funcs = 0x800A6850;

@@ -1,0 +1,18 @@
+// WSTAG620 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag620_slot_anim_advance = 0x800A5DE0; // type:func
+wstag620_anim_slot_update = 0x800A5F00; // type:func
+wstag620_anim_slot_create = 0x800A6198; // type:func
+wstag620_update = 0x800A61C8; // type:func
+wstag620_start = 0x800A6314; // type:func
+wstag620_event_532_end = 0x800A6370; // type:func
+wstag620_event_534_end = 0x800A63BC; // type:func
+wstag620_event_540_end = 0x800A63CC; // type:func
+wstag620_event_551_end = 0x800A6418; // type:func
+wstag620_setup = 0x800A6428; // type:func
+wstag620_battle_lists = 0x800A78D8;
+wstag620_vram_places = 0x800A78F4;
+wstag620_actors = 0x800A7D90;
+wstag620_sprites = 0x800A7DEC;
+wstag620_map_events = 0x800A7ED8;
+wstag620_funcs = 0x800A7F38;
+wstag620_events = 0x800A7F3C;

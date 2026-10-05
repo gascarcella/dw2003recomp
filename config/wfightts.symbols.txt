@@ -1,0 +1,48 @@
+// Symbol names for AAA/PRO/WFIGHTTS.PRO (splat format). Tier-2 overlays share one address range (0x800A5DE0+),
+// so each has its own symbol file. The EXE's names come from config/symbol_addrs.txt, FIGHTSTG's from
+// config/fightstg.symbols.txt (configure.py passes them on as build/fightstg/names_for_tier2.txt).
+wfightts_technique_menu_state = 0x800A96B4; // size:0x1C
+wfightts_script_menu_state = 0x800A96D0; // size:0x1C
+// The last string of each menu's .rodata, kept as asm: the padding bytes after them are not 0 (config/wfightts.yaml).
+wfightts_camera_menu_text_0 = 0x800A5E98; // size:0x10
+wfightts_stage_name_0 = 0x800A62E0; // size:0x14
+wfightts_technique_name_0 = 0x800A66A0; // size:0x10
+wfightts_script_name_0 = 0x800A67A8; // size:0x10
+// wfightts_digimon_menu_update's per-column state (it reaches [1] by address).
+wfightts_digimon_menu_cursors = 0x800A93B4; // size:0x8
+wfightts_digimon_menu_first_lines = 0x800A93BC; // size:0x8
+
+// Game code: names (DECISIONS "Naming conventions"). WFIGHTTS is the test battle: a main object and five menus.
+wfightts_init_layers = 0x800A67B8; // type:func
+wfightts_load_images = 0x800A6A28; // type:func
+wfightts_main_update = 0x800A6B90; // type:func
+wfightts_main_create = 0x800A7A60; // type:func
+wfightts_digimon_menu_update = 0x800A7A90; // type:func
+wfightts_digimon_menu_create = 0x800A7FCC; // type:func
+wfightts_camera_menu_update = 0x800A8018; // type:func
+wfightts_camera_menu_create = 0x800A8438; // type:func
+wfightts_stage_menu_update = 0x800A8484; // type:func
+wfightts_stage_menu_create = 0x800A8760; // type:func
+wfightts_technique_menu_update = 0x800A8798; // type:func
+wfightts_technique_menu_create = 0x800A8CE8; // type:func
+wfightts_script_menu_update = 0x800A8D34; // type:func
+wfightts_script_menu_create = 0x800A931C; // type:func
+wfightts_screen_rect = 0x800A9368;
+wfightts_test_battles = 0x800A9370;
+wfightts_screen_corners = 0x800A938C;
+wfightts_corner_colors = 0x800A939C;
+wfightts_speed = 0x800A93AC;
+wfightts_digimon_menu_column = 0x800A93B0;
+wfightts_camera_menu_column = 0x800A93C4;
+wfightts_camera_menu_cursors = 0x800A93C8;
+wfightts_camera_menu_text = 0x800A93D0;
+wfightts_camera_menu_text_2 = 0x800A9400;
+wfightts_stage_menu_cursor = 0x800A940C;
+wfightts_stage_menu_first_line = 0x800A9410;
+wfightts_stage_names = 0x800A9414;
+wfightts_technique_names = 0x800A94F0;
+wfightts_script_names = 0x800A95E8;
+wfightts_camera_0 = 0x800A9638;
+wfightts_camera_1 = 0x800A9678;
+wfightts_display_x = 0x800A96AC;
+wfightts_display_y = 0x800A96B0;

@@ -1,0 +1,10 @@
+// WSTAG219 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag219_color = 0x800A5DE0;
+wstag219_update = 0x800A5DE4; // type:func
+wstag219_start = 0x800A5E2C; // type:func
+wstag219_setup = 0x800A5E88; // type:func
+wstag219_battle_lists = 0x800A61E0;
+wstag219_vram_places = 0x800A61FC;
+wstag219_sprites = 0x800A625C;
+wstag219_map_events = 0x800A6430;
+wstag219_funcs = 0x800A64A8;

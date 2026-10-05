@@ -1,0 +1,12 @@
+// WSTAG475 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag475_update = 0x800A5DE0; // type:func
+wstag475_start = 0x800A5F88; // type:func
+wstag475_event_180_end = 0x800A5FE4; // type:func
+wstag475_event_230_end = 0x800A6010; // type:func
+wstag475_setup = 0x800A6048; // type:func
+wstag475_vram_places = 0x800A66EC;
+wstag475_actors = 0x800A6B20;
+wstag475_sprites = 0x800A6B6C;
+wstag475_map_events = 0x800A6BC8;
+wstag475_funcs = 0x800A6C10;
+wstag475_events = 0x800A6C14;

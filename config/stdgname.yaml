@@ -1,0 +1,66 @@
+# splat config for the tier-1 overlay AAA/PRO/STDGNAME.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: STDGNAME.PRO
+sha1: ae175dd74fd855e08cfdf0bec9d03f473f02d25a
+options:
+  basename: STDGNAME.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/STDGNAME.PRO
+  elf_path: build/stdgname/STDGNAME.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/stdgname
+  asm_path: asm/stdgname
+  src_path: src/stdgname
+  asset_path: assets/stdgname
+  ld_script_path: build/stdgname/STDGNAME.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/stdgname.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/stdgname/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/stdgname/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  ld_bss_is_noload: False  # .bss is in the file as zeros
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: stdgname
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_STDGNAME_<addr>, D_STDGNAME_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: STDGNAME_$VRAM
+    subsegments:
+      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"): the jump table at 0x80082F74 is at a
+      # different address mod 8 than the previous one (0x80082F58), so it starts a new object.
+      - [0x0,   .rodata, stdgname_80082F8C]
+      - [0x2C4, .rodata, stdgname_80086184]
+      - [0x2DC,  c, stdgname_80082F8C]   # 0x80082F8C .text (tools/overlay_layout.py)
+      - [0x34D4, c, stdgname_80086184]   # 0x80086184: owns the jump table at 0x80082F74; 86144 before it creates
+                                         # the object of 85DE4 (update/create pair), so it stays in the first file
+      # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t stdgname;
+      # DECISIONS "Overlay .data/.bss per file"). The name entry's .bss comes after
+      # 86184's .data, so it is .bss, and it starts 4 mod 8: overlay .bss is only 4-aligned.
+      - [0x3B80, .data, stdgname_80082F8C]   # 0x80086830 (after the last function's jr ra): name entry tables
+      - [0x5288, .data, stdgname_80086184]   # 0x80087F38 stdgname_funcs (its function table)
+      - [0x6184, .bss, stdgname_80082F8C]    # 0x80088E34 stdgname_keyboard (only 82F8C uses it)
+  - [0x6190]

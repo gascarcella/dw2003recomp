@@ -1,0 +1,13 @@
+// WSTAG960 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag960_color = 0x800A5DE0;
+wstag960_set_exits = 0x800A5DE4; // type:func
+wstag960_update = 0x800A5EE4; // type:func
+wstag960_start = 0x800A5F58; // type:func
+wstag960_setup = 0x800A5FB4; // type:func
+wstag960_exits = 0x800A6170;
+wstag960_vram_places = 0x800A6180;
+wstag960_actors = 0x800A6204;
+wstag960_sprites = 0x800A620C;
+wstag960_map_events = 0x800A6364;
+wstag960_funcs = 0x800A63AC;
+wstag960_battle_lists = 0x800A69E0;

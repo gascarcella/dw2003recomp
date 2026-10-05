@@ -1,0 +1,13 @@
+// WSTAG295 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag295_update = 0x800A5DE0; // type:func
+wstag295_start = 0x800A5EE0; // type:func
+wstag295_event_580_end = 0x800A5F3C; // type:func
+wstag295_event_891_end = 0x800A5F88; // type:func
+wstag295_event_892_end = 0x800A5FB4; // type:func
+wstag295_setup = 0x800A5FE0; // type:func
+wstag295_vram_places = 0x800A67F0;
+wstag295_actors = 0x800A6BB8;
+wstag295_sprites = 0x800A6C10;
+wstag295_map_events = 0x800A6CFC;
+wstag295_funcs = 0x800A6D44;
+wstag295_events = 0x800A6D48;

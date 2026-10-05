@@ -1,0 +1,11 @@
+// WSTAG570 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag570_color = 0x800A5DE0;
+wstag570_update = 0x800A5DE4; // type:func
+wstag570_start = 0x800A5E2C; // type:func
+wstag570_setup = 0x800A5E88; // type:func
+wstag570_battle_lists = 0x800A61F0;
+wstag570_vram_places = 0x800A620C;
+wstag570_actors = 0x800A6374;
+wstag570_sprites = 0x800A6384;
+wstag570_map_events = 0x800A6860;
+wstag570_funcs = 0x800A6950;

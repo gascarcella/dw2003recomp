@@ -1,0 +1,88 @@
+# splat config for the tier-2 overlay AAA/PRO/WFIGHTTS.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and data
+# with no header, loaded at 0x800A5DE0 (the EXE's main_file_base, by overlay_load_file) on top of FIGHTSTG, which
+# stays loaded at 0x80082CB0-0x800A47A0. The battle variant FIGHTSTG's fightstg_main_update picks when
+# gamestate_data.unk_26FC.unk_0C() != 0: it loads it as file 0x209 and calls its entry func_800A7A60.
+# It links against the EXE and against FIGHTSTG (configure.py TIER2_PARENT): splat gets both sets of names
+# (build/exe_symbols.txt, build/fightstg/names_for_tier2.txt), the linker both ELFs' symbol tables.
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file; nothing past the
+# file's end is referenced).
+name: WFIGHTTS.PRO
+sha1: 926c81ca92f9fbf2af5816c7a7f742e5efe1a372
+options:
+  basename: WFIGHTTS.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/WFIGHTTS.PRO
+  elf_path: build/wfightts/WFIGHTTS.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/wfightts
+  asm_path: asm/wfightts
+  src_path: src/wfightts
+  asset_path: assets/wfightts
+  ld_script_path: build/wfightts/WFIGHTTS.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt               # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - build/fightstg/names_for_tier2.txt  # FIGHTSTG's names (configure.py writes it when it splits FIGHTSTG)
+    - config/wfightts.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/wfightts/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/wfightts/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  ld_bss_is_noload: False  # .bss is in the file as zeros
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: wfightts
+    type: code
+    start: 0x0
+    vram: 0x800A5DE0
+    # Unnamed symbols are func_WFIGHTTS_<addr>, D_WFIGHTTS_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: WFIGHTTS_$VRAM
+    subsegments:
+      # Six files (docs/DECISIONS.md "Overlay file split", session 6 wfight2): the main object and one per menu it
+      # opens. Evidence: the menus' string tables (.data 93D0, 9414, 94F0, 95E8) have their strings in .rodata in
+      # table order, and each group ends with non-zero padding bytes (the end of an object's .rodata: psylink fills
+      # the gap) and repeats strings an earlier group already has (GCC shares identical literals within a file
+      # only): so each table is in its own object (strong). Each table's object holds the menu that uses it (the
+      # update function, its creator, then its state in .data/.bss in the same order: strong for 8018, 8484,
+      # 8798, 8D34). Menu 1 (7A90/7FCC, no strings) as its own file: by analogy with the others (moderate).
+      - [0x0,   .rodata, wfightts_800A67B8]  # 0x800A5DE0 wfightts_main_update's jump table
+      - [0x18,  .rodata, wfightts_800A8018]  # 0x800A5DF8 strings of 93D0/9400 (padding after 5E98 not 0)
+      - [0xC8,  .rodata, wfightts_800A8484]  # 0x800A5EA8 strings of 9414 (padding after 62E0 not 0)
+      - [0x514, .rodata, wfightts_800A8798]  # 0x800A62F4 strings of 94F0 (padding after 66A0 not 0)
+      - [0x8D0, .rodata, wfightts_800A8D34]  # 0x800A66B0 strings of 95E8 (padding after 67A8 not 0)
+      - [0x9D8,  c, wfightts_800A67B8]  # 0x800A67B8 .text (tools/overlay_layout.py: first stack frame): setup, main object, entry
+      - [0x1CB0, c, wfightts_800A7A90]  # 0x800A7A90 menu 1 (Digimon) and its creator 7FCC
+      - [0x2238, c, wfightts_800A8018]  # 0x800A8018 menu 2 (camera entries) and its creator 8438
+      - [0x26A4, c, wfightts_800A8484]  # 0x800A8484 menu 3 (stages) and its creator 8760
+      - [0x29B8, c, wfightts_800A8798]  # 0x800A8798 menu 4 (techniques) and its creator 8CE8
+      - [0x2F54, c, wfightts_800A8D34]  # 0x800A8D34 menu 5 (scripts) and its creator 931C
+      # .data, then .bss (zeros in the file), per file in link order, in C (tools/data_owners.py -t wfightts;
+      # DECISIONS "Overlay .data/.bss per file"). .bss: the zeros from 0x800A9638 to the end (they could be
+      # zero-initialised .data: weak); wfightts_camera_0 is 0x40 bytes, its last 0xC unreferenced.
+      - [0x3588, .data, wfightts_800A67B8]  # 0x800A9368 (after the last function's jr ra)
+      - [0x35D0, .data, wfightts_800A7A90]  # 0x800A93B0 menu 1's column, cursors, first lines
+      - [0x35E4, .data, wfightts_800A8018]  # 0x800A93C4 menu 2's state and tables
+      - [0x362C, .data, wfightts_800A8484]  # 0x800A940C menu 3's state and table
+      - [0x3710, .data, wfightts_800A8798]  # 0x800A94F0 menu 4's table
+      - [0x3808, .data, wfightts_800A8D34]  # 0x800A95E8 menu 5's table
+      - [0x3858, .bss, wfightts_800A67B8]   # 0x800A9638 the cameras, the display offset
+      - [0x38D4, .bss, wfightts_800A8798]   # 0x800A96B4 menu 4's state
+      - [0x38F0, .bss, wfightts_800A8D34]   # 0x800A96D0 menu 5's state
+  - [0x390C]

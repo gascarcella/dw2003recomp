@@ -1,0 +1,14 @@
+// WSTAG756 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag756_color = 0x800A5DE0;
+wstag756_update = 0x800A5DE4; // type:func
+wstag756_start = 0x800A5EA0; // type:func
+wstag756_event_910_end = 0x800A5EFC; // type:func
+wstag756_event_911_end = 0x800A5F48; // type:func
+wstag756_setup = 0x800A5F80; // type:func
+wstag756_battle_lists = 0x800A63E8;
+wstag756_vram_places = 0x800A6404;
+wstag756_actors = 0x800A6890;
+wstag756_sprites = 0x800A68D4;
+wstag756_map_events = 0x800A6A60;
+wstag756_funcs = 0x800A6B50;
+wstag756_events = 0x800A6B54;

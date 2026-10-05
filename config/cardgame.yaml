@@ -1,0 +1,116 @@
+# splat config for the tier-1 overlay AAA/PRO/CARDGAME.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: CARDGAME.PRO
+sha1: 95bedf835c55c9d87d4818b1f8cfd78d84f93df7
+options:
+  basename: CARDGAME.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/CARDGAME.PRO
+  elf_path: build/cardgame/CARDGAME.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/cardgame
+  asm_path: asm/cardgame
+  src_path: src/cardgame
+  asset_path: assets/cardgame
+  ld_script_path: build/cardgame/CARDGAME.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/cardgame.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/cardgame/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/cardgame/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  ld_bss_is_noload: False  # .bss is in the file as zeros
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: cardgame
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_CARDGAME_<addr>, D_CARDGAME_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: CARDGAME_$VRAM
+    subsegments:
+      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"). CARDGAME shares no code with the
+      # other overlays (no window_anim/fade/tween/stage-module copies; only the entry point matches), so the
+      # evidence is its own:
+      # - Jump-table parity: tables at 0 mod 8 up to 82FB0, at 4 mod 8 from 8326C (8642C's), at 0 from 836A0
+      #   (954F8's), at 4 from 83B04 (A36E4's): four groups of objects. Every table before a break has an odd
+      #   entry count and no padding word (175, 7, 5 entries), and a table with an odd count followed by a pad
+      #   word ties the next table to the same object (ASPSX doesn't pad section ends).
+      # - Define-before-use: of 273 calls/function addresses inside a parity group, 269 go backwards. The four
+      #   forward ones (95BFC -> A3240, and 9E560/A0F94/A2F00 -> A367C) all reach an object's create function
+      #   in a later file.
+      # - .data order (link order) and file-scope globals at the top of a file's data (weak).
+      - [0x0,   .rodata, cardgame_80083E34]
+      - [0x5BC, .rodata, cardgame_80085DE8]   # 8326C: parity break (4 mod 8)
+      - [0x9F0, .rodata, cardgame_800954F8]   # 836A0: parity break (0 mod 8)
+      - [0xA50, .rodata, cardgame_80096950]   # 83700 (836F0 is a 16-byte local array initialiser, no evidence)
+      - [0xAF0, .rodata, cardgame_8009D6E0]   # 837A0
+      - [0xE54, .rodata, cardgame_cpu]   # 83B04: parity break (4 mod 8)
+      - [0x1184,  c, cardgame_80083E34]   # 0x80083E34 .text: card data (83E34 reads the card table D_800A4DF4, the
+                                          # file's only .data), small effect helpers, and the card-effect
+                                          # dispatcher 84320 (two 175-case switches calling the next file's
+                                          # handlers); 82CB0/82CC8/82CF8 are padded into one object
+      - [0x3138,  c, cardgame_80085DE8]   # 0x80085DE8 card effects: one handler pair per effect (84320's first and
+                                          # second switch), plus their helpers 85DE8..860D4, which only this file
+                                          # (and A4978) calls. Position moderate: 85DE8..8642C; everything from
+                                          # 85DE8 is called only from here, and file 1 ends with its dispatcher.
+                                          # One file: no forward call, no parity break and no data-order break in
+                                          # 121 functions (A58A4, used by 8A068, precedes 860D4's A58B4)
+      - [0x12848, c, cardgame_800954F8]   # 0x800954F8 (strong): 954F8 (called by A2180), the root object 95BFC and
+                                          # the entry point 95E2C, two small objects 95FB4/96180 and 96418/96828
+                                          # (both created by 9F110). The root calls A3240 forwards: not in its file
+      - [0x13CA0, c, cardgame_80096950]   # 0x80096950 board display: object 9BBA8 with its 40-method table set by
+                                          # 9D310 (created by A2F00), its draw helpers 96950..9BAC8 (a closed call
+                                          # graph), and the small object 9D540/9D6B4. Position weak: the global
+                                          # D_800A5958 (per-player layout, also used by the effects) sits between
+                                          # 96418's data and 96C20's, read as the first data of this file
+      - [0x1AA30, c, cardgame_8009D6E0]   # 0x8009D6E0 game flow: the main object A2F00/A3240 and the turn phases
+                                          # (A1B48, A2DF8), every function defined before its caller. Position
+                                          # weak: anywhere in 95E58..9D6E0 by the forward call; here the global
+                                          # D_800A5C20 (also used by 86A30) starts its data, and 837A0/837C0/83800
+                                          # are padded into one object
+      - [0x20628, c, cardgame_800A32D8]   # 0x800A32D8 object A35BC/A367C with its helpers A32D8/A3488 (position
+                                          # moderate): created forwards by 9E560, A0F94 and A2F00, the only
+                                          # forward calls in the overlay besides the root's
+      - [0x20A34, c, cardgame_cpu]   # 0x800A36E4 (strong) the CPU player: A4978 (called by 9FDD8) and its
+                                          # helpers, its tables 83B04..83E34; no .data
+      # .data, then .bss (zeros in the file), per file in link order (tools/data_owners.py -t cardgame; DECISIONS
+      # "Overlay .data/.bss per file"). Each table is referenced by its own file only, in link order, except:
+      # - D_800A5958 (the slot origins [screen mode][side]) is read by 85DE8 and 9D6E0 but sits between 954F8's
+      #   .data and 96950's: defined in one of those two (neither reads it) or a data-only file; given to 96950,
+      #   whose .text start was placed by it (weak, see above). D_800A5C20 (card IDs, also read by 85DE8) starts
+      #   9D6E0's .data.
+      # - Unreferenced data: D_800A5CC4 (a second 40-card deck after 9D6E0's default deck D_800A5C74), the last
+      #   entry of D_800A5BDC (read [0..8]) and the zero word 800A5DC4 (in 85DE8's .bss; owner unknown).
+      # - .bss: 85DE8's variables (800A5D9C..) come after A32D8's .data (the last), so they are .bss; then
+      #   9D6E0's dialog save 800A5DC8 (link order; strong). A36E4 has no data.
+      - [0x22144, .data, cardgame_80083E34]   # 0x800A4DF4 (after the last function's jr ra): the card table
+      - [0x22B94, .data, cardgame_80085DE8]   # 0x800A5844
+      - [0x22C88, .data, cardgame_800954F8]   # 0x800A5938
+      - [0x22CA8, .data, cardgame_80096950]   # 0x800A5958
+      - [0x22F70, .data, cardgame_8009D6E0]   # 0x800A5C20
+      - [0x230E4, .data, cardgame_800A32D8]   # 0x800A5D94
+      - [0x230EC, .bss, cardgame_80085DE8]    # 0x800A5D9C
+      - [0x23118, .bss, cardgame_8009D6E0]    # 0x800A5DC8
+  - [0x23130]

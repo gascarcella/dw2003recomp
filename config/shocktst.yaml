@@ -1,0 +1,60 @@
+# splat config for the tier-1 overlay AAA/PRO/SHOCKTST.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: SHOCKTST.PRO
+sha1: 4d9cef77e2a9d25dfed5ae9e33b666f4de7cedd7
+options:
+  basename: SHOCKTST.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/SHOCKTST.PRO
+  elf_path: build/shocktst/SHOCKTST.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/shocktst
+  asm_path: asm/shocktst
+  src_path: src/shocktst
+  asset_path: assets/shocktst
+  ld_script_path: build/shocktst/SHOCKTST.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/shocktst.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/shocktst/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/shocktst/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: shocktst
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_SHOCKTST_<addr>, D_SHOCKTST_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: SHOCKTST_$VRAM
+    subsegments:
+      # One file (docs/DECISIONS.md "Overlay file split"): both jump tables at the same parity (82CB0, 82D10),
+      # .rodata in code order (the strings of .data initializers D_..84AE8/84AF0 sit between the functions
+      # that use their neighbours), .data referenced in code order (849C8..84AF0), no duplicated helpers.
+      - [0x0,  .rodata, shocktst_80082DA0]
+      - [0xF0, c, shocktst_80082DA0]   # 0x80082DA0 .text (tools/overlay_layout.py)
+      # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t shocktst;
+      # DECISIONS "Overlay .data/.bss per file").
+      - [0x1D18, .data, shocktst_80082DA0]   # 0x800849C8 (after the last function's jr ra); no .bss
+  - [0x1E44]

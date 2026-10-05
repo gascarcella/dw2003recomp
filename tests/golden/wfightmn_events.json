@@ -1,0 +1,2599 @@
+{
+ "family": "wfightmn_events",
+ "comment": "The battle's event queue on the fightstg_rules fixture: fightstg_events_get_delay per kind (the turn formula and its Newton root, the bounds, the random kinds), fightstg_events_take_next's tie rule and take modes, add_first, a full queue, the boss's final phase; and battle type 4's copy rule wfightmn_note_copied_tech (WFIGHTMN.PRO in the tier-2 slot).",
+ "generator": "tests/golden/families/wfightmn_events.py",
+ "oracle": {
+  "method": "lua-calls: tests/golden/oracle.lua hijacks the game at pad_update (-debugger -interpreter)",
+  "emulator": {
+   "name": "pcsx-redux",
+   "version": "bf4c9ceb",
+   "build_id": 359,
+   "changeset": "bf4c9cebdd1c649dd006736bb012fc7f1d6fd988"
+  },
+  "bios": {
+   "name": "openbios",
+   "sha1": "8f1269a22179433c8b22b4c804f11c0a076450c5"
+  },
+  "tree_commit": "49aff93d32a47c1561895a1d04b8b1b8b332a935",
+  "resident": "CNTY_SEL loaded: the EXE's code and data are resident"
+ },
+ "fixtures": {
+  "fixture_0": [
+   {
+    "symbol": "0x80082CB0",
+    "offset": 0,
+    "field": "overlay slot: FIGHTSTG.PRO",
+    "file": "extracted/disc/AAA/PRO/FIGHTSTG.PRO",
+    "size": 137968,
+    "sha1": "e56575e2066cf1898ac930f79d31b8a48674b8f9"
+   },
+   {
+    "symbol": "0x80190000",
+    "offset": 0,
+    "field": "SDIGIEDT.PRO, the enemy records (file 0x1CF)",
+    "file": "extracted/disc/AAA/PRO/SDIGIEDT.PRO",
+    "size": 13580,
+    "sha1": "79959dba99604edfbeabe2e66db7d7a15d1b8a3b"
+   },
+   {
+    "symbol": "cdload_module",
+    "offset": 1012,
+    "field": "cdload_module.entries[63] = {state 3 (loaded), id 0x1CF, buffer -> the file above}",
+    "hex": "03000000cf0100000000000000001980"
+   }
+  ],
+  "fixture_1": [
+   {
+    "symbol": "gamestate_data",
+    "offset": 112,
+    "field": "party = {0, 3, -1} (records_digimon indexes)",
+    "hex": "0000000003000000ffffffff"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 1924,
+    "field": "digimon[0].record.stats: level 20, HP 300/300, MP 100/100, stats [80, 60, 70, 90, 75, 10], resists [100, 100, 100, 100, 100, 100, 100]",
+    "hex": "140000002c012c016400640050003c0046005a004b000a006400640064006400640064006400000000000000"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 2856,
+    "field": "digimon[0].record.equipment = [0, 0, 0, 0, 0, 0]",
+    "hex": "000000000000000000000000"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 4888,
+    "field": "digimon[3].record.stats: level 25, HP 350/350, MP 120/120, stats [95, 70, 60, 80, 90, 20], resists [120, 80, 100, 100, 60, 150, 90]",
+    "hex": "190000005e015e01780078005f0046003c0050005a00140078005000640064003c0096005a00000000000000"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 5820,
+    "field": "digimon[3].record.equipment = [0, 0, 0, 0, 0, 0]",
+    "hex": "000000000000000000000000"
+   },
+   {
+    "symbol": "fightstg_battle",
+    "offset": 8,
+    "field": "fightstg_battle.state: current {0,0}; members[0] Kotemon 300 HP, #3 350 HP; members[1] 0x20 400 HP, 0xD9 800 HP (item 357)",
+    "hex": "00000000000000007f017f0100002c012c016400640000000000000000000000ffff0000000000000300030000005e015e017800780000000000000000000000ffff000000000000000000000000000000000000000000000000000000000000ffff000000000000200020000000900190013200320000000000000000000000ffff000000000000d900d90000002003200364006400000000000000000000006501000000000000000000000000000000000000000000000000000000000000ffff000000000000000000000000000000000000"
+   },
+   {
+    "symbol": "records_state",
+    "offset": 24,
+    "field": "records_state.enemies: 0x20 level 18 scale 16; 0xD9 level 30 scale 24",
+    "hex": "200000001200900132001000d90000001e00200364001800000000000000000000000000"
+   },
+   {
+    "symbol": "records_state",
+    "offset": 62,
+    "field": "records_state.blocked = all 0",
+    "hex": "000000000000000000000000"
+   },
+   {
+    "symbol": "fightstg_rules",
+    "offset": 0,
+    "field": "fightstg_rules.stats[2] = 0 (the function table after them stays)",
+    "hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+   },
+   {
+    "symbol": "pad_random",
+    "offset": 0,
+    "field": "pad_random.index = 0",
+    "hex": "00000000"
+   }
+  ],
+  "fixture_2": [
+   {
+    "symbol": "gamestate_data",
+    "offset": 112,
+    "field": "party = {0, 3, -1} (records_digimon indexes)",
+    "hex": "0000000003000000ffffffff"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 1924,
+    "field": "digimon[0].record.stats: level 20, HP 300/300, MP 100/100, stats [80, 60, 70, 90, 75, 10], resists [100, 100, 100, 100, 100, 100, 100]",
+    "hex": "140000002c012c016400640050003c0046005a004b000a006400640064006400640064006400000000000000"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 2856,
+    "field": "digimon[0].record.equipment = [0, 0, 0, 0, 0, 0]",
+    "hex": "000000000000000000000000"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 4888,
+    "field": "digimon[3].record.stats: level 25, HP 350/350, MP 120/120, stats [95, 70, 60, 80, 90, 20], resists [120, 80, 100, 100, 60, 150, 90]",
+    "hex": "190000005e015e01780078005f0046003c0050005a00140078005000640064003c0096005a00000000000000"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 5820,
+    "field": "digimon[3].record.equipment = [0, 0, 0, 0, 0, 0]",
+    "hex": "000000000000000000000000"
+   },
+   {
+    "symbol": "fightstg_battle",
+    "offset": 8,
+    "field": "fightstg_battle.state: current {0,0}; members[0] Kotemon 300 HP, #3 350 HP; members[1] 0x20 400 HP, 0xD9 800 HP (item 357)",
+    "hex": "00000000000000007f017f0100002c012c016400640000000000000000000000ffff0000000000000300030000005e015e017800780000000000000000000000ffff000000000000000000000000000000000000000000000000000000000000ffff000000000000200020000000900190013200320000000000000000000000ffff000000000000d900d90000002003200364006400000000000000000000006501000000000000000000000000000000000000000000000000000000000000ffff000000000000000000000000000000000000"
+   },
+   {
+    "symbol": "records_state",
+    "offset": 24,
+    "field": "records_state.enemies: 0x20 level 18 scale 16; 0xD9 level 30 scale 24",
+    "hex": "200000001200900132001000d90000001e00200364001800000000000000000000000000"
+   },
+   {
+    "symbol": "records_state",
+    "offset": 62,
+    "field": "records_state.blocked = all 0",
+    "hex": "000000000000000000000000"
+   },
+   {
+    "symbol": "fightstg_rules",
+    "offset": 0,
+    "field": "fightstg_rules.stats[2] = 0 (the function table after them stays)",
+    "hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+   },
+   {
+    "symbol": "pad_random",
+    "offset": 0,
+    "field": "pad_random.index = 0",
+    "hex": "00000000"
+   },
+   {
+    "symbol": "0x800A5DE0",
+    "offset": 0,
+    "field": "tier-2 slot: WFIGHTMN.PRO (restored after the case)",
+    "file": "extracted/disc/AAA/PRO/WFIGHTMN.PRO",
+    "size": 20680,
+    "sha1": "fe2db0a83e09b2fcb9ecedf0a6c1c2114be5dabe"
+   }
+  ]
+ },
+ "cases": [
+  {
+   "name": "setup_fightstg",
+   "comment": "setup, kept for the family: the overlay and the enemy file; nothing is restored",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "fightstg_rules_get_field_bonus",
+     "args": [
+      1000,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "smoke: no field element yet (the slot's data is the file's), so 0"
+    }
+   ]
+  },
+  {
+   "name": "delay_turn_s0",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_get_delay",
+     "args": [
+      0,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 800,
+     "v0": 800,
+     "comment": "member 0 (Boost 75) against 0x20 (Boost 48): 1000 * 48 / 60 = 800",
+     "reads": [
+      {
+       "symbol": "fightstg_rules",
+       "offset": 0,
+       "size": 128,
+       "field": "fightstg_rules.stats[0..1] after the call (attacker, target)",
+       "hex": "140050003c0046005a004b00640064006400640064006400640032000a00140028001e0000010000000000000000000000000000000000000000000000000000120032002a002800320030005a005a005a003c00a0005a00a0006300320032003200000000080000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "delay_turn_s16",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_get_delay",
+     "args": [
+      16,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 1250,
+     "v0": 1250,
+     "comment": "the enemy's turn: 1000 * 75 / 60 = 1250",
+     "reads": [
+      {
+       "symbol": "fightstg_rules",
+       "offset": 0,
+       "size": 128,
+       "field": "fightstg_rules.stats[0..1] after the call (attacker, target)",
+       "hex": "120032002a002800320030005a005a005a003c00a0005a00a0006300320032003200000000080000000000000000000000000000000000000000000000000000140050003c0046005a004b00640064006400640064006400640032000a00140028001e0000010000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "delay_turn_newton",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_get_delay",
+     "args": [
+      0,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 979,
+     "v0": 979,
+     "comment": "Boost 50: product 2400 = 49^2 - 1, the 10 Newton steps end on 49: 979 (isqrt 48: 1000)",
+     "writes": [
+      {
+       "symbol": "gamestate_data",
+       "offset": 1944,
+       "field": "digimon[0].record Boost 50",
+       "hex": "3200"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_rules",
+       "offset": 0,
+       "size": 128,
+       "field": "fightstg_rules.stats[0..1] after the call (attacker, target)",
+       "hex": "140050003c0046005a003200640064006400640064006400640032000a00140028001e0000010000000000000000000000000000000000000000000000000000120032002a002800320030005a005a005a003c00a0005a00a0006300320032003200000000080000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "delay_turn_min",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_get_delay",
+     "args": [
+      0,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 707,
+     "v0": 707,
+     "comment": "Boost 999: 1000 * 48 / 218 = 220, raised to 707",
+     "writes": [
+      {
+       "symbol": "gamestate_data",
+       "offset": 1944,
+       "field": "digimon[0].record Boost 999",
+       "hex": "e703"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_rules",
+       "offset": 0,
+       "size": 128,
+       "field": "fightstg_rules.stats[0..1] after the call (attacker, target)",
+       "hex": "140050003c0046005a00e703640064006400640064006400640032000a00140028001e0000010000000000000000000000000000000000000000000000000000120032002a002800320030005a005a005a003c00a0005a00a0006300320032003200000000080000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "delay_turn_max",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_get_delay",
+     "args": [
+      0,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 1414,
+     "v0": 1414,
+     "comment": "Boost 1: root 7 (isqrt 6), 6857 lowered to 1414",
+     "writes": [
+      {
+       "symbol": "gamestate_data",
+       "offset": 1944,
+       "field": "digimon[0].record Boost 1",
+       "hex": "0100"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_rules",
+       "offset": 0,
+       "size": 128,
+       "field": "fightstg_rules.stats[0..1] after the call (attacker, target)",
+       "hex": "140050003c0046005a000100640064006400640064006400640032000a00140028001e0000010000000000000000000000000000000000000000000000000000120032002a002800320030005a005a005a003c00a0005a00a0006300320032003200000000080000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "delay_blast_unbounded",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_get_delay",
+     "args": [
+      0,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 440,
+     "v0": 440,
+     "comment": "kind 3 (blast): 2000 * 48 / 218 = 440, no bounds",
+     "writes": [
+      {
+       "symbol": "gamestate_data",
+       "offset": 1944,
+       "field": "digimon[0].record Boost 999",
+       "hex": "e703"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_rules",
+       "offset": 0,
+       "size": 128,
+       "field": "fightstg_rules.stats[0..1] after the call (attacker, target)",
+       "hex": "140050003c0046005a00e703640064006400640064006400640032000a00140028001e0000010000000000000000000000000000000000000000000000000000120032002a002800320030005a005a005a003c00a0005a00a0006300320032003200000000080000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "00000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "delay_regen_r0",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_get_delay",
+     "args": [
+      0,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 1867,
+     "v0": 1867,
+     "comment": "kind 2: 1167 + Spirit 70 * 10 = 1867",
+     "writes": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "field": "pad_random.index = 0",
+       "hex": "00000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_rules",
+       "offset": 0,
+       "size": 128,
+       "field": "fightstg_rules.stats[0..1] after the call (attacker, target)",
+       "hex": "140050003c0046005a004b00640064006400640064006400640032000a00140028001e000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "01000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "delay_regen_min",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_get_delay",
+     "args": [
+      0,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 1001,
+     "v0": 1001,
+     "comment": "kind 2: 38 + 700 = 738, raised to 1001",
+     "writes": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "field": "pad_random.index = 3333",
+       "hex": "050d0000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_rules",
+       "offset": 0,
+       "size": 128,
+       "field": "fightstg_rules.stats[0..1] after the call (attacker, target)",
+       "hex": "140050003c0046005a004b00640064006400640064006400640032000a00140028001e000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "060d0000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "delay_kind8_min",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_get_delay",
+     "args": [
+      0,
+      8
+     ],
+     "ret_type": "s32",
+     "ret": 2000,
+     "v0": 2000,
+     "comment": "kind 8: draw 1936, raised to 2000",
+     "writes": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "field": "pad_random.index = 777",
+       "hex": "09030000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_rules",
+       "offset": 0,
+       "size": 128,
+       "field": "fightstg_rules.stats[0..1] after the call (attacker, target)",
+       "hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "0a030000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "delay_kind8",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_get_delay",
+     "args": [
+      0,
+      8
+     ],
+     "ret_type": "s32",
+     "ret": 2039,
+     "v0": 2039,
+     "comment": "kind 8: draw 2039",
+     "writes": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "field": "pad_random.index = 3333",
+       "hex": "050d0000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_rules",
+       "offset": 0,
+       "size": 128,
+       "field": "fightstg_rules.stats[0..1] after the call (attacker, target)",
+       "hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "060d0000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "delay_paralysis",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_get_delay",
+     "args": [
+      0,
+      9
+     ],
+     "ret_type": "s32",
+     "ret": 2368,
+     "v0": 2368,
+     "comment": "kind 9: 168 + (70 + 40) * 8 + 3000 - 0x20's (50 + 160) * 8 = 2368",
+     "writes": [
+      {
+       "symbol": "fightstg_events",
+       "offset": 2805,
+       "field": "fightstg_events.status_power = 40",
+       "hex": "28"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "field": "pad_random.index = 0",
+       "hex": "00000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_rules",
+       "offset": 0,
+       "size": 128,
+       "field": "fightstg_rules.stats[0..1] after the call (attacker, target)",
+       "hex": "140050003c0046005a004b00640064006400640064006400640032000a00140028001e0000010000000000000000000000000000000000000000000000000000120032002a002800320030005a005a005a003c00a0005a00a0006300320032003200000000080000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "01000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "delay_confusion",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_get_delay",
+     "args": [
+      0,
+      10
+     ],
+     "ret_type": "s32",
+     "ret": 3168,
+     "v0": 3168,
+     "comment": "kind 10: resists[9] + [3] = 50 + 60: 4048 - 880 = 3168",
+     "writes": [
+      {
+       "symbol": "fightstg_events",
+       "offset": 2805,
+       "field": "fightstg_events.status_power = 40",
+       "hex": "28"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "field": "pad_random.index = 0",
+       "hex": "00000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_rules",
+       "offset": 0,
+       "size": 128,
+       "field": "fightstg_rules.stats[0..1] after the call (attacker, target)",
+       "hex": "140050003c0046005a004b00640064006400640064006400640032000a00140028001e0000010000000000000000000000000000000000000000000000000000120032002a002800320030005a005a005a003c00a0005a00a0006300320032003200000000080000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "01000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "delay_sleep",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_get_delay",
+     "args": [
+      0,
+      11
+     ],
+     "ret_type": "s32",
+     "ret": 928,
+     "v0": 928,
+     "comment": "kind 11: + 1000, resists[10] + [2] = 50 + 90: 2048 - 1120 = 928",
+     "writes": [
+      {
+       "symbol": "fightstg_events",
+       "offset": 2805,
+       "field": "fightstg_events.status_power = 40",
+       "hex": "28"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "field": "pad_random.index = 0",
+       "hex": "00000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_rules",
+       "offset": 0,
+       "size": 128,
+       "field": "fightstg_rules.stats[0..1] after the call (attacker, target)",
+       "hex": "140050003c0046005a004b00640064006400640064006400640032000a00140028001e0000010000000000000000000000000000000000000000000000000000120032002a002800320030005a005a005a003c00a0005a00a0006300320032003200000000080000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "01000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "delay_modifier_tech",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_get_delay",
+     "args": [
+      0,
+      12
+     ],
+     "ret_type": "s32",
+     "ret": 3867,
+     "v0": 3867,
+     "comment": "kind 12: 1167 + 2000 + 700 = 3867",
+     "writes": [
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "field": "pad_random.index = 0",
+       "hex": "00000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_rules",
+       "offset": 0,
+       "size": 128,
+       "field": "fightstg_rules.stats[0..1] after the call (attacker, target)",
+       "hex": "140050003c0046005a004b00640064006400640064006400640032000a00140028001e000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index after the call",
+       "hex": "01000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "take_turn_loses_tie",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_take_next",
+     "args": [],
+     "ret_type": "s32",
+     "ret": 3,
+     "v0": 3,
+     "comment": "poison 500, party turn 300, enemy turn 300: the later enemy turn wins the tie (3, freed); delays 200, 0",
+     "writes": [
+      {
+       "symbol": "fightstg_events",
+       "offset": 0,
+       "field": "fightstg_events.events = [(9, 500), (2, 300), (3, 300)] (type, delay), rest empty",
+       "hex": "0900f40100000000000000001400000000000000000000000000000002002c0100000000000000000000000000000000000000000000000003002c01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_events",
+       "offset": 0,
+       "size": 112,
+       "field": "fightstg_events.events[0..3]",
+       "hex": "0900c800000000000000000014000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "fightstg_events",
+       "offset": 2800,
+       "size": 2,
+       "field": "fightstg_events.taken_type, .taken",
+       "hex": "0302"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "take_turn_then_status",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_take_next",
+     "args": [],
+     "ret_type": "s32",
+     "ret": 9,
+     "v0": 9,
+     "comment": "party turn 300, poison 300: the poison wins (9, kept: mode -1); delays 0, 0",
+     "writes": [
+      {
+       "symbol": "fightstg_events",
+       "offset": 0,
+       "field": "fightstg_events.events = [(2, 300), (9, 300)] (type, delay), rest empty",
+       "hex": "02002c0100000000000000000000000000000000000000000000000009002c0100000000000000001400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_events",
+       "offset": 0,
+       "size": 112,
+       "field": "fightstg_events.events[0..3]",
+       "hex": "02000000000000000000000000000000000000000000000000000000090000000000000000000000140000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "fightstg_events",
+       "offset": 2800,
+       "size": 2,
+       "field": "fightstg_events.taken_type, .taken",
+       "hex": "0901"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "take_status_then_turn",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_take_next",
+     "args": [],
+     "ret_type": "s32",
+     "ret": 9,
+     "v0": 9,
+     "comment": "poison 300, party turn 300: the first (9, kept), the turn does not take a tie from a status event",
+     "writes": [
+      {
+       "symbol": "fightstg_events",
+       "offset": 0,
+       "field": "fightstg_events.events = [(9, 300), (2, 300)] (type, delay), rest empty",
+       "hex": "09002c0100000000000000001400000000000000000000000000000002002c0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_events",
+       "offset": 0,
+       "size": 112,
+       "field": "fightstg_events.events[0..3]",
+       "hex": "09000000000000000000000014000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "fightstg_events",
+       "offset": 2800,
+       "size": 2,
+       "field": "fightstg_events.taken_type, .taken",
+       "hex": "0900"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "take_empty",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_take_next",
+     "args": [],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "empty queue: 0",
+     "writes": [
+      {
+       "symbol": "fightstg_events",
+       "offset": 0,
+       "field": "fightstg_events.events = [] (type, delay), rest empty",
+       "hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_events",
+       "offset": 0,
+       "size": 112,
+       "field": "fightstg_events.events[0..3]",
+       "hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "fightstg_events",
+       "offset": 2800,
+       "size": 2,
+       "field": "fightstg_events.taken_type, .taken",
+       "hex": "0000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "add_first_knockout",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_add_knockout",
+     "args": [
+      16
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 0,
+     "comment": "knockout of the enemy (add_first): queued delays + 2 (502, 802), the event 0x14 at delay 1 in slot 2",
+     "writes": [
+      {
+       "symbol": "fightstg_new_event",
+       "offset": 0,
+       "field": "fightstg_new_event = 0 (its unset args would be stale)",
+       "hex": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "fightstg_events",
+       "offset": 0,
+       "field": "fightstg_events.events = [(2, 500), (3, 800)] (type, delay), rest empty",
+       "hex": "0200f4010000000000000000000000000000000000000000000000000300200300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_events",
+       "offset": 0,
+       "size": 112,
+       "field": "fightstg_events.events[0..3]",
+       "hex": "0200f601000000000000000000000000000000000000000000000000030022030000000000000000000000000000000000000000000000001400010010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "add_full_queue",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_add_party_turn",
+     "args": [
+      100
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 4294967295,
+     "comment": "a full queue drops the new party turn (no slot, nothing overwritten)",
+     "writes": [
+      {
+       "symbol": "fightstg_events",
+       "offset": 0,
+       "field": "99 events {7, 9000}: the queue is full",
+       "hex": "070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000070028230000000000000000000000000000000000000000000000000700282300000000000000000000000000000000000000000000000007002823000000000000000000000000000000000000000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_events",
+       "offset": 0,
+       "size": 2772,
+       "field": "fightstg_events.events (hashed)",
+       "sha1": "05082e92c049010707d5e5bdce296b20f4abf980"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "final_phase_start",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fightstg_events_start_final_phase",
+     "args": [],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 4294966931,
+     "comment": "event 0x18 at 3000, final_phase 1, enemy 0's modifiers[1] and [3] = -(record 0x1D3's stats[1], [2]) >> 1",
+     "writes": [
+      {
+       "symbol": "fightstg_new_event",
+       "offset": 0,
+       "field": "fightstg_new_event = 0 (its unset args would be stale)",
+       "hex": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "fightstg_events",
+       "offset": 0,
+       "field": "fightstg_events.events = [] (type, delay), rest empty",
+       "hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_events",
+       "offset": 0,
+       "size": 112,
+       "field": "fightstg_events.events[0..3]",
+       "hex": "1800b80b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+       "symbol": "fightstg_battle",
+       "offset": 8,
+       "size": 212,
+       "field": "fightstg_battle.state after the call",
+       "hex": "00000000000000007f017f0100002c012c016400640000000000000000000000ffff0000000000000300030000005e015e017800780000000000000000000000ffff000000000000000000000000000000000000000000000000000000000000ffff00000000000020002000000090019001320032000000000089fe000093feffff000000000000d900d90000002003200364006400000000000000000000006501000000000000000000000000000000000000000000000000000000000000ffff000000000000000000000000000000000001"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "copy_kind1",
+   "fixture": "fixture_2",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "wfightmn_note_copied_tech",
+     "args": [
+      0,
+      55
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2148139008,
+     "comment": "technique 55: kind 1, defense_stat < 2: not copied",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 214,
+       "field": "state.type = 4 (the enemy copies), copied_tech = 0",
+       "hex": "04000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 8,
+       "size": 212,
+       "field": "fightstg_battle.state after the call",
+       "hex": "00000000000000007f017f0100002c012c016400640000000000000000000000ffff0000000000000300030000005e015e017800780000000000000000000000ffff000000000000000000000000000000000000000000000000000000000000ffff000000000000200020000000900190013200320000000000000000000000ffff000000000000d900d90000002003200364006400000000000000000000006501000000000000000000000000000000000000000000000000000000000000ffff000000000000000000000000040000000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "copy_kind1_elemental",
+   "fixture": "fixture_2",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "wfightmn_note_copied_tech",
+     "args": [
+      0,
+      53
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2148139008,
+     "comment": "technique 53: kind 1, defense_stat >= 2: copied",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 214,
+       "field": "state.type = 4 (the enemy copies), copied_tech = 0",
+       "hex": "04000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 8,
+       "size": 212,
+       "field": "fightstg_battle.state after the call",
+       "hex": "00000000000000007f017f0100002c012c016400640000000000000000000000ffff0000000000000300030000005e015e017800780000000000000000000000ffff000000000000000000000000000000000000000000000000000000000000ffff000000000000200020000000900190013200320000000000000000000000ffff000000000000d900d90000002003200364006400000000000000000000006501000000000000000000000000000000000000000000000000000000000000ffff000000000000000000000000040035000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "copy_anim5",
+   "fixture": "fixture_2",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "wfightmn_note_copied_tech",
+     "args": [
+      0,
+      222
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 5,
+     "comment": "technique 222: defense_stat >= 2 but anim_script 5/12: not copied",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 214,
+       "field": "state.type = 4 (the enemy copies), copied_tech = 0",
+       "hex": "04000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 8,
+       "size": 212,
+       "field": "fightstg_battle.state after the call",
+       "hex": "00000000000000007f017f0100002c012c016400640000000000000000000000ffff0000000000000300030000005e015e017800780000000000000000000000ffff000000000000000000000000000000000000000000000000000000000000ffff000000000000200020000000900190013200320000000000000000000000ffff000000000000d900d90000002003200364006400000000000000000000006501000000000000000000000000000000000000000000000000000000000000ffff000000000000000000000000040000000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "copy_kind2",
+   "fixture": "fixture_2",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "wfightmn_note_copied_tech",
+     "args": [
+      0,
+      94
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2148139008,
+     "comment": "technique 94: kind 2: copied",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 214,
+       "field": "state.type = 4 (the enemy copies), copied_tech = 0",
+       "hex": "04000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 8,
+       "size": 212,
+       "field": "fightstg_battle.state after the call",
+       "hex": "00000000000000007f017f0100002c012c016400640000000000000000000000ffff0000000000000300030000005e015e017800780000000000000000000000ffff000000000000000000000000000000000000000000000000000000000000ffff000000000000200020000000900190013200320000000000000000000000ffff000000000000d900d90000002003200364006400000000000000000000006501000000000000000000000000000000000000000000000000000000000000ffff00000000000000000000000004005e000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "copy_kind9",
+   "fixture": "fixture_2",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "wfightmn_note_copied_tech",
+     "args": [
+      0,
+      61
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2148139008,
+     "comment": "technique 61: kind 9: not copied",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 214,
+       "field": "state.type = 4 (the enemy copies), copied_tech = 0",
+       "hex": "04000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 8,
+       "size": 212,
+       "field": "fightstg_battle.state after the call",
+       "hex": "00000000000000007f017f0100002c012c016400640000000000000000000000ffff0000000000000300030000005e015e017800780000000000000000000000ffff000000000000000000000000000000000000000000000000000000000000ffff000000000000200020000000900190013200320000000000000000000000ffff000000000000d900d90000002003200364006400000000000000000000006501000000000000000000000000000000000000000000000000000000000000ffff000000000000000000000000040000000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "copy_kind10",
+   "fixture": "fixture_2",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "wfightmn_note_copied_tech",
+     "args": [
+      0,
+      63
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2148139008,
+     "comment": "technique 63: kind 10: not copied",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 214,
+       "field": "state.type = 4 (the enemy copies), copied_tech = 0",
+       "hex": "04000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 8,
+       "size": 212,
+       "field": "fightstg_battle.state after the call",
+       "hex": "00000000000000007f017f0100002c012c016400640000000000000000000000ffff0000000000000300030000005e015e017800780000000000000000000000ffff000000000000000000000000000000000000000000000000000000000000ffff000000000000200020000000900190013200320000000000000000000000ffff000000000000d900d90000002003200364006400000000000000000000006501000000000000000000000000000000000000000000000000000000000000ffff000000000000000000000000040000000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "copy_kind11",
+   "fixture": "fixture_2",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "wfightmn_note_copied_tech",
+     "args": [
+      0,
+      54
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2148139008,
+     "comment": "technique 54: kind 11: copied",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 214,
+       "field": "state.type = 4 (the enemy copies), copied_tech = 0",
+       "hex": "04000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 8,
+       "size": 212,
+       "field": "fightstg_battle.state after the call",
+       "hex": "00000000000000007f017f0100002c012c016400640000000000000000000000ffff0000000000000300030000005e015e017800780000000000000000000000ffff000000000000000000000000000000000000000000000000000000000000ffff000000000000200020000000900190013200320000000000000000000000ffff000000000000d900d90000002003200364006400000000000000000000006501000000000000000000000000000000000000000000000000000000000000ffff000000000000000000000000040036000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "copy_kind12",
+   "fixture": "fixture_2",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "wfightmn_note_copied_tech",
+     "args": [
+      0,
+      127
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2148139008,
+     "comment": "technique 127: kind 12: not copied",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 214,
+       "field": "state.type = 4 (the enemy copies), copied_tech = 0",
+       "hex": "04000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 8,
+       "size": 212,
+       "field": "fightstg_battle.state after the call",
+       "hex": "00000000000000007f017f0100002c012c016400640000000000000000000000ffff0000000000000300030000005e015e017800780000000000000000000000ffff000000000000000000000000000000000000000000000000000000000000ffff000000000000200020000000900190013200320000000000000000000000ffff000000000000d900d90000002003200364006400000000000000000000006501000000000000000000000000000000000000000000000000000000000000ffff000000000000000000000000040000000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "copy_kind13",
+   "fixture": "fixture_2",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "wfightmn_note_copied_tech",
+     "args": [
+      0,
+      211
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2148139008,
+     "comment": "technique 211: kind 13: copied",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 214,
+       "field": "state.type = 4 (the enemy copies), copied_tech = 0",
+       "hex": "04000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 8,
+       "size": 212,
+       "field": "fightstg_battle.state after the call",
+       "hex": "00000000000000007f017f0100002c012c016400640000000000000000000000ffff0000000000000300030000005e015e017800780000000000000000000000ffff000000000000000000000000000000000000000000000000000000000000ffff000000000000200020000000900190013200320000000000000000000000ffff000000000000d900d90000002003200364006400000000000000000000006501000000000000000000000000000000000000000000000000000000000000ffff0000000000000000000000000400d3000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "copy_kind9_elemental",
+   "fixture": "fixture_2",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "wfightmn_note_copied_tech",
+     "args": [
+      0,
+      72
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2148139008,
+     "comment": "technique 72: kind 9 but defense_stat >= 2: copied",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 214,
+       "field": "state.type = 4 (the enemy copies), copied_tech = 0",
+       "hex": "04000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 8,
+       "size": 212,
+       "field": "fightstg_battle.state after the call",
+       "hex": "00000000000000007f017f0100002c012c016400640000000000000000000000ffff0000000000000300030000005e015e017800780000000000000000000000ffff000000000000000000000000000000000000000000000000000000000000ffff000000000000200020000000900190013200320000000000000000000000ffff000000000000d900d90000002003200364006400000000000000000000006501000000000000000000000000000000000000000000000000000000000000ffff000000000000000000000000040048000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "copy_type0",
+   "fixture": "fixture_2",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "wfightmn_note_copied_tech",
+     "args": [
+      0,
+      94
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 5,
+     "comment": "battle type 0: not copied",
+     "reads": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 8,
+       "size": 212,
+       "field": "fightstg_battle.state after the call",
+       "hex": "00000000000000007f017f0100002c012c016400640000000000000000000000ffff0000000000000300030000005e015e017800780000000000000000000000ffff000000000000000000000000000000000000000000000000000000000000ffff000000000000200020000000900190013200320000000000000000000000ffff000000000000d900d90000002003200364006400000000000000000000006501000000000000000000000000000000000000000000000000000000000000ffff000000000000000000000000000000000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "copy_enemy",
+   "fixture": "fixture_2",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     10076
+    ],
+    [
+     "gamestate_flags",
+     28
+    ],
+    [
+     "fightstg_battle",
+     248
+    ],
+    [
+     "fightstg_rules",
+     240
+    ],
+    [
+     "records_state",
+     104
+    ],
+    [
+     "pad_random",
+     4
+    ],
+    [
+     "cdload_module",
+     1076
+    ],
+    [
+     "fightstg_events",
+     2844
+    ]
+   ],
+   "calls": [
+    {
+     "func": "wfightmn_note_copied_tech",
+     "args": [
+      16,
+      94
+     ],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 1692,
+     "comment": "the enemy's technique: not copied",
+     "writes": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 214,
+       "field": "state.type = 4 (the enemy copies), copied_tech = 0",
+       "hex": "04000000"
+      }
+     ],
+     "reads": [
+      {
+       "symbol": "fightstg_battle",
+       "offset": 8,
+       "size": 212,
+       "field": "fightstg_battle.state after the call",
+       "hex": "00000000000000007f017f0100002c012c016400640000000000000000000000ffff0000000000000300030000005e015e017800780000000000000000000000ffff000000000000000000000000000000000000000000000000000000000000ffff000000000000200020000000900190013200320000000000000000000000ffff000000000000d900d90000002003200364006400000000000000000000006501000000000000000000000000000000000000000000000000000000000000ffff000000000000000000000000040000000000"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

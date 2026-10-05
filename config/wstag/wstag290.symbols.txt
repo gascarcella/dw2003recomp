@@ -1,0 +1,10 @@
+// WSTAG290 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag290_update = 0x800A5DE0; // type:func
+wstag290_start = 0x800A5E28; // type:func
+wstag290_setup = 0x800A5E84; // type:func
+wstag290_battle_lists = 0x800A618C;
+wstag290_vram_places = 0x800A61A8;
+wstag290_actors = 0x800A6304;
+wstag290_sprites = 0x800A6314;
+wstag290_map_events = 0x800A658C;
+wstag290_funcs = 0x800A65EC;

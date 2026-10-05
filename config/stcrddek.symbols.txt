@@ -1,0 +1,78 @@
+// Symbol names for AAA/PRO/STCRDDEK.PRO (splat format). Tier-1 overlays share one address range,
+// so each overlay has its own symbol file; the EXE's names come from config/symbol_addrs.txt.
+
+// Helper table (src/stcrddek/stcrddek_8008A100.c)
+stcrddek_load_files = 0x8008A100; // type:func
+stcrddek_is_loading = 0x8008A21C; // type:func
+stcrddek_window_anim_start = 0x8008A2D8; // type:func
+stcrddek_window_anim_update = 0x8008A36C; // type:func
+stcrddek_lerp_start = 0x8008A3D8; // type:func
+stcrddek_lerp_update = 0x8008A418; // type:func
+stcrddek_grid_cursor_palettes = 0x8008A484;
+stcrddek_name_glyphs = 0x8008A49C;
+stcrddek_name_glyphs_ext = 0x8008AE80;
+stcrddek_name_tabs_jpn = 0x8008B368;
+stcrddek_name_pages_jpn = 0x8008B38C;
+stcrddek_name_tabs_latin = 0x8008B604;
+stcrddek_name_pages_latin = 0x8008B610;
+stcrddek_name_font = 0x8008B6E4;
+stcrddek_name_portrait_anims = 0x8008B6FC;
+stcrddek_name_buttons = 0x8008B7DC;
+stcrddek_name_arrow_palettes = 0x8008B818;
+stcrddek_util = 0x8008B830; // size:0x18
+
+// Functions (src/stcrddek/stcrddek_800831F0.c)
+stcrddek_update_root = 0x800831F0; // type:func
+stcrddek_start = 0x800832E8; // type:func
+stcrddek_start_fade = 0x80083314; // type:func
+stcrddek_draw_fade = 0x8008339C; // type:func
+stcrddek_update_fade = 0x800834E0; // type:func
+stcrddek_create_fade = 0x80083594; // type:func
+stcrddek_draw_grid = 0x800835D8; // type:func
+stcrddek_step_grid = 0x800837B4; // type:func
+stcrddek_update_grid = 0x800838C4; // type:func
+stcrddek_create_grid = 0x80083934; // type:func
+stcrddek_count_spare_cards = 0x800847C0; // type:func
+stcrddek_update_editor = 0x80086574; // type:func
+stcrddek_create_editor = 0x8008660C; // type:func
+stcrddek_stub_init = 0x80086664; // type:func
+stcrddek_stub_draw = 0x8008666C; // type:func
+stcrddek_stub_input = 0x800866A8; // type:func
+stcrddek_stub_update = 0x8008671C; // type:func
+stcrddek_stub_create = 0x800867A0; // type:func
+
+// Functions (src/stcrddek/stcrddek_80088874.c)
+stcrddek_set_bar_x = 0x80088874; // type:func
+stcrddek_set_bar_range = 0x80088880; // type:func
+stcrddek_set_bar_lines = 0x80088894; // type:func
+stcrddek_set_bar_line = 0x800888A8; // type:func
+stcrddek_update_bar = 0x800888B0; // type:func
+stcrddek_create_bar = 0x80088AC8; // type:func
+stcrddek_show_deck = 0x80088D24; // type:func
+stcrddek_draw_main = 0x80088E74; // type:func
+stcrddek_count_card_types = 0x8008924C; // type:func
+stcrddek_update_menu = 0x80089354; // type:func
+stcrddek_update_main = 0x80089E98; // type:func
+stcrddek_create_main = 0x8008A0B8; // type:func
+stcrddek_create_main_windows = 0x80088B34; // type:func
+
+// Functions (src/stcrddek/stcrddek_800867E8.c; the name entry, as in STDGNAME and STPLNMET)
+window_anim_start = 0x800867E8; // type:func allow_duplicated:True
+window_anim_update = 0x8008687C; // type:func allow_duplicated:True
+stcrddek_create_name_windows = 0x800868E8; // type:func
+stcrddek_show_name_windows = 0x80086AD8; // type:func
+stcrddek_update_name_entry = 0x800884E8; // type:func
+stcrddek_set_name_vram = 0x80088628; // type:func
+stcrddek_set_name = 0x80088634; // type:func
+stcrddek_get_name = 0x800886C8; // type:func
+stcrddek_close_name_entry = 0x800887C8; // type:func
+stcrddek_create_name_entry = 0x800887D4; // type:func
+stcrddek_name_pages = 0x8008B848; // size:0xC
+stcrddek_create_editor_windows = 0x8008397C; // type:func
+stcrddek_show_card_list = 0x80084278; // type:func
+stcrddek_show_deck_card = 0x80083D28; // type:func
+stcrddek_show_list_card = 0x80084440; // type:func
+stcrddek_draw_editor = 0x80084890; // type:func
+stcrddek_draw_name_entry = 0x80086E04; // type:func
+stcrddek_run_name_entry = 0x80087788; // type:func
+stcrddek_update_editor_menu = 0x80085210; // type:func

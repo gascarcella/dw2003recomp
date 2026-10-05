@@ -1,0 +1,10 @@
+// WSTAG706 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag706_update = 0x800A5DE0; // type:func
+wstag706_start = 0x800A5E28; // type:func
+wstag706_setup = 0x800A5E84; // type:func
+wstag706_battle_lists = 0x800A61A0;
+wstag706_vram_places = 0x800A61BC;
+wstag706_actors = 0x800A68A0;
+wstag706_sprites = 0x800A68C8;
+wstag706_map_events = 0x800A6924;
+wstag706_funcs = 0x800A6B34;

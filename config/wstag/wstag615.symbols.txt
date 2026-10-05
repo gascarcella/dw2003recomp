@@ -1,0 +1,15 @@
+// WSTAG615 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag615_color = 0x800A5DE0;
+wstag615_update = 0x800A5DE4; // type:func
+wstag615_start = 0x800A5E78; // type:func
+wstag615_event_530_end = 0x800A5ED4; // type:func
+wstag615_event_531_end = 0x800A5F20; // type:func
+wstag615_setup = 0x800A5F30; // type:func
+wstag615_battle_lists = 0x800A66C4;
+wstag615_vram_places = 0x800A66E0;
+wstag615_actors = 0x800A699C;
+wstag615_sprites = 0x800A69D0;
+wstag615_map_events = 0x800A7360;
+wstag615_map_events2 = 0x800A73D8;
+wstag615_funcs = 0x800A7468;
+wstag615_events = 0x800A746C;

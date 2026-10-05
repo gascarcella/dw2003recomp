@@ -1,0 +1,9 @@
+// WSTAG250 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag250_update = 0x800A5DE0; // type:func
+wstag250_start = 0x800A5E28; // type:func
+wstag250_setup = 0x800A5E84; // type:func
+wstag250_vram_places = 0x800A5F70;
+wstag250_actors = 0x800A6558;
+wstag250_sprites = 0x800A65BC;
+wstag250_map_events = 0x800A6724;
+wstag250_funcs = 0x800A676C;

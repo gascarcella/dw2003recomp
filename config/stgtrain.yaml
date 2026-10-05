@@ -1,0 +1,78 @@
+# splat config for the tier-1 overlay AAA/PRO/STGTRAIN.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: STGTRAIN.PRO
+sha1: 32344e9ffca3db7686aa70f6e0082510d0ba258b
+options:
+  basename: STGTRAIN.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/STGTRAIN.PRO
+  elf_path: build/stgtrain/STGTRAIN.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/stgtrain
+  asm_path: asm/stgtrain
+  src_path: src/stgtrain
+  asset_path: assets/stgtrain
+  ld_script_path: build/stgtrain/STGTRAIN.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/stgtrain.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/stgtrain/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/stgtrain/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  ld_bss_is_noload: False  # .bss is in the file as zeros
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: stgtrain
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_STGTRAIN_<addr>, D_STGTRAIN_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: STGTRAIN_$VRAM
+    subsegments:
+      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"). Jump-table parity: the table at
+      # 0x80082D84 (used by 0x8008706C) is at 4 mod 8 after 0x80082CB0's 0, and 0x80082E50 (0x800888BC) is back at
+      # 0 mod 8, so both start new objects. 0x80082E50, 0x80082F20 and 0x80082FF8 (0x8008AAD4, 0x8008B520) are
+      # contiguous (0x80082FF4 is alignment padding inside one object). .data order agrees (84838: 8C224; class
+      # 866CC: 8C304..8C490; 888BC: 8C4D8; the module table's functions: 8C4E4..).
+      - [0x0,   .rodata, stgtrain_80083058]
+      - [0xD4,  .rodata, stgtrain_800861BC]
+      - [0x1A0, .rodata, stgtrain_80088100]
+      # .text starts at 0x80083058: the 11 setters after the last jump table are code (tools/overlay_layout.py put
+      # the start at 0x80083124, the first stack frame).
+      - [0x3A8,  c, stgtrain_80083058]   # 0x80083058: an object class (83880/83150), the overlay entry 83AC0,
+                                         # the main object (85DD8/85BB0, its run 8517C owns table 82CB0), the fade
+      - [0x350C, c, stgtrain_800861BC]   # 0x800861BC: 861BC..865A0 are static helpers of 866CC (their only caller),
+                                         # object 88070/87F28 (8706C owns table 82D84); fade_create 86174 is called
+                                         # from the first file, so the fade stays there (position medium)
+      - [0x5450, c, stgtrain_80088100]   # 0x80088100: after the create/update pair 88070/87F28; an unused template
+                                         # object 881CC/88138, then objects 89764, 8A274, 8B838 and the module
+                                         # table's functions 8B8A4.. (position weak: 88100..88214)
+      # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t stgtrain;
+      # DECISIONS "Overlay .data/.bss per file"). .bss: four zero pointers only
+      # 88100 uses (its parse cursors, set before use); they could be zero-initialised .data (weak).
+      - [0x9574, .data, stgtrain_80083058]   # 0x8008C224 (after the last function's jr ra)
+      - [0x9654, .data, stgtrain_800861BC]   # 0x8008C304 (8C224 is 83058's, 8C304 861BC's: references)
+      - [0x9828, .data, stgtrain_80088100]   # 0x8008C4D8 (8C490 is 861BC's, 8C4D8 88100's: references)
+      - [0xA648, .bss, stgtrain_80088100]    # 0x8008D2F8
+  - [0xA658]

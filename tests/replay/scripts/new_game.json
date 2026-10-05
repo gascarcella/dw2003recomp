@@ -1,0 +1,124 @@
+{
+  "name": "new_game",
+  "description": "Boot the disc, choose English at CNTY_SEL, skip the opening movie, start a new game from the title menu and arrive on the first field map (FIELDSTG map 0x2D7, stage overlay WSTAG780). Checkpoints at every screen. Every step waits on game state (stage, map, overlay file) or taps a button until the state changes, so the script holds on both CPU cores (dynarec and -interpreter); the fixed waits are game-logic animations after a state change.",
+  "max_frames": 8000,
+  "default_timeout": 3000,
+  "steps": [
+    {
+      "type": "wait_stage",
+      "stage": 22,
+      "word0": "0x80083DC0",
+      "comment": "CNTY_SEL (overlay_files[22]) loaded: the country / language select"
+    },
+    {
+      "type": "checkpoint",
+      "name": "cnty_sel"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 2,
+      "release": 18,
+      "until": {
+        "type": "wait_map",
+        "map": "0xE02"
+      },
+      "timeout": 1500,
+      "comment": "START until the opening movie's map: confirms the default choice 0 = English (cnty_sel_languages[0] = 2 = ENG), records_language 2, once the panels have slid in and the cursor is up (cnty_sel_update_menu step 7 is the only step that reads START, the fade-out steps ignore it); the EU game then goes to map 0xE02 = the opening movie"
+    },
+    {
+      "type": "wait_stage",
+      "stage": 14,
+      "comment": "STDWTITL loaded (map 0xE02, stdwtitl_movie_screen for movie 1)"
+    },
+    {
+      "type": "checkpoint",
+      "name": "opening_movie"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 30,
+      "release": 30,
+      "until": {
+        "type": "wait_map",
+        "map": "0xE00"
+      },
+      "timeout": 3000,
+      "comment": "START skips the movie (stdwtitl_update_movie checks pad pressed bit 3). On the dynarec core the player spins in StGetNext and samples the pad rarely (the STR stream never reaches its last frame), so a short tap can fall between two samples: hold 30 / release 30 until the title screen proper (map 0xE00). On -interpreter the movie decodes normally and the first press skips it"
+    },
+    {
+      "type": "checkpoint",
+      "name": "title_screen"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 2,
+      "release": 18,
+      "repeat": 40,
+      "comment": "the logo slides in, shines and glows; START opens the New Game / Continue menu only at stdwtitl_menu step 2 (600 ticks there without START start the demo), every other step ignores it, so tap START for 800 frames instead of waiting a fixed time"
+    },
+    {
+      "type": "wait_frames",
+      "frames": 60,
+      "comment": "the menu blinks and the two choices slide out (steps 3-5: 12 + 15 + 6 ticks)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "UP"
+      ],
+      "frames": 4,
+      "comment": "cursor 0 = New Game (the menu opens on cursor 1 = Continue)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 4,
+      "release": 30,
+      "until": {
+        "type": "wait_stage",
+        "stage": 2
+      },
+      "timeout": 1500,
+      "comment": "confirm until FIELDSTG is loaded: physical CROSS is logical bit 13 (PAD_PRESSED(0xD)) for non-Japanese languages; stdwtitl_title_apply_choice case 1: gamestate_new_game, set_next_map(0x2D7)"
+    },
+    {
+      "type": "wait_map",
+      "map": "0x2D7",
+      "timeout": 200
+    },
+    {
+      "type": "checkpoint",
+      "name": "new_game_field",
+      "comment": "gamestate_data right after gamestate_new_game: map 0x2D7, money 0, party -1, encounter_timer from pad_random"
+    },
+    {
+      "type": "wait_mem",
+      "addr": "0x80055D2C",
+      "size": 4,
+      "signed": true,
+      "value": "0x1E9",
+      "timeout": 500,
+      "comment": "overlay_module.file == 0x1E9: the stage overlay WSTAG780.PRO of the intro map is loaded"
+    },
+    {
+      "type": "wait_frames",
+      "frames": 500,
+      "comment": "the intro scene runs (the field draws random numbers every frame)"
+    },
+    {
+      "type": "checkpoint",
+      "name": "first_field_map"
+    }
+  ]
+}

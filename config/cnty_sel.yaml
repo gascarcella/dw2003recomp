@@ -1,0 +1,62 @@
+# splat config for the tier-1 overlay AAA/PRO/CNTY_SEL.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: CNTY_SEL.PRO
+sha1: 72f2767301b7c07d80f0401f65f1c6838f8a11bf
+options:
+  basename: CNTY_SEL.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/CNTY_SEL.PRO
+  elf_path: build/cnty_sel/CNTY_SEL.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/cnty_sel
+  asm_path: asm/cnty_sel
+  src_path: src/cnty_sel
+  asset_path: assets/cnty_sel
+  ld_script_path: build/cnty_sel/CNTY_SEL.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/cnty_sel.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/cnty_sel/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/cnty_sel/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: cnty_sel
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_CNTY_SEL_<addr>, D_CNTY_SEL_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: CNTY_SEL_$VRAM
+    subsegments:
+      # One file (docs/DECISIONS.md "Overlay file split"): one jump table (no parity break), .data referenced
+      # in code order (843C0..84424), no duplicated helpers; nothing suggests a second object.
+      - [0x0,  .rodata, cnty_sel_80082CE8]
+      - [0x38, c, cnty_sel_80082CE8]   # 0x80082CE8 .text (tools/overlay_layout.py)
+      # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t cnty_sel;
+      # DECISIONS "Overlay .data/.bss per file").
+      - [0x1710, .data, cnty_sel_80082CE8]  # 0x800843C0 (after the last function's jr ra); no .bss. It ends
+                                            # with a 7-byte table, 3 bytes into a word (the file's end); splat
+                                            # drops that partial word from the target asm, so unit_diff shows
+                                            # .data 104 vs 108 bytes (the build is byte-identical)
+  - [0x177B]

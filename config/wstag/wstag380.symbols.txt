@@ -1,0 +1,15 @@
+// WSTAG380 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag380_color = 0x800A5DE0;
+wstag380_update = 0x800A5DE4; // type:func
+wstag380_start = 0x800A5E2C; // type:func
+wstag380_event_205_end = 0x800A5E88; // type:func
+wstag380_setup = 0x800A5E98; // type:func
+wstag380_battle_lists = 0x800A67A8;
+wstag380_battle_lists2 = 0x800A67C4;
+wstag380_battle_lists3 = 0x800A67E0;
+wstag380_vram_places = 0x800A67FC;
+wstag380_actors = 0x800A69EC;
+wstag380_sprites = 0x800A6A08;
+wstag380_map_events = 0x800A70C8;
+wstag380_funcs = 0x800A7260;
+wstag380_events = 0x800A7264;

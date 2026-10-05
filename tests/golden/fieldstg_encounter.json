@@ -1,0 +1,339 @@
+{
+ "family": "fieldstg_encounter",
+ "comment": "fieldstg_encounter_reset at RNG indexes whose next draw is 254, 257, 2303, 2304 and 4095: encounter_timer = r < 256 ? r : (r + 256) / 2 with r = draw % 2304; FIELDSTG.PRO in the overlay slot.",
+ "generator": "tests/golden/families/fieldstg_encounter.py",
+ "oracle": {
+  "method": "lua-calls: tests/golden/oracle.lua hijacks the game at pad_update (-debugger -interpreter)",
+  "emulator": {
+   "name": "pcsx-redux",
+   "version": "bf4c9ceb",
+   "build_id": 359,
+   "changeset": "bf4c9cebdd1c649dd006736bb012fc7f1d6fd988"
+  },
+  "bios": {
+   "name": "openbios",
+   "sha1": "8f1269a22179433c8b22b4c804f11c0a076450c5"
+  },
+  "tree_commit": "49aff93d32a47c1561895a1d04b8b1b8b332a935",
+  "resident": "CNTY_SEL loaded: the EXE's code and data are resident"
+ },
+ "fixtures": {
+  "fixture_0": [
+   {
+    "symbol": "0x80082CB0",
+    "offset": 0,
+    "field": "overlay slot: FIELDSTG.PRO (restored after the case)",
+    "file": "extracted/disc/AAA/PRO/FIELDSTG.PRO",
+    "size": 102040,
+    "sha1": "bc5fb336d7befa61e34d6d50331eedbc9c40e078"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 48,
+    "field": "encounter_timer = -1",
+    "hex": "ffffffff"
+   },
+   {
+    "symbol": "pad_random",
+    "offset": 0,
+    "field": "pad_random.index = 4",
+    "hex": "04000000"
+   }
+  ],
+  "fixture_1": [
+   {
+    "symbol": "0x80082CB0",
+    "offset": 0,
+    "field": "overlay slot: FIELDSTG.PRO (restored after the case)",
+    "file": "extracted/disc/AAA/PRO/FIELDSTG.PRO",
+    "size": 102040,
+    "sha1": "bc5fb336d7befa61e34d6d50331eedbc9c40e078"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 48,
+    "field": "encounter_timer = -1",
+    "hex": "ffffffff"
+   },
+   {
+    "symbol": "pad_random",
+    "offset": 0,
+    "field": "pad_random.index = 1092",
+    "hex": "44040000"
+   }
+  ],
+  "fixture_2": [
+   {
+    "symbol": "0x80082CB0",
+    "offset": 0,
+    "field": "overlay slot: FIELDSTG.PRO (restored after the case)",
+    "file": "extracted/disc/AAA/PRO/FIELDSTG.PRO",
+    "size": 102040,
+    "sha1": "bc5fb336d7befa61e34d6d50331eedbc9c40e078"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 48,
+    "field": "encounter_timer = -1",
+    "hex": "ffffffff"
+   },
+   {
+    "symbol": "pad_random",
+    "offset": 0,
+    "field": "pad_random.index = 4083",
+    "hex": "f30f0000"
+   }
+  ],
+  "fixture_3": [
+   {
+    "symbol": "0x80082CB0",
+    "offset": 0,
+    "field": "overlay slot: FIELDSTG.PRO (restored after the case)",
+    "file": "extracted/disc/AAA/PRO/FIELDSTG.PRO",
+    "size": 102040,
+    "sha1": "bc5fb336d7befa61e34d6d50331eedbc9c40e078"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 48,
+    "field": "encounter_timer = -1",
+    "hex": "ffffffff"
+   },
+   {
+    "symbol": "pad_random",
+    "offset": 0,
+    "field": "pad_random.index = 3028",
+    "hex": "d40b0000"
+   }
+  ],
+  "fixture_4": [
+   {
+    "symbol": "0x80082CB0",
+    "offset": 0,
+    "field": "overlay slot: FIELDSTG.PRO (restored after the case)",
+    "file": "extracted/disc/AAA/PRO/FIELDSTG.PRO",
+    "size": 102040,
+    "sha1": "bc5fb336d7befa61e34d6d50331eedbc9c40e078"
+   },
+   {
+    "symbol": "gamestate_data",
+    "offset": 48,
+    "field": "encounter_timer = -1",
+    "hex": "ffffffff"
+   },
+   {
+    "symbol": "pad_random",
+    "offset": 0,
+    "field": "pad_random.index = 8",
+    "hex": "08000000"
+   }
+  ]
+ },
+ "cases": [
+  {
+   "name": "reset_draw254",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     52
+    ],
+    [
+     "pad_random",
+     4
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fieldstg_encounter_reset",
+     "args": [],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2147811328,
+     "comment": "draw 254: r 254, timer 254",
+     "reads": [
+      {
+       "symbol": "gamestate_data",
+       "offset": 48,
+       "size": 4,
+       "field": "encounter_timer",
+       "hex": "fe000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index (one draw)",
+       "hex": "05000000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "reset_draw257",
+   "fixture": "fixture_1",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     52
+    ],
+    [
+     "pad_random",
+     4
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fieldstg_encounter_reset",
+     "args": [],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2147811328,
+     "comment": "draw 257: r 257, timer 256",
+     "reads": [
+      {
+       "symbol": "gamestate_data",
+       "offset": 48,
+       "size": 4,
+       "field": "encounter_timer",
+       "hex": "00010000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index (one draw)",
+       "hex": "45040000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "reset_draw2303",
+   "fixture": "fixture_2",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     52
+    ],
+    [
+     "pad_random",
+     4
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fieldstg_encounter_reset",
+     "args": [],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2147811328,
+     "comment": "draw 2303: r 2303, timer 1279",
+     "reads": [
+      {
+       "symbol": "gamestate_data",
+       "offset": 48,
+       "size": 4,
+       "field": "encounter_timer",
+       "hex": "ff040000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index (one draw)",
+       "hex": "f40f0000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "reset_draw2304",
+   "fixture": "fixture_3",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     52
+    ],
+    [
+     "pad_random",
+     4
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fieldstg_encounter_reset",
+     "args": [],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2147811328,
+     "comment": "draw 2304: r 0, timer 0",
+     "reads": [
+      {
+       "symbol": "gamestate_data",
+       "offset": 48,
+       "size": 4,
+       "field": "encounter_timer",
+       "hex": "00000000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index (one draw)",
+       "hex": "d50b0000"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "reset_draw4095",
+   "fixture": "fixture_4",
+   "buffers": {},
+   "saves": [
+    [
+     "gamestate_data",
+     52
+    ],
+    [
+     "pad_random",
+     4
+    ]
+   ],
+   "calls": [
+    {
+     "func": "fieldstg_encounter_reset",
+     "args": [],
+     "ret_type": "void",
+     "ret": null,
+     "v0": 2147811328,
+     "comment": "draw 4095: r 1791, timer 1023",
+     "reads": [
+      {
+       "symbol": "gamestate_data",
+       "offset": 48,
+       "size": 4,
+       "field": "encounter_timer",
+       "hex": "ff030000"
+      },
+      {
+       "symbol": "pad_random",
+       "offset": 0,
+       "size": 4,
+       "field": "pad_random.index (one draw)",
+       "hex": "09000000"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

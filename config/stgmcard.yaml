@@ -1,0 +1,62 @@
+# splat config for the tier-1 overlay AAA/PRO/STGMCARD.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: STGMCARD.PRO
+sha1: 925dcb2835f6ac18c3c460f2c99c72d87fcd7db2
+options:
+  basename: STGMCARD.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/STGMCARD.PRO
+  elf_path: build/stgmcard/STGMCARD.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/stgmcard
+  asm_path: asm/stgmcard
+  src_path: src/stgmcard
+  asset_path: assets/stgmcard
+  ld_script_path: build/stgmcard/STGMCARD.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/stgmcard.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/stgmcard/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/stgmcard/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: stgmcard
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_STGMCARD_<addr>, D_STGMCARD_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: STGMCARD_$VRAM
+    subsegments:
+      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"): one jump table, so no parity evidence;
+      # the stage module at the end (a module struct with its function table, like STDWTITL's 86DF8 and FIELDSTG's
+      # 91E60, whose fade and interpolation functions are the same code) is its own file.
+      - [0x0,    .rodata, stgmcard_80082CD0]
+      - [0x20,   c, stgmcard_80082CD0]   # 0x80082CD0 .text: root object (82DC8 is the entry) and the memory card screen
+      - [0x4F68, c, stgmcard_80087C18]   # 0x80087C18 stage module stgmcard_module (save icon, fades) (position strong)
+      # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t stgmcard;
+      # DECISIONS "Overlay .data/.bss per file").
+      - [0x53D8, .data, stgmcard_80082CD0]   # 0x80088088 (after the last function's jr ra)
+      - [0x5AB8, .data, stgmcard_80087C18]   # 0x80088768 the stage module (its function table); no .bss
+  - [0x5CA0]

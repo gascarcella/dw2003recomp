@@ -1,0 +1,13 @@
+// WSTAG538 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag538_update = 0x800A5DE0; // type:func
+wstag538_start = 0x800A5E80; // type:func
+wstag538_event_1287_end = 0x800A5EDC; // type:func
+wstag538_event_1288_end = 0x800A5F28; // type:func
+wstag538_setup = 0x800A5F74; // type:func
+wstag538_battle_lists = 0x800A63DC;
+wstag538_vram_places = 0x800A63F8;
+wstag538_actors = 0x800A66F8;
+wstag538_sprites = 0x800A6714;
+wstag538_map_events = 0x800A690C;
+wstag538_funcs = 0x800A6984;
+wstag538_events = 0x800A6988;

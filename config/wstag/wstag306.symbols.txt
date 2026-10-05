@@ -1,0 +1,15 @@
+// WSTAG306 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag306_sprite_anim_play_once = 0x800A5DE0; // type:func
+wstag306_sound_anim_update = 0x800A5EB8; // type:func
+wstag306_sound_anim_message = 0x800A6018; // type:func
+wstag306_sound_anim_create = 0x800A6084; // type:func
+wstag306_update = 0x800A60B4; // type:func
+wstag306_start = 0x800A6160; // type:func
+wstag306_setup = 0x800A61BC; // type:func
+D_WSTAG306_800A6738 = 0x800A6738; // size:0x18
+wstag306_vram_places = 0x800A6750;
+wstag306_actors = 0x800A6AE4;
+wstag306_sprites = 0x800A6B1C;
+wstag306_map_events = 0x800A6BD0;
+wstag306_funcs = 0x800A6C18;
+wstag306_events = 0x800A6C1C;

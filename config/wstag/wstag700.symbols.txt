@@ -1,0 +1,11 @@
+// WSTAG700 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag700_update = 0x800A5DE0; // type:func
+wstag700_start = 0x800A5E28; // type:func
+wstag700_event_1460_end = 0x800A5E84; // type:func
+wstag700_setup = 0x800A5EB0; // type:func
+wstag700_vram_places = 0x800A6014;
+wstag700_actors = 0x800A60FC;
+wstag700_sprites = 0x800A6108;
+wstag700_map_events = 0x800A6164;
+wstag700_funcs = 0x800A6194;
+wstag700_events = 0x800A6198;

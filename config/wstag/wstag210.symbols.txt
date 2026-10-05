@@ -1,0 +1,22 @@
+// WSTAG210 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag210_color = 0x800A5E70;
+wstag210_menu_update = 0x800A5E74; // type:func
+wstag210_event_8_start = 0x800A67E0; // type:func
+wstag210_choice_9_update = 0x800A680C; // type:func
+wstag210_event_9_start = 0x800A6DC8; // type:func
+wstag210_choice_1510_update = 0x800A6DF4; // type:func
+wstag210_event_1510_start = 0x800A73B0; // type:func
+wstag210_update = 0x800A73DC; // type:func
+wstag210_start = 0x800A74A4; // type:func
+wstag210_event_310_end = 0x800A7500; // type:func
+wstag210_event_685_end = 0x800A754C; // type:func
+wstag210_setup = 0x800A7580; // type:func
+wstag210_fade_start = 0x800A76EC; // type:func
+wstag210_fade_update = 0x800A7780; // type:func
+wstag210_battle_lists = 0x800A81A4;
+wstag210_vram_places = 0x800A81C0;
+wstag210_actors = 0x800A969C;
+wstag210_sprites = 0x800A9820;
+wstag210_map_events = 0x800A9F84;
+wstag210_funcs = 0x800AA08C;
+wstag210_events = 0x800AA098;

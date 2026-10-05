@@ -1,0 +1,13 @@
+// WSTAG350 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag350_update = 0x800A5DE0; // type:func
+wstag350_start = 0x800A5E28; // type:func
+wstag350_setup = 0x800A5E84; // type:func
+wstag350_battle_lists = 0x800A6624;
+wstag350_battle_lists2 = 0x800A6640;
+wstag350_battle_lists3 = 0x800A665C;
+wstag350_vram_places = 0x800A6678;
+wstag350_actors = 0x800A6CBC;
+wstag350_sprites = 0x800A6CDC;
+wstag350_map_events = 0x800A7008;
+wstag350_funcs = 0x800A7098;
+wstag350_events = 0x800A709C;

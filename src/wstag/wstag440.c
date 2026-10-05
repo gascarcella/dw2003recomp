@@ -1,0 +1,377 @@
+#include "wstag.h"
+
+/* WSTAG440: stage 0x232 (fieldstg_stages). */
+
+extern WstagFuncs wstag440_funcs;
+extern CVECTOR wstag440_color;
+extern FieldstgBattleLists wstag440_battle_lists;
+extern FieldstgVramPlace wstag440_vram_places[];
+extern FieldstgPlacedActor *wstag440_actors[];
+extern FieldstgSprite wstag440_sprites[];
+extern FieldstgMapEvent wstag440_map_events[];
+extern FieldstgEventDef wstag440_events[];
+void wstag440_update();
+
+void wstag440_update(WstagObject *obj, WstagEventData *data) {
+    switch (obj->base.state) {
+    case OBJECT_STATE_INIT:
+    default:
+        obj->base.next_state(obj);
+        if (gamestate_data.progress == 6) {
+            data->event = fieldstg_event_start(0x98);
+        }
+        break;
+    case OBJECT_STATE_RUN:
+    case OBJECT_STATE_DONE:
+    case OBJECT_STATE_END:
+        break;
+    }
+}
+
+WstagObject *wstag440_start(void *arg0) {
+    WstagObject *obj = object_new(wstag440_update, sizeof(WstagObject), 4);
+
+    obj->manager = arg0;
+    wstag440_funcs.setup();
+    return obj;
+}
+
+void wstag440_event_152_end(void) {
+    gamestate_data.progress = 0x7;
+}
+
+void wstag440_setup(void) {
+    fieldstg_stage.background_file = 0x37C;
+    fieldstg_stage.sprite_file = 0x037D0000;
+    fieldstg_stage.sprites = wstag440_sprites;
+    fieldstg_stage.map_events = wstag440_map_events;
+    fieldstg_stage.mask_file = 0x37B;
+    fieldstg_stage.talk_file = records_language + 0xEF;
+    fieldstg_stage.start_pos = (GamestatePos){ 0x1A000, 0x21C00 };
+    fieldstg_stage.start_dir = 0;
+    fieldstg_stage.vram_places = wstag440_vram_places;
+    fieldstg_stage.music = 0xE;
+    fieldstg_stage.sound = 0x60380000;
+    fieldstg_stage.actors = wstag440_actors;
+    fieldstg_stage.color = wstag440_color;
+    fieldstg_stage.events = wstag440_events;
+    fieldstg_stage.battle_lists = &wstag440_battle_lists;
+    fieldstg_attr.set_file(0, 0x037D0001);
+    fieldstg_attr.set_file(7, 0x037D0002);
+    fieldstg_attr.init_layer(0);
+    if (gamestate_data.progress >= 0x27 && gamestate_data.progress < 0x29) {
+        fieldstg_stage.music = 0x1F;
+        fieldstg_stage.sound = 0x607C0000;
+    }
+}
+
+INCLUDE_RODATA("asm/wstag440/nonmatchings/wstag440", wstag440_color);
+
+/* The stage's .data (tools/wstag_data.py). */
+void wstag440_setup(void);
+
+s16 D_WSTAG440_800A600C[62] = {
+    FIELDSTG_EVENT_WALK(2, 447, 288, 5),
+    FIELDSTG_EVENT_ANIM(0x32D, 823, 2),
+    FIELDSTG_EVENT_WAIT_WALK(2),
+    FIELDSTG_EVENT_ANIM(2, 1, 5),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_ANIM(0x32D, 824, 2),
+    FIELDSTG_EVENT_WAIT(120),
+    FIELDSTG_EVENT_ANIM(0x32D, 825, 2),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_DIALOG(0, 1, 2, 4),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_ANIM(2, 1, 1),
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_WALK(2, 416, 304, 1),
+    FIELDSTG_EVENT_WAIT_WALK(2),
+    FIELDSTG_EVENT_WALK(2, 336, 265, 3),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_GOTO_MAP(0x22C, 320, 320, 5),
+    FIELDSTG_EVENT_END,
+    0x128, /* padding, not read */
+};
+s16 D_WSTAG440_800A6088[36] = {
+    FIELDSTG_EVENT_CAMERA_MOVE(1, 431, 217),
+    FIELDSTG_EVENT_PLACE(2, 495, 185),
+    FIELDSTG_EVENT_ANIM(2, 1, 1),
+    FIELDSTG_EVENT_WAIT(120),
+    FIELDSTG_EVENT_DIALOG(0, 1, 2, 1),
+    FIELDSTG_EVENT_WAIT_DIALOG,
+    FIELDSTG_EVENT_WAIT(30),
+    FIELDSTG_EVENT_WALK(2, 367, 249, 1),
+    FIELDSTG_EVENT_WAIT(60),
+    FIELDSTG_EVENT_GOTO_MAP(0x233, 520, 156, 7),
+    FIELDSTG_EVENT_END,
+    0x1FB, /* padding, not read */
+};
+FieldstgListedBattle D_WSTAG440_800A60D0 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A60DC = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A60E8 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A60F4 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A6100 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A610C = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A6118 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A6124 = { 0, 0, 0x60040000 };
+FieldstgBattleList D_WSTAG440_800A6130 = {
+    3,
+    { &D_WSTAG440_800A60D0, &D_WSTAG440_800A60DC, &D_WSTAG440_800A60E8, &D_WSTAG440_800A60F4, &D_WSTAG440_800A6100,
+        &D_WSTAG440_800A610C, &D_WSTAG440_800A6118, &D_WSTAG440_800A6124 },
+};
+FieldstgListedBattle D_WSTAG440_800A6154 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A6160 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A616C = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A6178 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A6184 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A6190 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A619C = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A61A8 = { 0, 0, 0x60040000 };
+FieldstgBattleList D_WSTAG440_800A61B4 = {
+    0,
+    { &D_WSTAG440_800A6154, &D_WSTAG440_800A6160, &D_WSTAG440_800A616C, &D_WSTAG440_800A6178, &D_WSTAG440_800A6184,
+        &D_WSTAG440_800A6190, &D_WSTAG440_800A619C, &D_WSTAG440_800A61A8 },
+};
+FieldstgListedBattle D_WSTAG440_800A61D8 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A61E4 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A61F0 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A61FC = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A6208 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A6214 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A6220 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A622C = { 0, 0, 0x60040000 };
+FieldstgBattleList D_WSTAG440_800A6238 = {
+    0,
+    { &D_WSTAG440_800A61D8, &D_WSTAG440_800A61E4, &D_WSTAG440_800A61F0, &D_WSTAG440_800A61FC, &D_WSTAG440_800A6208,
+        &D_WSTAG440_800A6214, &D_WSTAG440_800A6220, &D_WSTAG440_800A622C },
+};
+FieldstgListedBattle D_WSTAG440_800A625C = { 210, 20, 0x600C0000 };
+FieldstgListedBattle D_WSTAG440_800A6268 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A6274 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A6280 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A628C = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A6298 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A62A4 = { 0, 0, 0x60040000 };
+FieldstgListedBattle D_WSTAG440_800A62B0 = { 0, 0, 0x60040000 };
+FieldstgBattleList D_WSTAG440_800A62BC = {
+    0,
+    { &D_WSTAG440_800A625C, &D_WSTAG440_800A6268, &D_WSTAG440_800A6274, &D_WSTAG440_800A6280, &D_WSTAG440_800A628C,
+        &D_WSTAG440_800A6298, &D_WSTAG440_800A62A4, &D_WSTAG440_800A62B0 },
+};
+FieldstgBattleLists wstag440_battle_lists = {
+    156, 0, 0, { &D_WSTAG440_800A6130, &D_WSTAG440_800A61B4, &D_WSTAG440_800A6238 }, &D_WSTAG440_800A62BC,
+};
+FieldstgVramPlace wstag440_vram_places[11] = {
+    { 512, 256, 540, 422, 112, 166, 560, 510 }, { 512, 256, 512, 256, 0, 0, 544, 510 },
+    { 512, 256, 534, 312, 88, 56, 512, 509 }, { 512, 256, 520, 444, 32, 188, 528, 509 },
+    { 512, 256, 528, 444, 64, 188, 544, 509 }, { 512, 256, 512, 444, 0, 188, 560, 509 },
+    { 320, 256, 344, 336, 96, 80, 368, 510 }, { 320, 256, 320, 336, 0, 80, 352, 509 }, { 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 320, 256, 328, 336, 32, 80, 368, 509 }, { 320, 256, 336, 336, 64, 80, 352, 508 },
+};
+u16 D_WSTAG440_800A63AC[4] = { 0, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A63B4[4] = { 0, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A63BC[6] = { 0, 1, 0x7202, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A63C8[8] = { 0, 1, 0x7202, 1, 0x7204, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A63D8[4] = { 0x7614, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A63E0[10] = {
+    0, 1, 0x7202, 1, 0xE0A, 0, 0x7204, 1,
+    0xFFFF, 0,
+};
+u16 D_WSTAG440_800A63F4[6] = { 0x7400, 1, 0xE0A, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6400[12] = {
+    0x7202, 1, 0xE0A, 1, 0, 1, 0x7204, 1,
+    0x8012, 0, 0xFFFF, 0,
+};
+u16 D_WSTAG440_800A6418[14] = {
+    0, 1, 0x7204, 1, 0x8012, 1, 0x7202, 1,
+    0xE0A, 1, 0x7206, 0, 0xFFFF, 0,
+};
+u16 D_WSTAG440_800A6434[14] = {
+    0, 1, 0x7204, 1, 0x8012, 1, 0x7202, 1,
+    0xE0A, 1, 0x7206, 1, 0xFFFF, 0,
+};
+u16 D_WSTAG440_800A6450[4] = { 0x7814, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6458[4] = { 0, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6460[4] = { 0, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6468[6] = { 0, 1, 0x7202, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6474[8] = { 0, 1, 0x7204, 0, 0x7202, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6484[4] = { 0x7614, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A648C[10] = {
+    0, 1, 0x7204, 1, 0x7202, 1, 0xE0A, 0,
+    0xFFFF, 0,
+};
+u16 D_WSTAG440_800A64A0[6] = { 0x7400, 1, 0xE0A, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A64AC[12] = {
+    0, 1, 0x7202, 1, 0x7204, 1, 0xE0A, 1,
+    0x8012, 0, 0xFFFF, 0,
+};
+u16 D_WSTAG440_800A64C4[14] = {
+    0, 1, 0x7202, 1, 0x7204, 1, 0xE0A, 1,
+    0x8012, 1, 0x7206, 0, 0xFFFF, 0,
+};
+u16 D_WSTAG440_800A64E0[14] = {
+    0, 1, 0x7202, 1, 0x7204, 1, 0xE0A, 1,
+    0x8012, 1, 0x7206, 1, 0xFFFF, 0,
+};
+u16 D_WSTAG440_800A64FC[4] = { 0x7814, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6504[4] = { 0, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A650C[4] = { 0, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6514[6] = { 0, 1, 0x7202, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6520[8] = { 0, 1, 0x7202, 1, 0x7204, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6530[4] = { 0x7614, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6538[10] = {
+    0, 1, 0x7202, 1, 0x7204, 1, 0xE0A, 0,
+    0xFFFF, 0,
+};
+u16 D_WSTAG440_800A654C[6] = { 0x7400, 1, 0xE0A, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6558[12] = {
+    0, 1, 0x7202, 1, 0x7204, 1, 0xE0A, 1,
+    0x8012, 0, 0xFFFF, 0,
+};
+u16 D_WSTAG440_800A6570[14] = {
+    0, 1, 0x7202, 1, 0x7204, 1, 0xE0A, 1,
+    0x8012, 1, 0x7206, 0, 0xFFFF, 0,
+};
+u16 D_WSTAG440_800A658C[14] = {
+    0, 1, 0x7202, 1, 0x7204, 1, 0xE0A, 1,
+    0x8012, 1, 0x7206, 1, 0xFFFF, 0,
+};
+u16 D_WSTAG440_800A65A8[4] = { 0x7814, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A65B0[4] = { 0x11, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A65B8[6] = { 0x10, 0, 0x11, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A65C4[4] = { 0x11, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A65CC[6] = { 0x10, 1, 0x11, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A65D8[6] = { 0x11, 0, 0x10, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A65E4[4] = { 0x9060, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A65EC[4] = { 0, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A65F4[6] = { 0, 1, 0x7202, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6600[8] = { 0, 1, 0x7202, 1, 0x7204, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6610[4] = { 0x7614, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6618[10] = {
+    0, 1, 0x7202, 1, 0x7204, 1, 0xE0A, 0,
+    0xFFFF, 0,
+};
+u16 D_WSTAG440_800A662C[4] = { 0xE0A, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6634[12] = {
+    0, 1, 0x7202, 1, 0x7204, 1, 0xE0A, 1,
+    0x8012, 0, 0xFFFF, 0,
+};
+u16 D_WSTAG440_800A664C[14] = {
+    0, 1, 0x7202, 1, 0x7204, 1, 0xE0A, 1,
+    0x8012, 1, 0x7206, 0, 0xFFFF, 0,
+};
+u16 D_WSTAG440_800A6668[14] = {
+    0, 1, 0x7202, 1, 0x7206, 1, 0x7204, 1,
+    0x8012, 1, 0xE0A, 1, 0xFFFF, 0,
+};
+u16 D_WSTAG440_800A6684[4] = { 0x7814, 1, 0xFFFF, 0 };
+FieldstgTalk D_WSTAG440_800A668C[8] = {
+    { D_WSTAG440_800A63AC, D_WSTAG440_800A63B4, 138 }, { D_WSTAG440_800A63BC, NULL, 143 },
+    { D_WSTAG440_800A63C8, D_WSTAG440_800A63D8, 144 }, { D_WSTAG440_800A63E0, D_WSTAG440_800A63F4, 145 },
+    { D_WSTAG440_800A6400, NULL, 146 }, { D_WSTAG440_800A6418, NULL, 147 },
+    { D_WSTAG440_800A6434, D_WSTAG440_800A6450, 148 }, { NULL, NULL, 0 },
+};
+FieldstgTalk D_WSTAG440_800A66EC[8] = {
+    { D_WSTAG440_800A6458, D_WSTAG440_800A6460, 139 }, { D_WSTAG440_800A6468, NULL, 143 },
+    { D_WSTAG440_800A6474, D_WSTAG440_800A6484, 144 }, { D_WSTAG440_800A648C, D_WSTAG440_800A64A0, 145 },
+    { D_WSTAG440_800A64AC, NULL, 146 }, { D_WSTAG440_800A64C4, NULL, 147 },
+    { D_WSTAG440_800A64E0, D_WSTAG440_800A64FC, 148 }, { NULL, NULL, 0 },
+};
+FieldstgTalk D_WSTAG440_800A674C[8] = {
+    { D_WSTAG440_800A6504, D_WSTAG440_800A650C, 140 }, { D_WSTAG440_800A6514, NULL, 143 },
+    { D_WSTAG440_800A6520, D_WSTAG440_800A6530, 144 }, { D_WSTAG440_800A6538, D_WSTAG440_800A654C, 145 },
+    { D_WSTAG440_800A6558, NULL, 146 }, { D_WSTAG440_800A6570, NULL, 147 },
+    { D_WSTAG440_800A658C, D_WSTAG440_800A65A8, 148 }, { NULL, NULL, 0 },
+};
+FieldstgTalk D_WSTAG440_800A67AC[4] = {
+    { D_WSTAG440_800A65B0, NULL, 138 }, { D_WSTAG440_800A65B8, D_WSTAG440_800A65C4, 149 },
+    { D_WSTAG440_800A65CC, D_WSTAG440_800A65D8, 150 }, { NULL, NULL, 0 },
+};
+FieldstgTalk D_WSTAG440_800A67DC[2] = { { NULL, NULL, 638 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG440_800A67F4[2] = { { NULL, NULL, 30 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG440_800A680C[2] = { { NULL, NULL, 248 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG440_800A6824[2] = { { NULL, NULL, 252 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG440_800A683C[2] = { { NULL, NULL, 30 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG440_800A6854[2] = { { NULL, NULL, 30 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG440_800A686C[2] = { { NULL, NULL, 249 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG440_800A6884[2] = { { NULL, NULL, 242 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG440_800A689C[2] = { { NULL, NULL, 243 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG440_800A68B4[2] = { { NULL, NULL, 244 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG440_800A68CC[2] = { { NULL, NULL, 245 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG440_800A68E4[2] = { { NULL, NULL, 246 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG440_800A68FC[2] = { { NULL, NULL, 247 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG440_800A6914[2] = { { NULL, NULL, 250 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG440_800A692C[2] = { { NULL, NULL, 248 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG440_800A6944[2] = { { NULL, D_WSTAG440_800A65E4, 811 }, { NULL, NULL, 0 } };
+FieldstgTalk D_WSTAG440_800A695C[8] = {
+    { D_WSTAG440_800A65EC, NULL, 141 }, { D_WSTAG440_800A65F4, NULL, 141 },
+    { D_WSTAG440_800A6600, D_WSTAG440_800A6610, 141 }, { D_WSTAG440_800A6618, D_WSTAG440_800A662C, 141 },
+    { D_WSTAG440_800A6634, NULL, 141 }, { D_WSTAG440_800A664C, NULL, 141 },
+    { D_WSTAG440_800A6668, D_WSTAG440_800A6684, 141 }, { NULL, NULL, 0 },
+};
+FieldstgTalk D_WSTAG440_800A69BC[2] = { { NULL, NULL, 251 }, { NULL, NULL, 0 } };
+u16 D_WSTAG440_800A69D4[8] = { 0x7003, 1, 0x11, 0, 0x8192, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A69E4[8] = { 0x7004, 1, 0x8192, 1, 0x11, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A69F4[8] = { 0x6026, 1, 0x8192, 1, 0x11, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A04[8] = { 0x7009, 1, 0x8192, 1, 0x11, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A14[8] = { 0x8192, 0, 0x7009, 1, 0x701A, 0, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A24[4] = { 0x6007, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A2C[4] = { 0x6019, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A34[4] = { 0x602B, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A3C[4] = { 0x6008, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A44[4] = { 0x6009, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A4C[4] = { 0x7019, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A54[4] = { 0x600A, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A5C[4] = { 0x600C, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A64[4] = { 0x600E, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A6C[4] = { 0x7016, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A74[4] = { 0x7017, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A7C[4] = { 0x6018, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A84[4] = { 0x6026, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A8C[4] = { 0x601A, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A94[4] = { 0x701A, 1, 0xFFFF, 0 };
+u16 D_WSTAG440_800A6A9C[4] = { 0x701A, 1, 0xFFFF, 0 };
+FieldstgPlacedActor D_WSTAG440_800A6AA4 = { D_WSTAG440_800A69D4, D_WSTAG440_800A668C, 45, 4, 177, 313, 7 };
+FieldstgPlacedActor D_WSTAG440_800A6AB8 = { D_WSTAG440_800A69E4, D_WSTAG440_800A66EC, 45, 4, 177, 313, 7 };
+FieldstgPlacedActor D_WSTAG440_800A6ACC = { D_WSTAG440_800A69F4, D_WSTAG440_800A674C, 45, 4, 177, 313, 7 };
+FieldstgPlacedActor D_WSTAG440_800A6AE0 = { D_WSTAG440_800A6A04, D_WSTAG440_800A67AC, 45, 4, 177, 313, 7 };
+FieldstgPlacedActor D_WSTAG440_800A6AF4 = { D_WSTAG440_800A6A14, D_WSTAG440_800A67DC, 45, 4, 177, 313, 7 };
+FieldstgPlacedActor D_WSTAG440_800A6B08 = { D_WSTAG440_800A6A24, D_WSTAG440_800A67F4, 46, 5, 145, 329, 5 };
+FieldstgPlacedActor D_WSTAG440_800A6B1C = { D_WSTAG440_800A6A2C, D_WSTAG440_800A680C, 46, 5, 145, 329, 5 };
+FieldstgPlacedActor D_WSTAG440_800A6B30 = { D_WSTAG440_800A6A34, D_WSTAG440_800A6824, 46, 5, 145, 329, 5 };
+FieldstgPlacedActor D_WSTAG440_800A6B44 = { D_WSTAG440_800A6A3C, D_WSTAG440_800A683C, 46, 5, 145, 329, 5 };
+FieldstgPlacedActor D_WSTAG440_800A6B58 = { D_WSTAG440_800A6A44, D_WSTAG440_800A6854, 46, 5, 145, 329, 5 };
+FieldstgPlacedActor D_WSTAG440_800A6B6C = { D_WSTAG440_800A6A4C, D_WSTAG440_800A686C, 46, 5, 145, 329, 5 };
+FieldstgPlacedActor D_WSTAG440_800A6B80 = { D_WSTAG440_800A6A54, D_WSTAG440_800A6884, 46, 5, 145, 329, 5 };
+FieldstgPlacedActor D_WSTAG440_800A6B94 = { D_WSTAG440_800A6A5C, D_WSTAG440_800A689C, 46, 5, 145, 329, 5 };
+FieldstgPlacedActor D_WSTAG440_800A6BA8 = { D_WSTAG440_800A6A64, D_WSTAG440_800A68B4, 46, 5, 145, 329, 5 };
+FieldstgPlacedActor D_WSTAG440_800A6BBC = { D_WSTAG440_800A6A6C, D_WSTAG440_800A68CC, 46, 5, 145, 329, 5 };
+FieldstgPlacedActor D_WSTAG440_800A6BD0 = { D_WSTAG440_800A6A74, D_WSTAG440_800A68E4, 46, 5, 145, 329, 5 };
+FieldstgPlacedActor D_WSTAG440_800A6BE4 = { D_WSTAG440_800A6A7C, D_WSTAG440_800A68FC, 46, 5, 145, 329, 5 };
+FieldstgPlacedActor D_WSTAG440_800A6BF8 = { D_WSTAG440_800A6A84, D_WSTAG440_800A6914, 46, 5, 145, 329, 5 };
+FieldstgPlacedActor D_WSTAG440_800A6C0C = { D_WSTAG440_800A6A8C, D_WSTAG440_800A692C, 46, 5, 145, 329, 5 };
+FieldstgPlacedActor D_WSTAG440_800A6C20 = { NULL, D_WSTAG440_800A6944, 63, 6, 463, 280, 1 };
+FieldstgPlacedActor D_WSTAG440_800A6C34 = { D_WSTAG440_800A6A94, D_WSTAG440_800A695C, 157, 7, 177, 313, 7 };
+FieldstgPlacedActor D_WSTAG440_800A6C48 = { D_WSTAG440_800A6A9C, D_WSTAG440_800A69BC, 158, 8, 145, 329, 5 };
+FieldstgPlacedActor *wstag440_actors[23] = {
+    &D_WSTAG440_800A6AA4, &D_WSTAG440_800A6AB8, &D_WSTAG440_800A6ACC, &D_WSTAG440_800A6AE0, &D_WSTAG440_800A6AF4,
+    &D_WSTAG440_800A6B08, &D_WSTAG440_800A6B1C, &D_WSTAG440_800A6B30, &D_WSTAG440_800A6B44, &D_WSTAG440_800A6B58,
+    &D_WSTAG440_800A6B6C, &D_WSTAG440_800A6B80, &D_WSTAG440_800A6B94, &D_WSTAG440_800A6BA8, &D_WSTAG440_800A6BBC,
+    &D_WSTAG440_800A6BD0, &D_WSTAG440_800A6BE4, &D_WSTAG440_800A6BF8, &D_WSTAG440_800A6C0C, &D_WSTAG440_800A6C20,
+    &D_WSTAG440_800A6C34, &D_WSTAG440_800A6C48, NULL,
+};
+FieldstgSprite wstag440_sprites[6] = {
+    { 1, 0, 0x40, 6, 0x32, 2, 0, 5, 9, 0, 435, 247, 0, 0 },
+    { 1, 0, 0x40, 6, 0x33, 1, 0x33, 0x38, 9, 0, 443, 254, 0, 0 },
+    { 1, 0, 0x40, 6, 0x39, 2, 0, 5, 6, 0, 443, 348, 0, 0 },
+    { 1, 0, 0x40, 6, 0x3A, 1, 0x3A, 0x3F, 6, 0, 377, 384, 0, 0 },
+    { 1, 0, 0x40, 4, 0, 0, 0, 0, 0, 0, 482, 177, 200, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+};
+FieldstgMapEvent wstag440_map_events[2] = {
+    { 0xFFFF, 0, 0xFFFF, 0, 1, 0x233, 0x208, 0x9C, 7, 0, 0, 0 }, { 0xFFFF, 0, 0xFFFF, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+};
+WstagFuncs wstag440_funcs = { wstag440_setup };
+FieldstgEventDef wstag440_events[3] = {
+    { 152, D_WSTAG440_800A6088, 0x01350006, NULL, wstag440_event_152_end },
+    { 144, D_WSTAG440_800A600C, 0x01350021, NULL, NULL }, { -1, NULL, 0, NULL, NULL },
+};

@@ -1,0 +1,13 @@
+// WSTAG964 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag964_color = 0x800A5DE0;
+wstag964_set_exits = 0x800A5DE4; // type:func
+wstag964_update = 0x800A5EE4; // type:func
+wstag964_start = 0x800A5F58; // type:func
+wstag964_setup = 0x800A5FB4; // type:func
+wstag964_exits = 0x800A6264;
+wstag964_vram_places = 0x800A628C;
+wstag964_actors = 0x800A6588;
+wstag964_sprites = 0x800A65A4;
+wstag964_map_events = 0x800A66C4;
+wstag964_funcs = 0x800A670C;
+wstag964_battle_lists = 0x800A6F50;

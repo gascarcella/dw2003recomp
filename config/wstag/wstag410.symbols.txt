@@ -1,0 +1,13 @@
+// WSTAG410 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag410_color = 0x800A5DE0;
+wstag410_update = 0x800A5DE4; // type:func
+wstag410_start = 0x800A5E2C; // type:func
+wstag410_event_90_end = 0x800A5E88; // type:func
+wstag410_setup = 0x800A5E98; // type:func
+wstag410_battle_lists = 0x800A6490;
+wstag410_vram_places = 0x800A64AC;
+wstag410_actors = 0x800A6B8C;
+wstag410_sprites = 0x800A6BB0;
+wstag410_map_events = 0x800A6C1C;
+wstag410_funcs = 0x800A6C64;
+wstag410_events = 0x800A6C68;

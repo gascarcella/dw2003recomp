@@ -1,0 +1,71 @@
+# splat config for the tier-1 overlay AAA/PRO/STCRDSHP.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: STCRDSHP.PRO
+sha1: d1e01bd598694a6aa8ddd0978f6d382fa970d314
+options:
+  basename: STCRDSHP.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/STCRDSHP.PRO
+  elf_path: build/stcrdshp/STCRDSHP.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/stcrdshp
+  asm_path: asm/stcrdshp
+  src_path: src/stcrdshp
+  asset_path: assets/stcrdshp
+  ld_script_path: build/stcrdshp/STCRDSHP.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/stcrdshp.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/stcrdshp/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/stcrdshp/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: stcrdshp
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_STCRDSHP_<addr>, D_STCRDSHP_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: STCRDSHP_$VRAM
+    subsegments:
+      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"): the jump table at 0x80082DA4
+      # (offset 0xF4, odd word) after 0x80082CB0's breaks parity, so a new object starts between 0x8008536C
+      # and 0x80086DC4.
+      - [0x0,  .rodata, stcrdshp_8008300C]
+      - [0xF4, .rodata, stcrdshp_800853B4]
+      - [0x35C,  c, stcrdshp_8008300C]  # 0x8008300C .text: the object 852CC/8536C and its helpers
+      - [0x2704, c, stcrdshp_800853B4]  # 0x800853B4 fade object, card objects 85DA0, 87A2C, root 87BDC,
+                                        # start 87CD4, main object 88B50/88CA0. Position moderate: parity
+                                        # puts it in 8536C..86DC4; chosen after 8536C's create and at the
+                                        # fade object, which with the card object after it (85788 = STCRDABM
+                                        # 8314C) also opens STCRDABM's .text
+      - [0x6174, c, stcrdshp_80088E24]  # 0x80088E24 the overlay's helper table D_STCRDSHP_8008CB80 (as
+                                        # STCRDDEK 8A100), then the price lookups 89160, 8923C (tables
+                                        # 8CB98/8CB9C; maybe their own file: data after the helper table's)
+      # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t stcrdshp;
+      # DECISIONS "Overlay .data/.bss per file").
+      - [0x65D8, .data, stcrdshp_8008300C]   # 0x80089288 (after the last function's jr ra)
+      - [0x9E60, .data, stcrdshp_800853B4]   # 0x8008CB10 (8CAF8 is 8300C's, 8CB10 853B4's: references)
+      - [0x9ED0, .data, stcrdshp_80088E24]   # 0x8008CB80 stcrdshp_util (its function table); no .bss
+  - [0xA250]

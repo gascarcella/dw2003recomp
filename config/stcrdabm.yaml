@@ -1,0 +1,59 @@
+# splat config for the tier-1 overlay AAA/PRO/STCRDABM.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: STCRDABM.PRO
+sha1: 0e58e7aef70165be0bb6b95d59236941ab648b28
+options:
+  basename: STCRDABM.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/STCRDABM.PRO
+  elf_path: build/stcrdabm/STCRDABM.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/stcrdabm
+  asm_path: asm/stcrdabm
+  src_path: src/stcrdabm
+  asset_path: assets/stcrdabm
+  ld_script_path: build/stcrdabm/STCRDABM.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/stcrdabm.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/stcrdabm/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/stcrdabm/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: stcrdabm
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_STCRDABM_<addr>, D_STCRDABM_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: STCRDABM_$VRAM
+    subsegments:
+      # One file (docs/DECISIONS.md "Overlay file split"): .rodata is a single jump table (no parity break),
+      # .data is one block of tables used by the overlay's last functions; no evidence for a second object.
+      - [0x0,  .rodata, stcrdabm_80082D88]
+      - [0xD8, c, stcrdabm_80082D88]   # 0x80082D88: .text (tools/overlay_layout.py)
+      # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t stcrdabm;
+      # DECISIONS "Overlay .data/.bss per file").
+      - [0x2D9C, .data, stcrdabm_80082D88]   # 0x80085A4C (after the last function's jr ra); no .bss
+  - [0x2DCC]

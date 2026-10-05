@@ -1,0 +1,71 @@
+# splat config for the tier-2 overlay AAA/PRO/WFIGHTMN.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and data
+# with no header, loaded at 0x800A5DE0 (the EXE's main_file_base, by overlay_load_file) on top of FIGHTSTG, which
+# stays loaded at 0x80082CB0-0x800A47A0. The normal battle: FIGHTSTG's fightstg_main_update loads it as file
+# 0x208 and calls its entry func_800A9FF0.
+# It links against the EXE and against FIGHTSTG (configure.py TIER2_PARENT): splat gets both sets of names
+# (build/exe_symbols.txt, build/fightstg/names_for_tier2.txt), the linker both ELFs' symbol tables.
+# Layout as psylink writes it: .rodata, .text, .data (no .bss: nothing past the file's end is referenced).
+name: WFIGHTMN.PRO
+sha1: fe2db0a83e09b2fcb9ecedf0a6c1c2114be5dabe
+options:
+  basename: WFIGHTMN.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/WFIGHTMN.PRO
+  elf_path: build/wfightmn/WFIGHTMN.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/wfightmn
+  asm_path: asm/wfightmn
+  src_path: src/wfightmn
+  asset_path: assets/wfightmn
+  ld_script_path: build/wfightmn/WFIGHTMN.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt               # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - build/fightstg/names_for_tier2.txt  # FIGHTSTG's names (configure.py writes it when it splits FIGHTSTG)
+    - config/wfightmn.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/wfightmn/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/wfightmn/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: wfightmn
+    type: code
+    start: 0x0
+    vram: 0x800A5DE0
+    # Unnamed symbols are func_WFIGHTMN_<addr>, D_WFIGHTMN_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: WFIGHTMN_$VRAM
+    subsegments:
+      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"). Proven by jump-table parity: the
+      # 7-entry table 800A5DE0 (offset 0) and 800A5DFC (offset 0x1C, mod 8 = 4) are in different objects, so a
+      # file starts at or before 800A6C44 (800A5DFC's function). Position (moderate): 800A5ECC is an object
+      # update and 800A6414 its create (it passes 800A5ECC to object_new), and every function from 800A6440
+      # to 800A69F0 is a helper called only by 800A6C44 (static helpers sit before their caller). The other
+      # tables (800A5E1C, 5E3C, 5E54, 5E6C) keep 800A5DFC's parity: no further break proven.
+      # Session 6 (wfight): WFIGHTTS's first function 800A67B8 is 800A6440 with one constant changed, and its
+      # 800A6A28 loads the images 800A5ECC loads; this supports 800A6440 as a file start (moderate).
+      - [0x0,  .rodata, wfightmn_800A5ECC]
+      - [0x1C, .rodata, wfightmn_800A6440]
+      - [0xEC,  c, wfightmn_800A5ECC]  # 0x800A5ECC .text (tools/overlay_layout.py: first stack frame)
+      - [0x660, c, wfightmn_800A6440]  # 0x800A6440 (position moderate: 800A6440..800A6C44)
+      # .data in C (tools/data_owners.py -t wfightmn; DECISIONS "Overlay .data/.bss per file"): every symbol is
+      # 800A6440's (the screen RECT, two technique tables, the event-handler table, a script table); no .bss.
+      - [0x4F28, .data, wfightmn_800A6440]  # 0x800AAD08 (after the last function's jr ra)
+  - [0x50C8]

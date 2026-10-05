@@ -1,0 +1,17 @@
+// WSTAG480 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag480_color = 0x800A5DF4;
+wstag480_seq_anim_advance = 0x800A5DF8; // type:func
+wstag480_seq_update = 0x800A5F84; // type:func
+wstag480_seq_create = 0x800A6164; // type:func
+wstag480_update = 0x800A6190; // type:func
+wstag480_start = 0x800A6230; // type:func
+wstag480_event_170_end = 0x800A628C; // type:func
+wstag480_event_171_end = 0x800A62D8; // type:func
+wstag480_setup = 0x800A62E8; // type:func
+wstag480_battle_lists = 0x800A6EA0;
+wstag480_vram_places = 0x800A6EF4;
+wstag480_actors = 0x800A6FE8;
+wstag480_sprites = 0x800A6FF0;
+wstag480_map_events = 0x800A80C0;
+wstag480_funcs = 0x800A81F8;
+wstag480_events = 0x800A81FC;

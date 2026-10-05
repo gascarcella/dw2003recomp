@@ -1,0 +1,11 @@
+// WSTAG451 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag451_color = 0x800A5DE0;
+wstag451_update = 0x800A5DE4; // type:func
+wstag451_start = 0x800A5E2C; // type:func
+wstag451_setup = 0x800A5E88; // type:func
+wstag451_battle_lists = 0x800A61C4;
+wstag451_vram_places = 0x800A61E0;
+wstag451_actors = 0x800A657C;
+wstag451_sprites = 0x800A659C;
+wstag451_map_events = 0x800A674C;
+wstag451_funcs = 0x800A6854;

@@ -1,0 +1,14 @@
+// WSTAG949 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag949_color = 0x800A5DE0;
+wstag949_parallax_update = 0x800A5DE4; // type:func
+wstag949_parallax_new = 0x800A5F38; // type:func
+wstag949_update = 0x800A5F64; // type:func
+wstag949_start = 0x800A5FC8; // type:func
+wstag949_setup = 0x800A6024; // type:func
+wstag949_vram_places = 0x800A6294;
+wstag949_actors = 0x800A6530;
+wstag949_sprites = 0x800A6548;
+wstag949_map_events = 0x800A655C;
+wstag949_funcs = 0x800A664C;
+wstag949_events = 0x800A6650;
+wstag949_battle_lists = 0x800A6888;

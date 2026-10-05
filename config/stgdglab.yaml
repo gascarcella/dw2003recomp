@@ -1,0 +1,88 @@
+# splat config for the tier-1 overlay AAA/PRO/STGDGLAB.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: STGDGLAB.PRO
+sha1: c2b82222d418fbf0a101f7062499ee5719fea7b5
+options:
+  basename: STGDGLAB.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/STGDGLAB.PRO
+  elf_path: build/stgdglab/STGDGLAB.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/stgdglab
+  asm_path: asm/stgdglab
+  src_path: src/stgdglab
+  asset_path: assets/stgdglab
+  ld_script_path: build/stgdglab/STGDGLAB.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/stgdglab.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/stgdglab/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/stgdglab/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: stgdglab
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_STGDGLAB_<addr>, D_STGDGLAB_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: STGDGLAB_$VRAM
+    subsegments:
+      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"). The overlay is a root object, a fade,
+      # seven screen objects (each: a window setup, a run function with a switch, a draw, an update and its create
+      # last) and a scroll bar, then the stage module. Jump-table parity proves four breaks: 82CEC (4 mod 8 after
+      # 82CD8's 0, which is padded to 8 after 82CB0), 82D08 (0 mod 8), 82DDC (4 mod 8), 82F30 (0 mod 8; 82DDC,
+      # 82E5C and 82E8C are 8-apart, so they prove nothing). Each break lands between a create (the last function
+      # of an object group) and the next group's first helper. The groups without a proven break (886DC, 8A92C,
+      # 8C278) are given one file each like the proven ones (moderate: 88808 and 8A92C are the same code with
+      # their own copies of one table, D_STGDGLAB_8008F490/8008F4A4); the scroll bar 8A670..8A8C4 is the same code
+      # as STCRDDEK's 88874 and STSTATUS's (moderate). The stage module (main object 8ED0C/8EFD0, which the root
+      # creates, and the helper table 8F040..8F424) starts at 8EB30, the static helper before its only caller
+      # 8ED0C (moderate); .data is referenced in code order throughout and adds no boundary.
+      - [0x0,   .rodata, stgdglab_80082F48]   # jump tables of 842F4 (82CB0, 82CD8)
+      - [0x3C,  .rodata, stgdglab_80085470]   # 85DD0's (4 mod 8: parity break)
+      - [0x58,  .rodata, stgdglab_80087070]   # 87600's (0 mod 8: parity break)
+      - [0x12C, .rodata, stgdglab_800886DC]   # 88B5C's (4 mod 8: parity break)
+      - [0x1AC, .rodata, stgdglab_8008A92C]   # 8B798's
+      - [0x1DC, .rodata, stgdglab_8008C278]   # 8C960's
+      - [0x280, .rodata, stgdglab_8008D7CC]   # 8E018's (0 mod 8: parity break)
+      - [0x298,  c, stgdglab_80082F48]   # 0x80082F48 .text: root object, entry 83040, fade 8306C..832EC, screen 842F4/85408
+      - [0x27C0, c, stgdglab_80085470]   # 0x80085470 screen 85DD0/87018 (position strong: create 85408 ends the previous group)
+      - [0x43C0, c, stgdglab_80087070]   # 0x80087070 screen 885EC/88694 (run 87600) (position strong: create 87018 before it)
+      - [0x5A2C, c, stgdglab_800886DC]   # 0x800886DC screen 8A51C/8A610 (run 88B5C; methods 886DC, 88718) (position strong)
+      - [0x79C0, c, stgdglab_8008A670]   # 0x8008A670 scroll bar 8A6AC/8A8C4 (as STCRDDEK 88874) (moderate)
+      - [0x7C7C, c, stgdglab_8008A92C]   # 0x8008A92C screen 8C060/8C230 (run 8B798) (moderate)
+      - [0x95C8, c, stgdglab_8008C278]   # 0x8008C278 screen 8C960/8D774 (moderate)
+      - [0xAB1C, c, stgdglab_8008D7CC]   # 0x8008D7CC screen 8E8D0/8EABC (run 8E018) (position strong: create 8D774 before it)
+      - [0xBE80, c, stgdglab_8008EB30]   # 0x8008EB30 stage module: main object 8ED0C/8EFD0, helper table D_STGDGLAB_8008FD90.. (moderate)
+      # .data per file in link order (tools/data_owners.py -t stgdglab; DECISIONS "Overlay .data/.bss per file"); no
+      # .bss. 8F470 is referenced by 82F48 only, 8F490 by 886DC, 8F4A4 by 8A92C (its own copy of 8F490's table).
+      # 8F4B8 (the menu's screen creates: functions of 8A92C, 87070 and 82F48) is referenced only by 8EB30's
+      # stgdglab_main_run, so it starts 8EB30's .data (weak: it could also end 8A92C's); 8F4C4..8FCA8 are the
+      # tables in stgdglab_funcs, last.
+      - [0xC7C0, .data, stgdglab_80082F48]   # 0x8008F470 (after the last function's jr ra)
+      - [0xC7E0, .data, stgdglab_800886DC]   # 0x8008F490
+      - [0xC7F4, .data, stgdglab_8008A92C]   # 0x8008F4A4
+      - [0xC808, .data, stgdglab_8008EB30]   # 0x8008F4B8 (weak: 8F4B8 or 8F4C4)
+  - [0xD100]

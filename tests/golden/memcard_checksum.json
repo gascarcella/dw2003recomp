@@ -1,0 +1,745 @@
+{
+ "family": "memcard_checksum",
+ "comment": "memcard_get_checksum(data, size) over fixed byte patterns, and memcard_check_checksum(data, size, sum) with the right sum, a wrong one, 0 and 0xFF.",
+ "generator": "tests/golden/families/memcard_checksum.py",
+ "oracle": {
+  "method": "lua-calls: tests/golden/oracle.lua hijacks the game at pad_update (-debugger -interpreter)",
+  "emulator": {
+   "name": "pcsx-redux",
+   "version": "bf4c9ceb",
+   "build_id": 359,
+   "changeset": "bf4c9cebdd1c649dd006736bb012fc7f1d6fd988"
+  },
+  "bios": {
+   "name": "openbios",
+   "sha1": "8f1269a22179433c8b22b4c804f11c0a076450c5"
+  },
+  "tree_commit": "49aff93d32a47c1561895a1d04b8b1b8b332a935",
+  "resident": "CNTY_SEL loaded: the EXE's code and data are resident"
+ },
+ "fixtures": {
+  "fixture_0": []
+ },
+ "cases": [
+  {
+   "name": "empty",
+   "comment": "0 bytes; Python's XOR is 0x0",
+   "fixture": "fixture_0",
+   "buffers": {
+    "data": ""
+   },
+   "saves": [],
+   "calls": [
+    {
+     "func": "memcard_get_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      0
+     ],
+     "ret_type": "u8",
+     "ret": 0,
+     "v0": 0,
+     "comment": "XOR of the bytes"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      0,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "right sum"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      0,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "one bit off"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      0,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "zero"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      0,
+      255
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "0xFF"
+    }
+   ]
+  },
+  {
+   "name": "one_byte_5a",
+   "comment": "1 bytes; Python's XOR is 0x5a",
+   "fixture": "fixture_0",
+   "buffers": {
+    "data": "5a"
+   },
+   "saves": [],
+   "calls": [
+    {
+     "func": "memcard_get_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      1
+     ],
+     "ret_type": "u8",
+     "ret": 90,
+     "v0": 90,
+     "comment": "XOR of the bytes"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      1,
+      90
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "right sum"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      1,
+      91
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "one bit off"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      1,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "zero"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      1,
+      255
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "0xFF"
+    }
+   ]
+  },
+  {
+   "name": "two_bytes",
+   "comment": "2 bytes; Python's XOR is 0xff",
+   "fixture": "fixture_0",
+   "buffers": {
+    "data": "5aa5"
+   },
+   "saves": [],
+   "calls": [
+    {
+     "func": "memcard_get_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      2
+     ],
+     "ret_type": "u8",
+     "ret": 255,
+     "v0": 255,
+     "comment": "XOR of the bytes"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      2,
+      255
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "right sum"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      2,
+      254
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "one bit off"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      2,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "zero"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      2,
+      255
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "0xFF"
+    }
+   ]
+  },
+  {
+   "name": "zeros_16",
+   "comment": "16 bytes; Python's XOR is 0x0",
+   "fixture": "fixture_0",
+   "buffers": {
+    "data": "00000000000000000000000000000000"
+   },
+   "saves": [],
+   "calls": [
+    {
+     "func": "memcard_get_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      16
+     ],
+     "ret_type": "u8",
+     "ret": 0,
+     "v0": 0,
+     "comment": "XOR of the bytes"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      16,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "right sum"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      16,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "one bit off"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      16,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "zero"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      16,
+      255
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "0xFF"
+    }
+   ]
+  },
+  {
+   "name": "ff_16",
+   "comment": "16 bytes; Python's XOR is 0x0",
+   "fixture": "fixture_0",
+   "buffers": {
+    "data": "ffffffffffffffffffffffffffffffff"
+   },
+   "saves": [],
+   "calls": [
+    {
+     "func": "memcard_get_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      16
+     ],
+     "ret_type": "u8",
+     "ret": 0,
+     "v0": 0,
+     "comment": "XOR of the bytes"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      16,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "right sum"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      16,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "one bit off"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      16,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "zero"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      16,
+      255
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "0xFF"
+    }
+   ]
+  },
+  {
+   "name": "inc_256",
+   "comment": "256 bytes; Python's XOR is 0x0",
+   "fixture": "fixture_0",
+   "buffers": {
+    "data": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"
+   },
+   "saves": [],
+   "calls": [
+    {
+     "func": "memcard_get_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      256
+     ],
+     "ret_type": "u8",
+     "ret": 0,
+     "v0": 0,
+     "comment": "XOR of the bytes"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      256,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "right sum"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      256,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "one bit off"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      256,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "zero"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      256,
+      255
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "0xFF"
+    }
+   ]
+  },
+  {
+   "name": "inc_255",
+   "comment": "255 bytes; Python's XOR is 0xff",
+   "fixture": "fixture_0",
+   "buffers": {
+    "data": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfe"
+   },
+   "saves": [],
+   "calls": [
+    {
+     "func": "memcard_get_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      255
+     ],
+     "ret_type": "u8",
+     "ret": 255,
+     "v0": 255,
+     "comment": "XOR of the bytes"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      255,
+      255
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "right sum"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      255,
+      254
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "one bit off"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      255,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "zero"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      255,
+      255
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "0xFF"
+    }
+   ]
+  },
+  {
+   "name": "lcg_1000",
+   "comment": "1000 bytes; Python's XOR is 0x6e",
+   "fixture": "fixture_0",
+   "buffers": {
+    "data": "d44136945e873109cc7af8f5169134f2c73f3e5c68f06aabaec21794620477df146f1f077f264d93bb6ffd37252faaa90e27e44426f19760a7b8156c41bae8d0c87f5a84a0d7c070e4958b82590c0d91164d0af5ef1f06e2a6bb4989d04cb2ed88294185d7d06297dfa2fa4fca6133a2746908e5dab18f2b4281096328f1ab2eec252a823d4a0900434fa2158f64f6d2c333348c01e10b3314c3af7361e0ad8c8b2b6ff2e97d8fa4a954dc4cc14e2d1c9963e86379e550f1b439933092538ffffff3684df4a1ca7aa969ff6d7757b0758fb17ae15df7385eba9b0b13d480297edd356b0c76ee947bda4662f0cbb757d73cd5447ec34d9a71bda170933ea15401c0a8d2a6879cc59ed5a3604cd3a6fa3a3a869eb3c4214e2256031b29eaece6813e06f3943ee333dc32384ef9a75b72951f7edef878a92d6a1c79634cee9ab9f5f005284db4fab72c88bd8570611096e083735dc4f61e0d40a9bba07462e4a4556d5fc84a011b2a8670e95e2817fc3e14001f748f57b8c89d93802a1a60007f9b4eca2c023c7d63e38276309ae15642282c387ad2b3af357872825ab6fe2722bc2b00aaed7e573a3a561b533dd9587a159f78c704213b2ccae07886bf559166b29cb79c84dfe38784838f1f891538bfd2f395b39eba94868a731908ad7c76217438a8593f765723b8a28cedf7ae30e858be48971796f219b0c41f37f88c0e2dfb988c39955cede4cf4bc813ffbb76cd9e9849cae7cc8dbf356a406b1a9d90613e531994fea9dba4c015fdeb185543469c1b50a387759d4f10fe35fd88c73695360308c3f2745a3a8499e1ccba94d02b4bdd167c6fa95aa13a18b743bc2137a2da3d111cebd6a27f126e2d0e5e905355a27750ad157ffb8daa4f7c972ec4ca5e239cecf95ee7eb49622e99097b60059a9a80b98cf411baec593d3d5054c729a308b651b1c5bf6d726d6fdd16891d1ed42a9208738174cd953e77b2c6a9448b488125f79c987560d02ac9b18c01ded6da4b42f5b837c36e5f51989352a3502725877e98124d22fc3d92d6cdc35bbd6585f42b38b58b14d3258b36984aba063613115ceb6c5fdd79909c2ce9130ed003ab1ee388c2f78036bce4ea7908667cf1e81855a70143bf0fa24164bdd4922fe726c0039f35f31fcdfd524ceee320cb8e7e9302862974e0f6497815015f60f44bccd2233467f508d1c1d0f3ae33600b46ac7bfa3f3c6758665f39d86d0aef3566774ddafeb178547adf537873509d54514ac7d68992963e96bb7d45b82fb80a6fff28c1b66af21a002fd673f4924fbde7306f2e1d8479abc0353cf49c25328da03a5c7015eadb749b894e7be852ef5e40376c9ab46887b71aa56c7cd044d5d43002e07ed189ab7883c5b52909e7f4519435b6b104983879dee408"
+   },
+   "saves": [],
+   "calls": [
+    {
+     "func": "memcard_get_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      1000
+     ],
+     "ret_type": "u8",
+     "ret": 110,
+     "v0": 110,
+     "comment": "XOR of the bytes"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      1000,
+      110
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "right sum"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      1000,
+      111
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "one bit off"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      1000,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "zero"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      1000,
+      255
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "0xFF"
+    }
+   ]
+  },
+  {
+   "name": "lcg_slot",
+   "comment": "9920 bytes; Python's XOR is 0xf",
+   "fixture": "fixture_0",
+   "buffers": {
+    "data": "d44136945e873109cc7af8f5169134f2c73f3e5c68f06aabaec21794620477df146f1f077f264d93bb6ffd37252faaa90e27e44426f19760a7b8156c41bae8d0c87f5a84a0d7c070e4958b82590c0d91164d0af5ef1f06e2a6bb4989d04cb2ed88294185d7d06297dfa2fa4fca6133a2746908e5dab18f2b4281096328f1ab2eec252a823d4a0900434fa2158f64f6d2c333348c01e10b3314c3af7361e0ad8c8b2b6ff2e97d8fa4a954dc4cc14e2d1c9963e86379e550f1b439933092538ffffff3684df4a1ca7aa969ff6d7757b0758fb17ae15df7385eba9b0b13d480297edd356b0c76ee947bda4662f0cbb757d73cd5447ec34d9a71bda170933ea15401c0a8d2a6879cc59ed5a3604cd3a6fa3a3a869eb3c4214e2256031b29eaece6813e06f3943ee333dc32384ef9a75b72951f7edef878a92d6a1c79634cee9ab9f5f005284db4fab72c88bd8570611096e083735dc4f61e0d40a9bba07462e4a4556d5fc84a011b2a8670e95e2817fc3e14001f748f57b8c89d93802a1a60007f9b4eca2c023c7d63e38276309ae15642282c387ad2b3af357872825ab6fe2722bc2b00aaed7e573a3a561b533dd9587a159f78c704213b2ccae07886bf559166b29cb79c84dfe38784838f1f891538bfd2f395b39eba94868a731908ad7c76217438a8593f765723b8a28cedf7ae30e858be48971796f219b0c41f37f88c0e2dfb988c39955cede4cf4bc813ffbb76cd9e9849cae7cc8dbf356a406b1a9d90613e531994fea9dba4c015fdeb185543469c1b50a387759d4f10fe35fd88c73695360308c3f2745a3a8499e1ccba94d02b4bdd167c6fa95aa13a18b743bc2137a2da3d111cebd6a27f126e2d0e5e905355a27750ad157ffb8daa4f7c972ec4ca5e239cecf95ee7eb49622e99097b60059a9a80b98cf411baec593d3d5054c729a308b651b1c5bf6d726d6fdd16891d1ed42a9208738174cd953e77b2c6a9448b488125f79c987560d02ac9b18c01ded6da4b42f5b837c36e5f51989352a3502725877e98124d22fc3d92d6cdc35bbd6585f42b38b58b14d3258b36984aba063613115ceb6c5fdd79909c2ce9130ed003ab1ee388c2f78036bce4ea7908667cf1e81855a70143bf0fa24164bdd4922fe726c0039f35f31fcdfd524ceee320cb8e7e9302862974e0f6497815015f60f44bccd2233467f508d1c1d0f3ae33600b46ac7bfa3f3c6758665f39d86d0aef3566774ddafeb178547adf537873509d54514ac7d68992963e96bb7d45b82fb80a6fff28c1b66af21a002fd673f4924fbde7306f2e1d8479abc0353cf49c25328da03a5c7015eadb749b894e7be852ef5e40376c9ab46887b71aa56c7cd044d5d43002e07ed189ab7883c5b52909e7f4519435b6b104983879dee408760be51af8562dad84a3a0db3ff0bc03150da9d7ac1b04440cc66b050a42c80579075e79104b95ba1a4386e3e01a442ed6aef00f880d7b0e42b23a65827f2b5d1f7a0969354811ffd76a923a7439373105a21515fca2730ced805bd1f9cee408fe1d3d627f837a7555ce1e5813856c023aa26e602112c238a3e828c08665cbfdaea852dd0635a613292882b6d435bc990d6755680f944287fca2f7aa417db934c8d4a151e1966fd2ee2f14cbd083fdee15a721a6de62c9f392662208444e84a6e457803629deaca93a9d2e101fa509faeb1b2a91a5b23174fbec0152a510064a9aea4905f6453591a62926fcd9d5b7b5267bc8a27dbe5100cfeceaff7dfb1619824553365f03e281ca8b56081549df165f7f54507ebc0292a81d3787e4478c0a3320f6407d508c723d7a15abec3a59152edf2414bfe51a1f1c393e63f12c411645338a9b6864095a98b0bc5d75e1feab2b529265597273a2c4f7590abde10b34523568c03776333472e4a197ca74a4cfed92f5bb6499e410370edff45fa0c45cf0e0e62603c0e1f665cd1ed1012c257a0d56a68ff79345630e38299af1a04387b8eb5e46e479eb9807248a81324158a32356fb592b986e93e12b8d74891860ad410d2797f1d82a13f0a23d2177eb1543c6494e9018e0389748a065f93f42f3c425009a914317745ebafd8f29e66234518fe9f6acd5a37967da4f08a12d54d4c7f97a0dadf26ca371fbeed91097de8ec516ec4b257c190bfc30f1cee56987dcab5835da6315108e454c2e714fa497fa98f20ca575227ac54de13c0f3c0c14e26ad8e7572ac63c0dd24473b15d23c550c1bdff5c11e2fe805387e9231f2d31befc124ade7a1a26f80f7c76f0b22d9f68390c7ec973d2dc1205b8b06305e51748589e14c7cc2c0728f48cef87c7d95f1af77a4143130b4e555b0c4926674cfe597613fe68971217737a0b96cc13403c3ff49d002267a58a1f4e1d6cc4bc791ec74f0ac01a53e58eb3989322190f7a6dad270e74beeab7ca4ad681d1957c86af6cda1b123679bda4bf47b94dc4329f2c3e8964536f125a44aeead02ff12088e91f10ddac1381b191707e18ce27f5c6afc91139568d57a5322182a440311f9a04b8e8e94609e2da8d9c35465d99cf082f26b723347131b2ca7c9793bbacf2d2380f5bd798701450d01d65dcb173387ce52e74baa77219974598203657ba1049bdfd603f5aa1902a92ca0672840ba93c07b73f9866e8876cdc4c1624ceb3f217ca59f0b843f3cd810a7b0f9f8cbb995ece9b1153292bf24bc57070f6d6ef0f5399fb01db0dbd446d720878fc83da81fa72b1e183a794d24a39dc264428c7df1661bb8e3f6f5a6c0500493a211fc0d82a2bd1a7c29a79a082706931a67d91db7859718d7d201fbd62ee174ca519c5170431d45ca6b834d30aa2ee88b38ba77a90baf5f62dda65b09c7248a6212942b5a0bc90f8c7bb1ce4fb074224040b603577bd20c1e75385bdcbc6b6412d088d2a1804df72bf598a4a6dd63ffc30b514844598c9e84245d65b06203915606c00ef824198c2244cd47e7849bd09d1411cdd1184c860d766b00266b9a719540ef27cf7aa93e18f4a53f7339792427d67cfbaf4baf5233e6f6b2b02c9d9459ea6bc488e79a8c6970c602db7f898a0ccdf8493067028280e185f4df388a892d9ecb4cb60e5b06ad54a52991ba3a51a586195df5fdf3a68e019e5e0512eebf79b97347e852582c4e1bc81b278d293a8b7a55a16163f02db4c2a535d34f37a6d7d6192d81573f5cc531a46f1e6bb3a43816329b144c85877e903033cb30f2deb170128512705e47bc21cf7cd7d9770e250535b2700b21437505c4cf4e7badd69002f4d62d41424c9c77aeebf549f0f7eba2c49f164340e1019ed87fde82c60e0d1a25a8333d98eacfaec823e8409ed0e58a84a8686881ffcdb6e0ad0cd9d90482114a52b5e8afb1ff22a0bc2250ee48bc17db65f7ee51df330972fe4af4444978a3b88d26a60421748ece1c44ee6cbec8e65e6f36582e2ecad1f4db2a65b54c8a2d15af172933b8e93e95dbc19c97b2a571630ba539945dfedc0bcb1c91999d0018c73ff8c5bbe7c6ddbd5219befca3bb449ee2d60601fc58631d45931b5e9aa41252b75d2f0a3d86c78a36bef90921a3cb777c4a41146951129ed23f6681e4bf854dbca598ac39a297a1e122be4aabd881623f636e2944826616087306b0fadbfd2d9763c61f4bb3b979e906823ea1c2f1f4a3b2e0de0d55c9284fcf6f494c82d557ff291ad10333b887c5abd852a30cb8a440ba6c802344c72b1fa613c8593db9624b670a5eff8c1060eea434242f0f20f6ae0b44cd25e8dba3ffa887cbb06614d2038f383670564c7aeb812910b543c66132f71d1284bb923867384ea0d1a5632ccf3307e514fbe84b33a42ac5c5543479772f48fddf16663dfdd6dbf53c654fc7e5c40cd86d064f575ebeac90deb9d6a4e2056bec84b2d33a1b15b336502f16590ed3aaadd80f1d24c412322f60ce28690b2af96c14ea54b2367657e1bc8c524591e384b2e56fbd391b405edefb3ac55b6a0174fa0f56763c076a4d74d0d69f1316650e9514a1bb09bbca763d1d6918e1760a5213d350b32cd563078d4cb7583713e9abd1f55e921c1d222bd726d2ae80b6d724471082872a380209887f981946f1c2ffd6e6efcde5e6e8e31ac700e1dea3c96ef126657da9b6b8d6f3e9024da857b27e2188eed9ec70702f856d8d6e30c47285cfa4630220c908f34d188f70f0ad19aa4f4ac541b5515974a499d1af4ca0641c100a04b014e663d2118d792e956969f7bdac1c80c6111655f5bb672067af0f958fd6d3f31b965b16cec778c21c1424f9fa3c4e2284272836f661b75d2767d6757c7a4a568a606004f24607e70a44ec24825ad3a2950b10bb241c5bc101526a4f8383e14606bc145009889008c553210ae3a7567c5e3451260c4abde78af62c871263226cf620d96b820ebaa2e2e655009b91302b553a7b3b1c7c675c39daaeafb6c78716ee2620cb0947c130e865f9a907a80a3b2f94e04dc220d17a7357523cedf098df64339be1ecd37d3e4b599087d55b3e2722cb21e1bae795cdcd13b8b2358dd141dde09c63ba1128468148ab00623a556ae444c19a44201de1cc8753a30b0eb9c9c094a3a3fea05bc52f9abab65ba4d981e99930cb1b69d331e729b472ebd2bbd2b1e7532627f081459be7310d0f4a33f7a83001078e246f39a2824cb55599611827402c7dc38142437ba5bf981a8a0e57a5b0a3c339ef3b8484088dddc5c232e59636811e5ee2183a345da7baeae3c1fd6772aaa18c39d18df144096fd9ccaad68431f28b47826ca54b868b190df6e884631d77060273bac19fbc30eeff28425676da02383ad1b9004697eb160122eb681e089a644a4c60bac4d895dea37492f0d37621b8967f96f69b29394541e754241ddb966fa1135ce52620b9a2542106314fbde28fd7eb7fd3dea2072a5dd3ac43d7edfc6bb47808dc193c1dedaebd15833108b6219c84ed236699c628b2675d32c1d71dfbf1ca0e0b23722413f0a85a821cee1e0131eb5880d87807d3ed21f08c810eac83e6a8d5edea6a6da8e7823e9988e59bb2559e5b57b9d43dbf6b730fbc7b1bf9a70083da0fb38c6c2fd0ba4b34ea66b0a8550d5f236015e93ebaf9f44e3586b6d8cceab3dc245f911c59dff9ffc708ee66cdb7dd6f70d48bf5491647ad25b6359cc94cccfeb25b8df1f052c455b433a6713d3d6fa761879746b3578354d14217567329aec2e317a43411c243d2177e8a5b00ed8f66b7a6acd6773d20f0dd91dda95810d2c43c0b85564b8df1e07650fb77c6679628e8c92e07f246a9ec804cd9f8d581c29e22ae92fc0b35481c56327b6afb2b4d597a46ac6ed1f3a7b37ecacdd898fbf79c3c785e78de37bfe13cba9b981ca7ee83d1c6996e73c373e12ea2facbffeefb49def059603224d2ca9f40dda2a86d1323a4b0869a7535b7e1154d124687da4742afbe0545a47c1a53f36ca2fe2bea54c4589be57633c9dd4ec84075cbde5d44f21428f38ca2bcffe8de958d0e14bf1ce152f037854cff6d75ad14b6df40c79de391c895b8aa470d24b6630d75e04ad50649350e3b3e55d211593156f46cc8bb82ce147d4d48c9cb73103c95a93c1d269e80f1cb1b655cb48d422dc79ebfc0176b0e940bddfba4a46f61a9c71b75a57b25bfae0fa96f737e44fd718a41b75d4b07f8cec2ce20672165402203601a735c373ac13d58ba39a8f3d0842080e0dfbfe4f23c43917480dc00114cdbfab816333e97d2e5bcd31ebdf580fd1bdfc9e6ef7d9053ffeb45912dcb7a61c25ebbfda9b76c6a8a4947a226c56433eda1dff2634d58ad691f30f7a022c12857ffa399193d0ddf9c7185438d0f1fc0078a9081a4cfc0a000b0a443cc91aae7fe611c780b3b01c9add909924a1df9390aed89143d904de368332cf51ca37d482726641a092ceda03fe3621df78d95e6595e2729871a65cef12a388b09d3cdc073b3280e8c9e26fab4241c260ec97b7f745fe8411ac9adea4d0954851d9e11c8558ad5a51efa4340ac0e855a096d2f5bfd6669ea72497bbccd440e52d17dfed74e20fa9d29dcc7f999165b3960e4070345f5098526f574bdf38dc393befeca84df09044646b11aacfcceeb33bec9a81cff9f64a092591e75611a11b74f8c1a4889c6804fef12d0c248abd2d86c7987e07bc8e8cc4e0fde5a87ac763cfcb16399cfccfbf99c6d7fd11e308f96f38f1c155bf51377c36529f4e8986ea4500a2c00128fd4f2c83c6d60eef08f0efd75fa1301b782228c04a6cbf571686cd2f1f8f303a298bafbfb4ed92c5f6e8fd3b997610e83924c0159ba474fcaf115fef4400a0488d4b1b14579c157e08bb92fd57986e3dcd183dceff9fe48f8862f4d9c96aca6b60676718693a10327740a5b5505fc2336cd397832cb68729db518384652525bad9b78c63a01ffaf87b4f2efa3e2482e24e2ec5ccdc40d6e2deb60589d289294e3214818fb5a34ce94cc12665d83e2961ab02bf40c59449d1cb6a7180c6ee4f3fa1543f32611f7d1d226c858ed5052cc9bb267e78a00d560fd843c001fbad0fa46051bde55ae905ab352a420ceed10632b672f90b250078b43e1be9a3271de096a5e2f33f595b5dacbcd25578dcfa2cb4d4be29930cc624d736c9e5ff03963a2da9e0dad916ccfd38f13cb76a55d918664ce305a60db8d591f625abad48709681a421694b49945b670b405f7a12c5426158b786dce02d00fab7083344ac036ba9ce7f992daa0cf25041b7463fcb1620bc2e14a3cf3d7d1f2ab148765de8a831be5fd16116f18a370ccd77635238242d9108d15415dc00a9381cbf6b90b4b561d88fefba9fd568a4b2e55aae4a1147def61cc69246750e173d30440b74c884730e96b19b5f10fdb15bc33720c00ed8ae03a4cb54fcbf00e15025af4da2dc6cde79acf0fdef59a1d51f9de6b14ce72d12d2d6b993cd742c7d8b33d82ab2a8c61a310982d7e767ad8916ac40578654a08479eb6746524aec66049198993be3e8a04de54121dff4774357281c0d050d887c101cad6622fb9811d379c692d6472ce7e67704d46eb6597efb4a51c862ca3e71b19f63ead63d86f811223a0e1b8be96814f9a3e72d67aaaf1a48b982354218db72ad61ca06ca0f93d6c3cc04a267779aeea1f753b4bdc251cb5b2b33152f70336c7e7fff4a588c593a96546d02922ef58da9d60f9a72f9d927bb80d29b479df0b64a968139a054c255d1aa40d4c666f209471a13783ca8c146a08e585f44f78b69497d466c5bbf473eada776afb9780979b59a59e6d425813f412fbbf8dcd67b9db20c497a3f255f0d6322062d24bbb1f7292ed67cf2ca902bd83af600c8923969bf1b7ffd05df83dc29f3e9e4c0876298dcae84d14eee66229c87fe0cc1843ce7a783e28b65432ac138f2166c4334957706f35a7ea0e97c3bc5eeceb77d03fc2da21a6abc17abccd5c8f7855f661ac1aae0d4511aa01449908a485b97b566f253e7ba0e2ad36ee22f11db2f53e1925e4aa028603e06c54636256c9f4521089572b03ac66b50e4e4e84b750be06cf3e56f7fca80828a56ea48cc329258793e5ea233728b1748664918ae9d12a0bf95ce30b48fa87ee31eaedcb9722b6a7561c4fbaa3a55c8724a89d7722b3b2992d090a67950d0c9cb75090b22046211cdca40944b6b1a1485ea1d3ccff77f149dfca3e905e6f1fcf9b473ed40c030e539d049864fdcd5943b9d7c60fddad5f898718010902803af243165994b7f8c7f71cb57e9ee657bdf4bbb1e5b33aa356e3b889e3451eefd79064656287c186f772c13e3d460de068e6c9c7c44ab41980e3d98766d8210d7f3554abfb20963d06524016560de1f6e3957990e349c76f67058f97fd25a668ab5ca95174e2b38a8e010eb53a59e01aa78c5094b433d22452b4203317c10c90d561e7fd7151a6fee82a72b28bbd85ab2e26c43ab88c71b80d8b50f0583de10586f0761761f0ee19ae0a31859b9c6047f1005a1a71c733b9c0e677373fffa1364983e916d833e64a595ba0b61b89fd60899487bb617775993671289f2079daa29687b69335ae4d20637a55ab5cf9ba84617ed2751900c4d5d786ca8fab4ffad9e78764040bc3703b65f1d5ecf17f2533020acffefa06beff1dc2e28041d59f4bb60e76e0dc06fcdaca4d87027a8dbadbe4c3d5a095fca1747291062875be15879b8864c117fc309e19f8fe7339a9090e935589016e5629e58f8caacfb86d0b0cf170b30c5116d904ce8fa1b6e0447d3a971b5f98e496b5b1be11560d9b65ed4b6162e74a08ea339e517d1654dff3a4ef5980cedeaa41d26897ca7d59902c39c254ca66f1b0d9fdca5c3cc1b4ba39fdac54414c5a10db0d799603863b28336e114522d79ada797518485a397dd07b04d120b87d72c9d5b46442582629c51f1797cc07aeace74c47179f40e307d44a381d3861c7d026c584c81653c2bd0832b3e552e441bf78b5e127caac43ea372b14d014c8a0e9c92debf48b61e14c5321c07963345639f059d0e863d7f19c6a8128993f68be37126247992b1e077f476fbac3768331a3ff9ba3c8e45f61a5efffe0d811cd552f941645157ed39abd46602063065c7984e81eb748c5ce097e48fadb2c45621b5adfbd4208d04e308dd1b67eb7bc1ba3545b3698f7918f7eacf6f574e533b2763046baebc2f8b94e788ad64350d15c2499ba86b634d12f16a98b834bb2764a0b477aa28ff321d069e4d342fbbe0f9982dc8772bcaffe1886fb6827cd0376842007dd07cc09050ef87a3c70155ec05f4384539e09b871e7252a2e567657ce1c6a08ff5e0d741bd08f9027f13dc28d08ec28a06c2aede616869d3f82c53ed65e4ea24308d1c3cfc094ce3739b268cf31e230ef508dbfb41230ec1d40570838c5438b599bb6779a4abd9bdbdd20d11055cb4491fecfbd7585998e590299635f0cee1b94aa291f14ea4f60872f068ae9f00cbb49ca5e4693bc35fb646cf9cfb270a3da8597a709c92adfd3dad2d0f5c59c2c2c6846a70a98519bbad0c305acecabfa5fbdf7bde70077e45d484c1da12cb59f0f7ee747690cc130541fa85a9a570a76f29f4ddb36746cf264410e4a1c88c7fadc0f3fcce15a96994eb2a045f79b279f5abafd8c579e758f80569cd3d7735eb5199aa385131b4d3bf22b2e6564128ec8ef829a4ed9d82d01490a6b685175e5435f92d61d6dc8408e15eaa6465f669ba9289797804ccaef1d15ce0d6519e9e74b05892af340cb2c24f182cb4648f0e9959d5b98ee1fc047286e22f6479078e011a2ff15b45bbd6b862c84e0f2b04af423c54ff1c5c281b0a8d99ab9ad547c6b4cbf5649be0e187a173e428ad934ee46e917f635c4d468c733ef96bae3e59dd461b2301a8de755e37d9e7d4c6726544d3b2ceff848d4eef63ef7b87da8b326c6d6230e0b9156ff330ec466892a240682af6b7e9cef339dc94fa97195494cc0be2f9941b085fc8dd46047cfd49fad7e82bb6b53a7056feeabcb5c43756311f515d37c8c8cc9378b52f79feaa2252225b8e483d09a39095b2957a7afa163a21d7967443003d897513a4a4468957831b5a0b06c96f9f79f7ccd5a13279cd88cd3545087eda9219ba8f5ddcccaf1f63b77c5a46d1849de71ccf358063ceb3f11903224cf16f051c3cc013790637b1ccf05b3362cc5fd3b4fa546d71850f004ffdd8e59612d7cd69f53f7cd36f374795be8d4eb2321a7ab68cf335ca1154ec79714d46405b2a21d8dda351427cc8179617ab638c7ccacac7c74345e57fb6af486ff9fca1447f3a41eb854a1fa8025ba8f64c2a4a228afabea6dd5519464d8192ec76c11144ef517c177d1ec068fc49a150095a429a7044741e591dbfde319a31e2594ce8d3919c615a23877f36cf1a5b207aadce5e95dfbf294e552dc07931fb483d547f6a7f54c9ab0e3cb38a9306ad5b36d945e6110379bf56b4bd633f80ca17b8932d81cfb18b03d7f5b5db5f456ffbd69800a9fbe779d706f4c64098be764763bf4a8e99eb7f591669dba14c1079f8f2a055206cc59769f9cca0ce9f22d5ced6912e0cf73a7da662527f55729da44922aa9ec27cd3ab6ec5f3a3856ae6c1a6a8c23170ffd65de15467f76ee925c6e6fd6f3207424b8edd032327de124010c77308ab34c9f7f802845f9d65c8dfb9c81ca56968d76316af4b128551ae699c28cc1cf5d06fd5240289f3c9b1280554e617059b5c53541ddb347a1455579a3cc14eb666bb07a8bbd8fddcd1cb20ce70398547215ccd577a5957112c622509c98b8f8e566daaa8957d75d00f2ac972e3b8ff2351df5ea205224b9025f130ef197e285c1d5f6f0c88e88c88d9463b28875c1c51855d1e6e972eaaaf57798f840690b0d814086f0e6d12d8bc89988e2a321b7689144f25f306730a261b725b0067bcc0ba91e1c2e41df2f2247697d9aebef0a383562d8a692cec03adc755ab9b14f7f0baee6180c86f807178f9bc35ee02d13cf6a36e6608e08f2ffcb59a998de53bd88f8201c0f03bb5ef70687eba20d7b6d89c548ad008fa5424cb3db83b0eb3800ff3a5389b96598902c41d567f7e1398102cc0fae2a153337bd2b527a95654bd2e9daf7e28f0a2f2422c6fbb9d3e906e7c5d3f35b20ac125cbc97660fd9da2eacd44f94c8137eceb4960b6252c992531b3e929b3587d1e22ad68d9da4d1a740083a2da19bba31169ad184a0d43c7aad84e86d6eded314121b966350eb107a2f6e96daa5ef16ce867060b84ebfb00f75be5ee9f5b895d021a877de273439a05c5975ec19239ca49daeef3ba356c7ce5b310d7da74443b3906ae643881190d7364242e772eacf50dbcfb864666ad734bd766fae1b03601bfdcc7d28fb14c96c6cc299324a962250a05c57e7ff3d71d00c0800f0b8876e96a956980407bf36fd5f43e46217c73921aabe691bd5602b2de66f6ceb1731c2914282e27a25627ce78d4faffc51ef67414a9f4795907466abdbf5ff029ea42fa948dac7d0dba00ec8765f67668070303d0f588eca97dba7c73c5542bcd64fe94c2bd7b3bd9209601db9fca6362b0b476268739a307307722da706c37f35a692f77b0351a5eff00454b780e7e0b901f07ef57a056ca999493c8b741cef5429a03895d70d0f5cf57f0aeeb597fbc205dec015e55bd4a302b06179269a72b97aa48d2bcc416f509b23adeed441eccd7855f3694f090df6b52b59ffa7d7aebcfb13629c6cba4b6252b5bb3786613932db19665f00887e2c521d636e614ff8f62c70566721b32909ad88b03845915699cf7cb666a365aaab3b2a2b54fc7ed6dc903ed61b84c78dbe0d102a808b3dea6996f3412fb12c18faf1b51f52c2efedf7b7e26f391f82def7030f879fc0c24a39e320a409a3374e931741ccd76e0e83cf150e8f3f5b50b25c10ba44e59fda1b7225885c740322a10b0d73915247665dda2906a39db1cc9d44c7b40ff161e0b399ef9dd81e4a69d5ca45ae1a52f882b180657e69d3bc41e54889703642c071c84892c4a457f29842686154c568daef34796bd92f70e47c4fded78245692508aed5c0a04ec085196c5cd22b2ff397f76c1c9d9a81f4b3b7128f436dcac41900ecd8eab434c77b78d91f2974b7729946ade18c45eeeeb38df2b15e8643d305f607d97273f3fc5f21fe26c8d4f98558588f6fa96ed3be5d7c460c7a8f2e457573854f095309ce99b0510b41bf53ab6e98861e8668ede31b0d91e828bbf76af0e4eaa110d4e3bdc4af874415b773343592278594d77afc85bd7bdbfac03cc2f1d5ad771a9d0f49596ae658b620c5df46d0e92c663e186a26f7496f521f7bfd01b1433887ff0a00d19e03b0b4beb8fc2bc0407a6c0043cb68569ff9c03d12689a13417cfa8e4163b68464e382c4ea0a5dfbc2f717b18a8fc356e522d6acad9534772dabd3be62e181e98f68b1e6b6b946eed62a0ad55a26d163be6206d1ab025a586d4ca522cc09bd18e8c7b397cc5870051f9aa6df30200c18813ec25f884f852275d6f02efa4bc1ae0668194b788772e9f4b08d42aa0aece0d3109aa9e2bc3e70fcd246668b2749146de1448558a5b908eb031fa31556ed58299f013437f7efcf47d6094cdc3bacd774bac6d8ea52bbdd8809ef742f7386d9ea118791f57222890c49ba557ae87672d06c21a9bb0e04f3313c6e29460052f1ba3faf4698ba60499f94eb13e4bd2f71f65ce68b28472db59c221d45e67ccb2b0f60d9b5bf40328c977f0cfba72931404c2466f0cf7d8fc00e328e5dae5868f14f3c9872b68302bd693fa1803fbc3579674a547e1e30a48e1d0532c3eb02a5e01f0a7d013c126a679a6e3a451bf5a588bd36007681f0158b4e018c2c3a2b1b72d471f8d49d6dc316a09238adc944fae9d37f1c7db83b4c4326bf2bfa2921231514ea8d8067f4a63611333e3dc549af282f8d0a171e71c2311ca563b11584665265fbac7829469d5161c8ac788d734bcf36f74ab6223300e0a54be4d49cc44eb62d1ce72f6ee301f417ca14e1af314a4a9f355fee510e91dd560a20d82c6045abefd5bf2986498d99a8bf08fc98133415adbecb234853ee729487995f41f7f4bf239d95fa1ce989ad9a2eda3cc5a882cbf82b1de855a2705c063bbfbd7aeac56b6dfc1d1490429fbb61812a15d550bfc903d1a9b12679d0f510ae158634b8412c2468b5fc8de4293e945d7a2b24ab54b8565a2001184979c949363c4d0cefe18cec6ae225634dcfc2981b3be04117eae5653be27bc8a0e454058b756560f130092b7a2322adfedcc30241e0d8c835cc0bb5ee826494ff9a20fb057272de7ba61c672e0a67eb6709bb48791a680764a176bde9816f1ad514ab7f3bb4e8c2cebd5224edf9789915b026f0084a219c43d4c202b450eec7b0dd7f27a5ae5adb89ff15da2181d8248a69917e96d198f442ff7919e6727729225de769bad02c762cd5031c8024fa3b34af86699c7221ace18af758d7779bbc892fafdb02bbd11036e885418154622ab3eb7126907d6f23bef0d8652ec1bfff74cc13d104c30c471793280e8ca1a39077a6dd4afa74d4f61aca97a443f2676f649ccef1389711986e7e66b9299e31e9ff7b264c51f9e691a481b0bbbe7b2589d84b3cb1159994619af3bcf6df9b80a4bad207a02e6e2783dbbfaef105dd7ddc4f20d896235bf8402caca62d162b236e3934dcebe7431b3a2fbdedf9918ac3c438d73e15f94fc0c192f2bdd164de8d840a1d2185142a35421036193b0904aaff34d7d8b5fee681436d6f5f89431732938d0461013c74f9293c819c4ac3ec86dab29c23fbabc1ad532b8c16ca4866b61a517426e5d7c4ea4ce449f28e59940ad4319dbb5c8762c87e3cc27ef9cc5e8b85e6f5eea86d8b7c4ac6f8b78b41ac8a9931660a5e193b362230bbe3ad66601663bcf323ce654a3280440746c6f3878977318e8c65e8bca9eca6c1f05a9e0cfa3152f551bd5672a09aeaff3bc706c69b0bc150cd296d78772aee8e2076eab6aa7c3886041ab8964a083b59f1f0e2db32d4407647fe1ee0318a8769efa7b40e9a91cd2eb64c13368235a49124fa1f36e44e5e68787974856c7910eec952a1665e3fa048d3e6ddc4fcb0a64e2038137b22e76a90fa0105e97b640a96490d2a6f68c3516df8509fd31d06dfda7f207719623d0499184a5a8df1f8d3f9ea2cb67b3dba30179f3ec0d256a5b0dfbd68917325bc9bda8e9ac9d463850c631856dd1b60a1ebcf23e6f8544d1aa8b746661a4a00e3bfdea887fb5e33b6239b6ef105d144f7c3fe31fe8dca63d336faa59e68df674fd02f01a7569cf5e9a8dc49a0d83e8e39783e44eb18b62e6cfb23768704c4dc5e7c35255e63022dbcfbcf53cbbba48ff46808c8321099104554bb14c5859bc38d139a7f22b83f3e8dbbedf8e727a4dd9622d747790ce4bce9d33b1bbf42b5c07935b88a99ad95bbe968a1a498a3c0eaac18234df5653a87e8061ce6e9e3a456906218d328daa7295d61840235b77a5aa3d786476cb0fbf4bd4cea11dadff8f9501844d455b6f50a57561e7d53ea32711ad069bf3487ba96c7371c28079f251c55c7c"
+   },
+   "saves": [],
+   "calls": [
+    {
+     "func": "memcard_get_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      9920
+     ],
+     "ret_type": "u8",
+     "ret": 15,
+     "v0": 15,
+     "comment": "XOR of the bytes"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      9920,
+      15
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "right sum"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      9920,
+      14
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "one bit off"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      9920,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "zero"
+    },
+    {
+     "func": "memcard_check_checksum",
+     "args": [
+      {
+       "buf": "data"
+      },
+      9920,
+      255
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "0xFF"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,6874 @@
+{
+ "family": "records",
+ "comment": "SHA-1 of records_digimon (55 x 0x58), records_techniques (443 x 0x12) and records_item_icons (32 bytes) in RAM; records_find_digimon for the 55 ids of the table and 6 unknown ids; records_get_item_icon for items 1..402; records_is_item_category for 25 items x categories 0..6.",
+ "generator": "tests/golden/families/records.py",
+ "oracle": {
+  "method": "lua-calls: tests/golden/oracle.lua hijacks the game at pad_update (-debugger -interpreter)",
+  "emulator": {
+   "name": "pcsx-redux",
+   "version": "bf4c9ceb",
+   "build_id": 359,
+   "changeset": "bf4c9cebdd1c649dd006736bb012fc7f1d6fd988"
+  },
+  "bios": {
+   "name": "openbios",
+   "sha1": "8f1269a22179433c8b22b4c804f11c0a076450c5"
+  },
+  "tree_commit": "49aff93d32a47c1561895a1d04b8b1b8b332a935",
+  "resident": "CNTY_SEL loaded: the EXE's code and data are resident"
+ },
+ "fixtures": {
+  "fixture_0": []
+ },
+ "cases": [
+  {
+   "name": "tables",
+   "comment": "the pointer-free tables as the game holds them in RAM (records_items holds pointers: not recorded)",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_find_digimon",
+     "args": [
+      383
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "Kotemon is row 0; the reads are the tables themselves",
+     "reads": [
+      {
+       "symbol": "records_digimon",
+       "offset": 0,
+       "size": 4840,
+       "field": "records_digimon[55] (SHA-1)",
+       "sha1": "f21c68dce0639c255f3ea12a4053bd90412ca702"
+      },
+      {
+       "symbol": "records_techniques",
+       "offset": 0,
+       "size": 7974,
+       "field": "records_techniques[443] (SHA-1)",
+       "sha1": "977914f20f280cba363fa6455f263df1a5d842df"
+      },
+      {
+       "symbol": "records_item_icons",
+       "offset": 0,
+       "size": 32,
+       "field": "records_item_icons[32]",
+       "hex": "4a4a4a4b4c4d4e4f5051525354494855565758595a5b5c5d5e5f606162636300"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "find_digimon",
+   "comment": "every id of the table, in table order: returns the row",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_find_digimon",
+     "args": [
+      383
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "id 0x17f"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      385
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "id 0x181"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      384
+     ],
+     "ret_type": "s32",
+     "ret": 2,
+     "v0": 2,
+     "comment": "id 0x180"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 3,
+     "v0": 3,
+     "comment": "id 0x3"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      145
+     ],
+     "ret_type": "s32",
+     "ret": 4,
+     "v0": 4,
+     "comment": "id 0x91"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      366
+     ],
+     "ret_type": "s32",
+     "ret": 5,
+     "v0": 5,
+     "comment": "id 0x16e"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      373
+     ],
+     "ret_type": "s32",
+     "ret": 6,
+     "v0": 6,
+     "comment": "id 0x175"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      31
+     ],
+     "ret_type": "s32",
+     "ret": 7,
+     "v0": 7,
+     "comment": "id 0x1f"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      386
+     ],
+     "ret_type": "s32",
+     "ret": 8,
+     "v0": 8,
+     "comment": "id 0x182"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      387
+     ],
+     "ret_type": "s32",
+     "ret": 9,
+     "v0": 9,
+     "comment": "id 0x183"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      388
+     ],
+     "ret_type": "s32",
+     "ret": 10,
+     "v0": 10,
+     "comment": "id 0x184"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 11,
+     "v0": 11,
+     "comment": "id 0x5"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      259
+     ],
+     "ret_type": "s32",
+     "ret": 12,
+     "v0": 12,
+     "comment": "id 0x103"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      367
+     ],
+     "ret_type": "s32",
+     "ret": 13,
+     "v0": 13,
+     "comment": "id 0x16f"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      374
+     ],
+     "ret_type": "s32",
+     "ret": 14,
+     "v0": 14,
+     "comment": "id 0x176"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      20
+     ],
+     "ret_type": "s32",
+     "ret": 15,
+     "v0": 15,
+     "comment": "id 0x14"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 16,
+     "v0": 16,
+     "comment": "id 0x6"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      260
+     ],
+     "ret_type": "s32",
+     "ret": 17,
+     "v0": 17,
+     "comment": "id 0x104"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      234
+     ],
+     "ret_type": "s32",
+     "ret": 18,
+     "v0": 18,
+     "comment": "id 0xea"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      389
+     ],
+     "ret_type": "s32",
+     "ret": 19,
+     "v0": 19,
+     "comment": "id 0x185"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      390
+     ],
+     "ret_type": "s32",
+     "ret": 20,
+     "v0": 20,
+     "comment": "id 0x186"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      391
+     ],
+     "ret_type": "s32",
+     "ret": 21,
+     "v0": 21,
+     "comment": "id 0x187"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      12
+     ],
+     "ret_type": "s32",
+     "ret": 22,
+     "v0": 22,
+     "comment": "id 0xc"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      26
+     ],
+     "ret_type": "s32",
+     "ret": 23,
+     "v0": 23,
+     "comment": "id 0x1a"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      254
+     ],
+     "ret_type": "s32",
+     "ret": 24,
+     "v0": 24,
+     "comment": "id 0xfe"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      368
+     ],
+     "ret_type": "s32",
+     "ret": 25,
+     "v0": 25,
+     "comment": "id 0x170"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      375
+     ],
+     "ret_type": "s32",
+     "ret": 26,
+     "v0": 26,
+     "comment": "id 0x177"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      211
+     ],
+     "ret_type": "s32",
+     "ret": 27,
+     "v0": 27,
+     "comment": "id 0xd3"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      66
+     ],
+     "ret_type": "s32",
+     "ret": 28,
+     "v0": 28,
+     "comment": "id 0x42"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      27
+     ],
+     "ret_type": "s32",
+     "ret": 29,
+     "v0": 29,
+     "comment": "id 0x1b"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      19
+     ],
+     "ret_type": "s32",
+     "ret": 30,
+     "v0": 30,
+     "comment": "id 0x13"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      56
+     ],
+     "ret_type": "s32",
+     "ret": 31,
+     "v0": 31,
+     "comment": "id 0x38"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      392
+     ],
+     "ret_type": "s32",
+     "ret": 32,
+     "v0": 32,
+     "comment": "id 0x188"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      393
+     ],
+     "ret_type": "s32",
+     "ret": 33,
+     "v0": 33,
+     "comment": "id 0x189"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      394
+     ],
+     "ret_type": "s32",
+     "ret": 34,
+     "v0": 34,
+     "comment": "id 0x18a"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      213
+     ],
+     "ret_type": "s32",
+     "ret": 35,
+     "v0": 35,
+     "comment": "id 0xd5"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      148
+     ],
+     "ret_type": "s32",
+     "ret": 36,
+     "v0": 36,
+     "comment": "id 0x94"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      369
+     ],
+     "ret_type": "s32",
+     "ret": 37,
+     "v0": 37,
+     "comment": "id 0x171"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      376
+     ],
+     "ret_type": "s32",
+     "ret": 38,
+     "v0": 38,
+     "comment": "id 0x178"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      214
+     ],
+     "ret_type": "s32",
+     "ret": 39,
+     "v0": 39,
+     "comment": "id 0xd6"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      196
+     ],
+     "ret_type": "s32",
+     "ret": 40,
+     "v0": 40,
+     "comment": "id 0xc4"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      144
+     ],
+     "ret_type": "s32",
+     "ret": 41,
+     "v0": 41,
+     "comment": "id 0x90"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      267
+     ],
+     "ret_type": "s32",
+     "ret": 42,
+     "v0": 42,
+     "comment": "id 0x10b"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      359
+     ],
+     "ret_type": "s32",
+     "ret": 43,
+     "v0": 43,
+     "comment": "id 0x167"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      378
+     ],
+     "ret_type": "s32",
+     "ret": 44,
+     "v0": 44,
+     "comment": "id 0x17a"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      372
+     ],
+     "ret_type": "s32",
+     "ret": 45,
+     "v0": 45,
+     "comment": "id 0x174"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      230
+     ],
+     "ret_type": "s32",
+     "ret": 46,
+     "v0": 46,
+     "comment": "id 0xe6"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      59
+     ],
+     "ret_type": "s32",
+     "ret": 47,
+     "v0": 47,
+     "comment": "id 0x3b"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      150
+     ],
+     "ret_type": "s32",
+     "ret": 48,
+     "v0": 48,
+     "comment": "id 0x96"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      381
+     ],
+     "ret_type": "s32",
+     "ret": 49,
+     "v0": 49,
+     "comment": "id 0x17d"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      377
+     ],
+     "ret_type": "s32",
+     "ret": 50,
+     "v0": 50,
+     "comment": "id 0x179"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      151
+     ],
+     "ret_type": "s32",
+     "ret": 51,
+     "v0": 51,
+     "comment": "id 0x97"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      468
+     ],
+     "ret_type": "s32",
+     "ret": -1,
+     "v0": 4294967295,
+     "comment": "id 0x1d4"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      469
+     ],
+     "ret_type": "s32",
+     "ret": -1,
+     "v0": 4294967295,
+     "comment": "id 0x1d5"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      470
+     ],
+     "ret_type": "s32",
+     "ret": -1,
+     "v0": 4294967295,
+     "comment": "id 0x1d6"
+    }
+   ]
+  },
+  {
+   "name": "find_digimon_unknown",
+   "comment": "ids not in the table: -1 (the compare is on a u16 field, so 0x7FFFFFFF matches nothing)",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_find_digimon",
+     "args": [
+      0
+     ],
+     "ret_type": "s32",
+     "ret": -1,
+     "v0": 4294967295,
+     "comment": "id 0x0"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      1
+     ],
+     "ret_type": "s32",
+     "ret": -1,
+     "v0": 4294967295,
+     "comment": "id 0x1"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      2
+     ],
+     "ret_type": "s32",
+     "ret": -1,
+     "v0": 4294967295,
+     "comment": "id 0x2"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      4660
+     ],
+     "ret_type": "s32",
+     "ret": -1,
+     "v0": 4294967295,
+     "comment": "id 0x1234"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      65535
+     ],
+     "ret_type": "s32",
+     "ret": -1,
+     "v0": 4294967295,
+     "comment": "id 0xffff"
+    },
+    {
+     "func": "records_find_digimon",
+     "args": [
+      2147483647
+     ],
+     "ret_type": "s32",
+     "ret": -1,
+     "v0": 4294967295,
+     "comment": "id 0x7fffffff"
+    }
+   ]
+  },
+  {
+   "name": "get_item_icon",
+   "comment": "records_item_icons[records_items[id - 1].type] for every item: the type of each item",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 1"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 2"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 3"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 4"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 5"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 6"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      7
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 7"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      8
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 8"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      9
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 9"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      10
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 10"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      11
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 11"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      12
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 12"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      13
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 13"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      14
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 14"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      15
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 15"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      16
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 16"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      17
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 17"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      18
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 18"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      19
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 19"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      20
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 20"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      21
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 21"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      22
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 22"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      23
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 23"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      24
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 24"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      25
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 25"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      26
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 26"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      27
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 27"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      28
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 28"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      29
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 29"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      30
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 30"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      31
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 31"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      32
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 32"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      33
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 33"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      34
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 34"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      35
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 35"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      36
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 36"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      37
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 37"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      38
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 38"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      39
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 39"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      40
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 40"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      41
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 41"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      42
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 42"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      43
+     ],
+     "ret_type": "s32",
+     "ret": 95,
+     "v0": 95,
+     "comment": "item 43"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      44
+     ],
+     "ret_type": "s32",
+     "ret": 95,
+     "v0": 95,
+     "comment": "item 44"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      45
+     ],
+     "ret_type": "s32",
+     "ret": 95,
+     "v0": 95,
+     "comment": "item 45"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      46
+     ],
+     "ret_type": "s32",
+     "ret": 95,
+     "v0": 95,
+     "comment": "item 46"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      47
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 47"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      48
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 48"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      49
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 49"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      50
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 50"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      51
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 51"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      52
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 52"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      53
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 53"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      54
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 54"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      55
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 55"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      56
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 56"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      57
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 57"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      58
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 58"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      59
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 59"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      60
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 60"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      61
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 61"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      62
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 62"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      63
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 63"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      64
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 64"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      65
+     ],
+     "ret_type": "s32",
+     "ret": 96,
+     "v0": 96,
+     "comment": "item 65"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      66
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 66"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      67
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 67"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      68
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 68"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      69
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 69"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      70
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 70"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      71
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 71"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      72
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 72"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      73
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 73"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      74
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 74"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      75
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 75"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      76
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 76"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      77
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 77"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      78
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 78"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      79
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 79"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      80
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 80"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      81
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 81"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      82
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 82"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      83
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 83"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      84
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 84"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      85
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 85"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      86
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 86"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      87
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 87"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      88
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 88"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      89
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 89"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      90
+     ],
+     "ret_type": "s32",
+     "ret": 97,
+     "v0": 97,
+     "comment": "item 90"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      91
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 91"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      92
+     ],
+     "ret_type": "s32",
+     "ret": 74,
+     "v0": 74,
+     "comment": "item 92"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      93
+     ],
+     "ret_type": "s32",
+     "ret": 74,
+     "v0": 74,
+     "comment": "item 93"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      94
+     ],
+     "ret_type": "s32",
+     "ret": 74,
+     "v0": 74,
+     "comment": "item 94"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      95
+     ],
+     "ret_type": "s32",
+     "ret": 74,
+     "v0": 74,
+     "comment": "item 95"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      96
+     ],
+     "ret_type": "s32",
+     "ret": 74,
+     "v0": 74,
+     "comment": "item 96"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      97
+     ],
+     "ret_type": "s32",
+     "ret": 74,
+     "v0": 74,
+     "comment": "item 97"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      98
+     ],
+     "ret_type": "s32",
+     "ret": 74,
+     "v0": 74,
+     "comment": "item 98"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      99
+     ],
+     "ret_type": "s32",
+     "ret": 74,
+     "v0": 74,
+     "comment": "item 99"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      100
+     ],
+     "ret_type": "s32",
+     "ret": 74,
+     "v0": 74,
+     "comment": "item 100"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      101
+     ],
+     "ret_type": "s32",
+     "ret": 74,
+     "v0": 74,
+     "comment": "item 101"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      102
+     ],
+     "ret_type": "s32",
+     "ret": 74,
+     "v0": 74,
+     "comment": "item 102"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      103
+     ],
+     "ret_type": "s32",
+     "ret": 74,
+     "v0": 74,
+     "comment": "item 103"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      104
+     ],
+     "ret_type": "s32",
+     "ret": 74,
+     "v0": 74,
+     "comment": "item 104"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      105
+     ],
+     "ret_type": "s32",
+     "ret": 74,
+     "v0": 74,
+     "comment": "item 105"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      106
+     ],
+     "ret_type": "s32",
+     "ret": 75,
+     "v0": 75,
+     "comment": "item 106"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      107
+     ],
+     "ret_type": "s32",
+     "ret": 75,
+     "v0": 75,
+     "comment": "item 107"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      108
+     ],
+     "ret_type": "s32",
+     "ret": 75,
+     "v0": 75,
+     "comment": "item 108"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      109
+     ],
+     "ret_type": "s32",
+     "ret": 75,
+     "v0": 75,
+     "comment": "item 109"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      110
+     ],
+     "ret_type": "s32",
+     "ret": 75,
+     "v0": 75,
+     "comment": "item 110"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      111
+     ],
+     "ret_type": "s32",
+     "ret": 75,
+     "v0": 75,
+     "comment": "item 111"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      112
+     ],
+     "ret_type": "s32",
+     "ret": 75,
+     "v0": 75,
+     "comment": "item 112"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      113
+     ],
+     "ret_type": "s32",
+     "ret": 75,
+     "v0": 75,
+     "comment": "item 113"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      114
+     ],
+     "ret_type": "s32",
+     "ret": 75,
+     "v0": 75,
+     "comment": "item 114"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      115
+     ],
+     "ret_type": "s32",
+     "ret": 75,
+     "v0": 75,
+     "comment": "item 115"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      116
+     ],
+     "ret_type": "s32",
+     "ret": 75,
+     "v0": 75,
+     "comment": "item 116"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      117
+     ],
+     "ret_type": "s32",
+     "ret": 75,
+     "v0": 75,
+     "comment": "item 117"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      118
+     ],
+     "ret_type": "s32",
+     "ret": 75,
+     "v0": 75,
+     "comment": "item 118"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      119
+     ],
+     "ret_type": "s32",
+     "ret": 75,
+     "v0": 75,
+     "comment": "item 119"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      120
+     ],
+     "ret_type": "s32",
+     "ret": 76,
+     "v0": 76,
+     "comment": "item 120"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      121
+     ],
+     "ret_type": "s32",
+     "ret": 76,
+     "v0": 76,
+     "comment": "item 121"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      122
+     ],
+     "ret_type": "s32",
+     "ret": 76,
+     "v0": 76,
+     "comment": "item 122"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      123
+     ],
+     "ret_type": "s32",
+     "ret": 76,
+     "v0": 76,
+     "comment": "item 123"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      124
+     ],
+     "ret_type": "s32",
+     "ret": 76,
+     "v0": 76,
+     "comment": "item 124"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      125
+     ],
+     "ret_type": "s32",
+     "ret": 76,
+     "v0": 76,
+     "comment": "item 125"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      126
+     ],
+     "ret_type": "s32",
+     "ret": 76,
+     "v0": 76,
+     "comment": "item 126"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      127
+     ],
+     "ret_type": "s32",
+     "ret": 76,
+     "v0": 76,
+     "comment": "item 127"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      128
+     ],
+     "ret_type": "s32",
+     "ret": 76,
+     "v0": 76,
+     "comment": "item 128"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      129
+     ],
+     "ret_type": "s32",
+     "ret": 76,
+     "v0": 76,
+     "comment": "item 129"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      130
+     ],
+     "ret_type": "s32",
+     "ret": 76,
+     "v0": 76,
+     "comment": "item 130"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      131
+     ],
+     "ret_type": "s32",
+     "ret": 76,
+     "v0": 76,
+     "comment": "item 131"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      132
+     ],
+     "ret_type": "s32",
+     "ret": 77,
+     "v0": 77,
+     "comment": "item 132"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      133
+     ],
+     "ret_type": "s32",
+     "ret": 77,
+     "v0": 77,
+     "comment": "item 133"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      134
+     ],
+     "ret_type": "s32",
+     "ret": 77,
+     "v0": 77,
+     "comment": "item 134"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      135
+     ],
+     "ret_type": "s32",
+     "ret": 77,
+     "v0": 77,
+     "comment": "item 135"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      136
+     ],
+     "ret_type": "s32",
+     "ret": 77,
+     "v0": 77,
+     "comment": "item 136"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      137
+     ],
+     "ret_type": "s32",
+     "ret": 77,
+     "v0": 77,
+     "comment": "item 137"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      138
+     ],
+     "ret_type": "s32",
+     "ret": 77,
+     "v0": 77,
+     "comment": "item 138"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      139
+     ],
+     "ret_type": "s32",
+     "ret": 77,
+     "v0": 77,
+     "comment": "item 139"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      140
+     ],
+     "ret_type": "s32",
+     "ret": 77,
+     "v0": 77,
+     "comment": "item 140"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      141
+     ],
+     "ret_type": "s32",
+     "ret": 77,
+     "v0": 77,
+     "comment": "item 141"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      142
+     ],
+     "ret_type": "s32",
+     "ret": 77,
+     "v0": 77,
+     "comment": "item 142"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      143
+     ],
+     "ret_type": "s32",
+     "ret": 77,
+     "v0": 77,
+     "comment": "item 143"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      144
+     ],
+     "ret_type": "s32",
+     "ret": 77,
+     "v0": 77,
+     "comment": "item 144"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      145
+     ],
+     "ret_type": "s32",
+     "ret": 78,
+     "v0": 78,
+     "comment": "item 145"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      146
+     ],
+     "ret_type": "s32",
+     "ret": 78,
+     "v0": 78,
+     "comment": "item 146"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      147
+     ],
+     "ret_type": "s32",
+     "ret": 78,
+     "v0": 78,
+     "comment": "item 147"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      148
+     ],
+     "ret_type": "s32",
+     "ret": 78,
+     "v0": 78,
+     "comment": "item 148"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      149
+     ],
+     "ret_type": "s32",
+     "ret": 78,
+     "v0": 78,
+     "comment": "item 149"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      150
+     ],
+     "ret_type": "s32",
+     "ret": 78,
+     "v0": 78,
+     "comment": "item 150"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      151
+     ],
+     "ret_type": "s32",
+     "ret": 78,
+     "v0": 78,
+     "comment": "item 151"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      152
+     ],
+     "ret_type": "s32",
+     "ret": 78,
+     "v0": 78,
+     "comment": "item 152"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      153
+     ],
+     "ret_type": "s32",
+     "ret": 78,
+     "v0": 78,
+     "comment": "item 153"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      154
+     ],
+     "ret_type": "s32",
+     "ret": 78,
+     "v0": 78,
+     "comment": "item 154"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      155
+     ],
+     "ret_type": "s32",
+     "ret": 78,
+     "v0": 78,
+     "comment": "item 155"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      156
+     ],
+     "ret_type": "s32",
+     "ret": 78,
+     "v0": 78,
+     "comment": "item 156"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      157
+     ],
+     "ret_type": "s32",
+     "ret": 79,
+     "v0": 79,
+     "comment": "item 157"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      158
+     ],
+     "ret_type": "s32",
+     "ret": 79,
+     "v0": 79,
+     "comment": "item 158"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      159
+     ],
+     "ret_type": "s32",
+     "ret": 79,
+     "v0": 79,
+     "comment": "item 159"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      160
+     ],
+     "ret_type": "s32",
+     "ret": 79,
+     "v0": 79,
+     "comment": "item 160"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      161
+     ],
+     "ret_type": "s32",
+     "ret": 79,
+     "v0": 79,
+     "comment": "item 161"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      162
+     ],
+     "ret_type": "s32",
+     "ret": 79,
+     "v0": 79,
+     "comment": "item 162"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      163
+     ],
+     "ret_type": "s32",
+     "ret": 79,
+     "v0": 79,
+     "comment": "item 163"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      164
+     ],
+     "ret_type": "s32",
+     "ret": 79,
+     "v0": 79,
+     "comment": "item 164"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      165
+     ],
+     "ret_type": "s32",
+     "ret": 79,
+     "v0": 79,
+     "comment": "item 165"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      166
+     ],
+     "ret_type": "s32",
+     "ret": 79,
+     "v0": 79,
+     "comment": "item 166"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      167
+     ],
+     "ret_type": "s32",
+     "ret": 80,
+     "v0": 80,
+     "comment": "item 167"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      168
+     ],
+     "ret_type": "s32",
+     "ret": 80,
+     "v0": 80,
+     "comment": "item 168"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      169
+     ],
+     "ret_type": "s32",
+     "ret": 80,
+     "v0": 80,
+     "comment": "item 169"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      170
+     ],
+     "ret_type": "s32",
+     "ret": 80,
+     "v0": 80,
+     "comment": "item 170"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      171
+     ],
+     "ret_type": "s32",
+     "ret": 80,
+     "v0": 80,
+     "comment": "item 171"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      172
+     ],
+     "ret_type": "s32",
+     "ret": 80,
+     "v0": 80,
+     "comment": "item 172"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      173
+     ],
+     "ret_type": "s32",
+     "ret": 80,
+     "v0": 80,
+     "comment": "item 173"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      174
+     ],
+     "ret_type": "s32",
+     "ret": 80,
+     "v0": 80,
+     "comment": "item 174"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      175
+     ],
+     "ret_type": "s32",
+     "ret": 80,
+     "v0": 80,
+     "comment": "item 175"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      176
+     ],
+     "ret_type": "s32",
+     "ret": 82,
+     "v0": 82,
+     "comment": "item 176"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      177
+     ],
+     "ret_type": "s32",
+     "ret": 82,
+     "v0": 82,
+     "comment": "item 177"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      178
+     ],
+     "ret_type": "s32",
+     "ret": 82,
+     "v0": 82,
+     "comment": "item 178"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      179
+     ],
+     "ret_type": "s32",
+     "ret": 82,
+     "v0": 82,
+     "comment": "item 179"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      180
+     ],
+     "ret_type": "s32",
+     "ret": 82,
+     "v0": 82,
+     "comment": "item 180"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      181
+     ],
+     "ret_type": "s32",
+     "ret": 82,
+     "v0": 82,
+     "comment": "item 181"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      182
+     ],
+     "ret_type": "s32",
+     "ret": 82,
+     "v0": 82,
+     "comment": "item 182"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      183
+     ],
+     "ret_type": "s32",
+     "ret": 83,
+     "v0": 83,
+     "comment": "item 183"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      184
+     ],
+     "ret_type": "s32",
+     "ret": 83,
+     "v0": 83,
+     "comment": "item 184"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      185
+     ],
+     "ret_type": "s32",
+     "ret": 83,
+     "v0": 83,
+     "comment": "item 185"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      186
+     ],
+     "ret_type": "s32",
+     "ret": 83,
+     "v0": 83,
+     "comment": "item 186"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      187
+     ],
+     "ret_type": "s32",
+     "ret": 83,
+     "v0": 83,
+     "comment": "item 187"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      188
+     ],
+     "ret_type": "s32",
+     "ret": 83,
+     "v0": 83,
+     "comment": "item 188"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      189
+     ],
+     "ret_type": "s32",
+     "ret": 83,
+     "v0": 83,
+     "comment": "item 189"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      190
+     ],
+     "ret_type": "s32",
+     "ret": 84,
+     "v0": 84,
+     "comment": "item 190"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      191
+     ],
+     "ret_type": "s32",
+     "ret": 84,
+     "v0": 84,
+     "comment": "item 191"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      192
+     ],
+     "ret_type": "s32",
+     "ret": 84,
+     "v0": 84,
+     "comment": "item 192"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      193
+     ],
+     "ret_type": "s32",
+     "ret": 84,
+     "v0": 84,
+     "comment": "item 193"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      194
+     ],
+     "ret_type": "s32",
+     "ret": 84,
+     "v0": 84,
+     "comment": "item 194"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      195
+     ],
+     "ret_type": "s32",
+     "ret": 84,
+     "v0": 84,
+     "comment": "item 195"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      196
+     ],
+     "ret_type": "s32",
+     "ret": 84,
+     "v0": 84,
+     "comment": "item 196"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      197
+     ],
+     "ret_type": "s32",
+     "ret": 84,
+     "v0": 84,
+     "comment": "item 197"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      198
+     ],
+     "ret_type": "s32",
+     "ret": 84,
+     "v0": 84,
+     "comment": "item 198"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      199
+     ],
+     "ret_type": "s32",
+     "ret": 73,
+     "v0": 73,
+     "comment": "item 199"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      200
+     ],
+     "ret_type": "s32",
+     "ret": 73,
+     "v0": 73,
+     "comment": "item 200"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      201
+     ],
+     "ret_type": "s32",
+     "ret": 73,
+     "v0": 73,
+     "comment": "item 201"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      202
+     ],
+     "ret_type": "s32",
+     "ret": 73,
+     "v0": 73,
+     "comment": "item 202"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      203
+     ],
+     "ret_type": "s32",
+     "ret": 73,
+     "v0": 73,
+     "comment": "item 203"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      204
+     ],
+     "ret_type": "s32",
+     "ret": 73,
+     "v0": 73,
+     "comment": "item 204"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      205
+     ],
+     "ret_type": "s32",
+     "ret": 73,
+     "v0": 73,
+     "comment": "item 205"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      206
+     ],
+     "ret_type": "s32",
+     "ret": 73,
+     "v0": 73,
+     "comment": "item 206"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      207
+     ],
+     "ret_type": "s32",
+     "ret": 72,
+     "v0": 72,
+     "comment": "item 207"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      208
+     ],
+     "ret_type": "s32",
+     "ret": 72,
+     "v0": 72,
+     "comment": "item 208"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      209
+     ],
+     "ret_type": "s32",
+     "ret": 72,
+     "v0": 72,
+     "comment": "item 209"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      210
+     ],
+     "ret_type": "s32",
+     "ret": 72,
+     "v0": 72,
+     "comment": "item 210"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      211
+     ],
+     "ret_type": "s32",
+     "ret": 72,
+     "v0": 72,
+     "comment": "item 211"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      212
+     ],
+     "ret_type": "s32",
+     "ret": 72,
+     "v0": 72,
+     "comment": "item 212"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      213
+     ],
+     "ret_type": "s32",
+     "ret": 72,
+     "v0": 72,
+     "comment": "item 213"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      214
+     ],
+     "ret_type": "s32",
+     "ret": 72,
+     "v0": 72,
+     "comment": "item 214"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      215
+     ],
+     "ret_type": "s32",
+     "ret": 85,
+     "v0": 85,
+     "comment": "item 215"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      216
+     ],
+     "ret_type": "s32",
+     "ret": 85,
+     "v0": 85,
+     "comment": "item 216"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      217
+     ],
+     "ret_type": "s32",
+     "ret": 85,
+     "v0": 85,
+     "comment": "item 217"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      218
+     ],
+     "ret_type": "s32",
+     "ret": 85,
+     "v0": 85,
+     "comment": "item 218"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      219
+     ],
+     "ret_type": "s32",
+     "ret": 85,
+     "v0": 85,
+     "comment": "item 219"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      220
+     ],
+     "ret_type": "s32",
+     "ret": 85,
+     "v0": 85,
+     "comment": "item 220"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      221
+     ],
+     "ret_type": "s32",
+     "ret": 85,
+     "v0": 85,
+     "comment": "item 221"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      222
+     ],
+     "ret_type": "s32",
+     "ret": 85,
+     "v0": 85,
+     "comment": "item 222"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      223
+     ],
+     "ret_type": "s32",
+     "ret": 85,
+     "v0": 85,
+     "comment": "item 223"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      224
+     ],
+     "ret_type": "s32",
+     "ret": 85,
+     "v0": 85,
+     "comment": "item 224"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      225
+     ],
+     "ret_type": "s32",
+     "ret": 85,
+     "v0": 85,
+     "comment": "item 225"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      226
+     ],
+     "ret_type": "s32",
+     "ret": 86,
+     "v0": 86,
+     "comment": "item 226"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      227
+     ],
+     "ret_type": "s32",
+     "ret": 86,
+     "v0": 86,
+     "comment": "item 227"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      228
+     ],
+     "ret_type": "s32",
+     "ret": 86,
+     "v0": 86,
+     "comment": "item 228"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      229
+     ],
+     "ret_type": "s32",
+     "ret": 86,
+     "v0": 86,
+     "comment": "item 229"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      230
+     ],
+     "ret_type": "s32",
+     "ret": 86,
+     "v0": 86,
+     "comment": "item 230"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      231
+     ],
+     "ret_type": "s32",
+     "ret": 86,
+     "v0": 86,
+     "comment": "item 231"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      232
+     ],
+     "ret_type": "s32",
+     "ret": 86,
+     "v0": 86,
+     "comment": "item 232"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      233
+     ],
+     "ret_type": "s32",
+     "ret": 86,
+     "v0": 86,
+     "comment": "item 233"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      234
+     ],
+     "ret_type": "s32",
+     "ret": 86,
+     "v0": 86,
+     "comment": "item 234"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      235
+     ],
+     "ret_type": "s32",
+     "ret": 86,
+     "v0": 86,
+     "comment": "item 235"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      236
+     ],
+     "ret_type": "s32",
+     "ret": 87,
+     "v0": 87,
+     "comment": "item 236"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      237
+     ],
+     "ret_type": "s32",
+     "ret": 87,
+     "v0": 87,
+     "comment": "item 237"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      238
+     ],
+     "ret_type": "s32",
+     "ret": 87,
+     "v0": 87,
+     "comment": "item 238"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      239
+     ],
+     "ret_type": "s32",
+     "ret": 87,
+     "v0": 87,
+     "comment": "item 239"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      240
+     ],
+     "ret_type": "s32",
+     "ret": 87,
+     "v0": 87,
+     "comment": "item 240"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      241
+     ],
+     "ret_type": "s32",
+     "ret": 87,
+     "v0": 87,
+     "comment": "item 241"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      242
+     ],
+     "ret_type": "s32",
+     "ret": 87,
+     "v0": 87,
+     "comment": "item 242"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      243
+     ],
+     "ret_type": "s32",
+     "ret": 87,
+     "v0": 87,
+     "comment": "item 243"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      244
+     ],
+     "ret_type": "s32",
+     "ret": 87,
+     "v0": 87,
+     "comment": "item 244"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      245
+     ],
+     "ret_type": "s32",
+     "ret": 87,
+     "v0": 87,
+     "comment": "item 245"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      246
+     ],
+     "ret_type": "s32",
+     "ret": 87,
+     "v0": 87,
+     "comment": "item 246"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      247
+     ],
+     "ret_type": "s32",
+     "ret": 87,
+     "v0": 87,
+     "comment": "item 247"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      248
+     ],
+     "ret_type": "s32",
+     "ret": 87,
+     "v0": 87,
+     "comment": "item 248"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      249
+     ],
+     "ret_type": "s32",
+     "ret": 88,
+     "v0": 88,
+     "comment": "item 249"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      250
+     ],
+     "ret_type": "s32",
+     "ret": 88,
+     "v0": 88,
+     "comment": "item 250"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      251
+     ],
+     "ret_type": "s32",
+     "ret": 88,
+     "v0": 88,
+     "comment": "item 251"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      252
+     ],
+     "ret_type": "s32",
+     "ret": 88,
+     "v0": 88,
+     "comment": "item 252"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      253
+     ],
+     "ret_type": "s32",
+     "ret": 88,
+     "v0": 88,
+     "comment": "item 253"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      254
+     ],
+     "ret_type": "s32",
+     "ret": 88,
+     "v0": 88,
+     "comment": "item 254"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      255
+     ],
+     "ret_type": "s32",
+     "ret": 88,
+     "v0": 88,
+     "comment": "item 255"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      256
+     ],
+     "ret_type": "s32",
+     "ret": 88,
+     "v0": 88,
+     "comment": "item 256"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      257
+     ],
+     "ret_type": "s32",
+     "ret": 88,
+     "v0": 88,
+     "comment": "item 257"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      258
+     ],
+     "ret_type": "s32",
+     "ret": 88,
+     "v0": 88,
+     "comment": "item 258"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      259
+     ],
+     "ret_type": "s32",
+     "ret": 88,
+     "v0": 88,
+     "comment": "item 259"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      260
+     ],
+     "ret_type": "s32",
+     "ret": 88,
+     "v0": 88,
+     "comment": "item 260"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      261
+     ],
+     "ret_type": "s32",
+     "ret": 88,
+     "v0": 88,
+     "comment": "item 261"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      262
+     ],
+     "ret_type": "s32",
+     "ret": 89,
+     "v0": 89,
+     "comment": "item 262"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      263
+     ],
+     "ret_type": "s32",
+     "ret": 89,
+     "v0": 89,
+     "comment": "item 263"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      264
+     ],
+     "ret_type": "s32",
+     "ret": 89,
+     "v0": 89,
+     "comment": "item 264"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      265
+     ],
+     "ret_type": "s32",
+     "ret": 89,
+     "v0": 89,
+     "comment": "item 265"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      266
+     ],
+     "ret_type": "s32",
+     "ret": 89,
+     "v0": 89,
+     "comment": "item 266"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      267
+     ],
+     "ret_type": "s32",
+     "ret": 89,
+     "v0": 89,
+     "comment": "item 267"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      268
+     ],
+     "ret_type": "s32",
+     "ret": 89,
+     "v0": 89,
+     "comment": "item 268"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      269
+     ],
+     "ret_type": "s32",
+     "ret": 89,
+     "v0": 89,
+     "comment": "item 269"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      270
+     ],
+     "ret_type": "s32",
+     "ret": 89,
+     "v0": 89,
+     "comment": "item 270"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      271
+     ],
+     "ret_type": "s32",
+     "ret": 89,
+     "v0": 89,
+     "comment": "item 271"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      272
+     ],
+     "ret_type": "s32",
+     "ret": 89,
+     "v0": 89,
+     "comment": "item 272"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      273
+     ],
+     "ret_type": "s32",
+     "ret": 89,
+     "v0": 89,
+     "comment": "item 273"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      274
+     ],
+     "ret_type": "s32",
+     "ret": 89,
+     "v0": 89,
+     "comment": "item 274"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      275
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 275"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      276
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 276"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      277
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 277"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      278
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 278"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      279
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 279"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      280
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 280"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      281
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 281"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      282
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 282"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      283
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 283"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      284
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 284"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      285
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 285"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      286
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 286"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      287
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 287"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      288
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 288"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      289
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 289"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      290
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 290"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      291
+     ],
+     "ret_type": "s32",
+     "ret": 90,
+     "v0": 90,
+     "comment": "item 291"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      292
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 292"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      293
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 293"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      294
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 294"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      295
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 295"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      296
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 296"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      297
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 297"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      298
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 298"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      299
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 299"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      300
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 300"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      301
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 301"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      302
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 302"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      303
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 303"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      304
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 304"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      305
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 305"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      306
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 306"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      307
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 307"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      308
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 308"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      309
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 309"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      310
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 310"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      311
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 311"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      312
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 312"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      313
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 313"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      314
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 314"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      315
+     ],
+     "ret_type": "s32",
+     "ret": 91,
+     "v0": 91,
+     "comment": "item 315"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      316
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 316"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      317
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 317"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      318
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 318"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      319
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 319"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      320
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 320"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      321
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 321"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      322
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 322"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      323
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 323"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      324
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 324"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      325
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 325"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      326
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 326"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      327
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 327"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      328
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 328"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      329
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 329"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      330
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 330"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      331
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 331"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      332
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 332"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      333
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 333"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      334
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 334"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      335
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 335"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      336
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 336"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      337
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 337"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      338
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 338"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      339
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 339"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      340
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 340"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      341
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 341"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      342
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 342"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      343
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 343"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      344
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 344"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      345
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 345"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      346
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 346"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      347
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 347"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      348
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 348"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      349
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 349"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      350
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 350"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      351
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 351"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      352
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 352"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      353
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 353"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      354
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 354"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      355
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 355"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      356
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 356"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      357
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 357"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      358
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 358"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      359
+     ],
+     "ret_type": "s32",
+     "ret": 92,
+     "v0": 92,
+     "comment": "item 359"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      360
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 360"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      361
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 361"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      362
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 362"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      363
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 363"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      364
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 364"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      365
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 365"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      366
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 366"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      367
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 367"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      368
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 368"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      369
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 369"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      370
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 370"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      371
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 371"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      372
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 372"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      373
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 373"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      374
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 374"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      375
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 375"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      376
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 376"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      377
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 377"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      378
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 378"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      379
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 379"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      380
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 380"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      381
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 381"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      382
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 382"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      383
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 383"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      384
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 384"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      385
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 385"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      386
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 386"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      387
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 387"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      388
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 388"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      389
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 389"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      390
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 390"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      391
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 391"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      392
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 392"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      393
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 393"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      394
+     ],
+     "ret_type": "s32",
+     "ret": 98,
+     "v0": 98,
+     "comment": "item 394"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      395
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 395"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      396
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 396"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      397
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 397"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      398
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 398"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      399
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 399"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      400
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 400"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      401
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 401"
+    },
+    {
+     "func": "records_get_item_icon",
+     "args": [
+      402
+     ],
+     "ret_type": "s32",
+     "ret": 99,
+     "v0": 99,
+     "comment": "item 402"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_1",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      1,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      1,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      1,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      1,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      1,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      1,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      1,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_6",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      6,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      6,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      6,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      6,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      6,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      6,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      6,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_42",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      42,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      42,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      42,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      42,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      42,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      42,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      42,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_43",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      43,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      43,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      43,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      43,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      43,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      43,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      43,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_47",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      47,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      47,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      47,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      47,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      47,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      47,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      47,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_91",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      91,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      91,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      91,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      91,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      91,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      91,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      91,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_92",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      92,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      92,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      92,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      92,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      92,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      92,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      92,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_93",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      93,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      93,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      93,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      93,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      93,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      93,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      93,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_150",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      150,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      150,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      150,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      150,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      150,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      150,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      150,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_176",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      176,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      176,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      176,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      176,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      176,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      176,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      176,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_200",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      200,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      200,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      200,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      200,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      200,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      200,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      200,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_214",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      214,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      214,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      214,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      214,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      214,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      214,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      214,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_215",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      215,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      215,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      215,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      215,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      215,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      215,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      215,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_217",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      217,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      217,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      217,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      217,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      217,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      217,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      217,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_250",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      250,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      250,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      250,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      250,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      250,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      250,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      250,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_291",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      291,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      291,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      291,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      291,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      291,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      291,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      291,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_292",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      292,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      292,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      292,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      292,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      292,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      292,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      292,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_293",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      293,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      293,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      293,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      293,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      293,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      293,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      293,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_300",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      300,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      300,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      300,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      300,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      300,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      300,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      300,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_330",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      330,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      330,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      330,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      330,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      330,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      330,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      330,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_350",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      350,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      350,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      350,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      350,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      350,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      350,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      350,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_380",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      380,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      380,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      380,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      380,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      380,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      380,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      380,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_401",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      401,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      401,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      401,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      401,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      401,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      401,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      401,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_402",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      402,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      402,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      402,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      402,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      402,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      402,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      402,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  },
+  {
+   "name": "is_item_category_7",
+   "comment": "1 key, 2 usable, 3 weapon, 4 armour, 5 accessory",
+   "fixture": "fixture_0",
+   "buffers": {},
+   "saves": [],
+   "calls": [
+    {
+     "func": "records_is_item_category",
+     "args": [
+      7,
+      0
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 0"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      7,
+      1
+     ],
+     "ret_type": "s32",
+     "ret": 1,
+     "v0": 1,
+     "comment": "category 1"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      7,
+      2
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 2"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      7,
+      3
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 3"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      7,
+      4
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 4"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      7,
+      5
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 5"
+    },
+    {
+     "func": "records_is_item_category",
+     "args": [
+      7,
+      6
+     ],
+     "ret_type": "s32",
+     "ret": 0,
+     "v0": 0,
+     "comment": "category 6"
+    }
+   ]
+  }
+ ]
+}

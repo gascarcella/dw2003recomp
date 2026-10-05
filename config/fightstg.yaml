@@ -1,0 +1,86 @@
+# splat config for the tier-1 overlay AAA/PRO/FIGHTSTG.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: FIGHTSTG.PRO
+sha1: e56575e2066cf1898ac930f79d31b8a48674b8f9
+options:
+  basename: FIGHTSTG.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/FIGHTSTG.PRO
+  elf_path: build/fightstg/FIGHTSTG.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/fightstg
+  asm_path: asm/fightstg
+  src_path: src/fightstg
+  asset_path: assets/fightstg
+  ld_script_path: build/fightstg/FIGHTSTG.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/fightstg.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/fightstg/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/fightstg/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  ld_bss_is_noload: False  # .bss is in the file as zeros
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: fightstg
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_FIGHTSTG_<addr>, D_FIGHTSTG_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: FIGHTSTG_$VRAM
+    subsegments:
+      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"): boundaries proven by jump-table
+      # parity; positions strong unless marked weak.
+      - [0x0,     .rodata, fightstg_model]
+      - [0x1C,    .rodata, fightstg_stage]
+      - [0x38,    .rodata, fightstg_80086A00]
+      - [0x16C,   .rodata, fightstg_8008B118]
+      - [0x188,   .rodata, fightstg_8008B630]
+      - [0x234,   .rodata, fightstg_8008D3B4]
+      - [0x608,   .rodata, fightstg_800A1FE0]
+      - [0x620,   c, fightstg_model]   # 0x800832D0 3D model object, GTE effect objects
+      - [0x3544,  c, fightstg_stage]   # 0x800861F4 object 86304, random/lookup helpers
+      - [0x3D50,  c, fightstg_80086A00]   # 0x80086A00 battle objects (from WFIGHTMN), the overlay entry 87160
+      - [0x8468,  c, fightstg_8008B118]   # 0x8008B118 object 8B200 (position weak: 89CD8..8B200)
+      - [0x8980,  c, fightstg_8008B630]   # 0x8008B630 objects 8C590, 8C93C, 8CB70
+      - [0xA704,  c, fightstg_8008D3B4]   # 0x8008D3B4 battle core: objects, effect dispatcher 92684, modules
+      - [0x1F330, c, fightstg_800A1FE0]   # 0x800A1FE0 object A1FE0 (position weak: 9E428..A1FE0)
+      # .data, then .bss (zeros in the file), per file in link order (tools/data_owners.py -t fightstg; DECISIONS
+      # "Overlay .data/.bss per file"). Every table is referenced by its own file only; the module structs
+      # 800A37FC, 800A3868, 800A43F4..800A469C (also used by other files and by WFIGHTMN/WFIGHTTS) hold pointers to
+      # 8D3B4's functions. 800832D0 and 8008B118 have no data.
+      # - .bss: 8B630's D_800A46D0 comes after A1FE0's .data (the last file), so it is .bss (position strong).
+      #   The boundary 8B630 -> 8D3B4 can be anywhere in 800A46D4..800A4710 by references (the camera setting
+      #   D_800A46D8 is used by 86A00, 8B630 and 8D3B4); it is at 46D8, with the camera object's file (weak). GCC
+      #   emits uninitialized definitions in the order of their first declaration: D_800A46D8 (declared in
+      #   fightstg.h) can only come first in its file's .bss, not after 8B630's D_800A46D0.
+      # - Three unreferenced zero words (their own variables in C, owners unknown): 800A46CC after A1FE0's table
+      #   (or .bss of a file before 8B630), 800A46D4 and 800A470C (gaps in the .bss).
+      - [0x1F7E8, .data, fightstg_stage]   # 0x800A2498 (after the last function's jr ra): sound keys
+      - [0x1F808, .data, fightstg_80086A00]   # 0x800A24B8
+      - [0x2069C, .data, fightstg_8008D3B4]   # 0x800A334C
+      - [0x219F8, .data, fightstg_800A1FE0]   # 0x800A46A8
+      - [0x21A20, .bss, fightstg_8008B630]    # 0x800A46D0
+      - [0x21A28, .bss, fightstg_8008D3B4]    # 0x800A46D8
+  - [0x21AF0]

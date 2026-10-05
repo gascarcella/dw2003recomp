@@ -1,0 +1,15 @@
+// WSTAG645 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag645_anim_loop = 0x800A5DE0; // type:func
+wstag645_anim_update = 0x800A5ED4; // type:func
+wstag645_anim_new = 0x800A6040; // type:func
+wstag645_update = 0x800A606C; // type:func
+wstag645_start = 0x800A60D0; // type:func
+wstag645_setup = 0x800A612C; // type:func
+D_WSTAG645_800A6230 = 0x800A6230; // size:0x34
+D_WSTAG645_800A6264 = 0x800A6264; // size:0x34
+D_WSTAG645_800A6298 = 0x800A6298; // size:0x30
+wstag645_battle_lists = 0x800A64D8;
+wstag645_vram_places = 0x800A64F4;
+wstag645_sprites = 0x800A6554;
+wstag645_map_events = 0x800A66AC;
+wstag645_funcs = 0x800A66F4;

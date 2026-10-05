@@ -1,0 +1,13 @@
+// WSTAG605 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag605_update = 0x800A5DE0; // type:func
+wstag605_start = 0x800A5E68; // type:func
+wstag605_event_511_end = 0x800A5EC4; // type:func
+wstag605_event_510_end = 0x800A5EF8; // type:func
+wstag605_setup = 0x800A5F44; // type:func
+wstag605_battle_lists = 0x800A6384;
+wstag605_vram_places = 0x800A63A0;
+wstag605_actors = 0x800A665C;
+wstag605_sprites = 0x800A6688;
+wstag605_map_events = 0x800A67F0;
+wstag605_funcs = 0x800A6850;
+wstag605_events = 0x800A6854;

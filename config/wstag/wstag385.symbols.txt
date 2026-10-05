@@ -1,0 +1,14 @@
+// WSTAG385 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag385_color = 0x800A5DE0;
+wstag385_update = 0x800A5DE4; // type:func
+wstag385_start = 0x800A5E84; // type:func
+wstag385_event_1275_end = 0x800A5EE0; // type:func
+wstag385_event_1276_end = 0x800A5F2C; // type:func
+wstag385_setup = 0x800A5F78; // type:func
+wstag385_battle_lists = 0x800A6720;
+wstag385_vram_places = 0x800A673C;
+wstag385_actors = 0x800A73EC;
+wstag385_sprites = 0x800A7450;
+wstag385_map_events = 0x800A8044;
+wstag385_funcs = 0x800A817C;
+wstag385_events = 0x800A8180;

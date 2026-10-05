@@ -1,0 +1,648 @@
+{
+ "script": "new_game",
+ "script_sha1": "8f8cc632f368494705dd848b053c50f9d9854aac",
+ "emulator": {
+  "name": "pcsx-redux",
+  "version": "bf4c9ceb",
+  "build_id": 359,
+  "changeset": "bf4c9cebdd1c649dd006736bb012fc7f1d6fd988"
+ },
+ "bios": {
+  "name": "openbios",
+  "sha1": "8f1269a22179433c8b22b4c804f11c0a076450c5"
+ },
+ "tree_commit": "49aff93d32a47c1561895a1d04b8b1b8b332a935",
+ "frames": 2462,
+ "checkpoints": [
+  {
+   "name": "cnty_sel",
+   "frame": 807,
+   "stage": 22,
+   "map": 5632,
+   "random_index": 1,
+   "gamestate_sha1": "8ad7aa337567128ce44a5214f3e1f5bafa665ee2",
+   "gamestate_sha1_stable": "c81c0f7124a841292d9b9b06d4a36af19c6529e2"
+  },
+  {
+   "name": "opening_movie",
+   "frame": 989,
+   "stage": 14,
+   "map": 3586,
+   "random_index": 169,
+   "gamestate_sha1": "1433a816b0342c2259d6233843bb53f5f4037c7c",
+   "gamestate_sha1_stable": "cbfd9064a4ba820c12f8a886e3b58f2cd72db154"
+  },
+  {
+   "name": "title_screen",
+   "frame": 1045,
+   "stage": 14,
+   "map": 3584,
+   "random_index": 174,
+   "gamestate_sha1": "cb970a98b4e31ea4ed5a418f1bb1707c8bf27e23",
+   "gamestate_sha1_stable": "0c10c1cd8bd1a7de66e78bf9b084d64fb423c540"
+  },
+  {
+   "name": "new_game_field",
+   "frame": 1960,
+   "stage": 2,
+   "map": 727,
+   "random_index": 1044,
+   "gamestate_sha1": "e65ec60a2eccb2d57e0b751f30d347105b6fabe4",
+   "gamestate_sha1_stable": "729e060f5fdb93338991d74b15e803a0e5a2e811"
+  },
+  {
+   "name": "first_field_map",
+   "frame": 2462,
+   "stage": 2,
+   "map": 727,
+   "random_index": 1683,
+   "gamestate_sha1": "939c6bef290f6c0e539d0dc4e2447c4dcaf1ede0",
+   "gamestate_sha1_stable": "e01ce9c5ed7f8ff834d928fec85392d6aa269809"
+  }
+ ],
+ "overlay_sequence": [
+  {
+   "file": 0,
+   "frame": 1,
+   "stage": 0
+  },
+  {
+   "file": -1,
+   "frame": 784,
+   "stage": 22
+  },
+  {
+   "file": -1,
+   "frame": 989,
+   "stage": 14
+  },
+  {
+   "file": -1,
+   "frame": 1960,
+   "stage": 2
+  },
+  {
+   "file": 489,
+   "frame": 1962,
+   "stage": 2
+  }
+ ],
+ "map_sequence": [
+  {
+   "frame": 1,
+   "map": 0
+  },
+  {
+   "frame": 752,
+   "map": 5632
+  },
+  {
+   "frame": 989,
+   "map": 3586
+  },
+  {
+   "frame": 1045,
+   "map": 3584
+  },
+  {
+   "frame": 1957,
+   "map": 5632
+  },
+  {
+   "frame": 1960,
+   "map": 727
+  }
+ ],
+ "inputs": [
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 807
+  },
+  {
+   "buttons": [],
+   "frame": 809
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 827
+  },
+  {
+   "buttons": [],
+   "frame": 829
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 847
+  },
+  {
+   "buttons": [],
+   "frame": 849
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 867
+  },
+  {
+   "buttons": [],
+   "frame": 869
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 887
+  },
+  {
+   "buttons": [],
+   "frame": 889
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 907
+  },
+  {
+   "buttons": [],
+   "frame": 909
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 927
+  },
+  {
+   "buttons": [],
+   "frame": 929
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 947
+  },
+  {
+   "buttons": [],
+   "frame": 949
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 967
+  },
+  {
+   "buttons": [],
+   "frame": 969
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 987
+  },
+  {
+   "buttons": [],
+   "frame": 1019
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1045
+  },
+  {
+   "buttons": [],
+   "frame": 1047
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1065
+  },
+  {
+   "buttons": [],
+   "frame": 1067
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1085
+  },
+  {
+   "buttons": [],
+   "frame": 1087
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1105
+  },
+  {
+   "buttons": [],
+   "frame": 1107
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1125
+  },
+  {
+   "buttons": [],
+   "frame": 1127
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1145
+  },
+  {
+   "buttons": [],
+   "frame": 1147
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1165
+  },
+  {
+   "buttons": [],
+   "frame": 1167
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1185
+  },
+  {
+   "buttons": [],
+   "frame": 1187
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1205
+  },
+  {
+   "buttons": [],
+   "frame": 1207
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1225
+  },
+  {
+   "buttons": [],
+   "frame": 1227
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1245
+  },
+  {
+   "buttons": [],
+   "frame": 1247
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1265
+  },
+  {
+   "buttons": [],
+   "frame": 1267
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1285
+  },
+  {
+   "buttons": [],
+   "frame": 1287
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1305
+  },
+  {
+   "buttons": [],
+   "frame": 1307
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1325
+  },
+  {
+   "buttons": [],
+   "frame": 1327
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1345
+  },
+  {
+   "buttons": [],
+   "frame": 1347
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1365
+  },
+  {
+   "buttons": [],
+   "frame": 1367
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1385
+  },
+  {
+   "buttons": [],
+   "frame": 1387
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1405
+  },
+  {
+   "buttons": [],
+   "frame": 1407
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1425
+  },
+  {
+   "buttons": [],
+   "frame": 1427
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1445
+  },
+  {
+   "buttons": [],
+   "frame": 1447
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1465
+  },
+  {
+   "buttons": [],
+   "frame": 1467
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1485
+  },
+  {
+   "buttons": [],
+   "frame": 1487
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1505
+  },
+  {
+   "buttons": [],
+   "frame": 1507
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1525
+  },
+  {
+   "buttons": [],
+   "frame": 1527
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1545
+  },
+  {
+   "buttons": [],
+   "frame": 1547
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1565
+  },
+  {
+   "buttons": [],
+   "frame": 1567
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1585
+  },
+  {
+   "buttons": [],
+   "frame": 1587
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1605
+  },
+  {
+   "buttons": [],
+   "frame": 1607
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1625
+  },
+  {
+   "buttons": [],
+   "frame": 1627
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1645
+  },
+  {
+   "buttons": [],
+   "frame": 1647
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1665
+  },
+  {
+   "buttons": [],
+   "frame": 1667
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1685
+  },
+  {
+   "buttons": [],
+   "frame": 1687
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1705
+  },
+  {
+   "buttons": [],
+   "frame": 1707
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1725
+  },
+  {
+   "buttons": [],
+   "frame": 1727
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1745
+  },
+  {
+   "buttons": [],
+   "frame": 1747
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1765
+  },
+  {
+   "buttons": [],
+   "frame": 1767
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1785
+  },
+  {
+   "buttons": [],
+   "frame": 1787
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1805
+  },
+  {
+   "buttons": [],
+   "frame": 1807
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1825
+  },
+  {
+   "buttons": [],
+   "frame": 1827
+  },
+  {
+   "buttons": [
+    "UP"
+   ],
+   "frame": 1905
+  },
+  {
+   "buttons": [],
+   "frame": 1909
+  },
+  {
+   "buttons": [
+    "CROSS"
+   ],
+   "frame": 1911
+  },
+  {
+   "buttons": [],
+   "frame": 1915
+  },
+  {
+   "buttons": [
+    "CROSS"
+   ],
+   "frame": 1945
+  },
+  {
+   "buttons": [],
+   "frame": 1949
+  }
+ ]
+}

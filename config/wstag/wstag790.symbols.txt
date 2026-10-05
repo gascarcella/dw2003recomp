@@ -1,0 +1,15 @@
+// WSTAG790 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag790_sequence_update = 0x800A5DF4; // type:func
+wstag790_sequence_message = 0x800A60D0; // type:func
+wstag790_sequence_create = 0x800A6108; // type:func
+wstag790_glow_update = 0x800A6138; // type:func
+wstag790_glow_message = 0x800A6224; // type:func
+wstag790_glow_create = 0x800A625C; // type:func
+wstag790_update = 0x800A628C; // type:func
+wstag790_start = 0x800A631C; // type:func
+wstag790_setup = 0x800A6378; // type:func
+wstag790_vram_places = 0x800A6714;
+wstag790_actors = 0x800A6814;
+wstag790_sprites = 0x800A6828;
+wstag790_funcs = 0x800A6980;
+wstag790_events = 0x800A6984;

@@ -1,0 +1,13 @@
+// WSTAG535 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag535_update = 0x800A5DE0; // type:func
+wstag535_start = 0x800A5E80; // type:func
+wstag535_event_1262_end = 0x800A5EDC; // type:func
+wstag535_event_1263_end = 0x800A5F28; // type:func
+wstag535_setup = 0x800A5F74; // type:func
+wstag535_battle_lists = 0x800A63F8;
+wstag535_vram_places = 0x800A6414;
+wstag535_actors = 0x800A681C;
+wstag535_sprites = 0x800A6848;
+wstag535_map_events = 0x800A6A40;
+wstag535_funcs = 0x800A6AB8;
+wstag535_events = 0x800A6ABC;

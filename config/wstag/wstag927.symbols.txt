@@ -1,0 +1,16 @@
+// WSTAG927 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag927_anim_loop = 0x800A5DE0; // type:func
+wstag927_anim2_update = 0x800A5ED4; // type:func
+wstag927_anim2_create = 0x800A5FCC; // type:func
+wstag927_update = 0x800A5FF8; // type:func
+wstag927_start = 0x800A60BC; // type:func
+wstag927_event_1608_end = 0x800A6118; // type:func
+wstag927_setup = 0x800A6164; // type:func
+D_WSTAG927_800A6244 = 0x800A6244; // size:0x50
+D_WSTAG927_800A6294 = 0x800A6294; // size:0x50
+wstag927_vram_places = 0x800A62E4;
+wstag927_actors = 0x800A6368;
+wstag927_sprites = 0x800A6370;
+wstag927_funcs = 0x800A64C8;
+wstag927_events = 0x800A64CC;
+wstag927_battle_lists = 0x800A68E0;

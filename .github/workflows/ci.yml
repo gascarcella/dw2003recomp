@@ -1,0 +1,73 @@
+# CI (DECISIONS "Going public", decision 8). NOT YET RUN: written before the public repo existed; the first run on
+# GitHub will show what to adjust.
+#
+# With the maintainers' secret GAMEDATA_DEPLOY_KEY (a read-only deploy key of the private data checkout
+# <owner>/dw2003-gamedata) the job has the disc and the pinned emulator: it rebuilds every game file byte-identical
+# (scripts/build.sh --check) and runs the reference tests (scripts/test.sh). Fork pull requests get no secrets, so
+# they only get the disc-free part: the toolchain is built and smoke-tested, the scripts parse, the Python compiles.
+name: CI
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      DW3_GAMEDATA: ${{ github.workspace }}/dw2003-gamedata
+      DW3_JOBS: "2"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Is the data checkout available?
+        id: data
+        run: echo "present=${{ secrets.GAMEDATA_DEPLOY_KEY != '' }}" >> "$GITHUB_OUTPUT"
+
+      - name: Data checkout (maintainers only)
+        if: steps.data.outputs.present == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/dw2003-gamedata
+          ssh-key: ${{ secrets.GAMEDATA_DEPLOY_KEY }}
+          path: dw2003-gamedata
+
+      - name: System packages
+        run: sudo apt-get update -q && sudo apt-get install -y -q ninja-build cmake xz-utils unzip
+
+      - name: Cached toolchain
+        uses: actions/cache@v4
+        with:
+          path: |
+            tools/binutils
+            tools/mkpsxiso
+            tools/venv
+            tools/gcc
+            tools/bin
+            tools/ext
+            tools/redux
+          key: tools-${{ runner.os }}-${{ hashFiles('scripts/setup.sh', 'tools/requirements.txt') }}
+
+      - name: Toolchain
+        run: scripts/setup.sh binutils mkpsxiso venv gcc objdiff ext redux
+
+      - name: Scripts parse, Python compiles
+        run: |
+          bash -n scripts/*.sh tools/*.sh tests/*/*.sh .claude/hooks/*.sh
+          tools/venv/bin/python -m py_compile configure.py diff_settings.py tools/*.py tests/golden/*.py tests/golden/families/*.py tests/replay/*.py tests/host/*.py tests/holdouts/*.py
+
+      - name: Toolchain smoke test
+        run: scripts/check_toolchain.sh
+
+      - name: Disc from the data checkout
+        if: steps.data.outputs.present == 'true'
+        run: scripts/worktree_init.sh
+
+      - name: Byte-identical rebuild of every game file
+        if: steps.data.outputs.present == 'true'
+        run: scripts/build.sh --check
+
+      - name: Reference tests
+        if: steps.data.outputs.present == 'true'
+        run: scripts/test.sh

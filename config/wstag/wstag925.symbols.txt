@@ -1,0 +1,15 @@
+// WSTAG925 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag925_update = 0x800A5DE0; // type:func
+wstag925_start = 0x800A5E64; // type:func
+wstag925_event_1600_end = 0x800A5EC0; // type:func
+wstag925_setup = 0x800A5F0C; // type:func
+wstag925_sprite_anim_play_once = 0x800A6000; // type:func
+wstag925_sprite_anim_reset = 0x800A60D8; // type:func
+wstag925_sprite_anim_update = 0x800A6110; // type:func
+wstag925_sprite_anim_create = 0x800A639C; // type:func
+wstag925_vram_places = 0x800A63DC;
+wstag925_actors = 0x800A64A4;
+wstag925_sprites = 0x800A64B0;
+wstag925_map_events = 0x800A6588;
+wstag925_funcs = 0x800A65B8;
+wstag925_events = 0x800A65BC;

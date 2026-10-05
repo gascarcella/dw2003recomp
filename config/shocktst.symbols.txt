@@ -1,0 +1,28 @@
+// Symbol names for AAA/PRO/SHOCKTST.PRO (splat format). Tier-1 overlays share one address range,
+// so each overlay has its own symbol file; the EXE's names come from config/symbol_addrs.txt.
+
+// Functions (src/shocktst/shocktst_80082DA0.c)
+shocktst_update_root = 0x80082DA0; // type:func
+shocktst_start = 0x80082E98; // type:func
+shocktst_highlight_window = 0x80082EC4; // type:func
+shocktst_choose_step = 0x80083064; // type:func
+shocktst_show_step = 0x80083274; // type:func
+shocktst_show_playing_step = 0x8008332C; // type:func
+shocktst_play_step = 0x800833C0; // type:func
+shocktst_play_all = 0x800835F4; // type:func
+shocktst_move_cursor = 0x800836C0; // type:func
+shocktst_edit_value = 0x80083B2C; // type:func
+shocktst_edit = 0x80083DB4; // type:func
+shocktst_update_editor = 0x80083EA4; // type:func
+shocktst_copy_steps = 0x800842E0; // type:func
+shocktst_create_editor = 0x8008436C; // type:func
+shocktst_convert_table = 0x800843F0; // type:func
+shocktst_update_loader = 0x80084714; // type:func
+shocktst_create_loader = 0x8008499C; // type:func
+shocktst_cursor_rows = 0x800849C8;
+shocktst_labels = 0x80084A28;
+shocktst_motor_names = 0x80084AE8;
+shocktst_data_path = 0x80084AF0;
+
+// Strings of .data initializers (one label each, so the target asm relocates the table words).
+D_SHOCKTST_80082CEC = 0x80082CEC; // type:asciz

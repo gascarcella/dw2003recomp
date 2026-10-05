@@ -1,0 +1,17 @@
+// WSTAG924 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag924_color = 0x800A5DE0;
+wstag924_update = 0x800A5E44; // type:func
+wstag924_start = 0x800A5E8C; // type:func
+wstag924_setup = 0x800A5EE8; // type:func
+wstag924_fade_start = 0x800A5FFC; // type:func
+wstag924_fade_update = 0x800A6090; // type:func
+wstag924_menu_1602_update = 0x800A60FC; // type:func
+wstag924_event_1602_start = 0x800A6A68; // type:func
+wstag924_menu_1604_update = 0x800A6A94; // type:func
+wstag924_event_1604_start = 0x800A7400; // type:func
+wstag924_vram_places = 0x800A742C;
+wstag924_actors = 0x800A7600;
+wstag924_sprites = 0x800A7620;
+wstag924_map_events = 0x800A79A4;
+wstag924_funcs = 0x800A79EC;
+wstag924_events = 0x800A79F8;

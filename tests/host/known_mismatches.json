@@ -1,0 +1,86 @@
+[
+ {
+  "where": "gamestate_flags/get_flag_721f_",
+  "reason": "gamestate_party_stat_levels[31]: index past the table (out-of-bounds read; FINDINGS.md 1)"
+ },
+ {
+  "where": "gamestate_flags/get_flag_723f_",
+  "reason": "gamestate_party_stat_levels[63]: index past the table (FINDINGS.md 1)"
+ },
+ {
+  "where": "gamestate_flags/get_flag_7264_",
+  "reason": "gamestate_party_stat_levels[100]: index past the table (FINDINGS.md 1)"
+ },
+ {
+  "where": "stfgtrep_exp/add_exp_d0_5000_rng0:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 0's Water resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "stfgtrep_exp/add_exp_d0_5000_rng2000:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 0's Water resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "stfgtrep_exp/add_exp_d0_999999_rng0:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 0's Water resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "stfgtrep_exp/add_exp_d0_999999_rng2000:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 0's Water resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "stfgtrep_exp/add_exp_d7_5000_rng0:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 7's Dark resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "stfgtrep_exp/add_exp_d7_5000_rng2000:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 7's Dark resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "stfgtrep_exp/add_exp_d7_50_rng0:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 7's Dark resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "stfgtrep_exp/add_exp_d7_50_rng2000:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 7's Dark resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "stfgtrep_exp/add_exp_d7_999999_rng0:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 7's Dark resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "stfgtrep_exp/add_exp_d7_999999_rng2000:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 7's Dark resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "stfgtrep_exp/raise_stats_d7_lv19_rng4000:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 7's Dark resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "stfgtrep_exp/raise_stats_d7_lv1_rng4000:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 7's Dark resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "stfgtrep_exp/raise_stats_d7_lv20_rng4000:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 7's Dark resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "stfgtrep_exp/raise_stats_d7_lv39_rng4000:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 7's Dark resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "stfgtrep_exp/raise_stats_d7_lv40_rng4000:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 7's Dark resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "stfgtrep_exp/raise_stats_d7_lv4_rng4000:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 7's Dark resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "stfgtrep_exp/raise_stats_d7_lv5_rng4000:",
+  "reason": "stfgtrep_resist_gains[8]: Digimon 7's Dark resist class 5 + residue 3 reads past the 8-entry table (FINDINGS.md 2)"
+ },
+ {
+  "where": "wfightmn_spoils/no_holder:",
+  "reason": "wfightmn_battle_end: next() % count with count 0 (no enemy holds an item) traps on x86 (SIGFPE; the harness recovers); the R3000A gives the draw and no item (FINDINGS.md 7)"
+ }
+]

@@ -1,0 +1,37 @@
+// Symbol names for AAA/PRO/STCRDABM.PRO (splat format). Tier-1 overlays share one address range,
+// so each overlay has its own symbol file; the EXE's names come from config/symbol_addrs.txt.
+
+// .data tables (sizes: splat writes base + offset for accesses inside them).
+stcrdabm_cursor_palettes = 0x80085A4C; // size:0x18
+stcrdabm_funcs = 0x80085A64; // size:0x18
+
+// Functions (src/stcrdabm/stcrdabm_80082D88.c).
+stcrdabm_fade_start = 0x80082D88; // type:func
+stcrdabm_fade_draw = 0x80082E10; // type:func
+stcrdabm_fade_update = 0x80082F54; // type:func
+stcrdabm_fade_create = 0x80083008; // type:func
+stcrdabm_page_load_pictures = 0x8008304C; // type:func
+stcrdabm_page_turn = 0x80083114; // type:func
+stcrdabm_page_close = 0x8008314C; // type:func
+stcrdabm_page_draw_cards = 0x80083174; // type:func
+stcrdabm_page_draw_flash = 0x800835BC; // type:func
+stcrdabm_page_has_cards = 0x80083734; // type:func
+stcrdabm_page_update_close = 0x80083780; // type:func
+stcrdabm_page_update = 0x80083848; // type:func
+stcrdabm_page_create = 0x80083A78; // type:func
+stcrdabm_update_main = 0x80083AD8; // type:func
+stcrdabm_start = 0x80083BD0; // type:func
+stcrdabm_album_create_windows = 0x80083BFC; // type:func
+stcrdabm_album_show_page_text = 0x80083E14; // type:func
+stcrdabm_album_show_card_text = 0x800840AC; // type:func
+stcrdabm_album_draw = 0x80084500; // type:func
+stcrdabm_album_mark_owned = 0x80084BC8; // type:func
+stcrdabm_album_run = 0x80084C38; // type:func
+stcrdabm_album_update = 0x80085540; // type:func
+stcrdabm_album_create = 0x8008566C; // type:func
+stcrdabm_load_files = 0x800856A8; // type:func
+stcrdabm_is_loading = 0x800857A0; // type:func
+stcrdabm_window_anim_start = 0x800858A0; // type:func
+stcrdabm_window_anim_update = 0x80085934; // type:func
+stcrdabm_tween_start = 0x800859A0; // type:func
+stcrdabm_tween_update = 0x800859E0; // type:func

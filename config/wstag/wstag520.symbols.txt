@@ -1,0 +1,14 @@
+// WSTAG520 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag520_update = 0x800A5DE0; // type:func
+wstag520_start = 0x800A5E74; // type:func
+wstag520_event_260_end = 0x800A5ED0; // type:func
+wstag520_event_261_end = 0x800A5F1C; // type:func
+wstag520_event_695_end = 0x800A5F50; // type:func
+wstag520_setup = 0x800A5F60; // type:func
+wstag520_battle_lists = 0x800A64A0;
+wstag520_vram_places = 0x800A64BC;
+wstag520_actors = 0x800A6E10;
+wstag520_sprites = 0x800A6EB8;
+wstag520_map_events = 0x800A6FD8;
+wstag520_funcs = 0x800A7080;
+wstag520_events = 0x800A7084;

@@ -1,0 +1,19 @@
+// WSTAG220 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag220_color = 0x800A5E70;
+wstag220_choice_1512_update = 0x800A5E74; // type:func
+wstag220_event_1512_start = 0x800A6430; // type:func
+wstag220_choice_1514_update = 0x800A645C; // type:func
+wstag220_event_1514_start = 0x800A6A18; // type:func
+wstag220_choice_1516_update = 0x800A6A44; // type:func
+wstag220_event_1516_start = 0x800A7000; // type:func
+wstag220_update = 0x800A702C; // type:func
+wstag220_start = 0x800A7074; // type:func
+wstag220_setup = 0x800A70D0; // type:func
+wstag220_fade_start = 0x800A7230; // type:func
+wstag220_fade_update = 0x800A72C4; // type:func
+wstag220_vram_places = 0x800A7580;
+wstag220_actors = 0x800A7D68;
+wstag220_sprites = 0x800A7DE8;
+wstag220_map_events = 0x800A816C;
+wstag220_funcs = 0x800A81B4;
+wstag220_events = 0x800A81C0;

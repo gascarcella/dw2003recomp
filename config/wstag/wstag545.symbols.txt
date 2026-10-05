@@ -1,0 +1,26 @@
+// WSTAG545 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag545_sprite_anim_hold = 0x800A5E18; // type:func
+wstag545_mark_update = 0x800A5F20; // type:func
+wstag545_mark_create = 0x800A6054; // type:func
+wstag545_sprite_anim_play_once = 0x800A60AC; // type:func
+wstag545_lid_update = 0x800A6184; // type:func
+wstag545_lid_message = 0x800A6304; // type:func
+wstag545_lid_create = 0x800A633C; // type:func
+wstag545_sprite_anim_advance = 0x800A636C; // type:func
+wstag545_board_update = 0x800A648C; // type:func
+wstag545_board_message = 0x800A6780; // type:func
+wstag545_board_create = 0x800A6894; // type:func
+wstag545_update = 0x800A68C4; // type:func
+wstag545_start = 0x800A6984; // type:func
+wstag545_event_710_end = 0x800A69E0; // type:func
+wstag545_event_711_end = 0x800A6A2C; // type:func
+wstag545_setup = 0x800A6A3C; // type:func
+D_WSTAG545_800A6D24 = 0x800A6D24; // size:0x38
+D_WSTAG545_800A6D5C = 0x800A6D5C; // size:0x4C
+wstag545_battle_lists = 0x800A7040;
+wstag545_vram_places = 0x800A705C;
+wstag545_actors = 0x800A71F0;
+wstag545_sprites = 0x800A7208;
+wstag545_map_events = 0x800A72E0;
+wstag545_funcs = 0x800A7370;
+wstag545_events = 0x800A7374;

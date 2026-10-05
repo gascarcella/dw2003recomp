@@ -1,0 +1,11 @@
+// WSTAG203 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag203_color = 0x800A5DE0;
+wstag203_update = 0x800A5DE4; // type:func
+wstag203_start = 0x800A5E2C; // type:func
+wstag203_setup = 0x800A5E88; // type:func
+wstag203_battle_lists = 0x800A61F4;
+wstag203_vram_places = 0x800A6210;
+wstag203_actors = 0x800A6688;
+wstag203_sprites = 0x800A66CC;
+wstag203_map_events = 0x800A68E8;
+wstag203_funcs = 0x800A69A8;

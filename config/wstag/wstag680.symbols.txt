@@ -1,0 +1,13 @@
+// WSTAG680 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag680_drop_anim_loop_b = 0x800A5EDC; // type:func
+wstag680_drops_update = 0x800A5FD8; // type:func
+wstag680_drops_message = 0x800A627C; // type:func
+wstag680_drops_create = 0x800A63AC; // type:func
+wstag680_update = 0x800A63DC; // type:func
+wstag680_start = 0x800A6454; // type:func
+wstag680_setup = 0x800A64B0; // type:func
+wstag680_vram_places = 0x800A67BC;
+wstag680_actors = 0x800A684C;
+wstag680_sprites = 0x800A6854;
+wstag680_funcs = 0x800A6998;
+wstag680_events = 0x800A699C;

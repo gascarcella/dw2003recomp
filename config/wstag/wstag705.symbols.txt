@@ -1,0 +1,10 @@
+// WSTAG705 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag705_update = 0x800A5DE0; // type:func
+wstag705_start = 0x800A5E28; // type:func
+wstag705_setup = 0x800A5E84; // type:func
+wstag705_battle_lists = 0x800A61A0;
+wstag705_vram_places = 0x800A61BC;
+wstag705_actors = 0x800A6724;
+wstag705_sprites = 0x800A6744;
+wstag705_map_events = 0x800A67A0;
+wstag705_funcs = 0x800A69B0;

@@ -1,0 +1,13 @@
+// WSTAG685 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag685_update = 0x800A5DE0; // type:func
+wstag685_start = 0x800A5E58; // type:func
+wstag685_event_413_end = 0x800A5EB4; // type:func
+wstag685_event_421_end = 0x800A5EC4; // type:func
+wstag685_event_690_end = 0x800A5EF0; // type:func
+wstag685_setup = 0x800A5F00; // type:func
+wstag685_vram_places = 0x800A6320;
+wstag685_actors = 0x800A6A6C;
+wstag685_sprites = 0x800A6ADC;
+wstag685_map_events = 0x800A6B80;
+wstag685_funcs = 0x800A6C40;
+wstag685_events = 0x800A6C44;

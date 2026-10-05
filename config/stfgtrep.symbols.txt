@@ -1,0 +1,59 @@
+// Symbol names for AAA/PRO/STFGTREP.PRO (splat format). Tier-1 overlays share one address range,
+// so each overlay has its own symbol file; the EXE's names come from config/symbol_addrs.txt.
+
+// Module structs and tables (sizes: splat writes base + offset for accesses inside them).
+stfgtrep_funcs = 0x8008913C; // size:0x30
+stfgtrep_level_exp_bonus = 0x8008916C;
+stfgtrep_hp_mp_gain_cut = 0x8008917C;
+stfgtrep_hp_mp_gain_random = 0x8008918C;
+stfgtrep_stat_gains = 0x800891B0;
+stfgtrep_resist_gains = 0x80089288;
+
+// Functions.
+stfgtrep_update_main = 0x80082E70; // type:func
+stfgtrep_start = 0x80082F6C; // type:func
+stfgtrep_fade_start = 0x80082F98; // type:func
+stfgtrep_fade_draw = 0x80083020; // type:func
+stfgtrep_fade_update = 0x80083164; // type:func
+stfgtrep_fade_create = 0x80083218; // type:func
+stfgtrep_member_create_windows = 0x80083260; // type:func
+stfgtrep_member_show_text = 0x80083404; // type:func
+stfgtrep_member_draw = 0x80083744; // type:func
+stfgtrep_member_count_exp = 0x80083D9C; // type:func
+stfgtrep_member_run = 0x80083E74; // type:func
+stfgtrep_member_update = 0x800848E4; // type:func
+stfgtrep_member_open = 0x80084A08; // type:func
+stfgtrep_member_close = 0x80084A14; // type:func
+stfgtrep_member_show_techniques = 0x80084A20; // type:func
+stfgtrep_member_get_exp = 0x80084A2C; // type:func
+stfgtrep_member_highlight = 0x80084AE0; // type:func
+stfgtrep_member_create = 0x80084AEC; // type:func
+stfgtrep_main_create_windows = 0x80084B98; // type:func
+stfgtrep_main_draw = 0x80084C20; // type:func
+stfgtrep_main_run = 0x80084EC4; // type:func
+stfgtrep_main_update = 0x800857F0; // type:func
+stfgtrep_main_create = 0x80085B24; // type:func
+stfgtrep_load_files = 0x80085B60; // type:func
+stfgtrep_is_loading = 0x80085C08; // type:func
+stfgtrep_window_anim_start = 0x80085C90; // type:func
+stfgtrep_window_anim_update = 0x80085D24; // type:func
+stfgtrep_tween_start = 0x80085D90; // type:func
+stfgtrep_tween_update = 0x80085DD0; // type:func
+stfgtrep_raise_stats = 0x80085E3C; // type:func
+stfgtrep_add_exp = 0x80086184; // type:func
+stfgtrep_learn_technique = 0x8008634C; // type:func
+stfgtrep_add_technique_exp = 0x800865C0; // type:func
+stfgtrep_learn_skill = 0x8008670C; // type:func
+stfgtrep_mark_skill = 0x80086844; // type:func
+stfgtrep_get_technique_exp = 0x80086924; // type:func
+stfgtrep_rewards = 0x80086A88;
+stfgtrep_learn_0 = 0x80087A3C;
+stfgtrep_learn_1 = 0x80087CFC;
+stfgtrep_learn_2 = 0x80087FBC;
+stfgtrep_learn_3 = 0x8008827C;
+stfgtrep_learn_4 = 0x8008853C;
+stfgtrep_learn_5 = 0x800887FC;
+stfgtrep_learn_6 = 0x80088ABC;
+stfgtrep_learn_7 = 0x80088D7C;
+stfgtrep_learn_lists = 0x8008903C;
+stfgtrep_member_anims = 0x8008905C;

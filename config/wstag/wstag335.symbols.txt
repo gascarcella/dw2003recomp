@@ -1,0 +1,13 @@
+// WSTAG335 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag335_color = 0x800A5DE0;
+wstag335_update = 0x800A5DE4; // type:func
+wstag335_start = 0x800A5E3C; // type:func
+wstag335_setup = 0x800A5E98; // type:func
+wstag335_battle_lists = 0x800A664C;
+wstag335_battle_lists2 = 0x800A6668;
+wstag335_battle_lists3 = 0x800A6684;
+wstag335_vram_places = 0x800A66A0;
+wstag335_actors = 0x800A6B68;
+wstag335_sprites = 0x800A6B8C;
+wstag335_map_events = 0x800A6EA4;
+wstag335_funcs = 0x800A6F1C;

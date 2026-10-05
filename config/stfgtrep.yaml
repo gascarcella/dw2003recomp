@@ -1,0 +1,61 @@
+# splat config for the tier-1 overlay AAA/PRO/STFGTREP.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: STFGTREP.PRO
+sha1: b59048734824ee31e3b4e777710c05926b47381d
+options:
+  basename: STFGTREP.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/STFGTREP.PRO
+  elf_path: build/stfgtrep/STFGTREP.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/stfgtrep
+  asm_path: asm/stfgtrep
+  src_path: src/stfgtrep
+  asset_path: assets/stfgtrep
+  ld_script_path: build/stfgtrep/STFGTREP.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/stfgtrep.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/stfgtrep/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/stfgtrep/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: stfgtrep
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_STFGTREP_<addr>, D_STFGTREP_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: STFGTREP_$VRAM
+    subsegments:
+      # One file (docs/DECISIONS.md "Overlay file split"): the three jump tables are all at 0 mod 8. The only
+      # candidate boundary, 0x80085E3C (the functions of the table at 0x80089154 start after the window-anim
+      # and tween helpers), is contradicted by the data order: D_STFGTREP_8008903C, used only by 0x8008634C,
+      # comes before D_STFGTREP_8008905C, used by 0x80083744.
+      - [0x0,   .rodata, stfgtrep_80082E70]
+      - [0x1C0, c, stfgtrep_80082E70]   # 0x80082E70: .text (tools/overlay_layout.py)
+      # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t stfgtrep;
+      # DECISIONS "Overlay .data/.bss per file").
+      - [0x3DD8, .data, stfgtrep_80082E70]   # 0x80086A88 (after the last function's jr ra); no .bss
+  - [0x65F8]

@@ -1,0 +1,14 @@
+// WSTAG261 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag261_color = 0x800A5DF8;
+wstag261_lift_update = 0x800A5DFC; // type:func
+wstag261_lift_message = 0x800A6218; // type:func
+wstag261_lift_create = 0x800A628C; // type:func
+wstag261_update = 0x800A62F4; // type:func
+wstag261_start = 0x800A634C; // type:func
+wstag261_setup = 0x800A63A8; // type:func
+wstag261_vram_places = 0x800A66B4;
+wstag261_actors = 0x800A67F4;
+wstag261_sprites = 0x800A6800;
+wstag261_map_events = 0x800A68C8;
+wstag261_funcs = 0x800A6940;
+wstag261_events = 0x800A6944;

@@ -1,0 +1,15 @@
+// WSTAG206 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag206_color = 0x800A5DE0;
+wstag206_update = 0x800A5DE4; // type:func
+wstag206_start = 0x800A5EC0; // type:func
+wstag206_event_730_end = 0x800A5F1C; // type:func
+wstag206_event_921_end = 0x800A5F48; // type:func
+wstag206_event_922_end = 0x800A5F74; // type:func
+wstag206_setup = 0x800A5F84; // type:func
+wstag206_battle_lists = 0x800A6808;
+wstag206_vram_places = 0x800A6824;
+wstag206_actors = 0x800A6DBC;
+wstag206_sprites = 0x800A6E2C;
+wstag206_map_events = 0x800A718C;
+wstag206_funcs = 0x800A724C;
+wstag206_events = 0x800A7250;

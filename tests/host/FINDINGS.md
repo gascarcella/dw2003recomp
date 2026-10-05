@@ -1,0 +1,181 @@
+# Host-side replay: findings
+
+What differs between the original (the goldens, recorded from the game in PCSX-Redux) and the same C compiled for a
+64-bit Linux host with the port's flags (`tests/host/build.sh`). `tests/host/replay.py` lists every mismatch; the ones
+explained here are in `tests/host/known_mismatches.json` so the suite stays green until the port decides what to do.
+A finding is never a reason to change `src/`: the matching build is the reference. The port handles each one in its
+own code (a bounds check, a shim, a documented divergence).
+
+State on 2026-10-05 (21 families, 3,437 cases, 5,333 calls): everything matches except findings 1, 2 and 7 (41 mismatching calls,
+6, 34 and 1, listed by the 21 entries of `known_mismatches.json`); findings 3, 4, 6 and 8 agree by accident, 5 by the same struct
+layout.
+
+## 1. `gamestate_check_party_stat` reads past `gamestate_party_stat_levels` (flag type 0x72, index >= 15)
+
+- **Where:** `src/main/gamestate.c` `gamestate_check_party_stat(i, flag)` indexes `gamestate_party_stat_levels[i]`, a
+  15-entry table, with the flag's 9-bit index unchecked.
+- **Original:** the table sits at `0x80048CF8`, right before `gamestate_data` (`0x80048D34`), so index 15 and above
+  read `gamestate_data` itself (index 31 reads its bytes `0x40..0x43`, index 63 `0xC0..`, index 100 `0x154..`). With the
+  golden's fixture those bytes are 0, so the comparison is against 0 and `value == 1` holds.
+- **Host:** the bytes after the table are whatever the host linker placed there; the six cases
+  `get_flag_721f_*`, `get_flag_723f_*`, `get_flag_7264_*` return the opposite.
+- **For the port: safe to bounds-check.** No data or code of the game uses a type 0x72 flag with an index >= 15, so the
+  overrun is reachable only from a hand-made flag (the goldens' edge cases); the port may clamp or return 0 there and
+  keep these six cases as documented divergences. Index 20 agrees by accident (both sides compare against a positive
+  number). Evidence (2026-10-05, `tools/flag_census.py --type 0x72`, which re-runs all of it in ~2 s):
+  - **Every reader of a flag word is known.** `gamestate_check_party_stat` is called only by `gamestate_get_flag`
+    (`gamestate_set_flag` has no 0x72 branch), which is called only by `gamestate_check_flags` and through the
+    `gamestate_flags` table. The table's callers in all of `src/` (EXE, the 21 tier-1 overlays, the 293 WSTAG files) and
+    in the residual INCLUDE_ASM bodies (only `fieldstg_manager_update` uses it: the placed actors' lists) take flags
+    from `FieldstgTalk.flags_required`/`flags_set` and `FieldstgPlacedActor.flags_required` lists, `FieldstgMapEvent.flag`/
+    `flag_2`, `fieldstg_flag_events`, constants in code, and two computed values (the visited-map bit
+    `get_map() + 0x1E00`, set side; STSTATUS's `(i & 0xFF) | 0x2000`, type 0x20). Event scripts, card scripts, text,
+    battle data and the save are read by none of them.
+  - **All of that data is C** (the build is byte-identical), and every `fieldstg_stage.actors`/`map_events` root, placed
+    actor, talk list and flag-list pointer resolves to a parsed definition. Census: 16,169 flag uses (12,658 get, 3,511
+    set) of 31 types; the computed types show up as expected (0x60 progress 1,946 gets, 0x70 conditions 1,746, 0x7E
+    route 502, 0x80-0x88 items 1,787, 0x92 cards 70), and every bit-array index is inside its array.
+  - **Type 0x72: 1,498 uses, all reads, indexes 0..14 only** (flags `0x7200..0x720E`, no `0x73xx`): 1,489 in talk lists
+    and 8 in placed-actor lists of 45 WSTAG files, and one in code (`wstag280.c`, `get_flag(0x7201, 0)`). Per index
+    (value 0 / value 1): 0: 24/71, 1: 29/124, 2: 28/136, 3: 24/96, 4: 44/104, 5: 29/43, 6: 42/126, 7: 9/35, 8: 37/132,
+    9: 39/75, 10: 36/76, 11: 34/55, 12: 7/7, 13: 17/17, 14: 1/1 (the last threshold, 2472, only in `wstag725.c`).
+  - **Backstops.** Every integer literal (hex or decimal, or either half of a 32-bit word) with a type-0x72 value in
+    `src/`, `include/` and the residual asm (116 INCLUDE_ASM/INCLUDE_RODATA bodies and `data` segments) is a counted
+    use or something else (file sizes, CLUT colours, addresses, start positions, a Shift-JIS string). A raw scan of the
+    disc's 319 PRO files and the EXE for a word `0x7200..0x73FF` followed by 0 or 1 finds 1,497 in range (the data uses)
+    and 24 out of range, all text bytes in SOUNDTST, STAGSLCT and the EXE, none of which read flags.
+  - Not scanned, because no flag reader takes data from them: the non-PRO disc files (maps, sprites, text, sound).
+
+## 2. `stfgtrep_raise_stats` reads past `stfgtrep_resist_gains` (resist class 5, RNG residue 3)
+
+- **Where:** `src/stfgtrep/stfgtrep_80082E70.c` `stfgtrep_raise_stats(digimon, lv)`, for `lv <= 40`:
+  `stfgtrep_resist_gains[class + pad_random.next() % 4]` with `class = records_digimon[digimon].resist_gains[i]`. The table
+  has 8 entries (`{0, 0, 0, 1, 1, 1, 2, 2}`) and the index reaches 8 when the class is 5 and the draw's residue is 3.
+  Two party Digimon have a class-5 resist: Digimon 0 (Kotemon, Water, `resist_gains[1]`) and Digimon 7 (Dark, `[6]`).
+- **Original:** the table ends the overlay file (`STFGTREP.PRO` is `0x65F8` bytes and `stfgtrep_resist_gains` ends at
+  `0x80089288 + 0x20 = 0x800892A8`, the file's end), so entry 8 is the rest of the file's last sector, which is zeros
+  on the disc and is loaded with it (`overlay_load_stage` copies whole sectors), and the gain is 0:
+  one draw in four gives that resist nothing, on top of the three draws that give 1, 1, 2. The golden records it (the 17
+  `stfgtrep_exp` cases with `add_exp` on Digimon 0 or 7 and `raise_stats` on Digimon 7 at RNG index 4000, levels <= 40).
+  The oracle pads every file it writes to whole sectors for this reason (2026-10-05): before that it copied the file's
+  bytes only, the word came from the overlay the previous family had left in the slot, and the golden held only because
+  that was FIGHTSTG (a zero there); with `shop_rules`' STCRDSHP before it, the word was 999.
+- **Host:** the word after the table is whatever the host linker placed there: the resist gets a garbage gain
+  (`-6528` in this build).
+- **Related, in bounds:** `stfgtrep_stat_gains[k][class + next() % 5]` with class 5 and residue 4 reads entry 9 of a
+  9-entry row: the next row's first entry, and for the last row (levels >= 80) `stfgtrep_resist_gains[0]`, which follows
+  it in both the original's and the host's layout, so the host agrees there (the Digimon 1 cases at levels >= 80). The
+  port must keep the two tables adjacent or bounds-check both.
+- **For the port:** emulate the original (a gain of 0 for the overrun) or bounds-check; either way the level-up draws must
+  stay identical to the original's for the replay tests, so the draw count must not change.
+
+## 3. `stgtrain_get_menu(14)` reads past `stgtrain_menus` (agrees on the host by accident)
+
+- **Where:** `src/stgtrain/` `stgtrain_get_menu(menu)` keeps any menu 1..14, but `stgtrain_menus` has 14 rows (0..13),
+  so menu 14 reads the 16 entries after the table, the start of `stgtrain_trainings`, and counts their non-zero IDs into
+  `stgtrain_module.count`.
+- **Original:** the golden `stgtrain_rules` case `menu_14` records what the original counts there (12 entries).
+- **Host:** matches today only because the host linker also placed `stgtrain_trainings` right after `stgtrain_menus`; a
+  different layout or compiler would read something else. Not in `known_mismatches.json` (no mismatch).
+- **For the port: safe to bounds-check** (2026-10-05): menu 14 is never passed. STGTRAIN's `map_entry` comes from three
+  places, all in C: a trainer's talk flag `0x94xx` (`gamestate_set_flag`: map 0xA00, entry = the index), whose 28 uses have
+  indexes 0..13 (`tools/flag_census.py --type 0x94`); STAGSLCT's stage list (entries 0..7); and field map changes, which
+  pass -1 (menu 0; `fieldstg_manager_update`'s WIP C too). No event script `GOTO_MAP` targets 0xA00 (tests/README.md,
+  "The overlay tour").
+
+## 4. `stitshop_get_items(31)` reads past `stitshop_shops` (agrees on the host by accident)
+
+- **Where:** `src/stitshop/stitshop_800859C0.c` `stitshop_get_items(shop)` checks `shop < 0` and a NULL list only;
+  `stitshop_shops` has 31 entries (0..30).
+- **Original:** `stitshop_funcs` follows the table, so entry 31 is `stitshop_funcs` itself: its `count` (the field the
+  function sets) and its first function pointer (`stitshop_load_files`), returned as the goods list; the count is set to
+  itself. The golden `shop_rules` case `get_items_31` records the count (77 before and after).
+- **Host:** the 16 bytes after the host's table are alignment padding (zeros), so the host returns NULL and leaves the
+  count alone: the same count, a different list (the list is an address, not compared).
+- **For the port:** the shop is the field's map entry (`stitshop_main_create`: `get_map_entry()`). Shop 30 (all items) is
+  STAGSLCT's debug entry `{0xF00, 0x1E}`, and its title already reads `stitshop_shop_names[30]` past that 30-entry table
+  (UI, not tested). **Safe to bounds-check** (2026-10-05): the field opens STITSHOP only through a talk flag `0x7Axx` with
+  index < 30 (`gamestate_set_flag`'s branch; 30 and up go to STCRDSHP or elsewhere), so the field passes 0..29; STAGSLCT
+  passes 0..4, 0x1C and 0x1E. Shop 31 is never passed, shop 30 only by the debug list.
+
+## 5. Overruns inside one struct (agree on the host because the struct layout is the same)
+
+Not mismatches: the original and the host read or write the next field of the same struct, so they agree as long as the
+port keeps the struct layout (the save struct `gamestate_data` must keep it anyway). Recorded so the port does not
+"fix" them into a different behaviour, nor reorder these fields:
+- `gamestate_set_flag(0x0608, v)` (golden `gamestate_actions`): index 8 of the 8-bit `flags_06` sets `flags_08` bit 0.
+  The game's data never does this (`tools/flag_census.py --check`: every bit-array use is in range).
+- `cardgame_deal_cards` with fewer than 6 cards left in the deck (golden `cardgame_rules`): reads past the deck's end
+  into `hand[]`, which it has just written.
+- `cardgame_mark_best_cpu_slot` (effect 0xAE) with fewer than 6 CPU slots picks slot `count`, an empty slot
+  (golden `cardgame_cpu_choice`; MECHANICS 10): a rule to keep, not an overrun.
+- `fightstg_enemy_turn_update` (FIGHTSTG, the enemy's turn): when none of the record's three `actions[]` conditions holds,
+  the loop ends at `i = 3` and reads `actions[3]`, the 4 bytes at record + 0x3E (`unk_3E`). Every record of file 0x1CF
+  has `{1 or 2, 0, 0}` there (187 attack, 6 `tech_2`), and 58 of the 193 records have no unconditional action among the
+  three, so this is the game's default action, used often. A port must read it (declare `actions[4]`), not stop at 3
+  (sweep4; the conditions themselves are golden `wfightmn_enemy_ai`).
+
+## 6. `fightstg_rules_roll_wake` without a sleep event reads `fightstg_events.events[-1]` (agrees on the host by accident)
+
+- **Where:** `src/fightstg/fightstg_8008D3B4.c` `fightstg_rules_roll_wake(side, amount)`: `i = fightstg_events.find_member(0xC,
+  ...)` and then `fightstg_events.events[i].delay / 100` with no check of `i == -1` (no sleep event for the member).
+- **Original:** `events[-1].delay` is the s16 at `fightstg_events - 0x1A`, inside `fightstg_events_take_modes` (the table
+  defined just before it): 0, so the wait term is 0. The `fightstg_rules` cases `wake_s0_a*`, `wake_s1_a*` (a sleeping
+  member with no event) record that; `wake_event_*` (appended 2026-10-05) have the event and pin `wait = delay / 100`.
+- **Host:** agrees today by accident: there the s16 lands in the top two bytes of the pointer in `fightstg_enemy_records`
+  (placed before `fightstg_events`), which are 0 in this non-PIE build.
+- **For the port: treat -1 as wait 0** (what the original reads). Sleep is set only by `fightstg_events_start_sleep`, which
+  adds or refreshes the member's event 12 at the same time, so a sleeper without an event needs a full queue (99 events)
+  or an event removed while the status stays (`fightstg_events_remove_member`, WFIGHTMN's switch handler; not traced).
+  A port that bounds-checks the index must not crash on -1.
+
+## 7. `wfightmn_battle_end` divides by zero when no enemy holds an item (traps on x86)
+
+- **Where:** `src/wfightmn/wfightmn_800A6440.c` `wfightmn_battle_end`, at the battle's end (won or lost, `fightstg_events.result
+  != 0`): `count` = the enemy members with `item != 0`, then `pick = pad_random.next() % count`. An enemy's `item` is set
+  only from its record (`wfightmn_init_members`, when the record's item is non-zero; else it stays 0, as the first
+  battle below shows) or to -1 by a steal, so a battle whose enemies all have record item 0 (101 of the 193 records) has
+  `count == 0`.
+- **Original:** no trap: GCC 2.8 emitted a bare `div` (no `break 7` check), and the R3000A's division by zero leaves the
+  dividend in HI, so `pick` is the draw; the second loop then finds no holder, `count` stays 0, and `enemies[0].item > 0`
+  is false: no item, one draw taken. Seen in the emulator: the story's first battle (layer-2 `first_battle_save`) executes
+  it with dividend 2729 and divisor 0 (an exec breakpoint on the `div` at `0x800A7CF4`, sweep4).
+- **Host:** compiled for x86, `% 0` raises SIGFPE: a port built from the C as it is crashes at the end of the first battle.
+  Replayed since sweep5 by `wfightmn_spoils/no_holder` (the golden: item 0, one draw, substep 1): `replay.c` catches the
+  SIGFPE and answers `trap`, so the case's return and two of its reads (`records_battle_results` with the old item,
+  substep 0) mismatch and are listed in `known_mismatches.json`; the other 10 battle-end cases (one or two holders) match.
+- **For the port: `count == 0` must give no item and still take the one draw** (`pad_random.next()` is called before the
+  `%`, so the RNG index advances either way, and `first_battle_save`'s hashes depend on it).
+
+## 8. A function defined `void` whose callers use its return value (agrees on the host by accident)
+
+- **Where:** FIGHTSTG's object creators: `fightstg_fade_create` (`src/fightstg/fightstg_80086A00.c`) is defined `void` and
+  ends on a store through its object pointer; `wfightmn_battle_end` declares it as returning `Fade *` and calls
+  `->start` on the result (the comments at `src/wfightmn/wfightmn_800A6440.c` 72 and `src/fightstg/fightstg_80086A00.c` 187,
+  `fightstg_8008B630.c` 34/61, `fightstg_8008D3B4.c` 2682 list the others: the command menu, the message box, the scenes).
+- **Original:** the object stays in `v0` from `object_new` through the field stores (GCC 2.8 needs no other register),
+  so the caller gets the object.
+- **Host:** agrees by accident: the harness is built at `-O0`, where `rax` still holds the object after the last store
+  (`wfightmn_spoils`' 11 non-trapping battle-end cases pass). With optimisation, or another compiler, the caller gets garbage.
+- **For the port: give these creators their real return type** (return the object). The declarations that disagree are
+  marked in the C, which keeps them as they are (tests never change `src/`).
+
+## What the host does not replay (by design, not findings)
+
+- Stack leftovers: `replay.c` zeroes 64 KB of stack before every call, so a local the C reads uninitialised is 0 on the
+  host. The one known case is `cardgame_cpu_get_score` on an empty side (`list[0]` indexes the slots once, the value is
+  discarded; MECHANICS 10): with leftovers there the harness crashed as soon as another unit (FIELDSTG's) was linked in.
+  The original reads its own stack's leftovers; no golden depends on them. A port should not read them at all.
+
+- Writes to raw addresses: the overlay in the slot (`FIGHTSTG.PRO`, `CARDGAME.PRO`) and the data files placed in RAM.
+  The host links the same C natively and serves the files through its own `cdload_module.files.get_file` from the
+  cdload entry writes (`replay.py` turns them into file registrations).
+- Pointer-bearing structs are wider on an LP64 host. Fixture offsets are chosen in the pointer-free part of each struct
+  (`gamestate_data` before `.funcs`, `fightstg_battle.state`, `fightstg_rules.stats`); the one fixture buffer of such a
+  struct (`CardgameGame`, whose `Object` header holds pointers) is remapped with the offsets `layout.c` reports, and so are
+  the reads of it (`buf:game` past the header).
+  A 32-bit host build (`gcc -m32`, needs `gcc-multilib`) would need none of that.
+- UI calls inside a rule (`ststatus_items_use`, `ststatus_tech_use`): the goldens give the page's windows methods that do
+  nothing (every word of a `window` buffer is `heap_nop`'s address, the data block points every window at it); the host
+  builds the same from host pointers (`replay.py` `POINTER_BUFFERS`, the `P ... @nop` command) and a `sound_module` whose
+  `play` does nothing (`shims.c`). Only what the rule writes to `gamestate_data` and the RNG is compared.

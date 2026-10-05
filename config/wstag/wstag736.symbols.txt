@@ -1,0 +1,20 @@
+// WSTAG736 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag736_update = 0x800A5DE0; // type:func
+wstag736_start = 0x800A5EE4; // type:func
+wstag736_anim_advance = 0x800A5F40; // type:func
+wstag736_two_sprite_draw = 0x800A6060; // type:func
+wstag736_is_on_screen = 0x800A6148; // type:func
+wstag736_two_sprite_update = 0x800A620C; // type:func
+wstag736_two_sprite_create = 0x800A649C; // type:func
+wstag736_event_1293_end = 0x800A64F8; // type:func
+wstag736_event_1294_end = 0x800A6544; // type:func
+wstag736_setup = 0x800A6590; // type:func
+D_WSTAG736_800A6878 = 0x800A6878; // size:0x18
+D_WSTAG736_800A6890 = 0x800A6890; // size:0x58
+wstag736_battle_lists = 0x800A6AF8;
+wstag736_vram_places = 0x800A6B14;
+wstag736_actors = 0x800A6ED0;
+wstag736_sprites = 0x800A6EFC;
+wstag736_map_events = 0x800A7270;
+wstag736_funcs = 0x800A73C0;
+wstag736_events = 0x800A73C4;

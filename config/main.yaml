@@ -1,0 +1,527 @@
+# splat config for the boot executable SLES_039.36 (Digimon World 2003, Europe).
+# Memory map: docs/DISC_LAYOUT.md. Library boundaries: tools/psyq_match.py (Psy-Q 4.7).
+# Run through configure.py (it splits, then writes build.ninja), or by hand:
+#   tools/venv/bin/splat split config/main.yaml
+#
+# Overlays get their own config/<name>.yaml with the same layout of paths
+# (asm/<name>/, src/<name>/, build/<name>/) and link against this EXE's symbols.
+name: SLES_039.36
+sha1: d1b7e4d646e3a9c2b88fdb25d20b5f7116bbb06d
+options:
+  basename: SLES_039.36
+  base_path: ..
+  target_path: extracted/disc/SLES_039.36
+  elf_path: build/main/SLES_039.36.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/main
+  asm_path: asm/main
+  src_path: src/main
+  asset_path: assets/main
+  ld_script_path: build/main/SLES_039.36.ld
+  symbol_addrs_path:
+    - config/symbol_addrs.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/main/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/main/undefined_syms_auto.txt
+
+  # crt0 sets $gp to 0x8005CB50 (small data around the end of .data / start of .bss).
+  gp_value: 0x8005CB50
+  # psylink puts each object's .rodata before all .text.
+  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+  # The file holds .bss as zeros (the header has no bss fields), so .bss is part of the
+  # loaded image; this also keeps the ROM position of the tail right.
+  ld_bss_is_noload: False
+  # psylink packs objects at 4-byte alignment; GNU as would give every section 16.
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  # Also write a full .s for each c segment: assembled, it is objdiff's "target" object.
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: header
+    type: header
+    start: 0x0
+
+  - name: main
+    type: code
+    start: 0x800
+    vram: 0x80010000
+    bss_size: 0x25FC8          # 0x8005CCE8-0x80082CB0, cleared by crt0
+    subsegments:
+      # File boundaries: docs/DECISIONS.md "Game code file split". psylink puts every object's
+      # .rodata (in link order) before all .text, so .rodata is split per file too.
+      - [0x800, .rodata, inn]             # 0x80010000
+      - [0x884, .rodata, fieldmenu]       # 0x80010084
+      - [0x8C4, .rodata, main]            # 0x800100C4 heap base, title TIM pointers
+      - [0x8CC, .rodata, memcard]         # 0x800100CC save file names per region
+      - [0x960, .rodata, gamestate]       # 0x80010160
+      - [0x988, .rodata, pad]             # 0x80010188
+      - [0x9A4, .rodata, message]         # 0x800101A4 SJIS debug messages
+      - [0xAA4, .rodata, font]            # 0x800102A4 font_get_text_width's jump table
+      # Psy-Q 4.7 library objects with .rodata, in link order (owners: who references it).
+      - [0xAB8, rodata, psyq/libpad/pdent4]
+      - [0xAD8, rodata, psyq/libgpu/sys]
+      - [0xCF8, rodata, psyq/libc2/prnt]
+      - [0xF18, rodata, psyq/libgs/gs_108]
+      - [0xF38, rodata, psyq/libgs/gs_123]
+      - [0xFC8, rodata, psyq/libcd/event]
+      - [0xFE8, rodata, psyq/libcd/c_011]
+      - [0x1008, rodata, psyq/libcd/bios_1]  # its debug name tables (in .data) point at 0x80010808+
+      - [0x1268, rodata, psyq/libc2/puts]
+      - [0x1278, rodata, psyq/libetc/vsync]
+      - [0x12BC, rodata, psyq/libetc/intr]
+      - [0x12F8, rodata, psyq/libetc/intr_dma]
+      - [0x1328, rodata, psyq/libsnd/ssopenp]
+      - [0x1358, rodata, psyq/libsnd/sepinit]
+      - [0x1378, rodata, psyq/libsnd/sstick]
+      - [0x1398, rodata, psyq/libspu/spu]
+      - [0x13E8, rodata, psyq/libspu/s_sva]
+      - [0x1428, rodata, psyq/libspu/s_sca]
+      - [0x1468, rodata, psyq/libmcrd/libmcrd]
+      - [0x1638, rodata, psyq/libmcrd/userfunc]
+      - [0x1658, rodata, psyq/libmcrd/low]
+      - [0x1668, rodata, psyq/libmcrd/unformat]
+      - [0x1688, asm, crt0]            # 0x80010E88 Psy-Q 2MBYTE.OBJ: __main, __SN_ENTRY_POINT
+      # Game code, one C file per unit (INCLUDE_ASM for what isn't decompiled yet). Units named
+      # game_<addr> are files whose purpose isn't understood yet.
+      - [0x174C, c, inn]               # 0x80010F4C the inn (pay, heal the party)
+      - [0x28B4, c, fieldmenu]         # 0x800120B4 the field menu; starts with the same static window helpers as inn
+      - [0x3CAC, c, records]           # 0x800134AC ID records and item lists (-G8: owns .sdata)
+      - [0x3E94, c, cdload]            # 0x80013694 CD reads and file loading (-G8)
+      - [0x49E4, c, filetable]         # 0x800141E4 accessors for the file LBA table
+      - [0x4A74, c, object]            # 0x80014274 object system: counters; object_new creates objects
+      - [0x4D24, c, main]              # 0x80014524 main (-G8)
+      - [0x5054, c, memcard]           # 0x80014854 memory card; memcard_funcs is its function table (-G8: "*" in .sdata)
+      - [0x5D90, c, gamestate]         # 0x80015590 game state (gamestate_data: flags, items, Digimon, party) and condition checks
+      - [0x8370, c, heap]              # 0x80017B70 heap allocator; from 0x80017FB4 the object list (heap_objects)
+      - [0x8B10, c, pad]               # 0x80018310 controllers (libpad)
+      - [0x9B70, c, message]           # 0x80019370 text/message system (-G8: SJIS literals in .sdata)
+      - [0xDBF4, c, gfx]               # 0x8001D3F4 graphics: display, packet buffers, layers; $gp gfx_frame_pending, gfx_initialized
+      - [0xEFE0, c, card]              # 0x8001E7E0 the card-picture object (card_init sets one up); $gp card_module
+      - [0xF4B0, c, sprite]            # 0x8001ECB0 sprite banks: sprite_draw; $gp sprite_current
+      - [0xFF38, c, font]              # 0x8001F738 text width, glyph <-> Shift-JIS; $gp font_module
+      - [0x1051C, c, tim]              # 0x8001FD1C TIM loading; $gp tim_module
+      - [0x10830, c, sound]            # 0x80020030 sound (libsnd)
+      - [0x11358, c, overlay]          # 0x80020B58 loads and runs the stage overlays (table overlay_entries); own data, not sound's
+      # Psy-Q 4.7 libraries from 0x80020D8C, one unit per library object (tools/psyq_match.py;
+      # the ambiguous ones as settled in docs/TOOLCHAIN.md "Ambiguous objects"). Each object's
+      # .text is padded to 16 bytes, which is where the next one starts.
+      - [0x1158C, asm, psyq/libpad/pdcmd1]
+      - [0x115CC, asm, psyq/libpad/pdcmd2]
+      - [0x1173C, asm, psyq/libpad/pdcmd3]
+      - [0x1189C, asm, psyq/libpad/pdent2]
+      - [0x1196C, asm, psyq/libpad/pdent3]
+      - [0x11A6C, asm, psyq/libpad/pdent4]
+      - [0x11B4C, asm, psyq/libpad/pdmaiini]
+      - [0x11C5C, asm, psyq/libpad/pdmain2]
+      - [0x11C7C, asm, psyq/libpad/pddirini]
+      - [0x11D2C, asm, psyq/libpad/pdtapini]
+      - [0x11E8C, asm, psyq/libpad/pddirres]
+      - [0x128CC, asm, psyq/libpad/pdtapres]
+      - [0x13A0C, asm, psyq/libpad/pdresres]
+      - [0x1587C, asm, psyq/libapi/c57]
+      - [0x1588C, asm, psyq/libapi/a36]
+      - [0x1589C, asm, psyq/libapi/a37]
+      - [0x158AC, asm, psyq/libapi/a50]
+      - [0x158BC, asm, psyq/libapi/a52]
+      - [0x158CC, asm, psyq/libapi/a53]
+      - [0x158DC, asm, psyq/libapi/a54]
+      - [0x158EC, asm, psyq/libapi/l02]
+      - [0x158FC, asm, psyq/libapi/l03]
+      - [0x1590C, asm, psyq/libapi/l10]
+      - [0x1591C, asm, psyq/libc2/bzero]
+      - [0x1594C, asm, psyq/libc2/memcpy]
+      - [0x1598C, asm, psyq/libc2/strcpy]
+      - [0x159DC, asm, psyq/libc2/strcspn]
+      - [0x15A5C, asm, psyq/libc2/strlen]
+      - [0x15A9C, asm, psyq/libc2/strncpy]
+      - [0x15B0C, asm, psyq/libc2/atoi_0]
+      - [0x15C3C, asm, psyq/libc2/todigit]
+      - [0x15CAC, asm, psyq/libc2/ctype_2]
+      - [0x15CEC, asm, psyq/libgpu/sys]
+      - [0x18BEC, asm, psyq/libapi/c73]
+      - [0x18BFC, asm, psyq/libc2/printf]
+      - [0x18C3C, asm, psyq/libc2/prnt]
+      - [0x192DC, asm, psyq/libc2/memchr]
+      - [0x1932C, asm, psyq/libc2/putchar]
+      - [0x1958C, asm, psyq/libgpu/break]
+      - [0x197AC, asm, psyq/libgpu/e03]
+      - [0x1986C, asm, psyq/libgpu/e04]
+      - [0x198AC, asm, psyq/libgpu/p00]
+      - [0x198EC, asm, psyq/libgpu/p01]
+      - [0x1990C, asm, psyq/libgpu/p10]
+      - [0x1993C, asm, psyq/libgpu/p22]
+      - [0x1995C, asm, psyq/libgpu/p33]
+      - [0x1998C, asm, psyq/libgpu/p34]
+      - [0x199EC, asm, psyq/libgs/gs_001]
+      - [0x19F3C, asm, psyq/libgpu/p06]
+      - [0x19F7C, asm, psyq/libgs/gs_0022]
+      - [0x1A08C, asm, psyq/libgs/gs_003]
+      - [0x1A10C, asm, psyq/libgs/gs_104]
+      - [0x1A18C, asm, psyq/libgs/gs_106]
+      - [0x1A1AC, asm, psyq/libgs/gs_107]
+      - [0x1A71C, asm, psyq/libgs/gs_108]
+      - [0x1A79C, asm, psyq/libgs/gs_121]
+      - [0x1A7EC, asm, psyq/libgs/gs_122]
+      - [0x1A8DC, asm, psyq/libgs/gs_123]
+      - [0x1A9AC, asm, psyq/libgs/gs_131]
+      - [0x1AF4C, asm, psyq/libgs/matrix8]
+      - [0x1AFCC, asm, psyq/libgs/gs_119]
+      - [0x1B08C, asm, psyq/libgs/gs_133]
+      - [0x1B34C, asm, psyq/libgs/matrix9]
+      - [0x1B3CC, asm, psyq/libgte/geo_00]
+      - [0x1B49C, asm, psyq/libgte/geo_01]
+      - [0x1B53C, asm, psyq/libgte/msc00]
+      - [0x1B5CC, asm, psyq/libgte/msc01]
+      - [0x1B65C, asm, psyq/libgte/mtx_004]
+      - [0x1B7BC, asm, psyq/libgte/mtx_03]
+      - [0x1B8CC, asm, psyq/libgte/mtx_04]
+      - [0x1B9DC, asm, psyq/libgte/mtx_06]
+      - [0x1BA3C, asm, psyq/libgte/mtx_08]
+      - [0x1BB7C, asm, psyq/libgte/mtx_11]
+      - [0x1BBAC, asm, psyq/libgte/reg10]
+      - [0x1BBCC, asm, psyq/libgte/reg11]
+      - [0x1BBEC, asm, psyq/libgte/reg12]
+      - [0x1BC0C, asm, psyq/libgte/reg13]
+      - [0x1BC1C, asm, psyq/libgte/fgo_00]
+      - [0x1BC5C, asm, psyq/libgte/rmat_00]
+      - [0x1BE5C, asm, psyq/libgte/rmat_02]
+      - [0x1C05C, asm, psyq/libgte/patchgte]
+      - [0x1C13C, asm, psyq/libapi/c68]
+      - [0x1C14C, asm, psyq/libcd/cdrom]
+      - [0x1C17C, asm, psyq/libcd/event]
+      - [0x1C2CC, asm, psyq/libapi/a07]
+      - [0x1C2DC, asm, psyq/libcd/sys]
+      - [0x1C35C, asm, psyq/libcd/cdread2]
+      - [0x1C40C, asm, psyq/libcd/c_002]
+      - [0x1C46C, asm, psyq/libcd/c_003]
+      - [0x1C4EC, asm, psyq/libcd/c_004]
+      - [0x1C5DC, asm, psyq/libcd/c_005]
+      - [0x1C66C, asm, psyq/libcd/c_007]
+      - [0x1C71C, asm, psyq/libcd/c_008]
+      - [0x1C75C, asm, psyq/libcd/c_009]
+      - [0x1C81C, asm, psyq/libcd/c_010]
+      - [0x1C83C, asm, psyq/libcd/c_011]
+      - [0x1D32C, asm, psyq/libcd/bios_1]
+      - [0x1E8AC, asm, psyq/libc2/puts]
+      - [0x1E90C, asm, psyq/libcd/s_002]
+      - [0x1EA1C, asm, psyq/libcd/s_009]
+      - [0x1EA3C, asm, psyq/libcd/s_013]
+      - [0x1EA5C, asm, psyq/libcd/s_014]
+      - [0x1EA7C, asm, psyq/libcd/s_015]
+      - [0x1EA9C, asm, psyq/libcd/s_016]
+      - [0x1EE5C, asm, psyq/libcd/s_021]
+      - [0x1EE7C, asm, psyq/libcd/bios_2]
+      - [0x1EF7C, asm, psyq/libcd/s_023]
+      - [0x1EFAC, asm, psyq/libds/dscb_2]
+      - [0x1EFCC, asm, psyq/libds/dscb_4]
+      - [0x1EFFC, asm, psyq/libetc/vsync]
+      - [0x1F20C, asm, psyq/libapi/a91]
+      - [0x1F21C, asm, psyq/libetc/intr]
+      - [0x1F8DC, asm, psyq/libapi/c114]
+      - [0x1F8FC, asm, psyq/libapi/a23]
+      - [0x1F90C, asm, psyq/libapi/a24]
+      - [0x1F91C, asm, psyq/libapi/a25]
+      - [0x1F92C, asm, psyq/libc2/setjmp]
+      - [0x1F9AC, asm, psyq/libetc/intr_vb]
+      - [0x1FACC, asm, psyq/libetc/intr_dma]
+      - [0x1FD6C, asm, psyq/libetc/vmode]
+      - [0x1FD9C, asm, psyq/libsnd/sscall]
+      - [0x2000C, asm, psyq/libsnd/cres]
+      - [0x2021C, asm, psyq/libsnd/pause]
+      - [0x202BC, asm, psyq/libsnd/play]
+      - [0x202EC, asm, psyq/libsnd/midiread]
+      - [0x209DC, asm, psyq/libsnd/miditime]
+      - [0x20A8C, asm, psyq/libsnd/next]
+      - [0x20B8C, asm, psyq/libsnd/replay]
+      - [0x20BEC, asm, psyq/libsnd/ssclose]
+      - [0x20DBC, asm, psyq/libsnd/ssdecres]
+      - [0x20F8C, asm, psyq/libsnd/ssinit]
+      - [0x2102C, asm, psyq/libsnd/ssinit_c]
+      - [0x2106C, asm, psyq/libsnd/ssopenp]
+      - [0x2136C, asm, psyq/libsnd/cc_0]
+      - [0x213EC, asm, psyq/libsnd/cc_6]
+      - [0x2176C, asm, psyq/libsnd/cc_7]
+      - [0x2183C, asm, psyq/libsnd/cc_10]
+      - [0x2190C, asm, psyq/libsnd/cc_11]
+      - [0x219FC, asm, psyq/libsnd/cc_64]
+      - [0x21AAC, asm, psyq/libsnd/cc_91]
+      - [0x21B3C, asm, psyq/libsnd/cc_98]
+      - [0x21C3C, asm, psyq/libsnd/cc_99]
+      - [0x21D7C, asm, psyq/libsnd/cc_100]
+      - [0x21DEC, asm, psyq/libsnd/cc_101]
+      - [0x21E5C, asm, psyq/libsnd/cc_121]
+      - [0x21F1C, asm, psyq/libsnd/de_0]
+      - [0x21FAC, asm, psyq/libsnd/de_1]
+      - [0x2206C, asm, psyq/libsnd/de_2]
+      - [0x220FC, asm, psyq/libsnd/de_3]
+      - [0x2218C, asm, psyq/libsnd/de_4]
+      - [0x2223C, asm, psyq/libsnd/ccadsr]
+      - [0x2233C, asm, psyq/libsnd/de_5]
+      - [0x223FC, asm, psyq/libsnd/de_6]
+      - [0x224AC, asm, psyq/libsnd/de_7]
+      - [0x2255C, asm, psyq/libsnd/de_8]
+      - [0x2260C, asm, psyq/libsnd/de_9]
+      - [0x226CC, asm, psyq/libsnd/de_10]
+      - [0x2277C, asm, psyq/libsnd/de_11]
+      - [0x2282C, asm, psyq/libsnd/de_12]
+      - [0x2290C, asm, psyq/libsnd/de_13]
+      - [0x229AC, asm, psyq/libsnd/de_14]
+      - [0x22A4C, asm, psyq/libsnd/de_15]
+      - [0x22A7C, asm, psyq/libsnd/de_16]
+      - [0x22AAC, asm, psyq/libsnd/de_17]
+      - [0x22ADC, asm, psyq/libsnd/de_18]
+      - [0x22B0C, asm, psyq/libsnd/de_19]
+      - [0x22B3C, asm, psyq/libsnd/midibend]
+      - [0x22BEC, asm, psyq/libsnd/midicc]
+      - [0x22E1C, asm, psyq/libsnd/midimeta]
+      - [0x22FEC, asm, psyq/libsnd/midinote]
+      - [0x230CC, asm, psyq/libsnd/midiprog]
+      - [0x2313C, asm, psyq/libsnd/sepinit]
+      - [0x2351C, asm, psyq/libsnd/ssplay_2]
+      - [0x2355C, asm, psyq/libsnd/playmode]
+      - [0x2367C, asm, psyq/libsnd/sssattr]
+      - [0x2373C, asm, psyq/libsnd/sssmv]
+      - [0x2378C, asm, psyq/libsnd/ssstart]
+      - [0x23A9C, asm, psyq/libapi/counter]
+      - [0x23C0C, asm, psyq/libsnd/ssstop]
+      - [0x23DEC, asm, psyq/libsnd/sssv]
+      - [0x23EFC, asm, psyq/libsnd/sstable]
+      - [0x2411C, asm, psyq/libsnd/sstick]
+      - [0x2426C, asm, psyq/libsnd/ssvol]
+      - [0x243FC, asm, psyq/libsnd/tempo]
+      - [0x2461C, asm, psyq/libsnd/vol]
+      - [0x2468C, asm, psyq/libsnd/ut_ako]
+      - [0x247DC, asm, psyq/libsnd/ut_gpa]
+      - [0x248EC, asm, psyq/libsnd/ut_gva]
+      - [0x24B2C, asm, psyq/libsnd/ut_key]
+      - [0x24FDC, asm, psyq/libsnd/ut_rdel]
+      - [0x2501C, asm, psyq/libsnd/ut_rdep]
+      - [0x250AC, asm, psyq/libsnd/ut_rev]
+      - [0x2514C, asm, psyq/libsnd/ut_rfb]
+      - [0x2518C, asm, psyq/libsnd/ut_roff]
+      - [0x251AC, asm, psyq/libsnd/ut_ron]
+      - [0x251CC, asm, psyq/libsnd/ut_sva]
+      - [0x2539C, asm, psyq/libsnd/vm_aloc1]
+      - [0x2560C, asm, psyq/libsnd/vm_aloc2]
+      - [0x257DC, asm, psyq/libsnd/vm_doff]
+      - [0x257EC, asm, psyq/libsnd/vm_don]
+      - [0x257FC, asm, psyq/libsnd/vm_f]
+      - [0x25CCC, asm, psyq/libsnd/vm_init]
+      - [0x2601C, asm, psyq/libsnd/vm_key]
+      - [0x267BC, asm, psyq/libsnd/vm_n2p]
+      - [0x2699C, asm, psyq/libsnd/vm_no1]
+      - [0x26F0C, asm, psyq/libsnd/vm_noff]
+      - [0x26F4C, asm, psyq/libsnd/vm_nowof]
+      - [0x2700C, asm, psyq/libsnd/vm_nowon]
+      - [0x274DC, asm, psyq/libsnd/vm_pb]
+      - [0x277AC, asm, psyq/libsnd/vm_prog2]
+      - [0x2781C, asm, psyq/libsnd/vm_seq]
+      - [0x27E9C, asm, psyq/libsnd/vm_stav]
+      - [0x27F6C, asm, psyq/libsnd/vm_vol]
+      - [0x2850C, asm, psyq/libsnd/vm_vsu]
+      - [0x285CC, asm, psyq/libsnd/vs_vab]
+      - [0x2867C, asm, psyq/libsnd/vs_vh]
+      - [0x28ADC, asm, psyq/libsnd/vs_vtb]
+      - [0x28B9C, asm, psyq/libsnd/vs_vtc]
+      - [0x28BCC, asm, psyq/libspu/s_i]
+      - [0x28BEC, asm, psyq/libspu/s_ini]
+      - [0x28D4C, asm, psyq/libapi/a08]
+      - [0x28D5C, asm, psyq/libapi/a12]
+      - [0x28D6C, asm, psyq/libspu/spu]
+      - [0x298AC, asm, psyq/libspu/s_dcb]
+      - [0x298DC, asm, psyq/libspu/s_m_init]
+      - [0x2993C, asm, psyq/libspu/s_m_f]
+      - [0x299BC, asm, psyq/libspu/s_m_int]
+      - [0x29CBC, asm, psyq/libspu/s_snv]
+      - [0x29CEC, asm, psyq/libspu/s_sav]
+      - [0x29FAC, asm, psyq/libspu/s_gnv]
+      - [0x29FDC, asm, psyq/libspu/s_gav]
+      - [0x2A00C, asm, psyq/libspu/s_snc]
+      - [0x2A05C, asm, psyq/libspu/s_sr]
+      - [0x2A14C, asm, psyq/libspu/s_m_util]
+      - [0x2A25C, asm, psyq/libspu/s_srmp]
+      - [0x2A73C, asm, psyq/libspu/s_sra]
+      - [0x2AC0C, asm, psyq/libspu/s_srv]
+      - [0x2AC3C, asm, psyq/libspu/s_grv]
+      - [0x2AC6C, asm, psyq/libspu/s_crwa]
+      - [0x2AE0C, asm, psyq/libapi/a10]
+      - [0x2AE1C, asm, psyq/libspu/s_sk]
+      - [0x2AFDC, asm, psyq/libspu/s_w]
+      - [0x2B03C, asm, psyq/libspu/s_stsa]
+      - [0x2B09C, asm, psyq/libspu/s_stm]
+      - [0x2B0CC, asm, psyq/libspu/s_itc]
+      - [0x2B17C, asm, psyq/libapi/a11]
+      - [0x2B18C, asm, psyq/libspu/s_it]
+      - [0x2B1CC, asm, psyq/libspu/s_sva]
+      - [0x2B7CC, asm, psyq/libspu/s_n2p]
+      - [0x2B9CC, asm, psyq/libspu/s_gvex]
+      - [0x2B9EC, asm, psyq/libspu/s_sca]
+      - [0x2BD6C, asm, psyq/libmcrd/init]
+      - [0x2BDBC, asm, psyq/libapi/c112]
+      - [0x2BDCC, asm, psyq/libcard/init]
+      - [0x2BECC, asm, psyq/libapi/pad]
+      - [0x2C15C, asm, psyq/libapi/a18]
+      - [0x2C16C, asm, psyq/libapi/a19]
+      - [0x2C17C, asm, psyq/libapi/a21]
+      - [0x2C18C, asm, psyq/libapi/patch]
+      - [0x2C22C, asm, psyq/libapi/chclrpad]
+      - [0x2C29C, asm, psyq/libcard/a74]
+      - [0x2C2AC, asm, psyq/libcard/a75]
+      - [0x2C2BC, asm, psyq/libcard/a76]
+      - [0x2C2CC, asm, psyq/libcard/patch]
+      - [0x2C4EC, asm, psyq/libcard/end]
+      - [0x2C56C, asm, psyq/libmcrd/libmcrd]
+      - [0x2DE3C, asm, psyq/libapi/a51]
+      - [0x2DE4C, asm, psyq/libapi/a67]
+      - [0x2DE5C, asm, psyq/libapi/first]
+      - [0x2E0FC, asm, psyq/libapi/a66]
+      - [0x2E10C, asm, psyq/libc2/strcat]
+      - [0x2E1BC, asm, psyq/libc2/strcmp]
+      - [0x2E22C, asm, psyq/libcard/c171]
+      - [0x2E23C, asm, psyq/libcard/c172]
+      - [0x2E24C, asm, psyq/libcard/card]
+      - [0x2E28C, asm, psyq/libcard/a78]
+      - [0x2E29C, asm, psyq/libcard/a80]
+      - [0x2E2AC, asm, psyq/libmcrd/userfunc]
+      - [0x2E3BC, asm, psyq/libmcrd/bios]
+      - [0x2EA6C, asm, psyq/libapi/a09]
+      - [0x2EA7C, asm, psyq/libmcrd/low]
+      - [0x2F50C, asm, psyq/libcard/a79]
+      - [0x2F51C, asm, psyq/libmcrd/unformat]
+      # .data/.sdata/.sbss/.bss per file, in link order (DECISIONS "Plan for splitting .data/.bss per
+      # file", "Data split per file"; evidence per symbol: tools/data_owners.py). Game objects' .data is
+      # packed at 4; their .sdata/.sbss/.bss start 8-aligned (configure.py align_small_data).
+      - [0x2F5CC, .data, inn]                 # 0x8003EDCC inn_table
+      - [0x2F67C, .data, fieldmenu]           # 0x8003EE7C
+      - [0x2F75C, .data, records]             # 0x8003EF5C ID records; module struct records_state
+      - [0x35304, .data, cdload]              # 0x80044B04 module structs cdload_reader, cdload_module
+      - [0x3576C, .data, filetable]           # 0x80044F6C filetable_lba, _sectors, _funcs
+      - [0x38F50, .data, memcard]             # 0x80048750 state; table memcard_funcs
+      - [0x392BC, .data, gamestate]           # 0x80048ABC table gamestate_flags; gamestate_data
+      - [0x3BDDC, .data, heap]                # 0x8004B5DC heap_funcs; object list heap_objects
+      - [0x3BFD0, .data, pad]                 # 0x8004B7D0 pad_state, button map; random module pad_random_table, pad_random
+      # 0x8004DC10-0x8004DCA0: 16 zero bytes, an identity MATRIX (FIGHTSTG reads it) and 3 scale
+      # matrices, which no EXE code uses (only FIGHTSTG reads the identity; nothing reads the rest): the
+      # end of pad's or the start of message's data, or a data-only file. Kept apart as asm.
+      - [0x3E410, data, data_8004DC10]        # 0x8004DC10
+      - [0x3E4A0, .data, message]             # 0x8004DCA0 message_control_handlers ... message_module
+      - [0x3E610, .data, gfx]                 # 0x8004DE10 module struct gfx_module
+      - [0x3E7B8, .data, card]                # 0x8004DFB8
+      # sprite has no .data. font's own tables, then glyph tables only message's message_fonts points
+      # at (0x8004E5A4-0x80051208): font's (or tim's; neither references them).
+      - [0x3E810, .data, font]                # 0x8004E010
+      - [0x41A08, .data, sound]               # 0x80051208 records that sound's sound_banks points at; sound_module
+      - [0x46470, .data, overlay]             # 0x80055C70
+      # Psy-Q objects' .data starts 8-aligned. Owners: the object whose code references it, in
+      # link order; "conflict" = referenced only by another object (often a library global).
+      - [0x46538, data, psyq/libpad/pdmaiini]  # 0x80055D38
+      - [0x46548, data, psyq/libpad/pddirres]  # 0x80055D48
+      - [0x46558, data, psyq/libpad/pdtapres]  # 0x80055D58 libpad globals used by every pd* object
+      - [0x46598, data, psyq/libpad/pdresres]  # 0x80055D98
+      - [0x46618, data, psyq/libc2/ctype_2]    # 0x80055E18 _ctype_ (code reads _ctype_ + 1)
+      - [0x466B0, data, psyq/libgpu/sys]       # 0x80055EB0
+      - [0x46848, data, psyq/libc2/putchar]    # 0x80056048
+      - [0x46858, data, psyq/libgpu/break]     # 0x80056058
+      - [0x46888, data, psyq/libgte/geo_00]    # 0x80056088 sine table
+      - [0x47098, data, psyq/libgte/msc00]     # 0x80056898
+      - [0x470A8, data, psyq/libgte/msc01]     # 0x800568A8
+      - [0x47228, data, psyq/libgte/rmat_00]   # 0x80056A28
+      - [0x4B238, data, psyq/libcd/event]      # 0x8005AA38
+      - [0x4B258, data, psyq/libcd/c_003]      # 0x8005AA58
+      - [0x4B2C8, data, psyq/libcd/c_011]      # 0x8005AAC8
+      - [0x4B320, data, psyq/libcd/bios_1]     # 0x8005AB20 (0x8005AB40 is only read by c_003: conflict)
+      - [0x4B638, data, psyq/libcd/s_016]      # 0x8005AE38
+      - [0x4B6B8, data, psyq/libcd/bios_2]     # 0x8005AEB8
+      - [0x4B6E0, data, psyq/libetc/vsync]     # 0x8005AEE0
+      - [0x4B750, data, psyq/libetc/intr]      # 0x8005AF50
+      - [0x4C7F8, data, psyq/libetc/intr_vb]   # 0x8005BFF8
+      - [0x4C828, data, psyq/libetc/intr_dma]  # 0x8005C028
+      - [0x4C858, data, psyq/libetc/vmode]     # 0x8005C058
+      # 0x8005C068: two words crt0 reads (0x8000, 0x800000: stack and RAM size), then libsnd
+      # globals that ssinit/sstick/vm_* use. Owner unclear (data-only objects?); kept with sscall.
+      - [0x4C868, data, psyq/libsnd/sscall]    # 0x8005C068
+      - [0x4C8A8, data, psyq/libsnd/ssstart]   # 0x8005C0A8 (holds &SsSeqCalledTbyT; ssstart reads it)
+      - [0x4C8C0, data, psyq/libapi/counter]   # 0x8005C0C0
+      - [0x4C8E0, data, psyq/libsnd/vm_n2p]    # 0x8005C0E0
+      - [0x4CA08, data, psyq/libspu/s_ini]     # 0x8005C208 (0x8005C228-0x8005C23C: s_sr/s_srmp/s_sva globals)
+      - [0x4CA80, data, psyq/libspu/spu]       # 0x8005C280
+      - [0x4CAE0, data, psyq/libspu/s_m_init]  # 0x8005C2E0
+      - [0x4CAF0, data, psyq/libspu/s_crwa]    # 0x8005C2F0
+      - [0x4CEF0, data, psyq/libspu/s_n2p]     # 0x8005C6F0 (0x8005C810-0x8005CB10: s_srmp's reverb tables, conflict)
+      - [0x4D310, data, psyq/libapi/pad]       # 0x8005CB10
+      - [0x4D320, data, psyq/libmcrd/libmcrd]  # 0x8005CB20
+      - [0x4D340, data, psyq/libmcrd/userfunc] # 0x8005CB40
+      # .sdata (game only, from _gp). 0x8005CB50 (the heap start, read by heap) goes with
+      # records' 83 words, the items' 4-byte data (an object starts 8-aligned; theirs at 0x8005CB54).
+      # The language records_language and the 60 Hz flag records_60hz are not main's: main reads CCAC with
+      # %hi/%lo but its own .sdata variables after it (main_boot_rect, main_object) through $gp. So they
+      # end records' (or an object of their own between it and main: cdload/filetable/object).
+      - [0x4D350, .sdata, records]            # 0x8005CB50
+      # main: main_screen_pos (NTSC screen position; main's .sdata starts 8-aligned before main_boot_rect),
+      # the boot screen RECT main_boot_rect and main_object.
+      - [0x4D4B0, .sdata, main]               # 0x8005CCB0
+      - [0x4D4C0, .sdata, memcard]            # 0x8005CCC0 the "*" literal, then two unreferenced globals
+      - [0x4D4D0, .sdata, message]            # 0x8005CCD0 2-byte SJIS strings (message's message_cursor_frames)
+      - [0x4D4E0, .sdata, gfx]                # 0x8005CCE0 $gp
+      # .sbss (game only): one 8-aligned slot per object, each used through $gp by its own file only.
+      - [0x4D4E8, sbss, crt0]                 # 0x8005CCE8 crt0 saves $ra here around InitHeap
+      - [0x4D4F0, .sbss, records]             # 0x8005CCF0 menu choice (fieldmenu, STSTATUS use it without $gp: not theirs)
+      - [0x4D4F8, .sbss, cdload]              # 0x8005CCF8 $gp
+      - [0x4D500, .sbss, gfx]                 # 0x8005CD00 $gp
+      - [0x4D508, .sbss, card]                # 0x8005CD08 $gp
+      - [0x4D510, .sbss, sprite]              # 0x8005CD10 $gp
+      - [0x4D518, .sbss, font]                # 0x8005CD18 $gp
+      - [0x4D520, .sbss, tim]                 # 0x8005CD20 $gp
+      # .bss
+      - [0x4D528, .bss, cdload]               # 0x8005CD28 last sector header
+      - [0x4D538, .bss, sound]                # 0x8005CD38 three buffers (sound's sound_buffers points at them)
+      # Psy-Q .bss: per object where clear; libgs, libcd and libsnd hold library globals that many
+      # objects use (COMMON), interleaved with the objects' own, so each is one block.
+      - [0x6F538, bss, psyq/libpad/pddirres]  # 0x8007ED38
+      - [0x6F7A8, bss, psyq/libpad/pdtapres]  # 0x8007EFA8
+      - [0x70198, bss, psyq/libpad/pdresres]  # 0x8007F998
+      - [0x701B0, bss, psyq/libgpu/sys]       # 0x8007F9B0
+      - [0x71A00, bss, psyq/libc2/putchar]    # 0x80081200
+      - [0x71A20, bss, psyq/libgs/bss]        # 0x80081220 gs_001 ... gs_133
+      - [0x71C38, bss, psyq/libgte/patchgte]  # 0x80081438
+      - [0x71C48, bss, psyq/libcd/bss]        # 0x80081448 c_002 ... bios_1
+      - [0x71CF4, bss, psyq/libds/dscb_2]     # 0x800814F4
+      - [0x71D00, bss, psyq/libsnd/bss]       # 0x80081500 midiread ... vs_vh
+      - [0x73038, bss, psyq/libspu/spu]       # 0x80082838
+      - [0x73050, bss, psyq/libapi/pad]       # 0x80082850
+      - [0x73060, bss, psyq/libapi/patch]     # 0x80082860
+      - [0x73070, bss, psyq/libapi/chclrpad]  # 0x80082870
+      - [0x73080, bss, psyq/libcard/patch]    # 0x80082880
+      - [0x73090, bss, psyq/libcard/end]      # 0x80082890
+      - [0x730A0, bss, psyq/libmcrd/libmcrd]  # 0x800828A0
+      - [0x73130, bss, psyq/libapi/first]     # 0x80082930
+      - [0x73160, bss, psyq/libmcrd/userfunc] # 0x80082960
+      - [0x731B0, bss, psyq/libmcrd/bios]     # 0x800829B0
+      - [0x731F0, bss, psyq/libmcrd/low]      # 0x800829F0
+
+  # In the file but not part of the program image proper: zeros over .bss and the
+  # tier-1 overlay slot/heap, then a 320x480 TIM that tier-2 overlays later overwrite.
+  - name: tail
+    type: code
+    start: 0x734B0
+    vram: 0x80082CB0
+    subsegments:
+      - [0x734B0, bin, heap_zero]        # 0x80082CB0-0x800A5DE0
+      - [0x965E0, bin, title_tim]        # 0x800A5DE0 TIM (8-byte header + pixels)
+      - [0xE15F4, bin, tail_pad]         # 0x800F0DF4 zero padding to the sector
+
+  - [0xE1800]

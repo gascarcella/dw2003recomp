@@ -1,0 +1,10 @@
+// WSTAG540 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag540_update = 0x800A5DE0; // type:func
+wstag540_start = 0x800A5E28; // type:func
+wstag540_setup = 0x800A5E84; // type:func
+wstag540_battle_lists = 0x800A61BC;
+wstag540_vram_places = 0x800A61D8;
+wstag540_actors = 0x800A6334;
+wstag540_sprites = 0x800A6344;
+wstag540_map_events = 0x800A6680;
+wstag540_funcs = 0x800A67A0;

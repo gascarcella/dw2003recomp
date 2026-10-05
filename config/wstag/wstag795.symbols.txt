@@ -1,0 +1,24 @@
+// WSTAG795 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag795_sprite_anim_advance_b = 0x800A5DE0; // type:func
+wstag795_door_update = 0x800A5F00; // type:func
+wstag795_door_message = 0x800A6180; // type:func
+wstag795_door_create = 0x800A61D0; // type:func
+wstag795_door_new = 0x800A6200; // type:func
+wstag795_countdown_draw = 0x800A6234; // type:func
+wstag795_countdown_update = 0x800A637C; // type:func
+wstag795_countdown_new = 0x800A654C; // type:func
+wstag795_update = 0x800A6578; // type:func
+wstag795_start = 0x800A6654; // type:func
+wstag795_event_830_end = 0x800A66B0; // type:func
+wstag795_event_840_end = 0x800A66DC; // type:func
+wstag795_setup = 0x800A6728; // type:func
+D_WSTAG795_800A6A1C = 0x800A6A1C; // size:0xC
+D_WSTAG795_800A6A28 = 0x800A6A28; // size:0x2C
+D_WSTAG795_800A6A54 = 0x800A6A54; // size:0x1C
+wstag795_battle_lists = 0x800A6C94;
+wstag795_vram_places = 0x800A6CB0;
+wstag795_actors = 0x800A70C0;
+wstag795_sprites = 0x800A70F4;
+wstag795_map_events = 0x800A7280;
+wstag795_funcs = 0x800A7328;
+wstag795_events = 0x800A732C;

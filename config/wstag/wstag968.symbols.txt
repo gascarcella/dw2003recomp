@@ -1,0 +1,12 @@
+// WSTAG968 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag968_set_exits = 0x800A5DE0; // type:func
+wstag968_update = 0x800A5EE0; // type:func
+wstag968_start = 0x800A5F54; // type:func
+wstag968_setup = 0x800A5FB0; // type:func
+wstag968_exits = 0x800A61A0;
+wstag968_vram_places = 0x800A61B8;
+wstag968_actors = 0x800A62BC;
+wstag968_sprites = 0x800A62D0;
+wstag968_map_events = 0x800A62F4;
+wstag968_funcs = 0x800A633C;
+wstag968_battle_lists = 0x800A6B80;

@@ -1,0 +1,65 @@
+# splat config for the tier-1 overlay AAA/PRO/STITSHOP.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: STITSHOP.PRO
+sha1: 7b483f1898fe7c11605017259f8daa6cc8e8bdcc
+options:
+  basename: STITSHOP.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/STITSHOP.PRO
+  elf_path: build/stitshop/STITSHOP.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/stitshop
+  asm_path: asm/stitshop
+  src_path: src/stitshop
+  asset_path: assets/stitshop
+  ld_script_path: build/stitshop/STITSHOP.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/stitshop.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/stitshop/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/stitshop/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: stitshop
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_STITSHOP_<addr>, D_STITSHOP_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: STITSHOP_$VRAM
+    subsegments:
+      # Two files (docs/DECISIONS.md "Overlay file split"). The six jump tables are all at 0 mod 8 and each is a
+      # multiple of 8 bytes long, so parity can't show a break; .data is referenced in an order consistent with
+      # any split. The evidence is a duplicated helper: 85934 and 8739C are byte for byte the same method, one
+      # in each of two parallel window objects (8360C..859C0, create 8596C; 859C0..87428, create 873D4), as a
+      # static of the same name in two files would be. Position (weak): the second object's first function.
+      - [0x0,   .rodata, stitshop_8008321C]
+      - [0xD0,  .rodata, stitshop_800859C0]
+      - [0x56C,  c, stitshop_8008321C]   # 0x8008321C .text: entry point, fade, the first window object
+      - [0x2D10, c, stitshop_800859C0]   # 0x800859C0: the second window object, ..., the main object and the
+                                         # module's function table (8D1AC); finer splits not proven
+      # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t stitshop;
+      # DECISIONS "Overlay .data/.bss per file"). 8321C has no .data.
+      - [0x9DF8, .data, stitshop_800859C0]   # 0x8008CAA8 (only 859C0 references it); no .bss
+  - [0xA528]

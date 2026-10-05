@@ -1,0 +1,24 @@
+// WSTAG305 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag305_sprite_anim_play_once = 0x800A5DE0; // type:func
+wstag305_sound_anim_update = 0x800A5EB8; // type:func
+wstag305_sound_anim_message = 0x800A6018; // type:func
+wstag305_sound_anim_create = 0x800A6084; // type:func
+wstag305_update = 0x800A60B4; // type:func
+wstag305_start = 0x800A63A8; // type:func
+wstag305_event_350_end = 0x800A6404; // type:func
+wstag305_event_351_end = 0x800A6430; // type:func
+wstag305_event_660_end = 0x800A645C; // type:func
+wstag305_event_661_end = 0x800A6488; // type:func
+wstag305_event_890_end = 0x800A6498; // type:func
+wstag305_event_893_end = 0x800A64C4; // type:func
+wstag305_event_894_end = 0x800A64D4; // type:func
+wstag305_event_895_end = 0x800A6500; // type:func
+wstag305_event_960_end = 0x800A6510; // type:func
+wstag305_setup = 0x800A653C; // type:func
+D_WSTAG305_800A7FFC = 0x800A7FFC; // size:0x18
+wstag305_vram_places = 0x800A8014;
+wstag305_actors = 0x800A94BC;
+wstag305_sprites = 0x800A95C4;
+wstag305_map_events = 0x800A9678;
+wstag305_funcs = 0x800A96C0;
+wstag305_events = 0x800A96C4;

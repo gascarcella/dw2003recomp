@@ -1,0 +1,17 @@
+// WSTAG640 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag640_anim_loop = 0x800A5DE0; // type:func
+wstag640_anim_update = 0x800A5ED4; // type:func
+wstag640_anim_new = 0x800A6040; // type:func
+wstag640_set_exits = 0x800A606C; // type:func
+wstag640_update = 0x800A616C; // type:func
+wstag640_start = 0x800A61F4; // type:func
+wstag640_setup = 0x800A6250; // type:func
+D_WSTAG640_800A6354 = 0x800A6354; // size:0x34
+D_WSTAG640_800A6388 = 0x800A6388; // size:0x34
+D_WSTAG640_800A63BC = 0x800A63BC; // size:0x30
+wstag640_exits = 0x800A6634;
+wstag640_battle_lists = 0x800A686C;
+wstag640_vram_places = 0x800A6888;
+wstag640_sprites = 0x800A68E8;
+wstag640_map_events = 0x800A6ABC;
+wstag640_funcs = 0x800A6B34;

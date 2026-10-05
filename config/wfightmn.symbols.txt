@@ -1,0 +1,52 @@
+// Symbol names for AAA/PRO/WFIGHTMN.PRO (splat format). Tier-2 overlays share one address range (0x800A5DE0+),
+// so each has its own symbol file. The EXE's names come from config/symbol_addrs.txt, FIGHTSTG's from
+// config/fightstg.symbols.txt (configure.py passes them on as build/fightstg/names_for_tier2.txt).
+// Game code: names (DECISIONS "Naming conventions"). WFIGHTMN runs a normal battle: a main object and one handler
+// per battle event type (wfightmn_handlers, wfightmn_run_events).
+wfightmn_loader_update = 0x800A5ECC; // type:func
+wfightmn_loader_create = 0x800A6414; // type:func
+wfightmn_init_layers = 0x800A6440; // type:func
+wfightmn_init_members = 0x800A66B0; // type:func
+wfightmn_roll_first_strike = 0x800A684C; // type:func
+wfightmn_check_regen = 0x800A6920; // type:func
+wfightmn_check_regen_all = 0x800A69B8; // type:func
+wfightmn_mark_took_part = 0x800A69F0; // type:func
+wfightmn_mark_chosen_took_part = 0x800A6B18; // type:func
+wfightmn_main_update = 0x800A6C44; // type:func
+wfightmn_end_blast = 0x800A7328; // type:func
+wfightmn_party_turn = 0x800A7418; // type:func
+wfightmn_digivolve = 0x800A77B4; // type:func
+wfightmn_switch_member = 0x800A78D8; // type:func
+wfightmn_team_tech = 0x800A7B08; // type:func
+wfightmn_battle_end = 0x800A7C00; // type:func
+wfightmn_escape = 0x800A7FE4; // type:func
+wfightmn_regen_end = 0x800A8118; // type:func
+wfightmn_regen = 0x800A8260; // type:func
+wfightmn_field_end = 0x800A8458; // type:func
+wfightmn_poison = 0x800A84D0; // type:func
+wfightmn_status_end = 0x800A8770; // type:func
+wfightmn_modifier_end = 0x800A88CC; // type:func
+wfightmn_confused_turn = 0x800A89F0; // type:func
+wfightmn_seal_end = 0x800A8AC8; // type:func
+wfightmn_blast = 0x800A8BF4; // type:func
+wfightmn_blast_end = 0x800A8E90; // type:func
+wfightmn_knockout = 0x800A8F88; // type:func
+wfightmn_boost_end = 0x800A9584; // type:func
+wfightmn_revert_form = 0x800A9640; // type:func
+wfightmn_victory_wait = 0x800A97BC; // type:func
+wfightmn_boss_enters = 0x800A988C; // type:func
+wfightmn_final_phase_end = 0x800A9C10; // type:func
+wfightmn_run_events = 0x800A9CB4; // type:func
+wfightmn_main_create = 0x800A9FF0; // type:func
+wfightmn_note_copied_tech = 0x800AA06C; // type:func
+wfightmn_add_gauge = 0x800AA110; // type:func
+wfightmn_tech_script_create = 0x800AA1F0; // type:func
+wfightmn_update_idle_anim = 0x800AA9F0; // type:func
+wfightmn_count_boss_hits = 0x800AAB10; // type:func
+wfightmn_check_final_phase_end = 0x800AABA0; // type:func
+wfightmn_cap_damage = 0x800AABF0; // type:func
+wfightmn_screen_rect = 0x800AAD08;
+wfightmn_kind_effects = 0x800AAD10;
+wfightmn_stat_effects = 0x800AAD64;
+wfightmn_handlers = 0x800AADE4;
+wfightmn_action_effects = 0x800AAE50;

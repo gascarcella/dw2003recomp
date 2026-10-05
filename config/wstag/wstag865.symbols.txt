@@ -1,0 +1,12 @@
+// WSTAG865 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag865_set_exits = 0x800A5DE0; // type:func
+wstag865_update = 0x800A5EE0; // type:func
+wstag865_start = 0x800A5F54; // type:func
+wstag865_setup = 0x800A5FB0; // type:func
+wstag865_exits = 0x800A67B4;
+wstag865_battle_lists = 0x800AA228;
+wstag865_vram_places = 0x800AA538;
+wstag865_actors = 0x800AA854;
+wstag865_sprites = 0x800AA898;
+wstag865_map_events = 0x800AA8BC;
+wstag865_funcs = 0x800AA904;

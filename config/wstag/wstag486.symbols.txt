@@ -1,0 +1,13 @@
+// WSTAG486 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag486_color = 0x800A5DE0;
+wstag486_update = 0x800A5DE4; // type:func
+wstag486_start = 0x800A5E2C; // type:func
+wstag486_event_745_end = 0x800A5E88; // type:func
+wstag486_setup = 0x800A5EB4; // type:func
+wstag486_battle_lists = 0x800A62E8;
+wstag486_vram_places = 0x800A6304;
+wstag486_actors = 0x800A674C;
+wstag486_sprites = 0x800A678C;
+wstag486_map_events = 0x800A6B7C;
+wstag486_funcs = 0x800A6CB4;
+wstag486_events = 0x800A6CB8;

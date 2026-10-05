@@ -1,0 +1,18 @@
+// WSTAG635 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag635_anim_loop = 0x800A5DE0; // type:func
+wstag635_anim_update = 0x800A5ED4; // type:func
+wstag635_anim_new = 0x800A6040; // type:func
+wstag635_set_exits = 0x800A606C; // type:func
+wstag635_update = 0x800A616C; // type:func
+wstag635_start = 0x800A61F4; // type:func
+wstag635_setup = 0x800A6250; // type:func
+D_WSTAG635_800A6360 = 0x800A6360; // size:0x34
+D_WSTAG635_800A6394 = 0x800A6394; // size:0x34
+D_WSTAG635_800A63C8 = 0x800A63C8; // size:0x30
+wstag635_exits = 0x800A6640;
+wstag635_battle_lists = 0x800A6878;
+wstag635_vram_places = 0x800A6894;
+wstag635_actors = 0x800A6DBC;
+wstag635_sprites = 0x800A6DE4;
+wstag635_map_events = 0x800A6F3C;
+wstag635_funcs = 0x800A6FB4;

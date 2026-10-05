@@ -1,0 +1,27 @@
+// WSTAG820 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag820_sprite_anim_play_once = 0x800A5DE0; // type:func
+wstag820_sprite_anim1_update = 0x800A5EB8; // type:func
+wstag820_sprite_anim1_create = 0x800A5FB4; // type:func
+wstag820_update = 0x800A6008; // type:func
+wstag820_start = 0x800A6160; // type:func
+wstag820_anim_advance = 0x800A61BC; // type:func
+wstag820_two_sprite_draw = 0x800A62DC; // type:func
+wstag820_is_on_screen = 0x800A63C4; // type:func
+wstag820_two_sprite_update = 0x800A6488; // type:func
+wstag820_two_sprite_create = 0x800A6718; // type:func
+wstag820_two_sprite_create_fixed = 0x800A6774; // type:func
+wstag820_two_sprite_message = 0x800A67BC; // type:func
+wstag820_event_1060_end = 0x800A67F4; // type:func
+wstag820_event_1070_end = 0x800A6840; // type:func
+wstag820_event_1080_end = 0x800A686C; // type:func
+wstag820_setup = 0x800A68A4; // type:func
+D_WSTAG820_800A711C = 0x800A711C; // size:0x90
+D_WSTAG820_800A71DC = 0x800A71DC; // size:0x18
+D_WSTAG820_800A71F4 = 0x800A71F4; // size:0x58
+wstag820_battle_lists = 0x800A745C;
+wstag820_vram_places = 0x800A7478;
+wstag820_actors = 0x800A7640;
+wstag820_sprites = 0x800A7664;
+wstag820_map_events = 0x800A7688;
+wstag820_funcs = 0x800A76E8;
+wstag820_events = 0x800A76EC;

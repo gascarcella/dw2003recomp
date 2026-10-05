@@ -1,0 +1,13 @@
+// WSTAG967 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag967_color = 0x800A5DE0;
+wstag967_set_exits = 0x800A5DE4; // type:func
+wstag967_update = 0x800A5EE4; // type:func
+wstag967_start = 0x800A5F58; // type:func
+wstag967_setup = 0x800A5FB4; // type:func
+wstag967_exits = 0x800A6144;
+wstag967_vram_places = 0x800A6154;
+wstag967_actors = 0x800A62C0;
+wstag967_sprites = 0x800A62D4;
+wstag967_map_events = 0x800A63C0;
+wstag967_funcs = 0x800A63F0;
+wstag967_battle_lists = 0x800A6A24;

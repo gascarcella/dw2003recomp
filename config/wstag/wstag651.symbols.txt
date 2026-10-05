@@ -1,0 +1,12 @@
+// WSTAG651 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag651_update = 0x800A5DE0; // type:func
+wstag651_start = 0x800A5E28; // type:func
+wstag651_event_1462_end = 0x800A5E84; // type:func
+wstag651_setup = 0x800A5EB0; // type:func
+wstag651_battle_lists = 0x800A6238;
+wstag651_vram_places = 0x800A6254;
+wstag651_actors = 0x800A6E44;
+wstag651_sprites = 0x800A6E94;
+wstag651_map_events = 0x800A6FFC;
+wstag651_funcs = 0x800A7194;
+wstag651_events = 0x800A7198;

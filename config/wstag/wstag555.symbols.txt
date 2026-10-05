@@ -1,0 +1,18 @@
+// WSTAG555 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag555_anim_loop = 0x800A5DE0; // type:func
+wstag555_anim_update = 0x800A5ED4; // type:func
+wstag555_anim_new = 0x800A6040; // type:func
+wstag555_update = 0x800A606C; // type:func
+wstag555_start = 0x800A60D0; // type:func
+wstag555_event_380_end = 0x800A612C; // type:func
+wstag555_setup = 0x800A6158; // type:func
+D_WSTAG555_800A63E4 = 0x800A63E4; // size:0x34
+D_WSTAG555_800A6418 = 0x800A6418; // size:0x34
+D_WSTAG555_800A644C = 0x800A644C; // size:0x30
+wstag555_battle_lists = 0x800A668C;
+wstag555_vram_places = 0x800A66A8;
+wstag555_actors = 0x800A6734;
+wstag555_sprites = 0x800A673C;
+wstag555_map_events = 0x800A6900;
+wstag555_funcs = 0x800A69C0;
+wstag555_events = 0x800A69C4;

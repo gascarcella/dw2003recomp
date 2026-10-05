@@ -1,0 +1,78 @@
+# splat config for the tier-1 overlay AAA/PRO/STCRDDEK.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: STCRDDEK.PRO
+sha1: f813f89a1ab17597e6a429c42d0acd81dd41aa49
+options:
+  basename: STCRDDEK.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/STCRDDEK.PRO
+  elf_path: build/stcrddek/STCRDDEK.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/stcrddek
+  asm_path: asm/stcrddek
+  src_path: src/stcrddek
+  asset_path: assets/stcrddek
+  ld_script_path: build/stcrddek/STCRDDEK.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/stcrddek.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/stcrddek/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/stcrddek/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  ld_bss_is_noload: False  # .bss is in the file as zeros
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: stcrddek
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_STCRDDEK_<addr>, D_STCRDDEK_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: STCRDDEK_$VRAM
+    subsegments:
+      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"). All five jump tables are at an
+      # even offset and every table's length is a multiple of 8, so parity proves nothing here; the
+      # boundaries come from shared code (tools/overlay_xref.py, masked cross-overlay comparison).
+      - [0x0,   .rodata, stcrddek_800831F0]
+      - [0x100, .rodata, stcrddek_800867E8]
+      - [0x3A8, .rodata, stcrddek_80088874]
+      - [0x540, c, stcrddek_800831F0]   # 0x800831F0 .text: root 831F0, start 832E8, fade object (as inn.c's),
+                                        # the deck editor 86574 and two small objects (one file: no evidence)
+      - [0x3B38, c, stcrddek_800867E8]  # 0x800867E8 name entry (strong): starts with window_anim.h's static
+                                        # pair (867E8, 8687C), and its 15 functions up to the create 887D4 are
+                                        # the same code as STDGNAME 83378..85364 and STPLNMET 83D70..85E10
+      - [0x5BC4, c, stcrddek_80088874]  # 0x80088874 scroll bar object 88874..88AC8 (the same code as STGDGLAB
+                                        # 8A670, STSTATUS 99430; maybe its own file) and the main object
+                                        # 89E98/8A0B8 that the root creates
+      - [0x7450, c, stcrddek_8008A100]  # 0x8008A100 the overlay's helper table D_STCRDDEK_8008B830 (load,
+                                        # loaded?, window open/step, lerp start/step): the same tail ends
+                                        # STCRDSHP, STCRDABM, STGMCARD, STITSHOP, STGDGLAB, ...; its own
+                                        # window_anim copy can't be in 867E8's file (position moderate)
+      # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t stcrddek;
+      # DECISIONS "Overlay .data/.bss per file"). The name entry's .bss comes after
+      # 8A100's .data, so it is .bss.
+      - [0x77D4, .data, stcrddek_800831F0]   # 0x8008A484 (after the last function's jr ra)
+      - [0x77EC, .data, stcrddek_800867E8]   # 0x8008A49C the name entry's character tables
+      - [0x8B80, .data, stcrddek_8008A100]   # 0x8008B830 stcrddek_util (its function table)
+      - [0x8B98, .bss, stcrddek_800867E8]    # 0x8008B848 stcrddek_name_pages (only 867E8 uses it)
+  - [0x8BA4]

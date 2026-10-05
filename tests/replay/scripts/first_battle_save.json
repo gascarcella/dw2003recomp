@@ -1,0 +1,1796 @@
+{
+  "name": "first_battle_save",
+  "description": "From boot (new_game's steps) through the registration and the Asuka lobby to the story's first battle (scripted, map 0x200 at progress 3), won with CROSS on every menu; then a save at the Asuka Inn (map 0x20A, STGMCARD), a hard reset and Continue to load it. One script: the save point is only reachable through the battle's story path. Waits are on game state (stage, map, progress, memory card state) or player position (walk), so it holds on both CPU cores. Then, from the loaded save, the Asuka Item Shop (map 0x20D, STITSHOP shop 2): four Power Charges bought with the quantity capped by money (50 BIT -> 2), a purchase refused for lack of money, back to the field. The shop is appended after the load so every earlier checkpoint stays as it was. Then a tour of the other menus reachable from boot: the lab's Digimon chart (STGDGLAB, map 0x206), the inn's stairs to maps 0x20B and 0x201 and the card arena (0x211), whose introduction gives the card case (item 0x192); with it the field menu's party page opens the card album (STCRDABM) and the deck editor (STCRDDEK) through STSTATUS, and the arena's counter becomes the card shop (STCRDSHP: Buy opened, nothing affordable). Then STGTRAIN: from the arena through the inn and Asuka City to map 0x21D (an encounter area, crossed before encounter_timer runs out) and its trainer; the party has no TP, so a training is refused (\"Not enough TP.\"), and the script leaves.",
+  "max_frames": 55000,
+  "default_timeout": 3000,
+  "steps": [
+    {
+      "type": "wait_stage",
+      "stage": 22,
+      "word0": "0x80083DC0",
+      "comment": "CNTY_SEL (overlay_files[22]) loaded: the country / language select"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 2,
+      "release": 18,
+      "until": {
+        "type": "wait_map",
+        "map": "0xE02"
+      },
+      "timeout": 1500,
+      "comment": "START until the opening movie's map: confirms the default choice 0 = English (cnty_sel_languages[0] = 2 = ENG), records_language 2, once the panels have slid in and the cursor is up (cnty_sel_update_menu step 7 is the only step that reads START, the fade-out steps ignore it); the EU game then goes to map 0xE02 = the opening movie"
+    },
+    {
+      "type": "wait_stage",
+      "stage": 14,
+      "comment": "STDWTITL loaded (map 0xE02, stdwtitl_movie_screen for movie 1)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 30,
+      "release": 30,
+      "until": {
+        "type": "wait_map",
+        "map": "0xE00"
+      },
+      "timeout": 3000,
+      "comment": "START skips the movie (stdwtitl_update_movie checks pad pressed bit 3). On the dynarec core the player spins in StGetNext and samples the pad rarely (the STR stream never reaches its last frame), so a short tap can fall between two samples: hold 30 / release 30 until the title screen proper (map 0xE00). On -interpreter the movie decodes normally and the first press skips it"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 2,
+      "release": 18,
+      "repeat": 40,
+      "comment": "the logo slides in, shines and glows; START opens the New Game / Continue menu only at stdwtitl_menu step 2 (600 ticks there without START start the demo), every other step ignores it, so tap START for 800 frames instead of waiting a fixed time"
+    },
+    {
+      "type": "wait_frames",
+      "frames": 60,
+      "comment": "the menu blinks and the two choices slide out (steps 3-5: 12 + 15 + 6 ticks)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "UP"
+      ],
+      "frames": 4,
+      "comment": "cursor 0 = New Game (the menu opens on cursor 1 = Continue)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 4,
+      "release": 30,
+      "until": {
+        "type": "wait_stage",
+        "stage": 2
+      },
+      "timeout": 1500,
+      "comment": "confirm until FIELDSTG is loaded: physical CROSS is logical bit 13 (PAD_PRESSED(0xD)) for non-Japanese languages; stdwtitl_title_apply_choice case 1: gamestate_new_game, set_next_map(0x2D7)"
+    },
+    {
+      "type": "wait_map",
+      "map": "0x2D7",
+      "timeout": 200
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_map",
+        "map": "0xE03"
+      },
+      "timeout": 15000,
+      "comment": "the intro (maps 0x2D7-0x2D9), the registration in STPLNMET (map 0x500: CROSS types the name, the default partner set) and the chamber capsule, every line confirmed with CROSS, until the login movie (STDWTITL map 0xE03)"
+    },
+    {
+      "type": "checkpoint",
+      "name": "login_movie",
+      "comment": "after the registration: the name, the partner set and the three Digimon records are in gamestate_data"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 400,
+      "release": 2,
+      "until": {
+        "type": "wait_map",
+        "map": "0x207"
+      },
+      "timeout": 3000,
+      "comment": "skip the login movie at once with one long START hold, as new_game did first. The dynarec core's STR playback is fragile: waiting 150 frames first, or tapping every 30 frames, made the emulated machine run off (reads from 0x17FF0500, a reset, then 'Unrecoverable error while running recompiler' at PC 0xFF050014), at speed 1 too"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_map",
+        "map": "0x203"
+      },
+      "timeout": 5000,
+      "comment": "the arrival scenes in Asuka (map 0x207, WSTAG225: progress 1 -> 2) until the Main Lobby"
+    },
+    {
+      "type": "checkpoint",
+      "name": "asuka_lobby"
+    },
+    {
+      "type": "walk",
+      "x": 600,
+      "y": 440,
+      "comment": "Main Lobby (map 0x203, WSTAG210; positions from its attribute map, layer 0): down the ramp (the player can move once the arrival scene ends)"
+    },
+    {
+      "type": "walk",
+      "x": 545,
+      "y": 438
+    },
+    {
+      "type": "walk",
+      "x": 470,
+      "y": 355,
+      "comment": "up the stairs"
+    },
+    {
+      "type": "walk",
+      "x": 400,
+      "y": 330
+    },
+    {
+      "type": "walk",
+      "x": 359,
+      "y": 284,
+      "tol": 4,
+      "comment": "below the Tamer Service counter (actor 49 at (361, 221))"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "UP",
+        "RIGHT"
+      ],
+      "frames": 3,
+      "comment": "face the counter (direction 5, as event 13 places the player)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_map",
+        "map": "0x204"
+      },
+      "timeout": 3000,
+      "comment": "talk to Tamer Service (talk 13 starts event 13: the first answer leads to the admin room, map 0x204). Before progress 3 the lobby's exit to the city (map event 6, event 20) turns the player back"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_stage",
+        "stage": 6
+      },
+      "timeout": 8000,
+      "comment": "the admin room scene (WSTAG212: progress 2 -> 3), the walk to Asuka City (map 0x200), whose progress-3 event starts the first battle (map 0x600)"
+    },
+    {
+      "type": "checkpoint",
+      "name": "battle_start",
+      "comment": "FIGHTSTG loaded: the scripted first battle of the story (one enemy)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_stage",
+        "stage": 20
+      },
+      "timeout": 6000,
+      "comment": "CROSS on every menu: Fight, the default technique and target; the enemy falls to the first attacks"
+    },
+    {
+      "type": "checkpoint",
+      "name": "battle_won",
+      "comment": "STFGTREP (the battle report) loaded: HP/MP after the battle, records_battle_results; the experience is not added yet"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_stage",
+        "stage": 2
+      },
+      "timeout": 3000,
+      "comment": "through the report"
+    },
+    {
+      "type": "checkpoint",
+      "name": "battle_end",
+      "comment": "back in FIELDSTG (map 0x200): the report has added the experience (stfgtrep_add_exp, level-ups and their stat draws)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_map",
+        "map": "0x206"
+      },
+      "timeout": 4000,
+      "comment": "the post-battle scene in Asuka City, which ends in the lab (map 0x206, progress 4)"
+    },
+    {
+      "type": "checkpoint",
+      "name": "back_on_field"
+    },
+    {
+      "type": "walk",
+      "x": 150,
+      "y": 262,
+      "comment": "the lab (map 0x206, WSTAG220): down the stairs to the exit to Asuka City"
+    },
+    {
+      "type": "walk",
+      "x": 190,
+      "y": 300
+    },
+    {
+      "type": "walk",
+      "x": 230,
+      "y": 350
+    },
+    {
+      "type": "walk",
+      "x": 203,
+      "y": 387
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x200"
+      },
+      "timeout": 600,
+      "comment": "an exit (FieldstgMapEvent type 1) is taken with CROSS while standing on it (fieldstg_map_events_update)"
+    },
+    {
+      "type": "walk",
+      "x": 1000,
+      "y": 530,
+      "comment": "Asuka City (map 0x200, WSTAG200), arriving at (1040, 512): along the lower street"
+    },
+    {
+      "type": "walk",
+      "x": 935,
+      "y": 558
+    },
+    {
+      "type": "walk",
+      "x": 830,
+      "y": 512
+    },
+    {
+      "type": "walk",
+      "x": 760,
+      "y": 505
+    },
+    {
+      "type": "walk",
+      "x": 740,
+      "y": 545
+    },
+    {
+      "type": "walk",
+      "x": 680,
+      "y": 545
+    },
+    {
+      "type": "walk",
+      "x": 672,
+      "y": 515,
+      "comment": "the foot of the stairs"
+    },
+    {
+      "type": "walk",
+      "x": 730,
+      "y": 440,
+      "comment": "up to the upper street"
+    },
+    {
+      "type": "walk",
+      "x": 700,
+      "y": 400
+    },
+    {
+      "type": "walk",
+      "x": 661,
+      "y": 372,
+      "comment": "the door to map 0x20A"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x20A"
+      },
+      "timeout": 600
+    },
+    {
+      "type": "walk",
+      "x": 240,
+      "y": 212,
+      "comment": "Asuka Inn (map 0x20A, WSTAG235): to the save attendant (actor 21 at (175, 192))"
+    },
+    {
+      "type": "walk",
+      "x": 207,
+      "y": 208,
+      "tol": 3
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "UP",
+        "LEFT"
+      ],
+      "frames": 3,
+      "comment": "face her (direction 3, as event 1200 places the player)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_stage",
+        "stage": 12
+      },
+      "timeout": 3000,
+      "comment": "talk, accept: event 1200 goes to STGMCARD in save mode (map 0xC01, entry -1)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 30,
+      "until": {
+        "type": "wait_mem",
+        "addr": "0x80048750",
+        "size": 4,
+        "value": 2
+      },
+      "timeout": 1500,
+      "comment": "STGMCARD: choose memory card slot 1 (the default) until the card is accessed (memcard_state.state 2, MemCardAccept)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 30,
+      "until": {
+        "type": "wait_mem",
+        "addr": "0x800487E0",
+        "size": 4,
+        "value": 8
+      },
+      "timeout": 1500,
+      "comment": "the runner's card is empty: 'File cannot be found. Create new data?' YES (the default) until the create command (memcard_state.command 8)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 30,
+      "until": {
+        "type": "wait_mem",
+        "addr": "0x80048A50",
+        "size": 4,
+        "value": "0x2700"
+      },
+      "timeout": 3000,
+      "comment": "after the file's header is written: 'Save here?' on save slot 1, CROSS, until the slot's 0x2700 bytes are written (memcard_state.done)"
+    },
+    {
+      "type": "checkpoint",
+      "name": "saved",
+      "comment": "the slot is on the card: STGMCARD copied the first 0x26C4 bytes of gamestate_data into it"
+    },
+    {
+      "type": "wait_frames",
+      "frames": 120,
+      "comment": "'Saved.' appears (window animation)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 4,
+      "comment": "dismiss 'Saved.' (TRIANGLE does nothing there)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "TRIANGLE"
+      ],
+      "frames": 2,
+      "release": 30,
+      "until": {
+        "type": "wait_stage",
+        "stage": 2
+      },
+      "timeout": 1500,
+      "comment": "Back (TRIANGLE: logical cancel) from the save slots, then from the card choice: STGMCARD returns to the field (map 0x20A)"
+    },
+    {
+      "type": "reset",
+      "comment": "reboot (hard reset; the memory card keeps the save)"
+    },
+    {
+      "type": "wait_stage",
+      "stage": 22,
+      "word0": "0x80083DC0",
+      "comment": "CNTY_SEL (overlay_files[22]) loaded: the country / language select"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 2,
+      "release": 18,
+      "until": {
+        "type": "wait_map",
+        "map": "0xE02"
+      },
+      "timeout": 1500,
+      "comment": "START until the opening movie's map: confirms the default choice 0 = English (cnty_sel_languages[0] = 2 = ENG), records_language 2, once the panels have slid in and the cursor is up (cnty_sel_update_menu step 7 is the only step that reads START, the fade-out steps ignore it); the EU game then goes to map 0xE02 = the opening movie"
+    },
+    {
+      "type": "wait_stage",
+      "stage": 14,
+      "comment": "STDWTITL loaded (map 0xE02, stdwtitl_movie_screen for movie 1)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 30,
+      "release": 30,
+      "until": {
+        "type": "wait_map",
+        "map": "0xE00"
+      },
+      "timeout": 3000,
+      "comment": "START skips the movie (stdwtitl_update_movie checks pad pressed bit 3). On the dynarec core the player spins in StGetNext and samples the pad rarely (the STR stream never reaches its last frame), so a short tap can fall between two samples: hold 30 / release 30 until the title screen proper (map 0xE00). On -interpreter the movie decodes normally and the first press skips it"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 2,
+      "release": 18,
+      "repeat": 40,
+      "comment": "the logo slides in, shines and glows; START opens the New Game / Continue menu only at stdwtitl_menu step 2 (600 ticks there without START start the demo), every other step ignores it, so tap START for 800 frames instead of waiting a fixed time"
+    },
+    {
+      "type": "wait_frames",
+      "frames": 60,
+      "comment": "the menu blinks and the two choices slide out (steps 3-5: 12 + 15 + 6 ticks)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 4,
+      "release": 30,
+      "until": {
+        "type": "wait_stage",
+        "stage": 12
+      },
+      "timeout": 1500,
+      "comment": "the menu opens on Continue (cursor 1): STGMCARD in load mode (map 0xC00, entry 0)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 30,
+      "until": {
+        "type": "wait_stage",
+        "stage": 2
+      },
+      "timeout": 4000,
+      "comment": "card slot 1, save slot 1, confirm; the load sets the map back to the saved field map"
+    },
+    {
+      "type": "checkpoint",
+      "name": "loaded",
+      "comment": "FIELDSTG loaded from the save: compare with 'saved'"
+    },
+    {
+      "type": "walk",
+      "x": 250,
+      "y": 222,
+      "comment": "after the load: Asuka Inn (map 0x20A, WSTAG235), from the save attendant toward the exit to Asuka City (map event 1, x 272..315, y 216..240 on the attribute map's event layer)"
+    },
+    {
+      "type": "walk",
+      "x": 294,
+      "y": 229
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x200"
+      },
+      "timeout": 600,
+      "comment": "take the exit: Asuka City (map 0x200), arriving at (672, 378)"
+    },
+    {
+      "type": "walk",
+      "x": 565,
+      "y": 418,
+      "comment": "along the upper street to the door of the item shop (map 0x200's map event 3 to map 0x20D, x 544..586, y 406..428)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x20D"
+      },
+      "timeout": 600,
+      "comment": "enter: Asuka Item Shop (map 0x20D, WSTAG245), arriving at (536, 332)"
+    },
+    {
+      "type": "walk",
+      "x": 481,
+      "y": 297,
+      "comment": "in front of the right-hand counter: shopkeeper actor 22 at (449, 281), whose talk list opens shop 2 (usable items)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "UP",
+        "LEFT"
+      ],
+      "frames": 3,
+      "comment": "face the counter (direction 3)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_stage",
+        "stage": 15
+      },
+      "timeout": 2000,
+      "comment": "talk: the first talk (flag 0x1A0F clear) is a greeting that sets 0x1A0F; the second sets flag 0x7A02 = shop 2 (gamestate_set_flag type 0x7A, index < 30: map 0xF00, entry 2): STITSHOP (overlay_files[15])"
+    },
+    {
+      "type": "checkpoint",
+      "name": "shop_open",
+      "comment": "STITSHOP loaded (map 0xF00, map_entry 2, field_map 0x20D); money 50 (the first battle's prize), no items"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "UP",
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_mem",
+        "addr": "0x80048DDB",
+        "size": 1,
+        "value": 4
+      },
+      "timeout": 2000,
+      "comment": "UP+CROSS together, again and again: Buy (stitshop_main_run, cursor 0), the first item (Power Charge, item 43, 12 BIT; UP keeps the list cursor at 0), then in the quantity box (stitshop_buy_run step 8) each UP adds 1 and CROSS is taken only on a press where UP changed nothing, i.e. once the quantity reaches its cap money / price = 50 / 12 = 4; then Yes (cursor 0): items[43] (gamestate_data + 0xA7 = 0x80048DDB) += 4, money -= 4 x 12"
+    },
+    {
+      "type": "checkpoint",
+      "name": "shop_bought",
+      "comment": "the purchase: gamestate_data.money (+0x6C) 50 -> 2, items[43] (+0xA7) 0 -> 4"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "repeat": 8,
+      "comment": "CROSS on the same item with 2 BIT: 'Not enough BIT.' (money < price, stitshop_buy_run step 3 -> 45), CROSS dismisses it (step 47) and the next CROSS asks again; nothing is bought"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "TRIANGLE"
+      ],
+      "frames": 2,
+      "release": 30,
+      "until": {
+        "type": "wait_stage",
+        "stage": 2
+      },
+      "timeout": 1500,
+      "comment": "Back (TRIANGLE): from the message or the list, then from the Buy/Sell menu; STITSHOP returns to the field map (field_map 0x20D)"
+    },
+    {
+      "type": "wait_map",
+      "map": "0x20D",
+      "timeout": 300
+    },
+    {
+      "type": "checkpoint",
+      "name": "shop_left",
+      "comment": "back on the field in the item shop: money 2 and items[43] = 4 unchanged by the refused purchase"
+    },
+    {
+      "type": "walk",
+      "x": 547,
+      "y": 339,
+      "comment": "the tour of the menus reachable from boot (tier-1 overlays STGDGLAB, STSTATUS, STCRDABM, STCRDDEK, STCRDSHP), appended after shop_left so every earlier checkpoint, sequence entry and input stays as it was. From the item shop's counter to its door to Asuka City (map 0x20D's map event 1, x 528..566, y 328..350)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x200"
+      },
+      "timeout": 600,
+      "comment": "take the exit (FieldstgMapEvent type 1: CROSS while standing on its region of the attribute map's event layer): Asuka City (map 0x200), arriving at (576, 426)"
+    },
+    {
+      "type": "walk",
+      "x": 665,
+      "y": 378,
+      "comment": "along the upper street to the stairs and down to the lower street (the reverse of the inn walk above)"
+    },
+    {
+      "type": "walk",
+      "x": 700,
+      "y": 400
+    },
+    {
+      "type": "walk",
+      "x": 730,
+      "y": 440
+    },
+    {
+      "type": "walk",
+      "x": 672,
+      "y": 515
+    },
+    {
+      "type": "walk",
+      "x": 680,
+      "y": 545
+    },
+    {
+      "type": "walk",
+      "x": 740,
+      "y": 545
+    },
+    {
+      "type": "walk",
+      "x": 760,
+      "y": 505
+    },
+    {
+      "type": "walk",
+      "x": 830,
+      "y": 512
+    },
+    {
+      "type": "walk",
+      "x": 935,
+      "y": 558
+    },
+    {
+      "type": "walk",
+      "x": 1000,
+      "y": 530
+    },
+    {
+      "type": "walk",
+      "x": 1053,
+      "y": 505,
+      "comment": "the lab's door (map 0x200's map event 6, x 1030..1076, y 494..516)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x206"
+      },
+      "timeout": 600,
+      "comment": "take the exit (FieldstgMapEvent type 1: CROSS while standing on its region of the attribute map's event layer): the lab (map 0x206, WSTAG220), arriving at (216, 376)"
+    },
+    {
+      "type": "walk",
+      "x": 300,
+      "y": 335,
+      "comment": "across the lower floor and up the right-hand stairs"
+    },
+    {
+      "type": "walk",
+      "x": 345,
+      "y": 282
+    },
+    {
+      "type": "walk",
+      "x": 378,
+      "y": 262,
+      "comment": "in front of the lab's Digimon chart terminal (actor 67 at (399, 248), placed while 0x6016 is clear and condition 0x22 holds)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "UP",
+        "RIGHT"
+      ],
+      "frames": 3,
+      "comment": "face it (direction 5)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_stage",
+        "stage": 13
+      },
+      "timeout": 2000,
+      "comment": "talk: the first talk (flag 0x1A04 clear) sets 0x1A04, the second sets flag 0x7C00 (gamestate_set_flag type 0x7C, index 0: map 0xD00): STGDGLAB (overlay_files[13])"
+    },
+    {
+      "type": "checkpoint",
+      "name": "lab_open",
+      "comment": "STGDGLAB loaded (map 0xD00, field_map 0x206): flags 0x1A04 and 0x7C00 set"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "TRIANGLE"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_stage",
+        "stage": 2
+      },
+      "timeout": 1500,
+      "comment": "Back (TRIANGLE) from the chart: STGDGLAB returns to the field map (stgdglab_main_update, field_map 0x206)"
+    },
+    {
+      "type": "wait_map",
+      "map": "0x206",
+      "timeout": 300
+    },
+    {
+      "type": "walk",
+      "x": 345,
+      "y": 282,
+      "comment": "down the stairs to the lab's exit to Asuka City (map event 1, x 184..222, y 376..398)"
+    },
+    {
+      "type": "walk",
+      "x": 300,
+      "y": 335
+    },
+    {
+      "type": "walk",
+      "x": 203,
+      "y": 387
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x200"
+      },
+      "timeout": 600,
+      "comment": "take the exit (FieldstgMapEvent type 1: CROSS while standing on its region of the attribute map's event layer): Asuka City, arriving at (1040, 512)"
+    },
+    {
+      "type": "walk",
+      "x": 1000,
+      "y": 530,
+      "comment": "the lower street, the stairs and the upper street to the inn's door (map event 4), as first_battle_save walked it"
+    },
+    {
+      "type": "walk",
+      "x": 935,
+      "y": 558
+    },
+    {
+      "type": "walk",
+      "x": 830,
+      "y": 512
+    },
+    {
+      "type": "walk",
+      "x": 760,
+      "y": 505
+    },
+    {
+      "type": "walk",
+      "x": 740,
+      "y": 545
+    },
+    {
+      "type": "walk",
+      "x": 680,
+      "y": 545
+    },
+    {
+      "type": "walk",
+      "x": 672,
+      "y": 515
+    },
+    {
+      "type": "walk",
+      "x": 730,
+      "y": 440
+    },
+    {
+      "type": "walk",
+      "x": 700,
+      "y": 400
+    },
+    {
+      "type": "walk",
+      "x": 661,
+      "y": 372
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x20A"
+      },
+      "timeout": 600,
+      "comment": "take the exit (FieldstgMapEvent type 1: CROSS while standing on its region of the attribute map's event layer): Asuka Inn (map 0x20A), arriving at (278, 218)"
+    },
+    {
+      "type": "walk",
+      "x": 199,
+      "y": 237,
+      "comment": "the top of the inn's stairs (map event 4, type 3: climb down, x 184..214, y 230..244)"
+    },
+    {
+      "type": "wait_frames",
+      "frames": 10,
+      "comment": "the map event object sees the player on the region (step 0 -> 1, the icon) before it takes CROSS"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 2,
+      "comment": "climb down (one press: CROSS again at the bottom, on map event 5, would climb back up); the walk below waits for the animation"
+    },
+    {
+      "type": "walk",
+      "x": 184,
+      "y": 320,
+      "comment": "the lower floor, to the exit to map 0x20B (map event 3, x 160..202, y 336..360)"
+    },
+    {
+      "type": "walk",
+      "x": 181,
+      "y": 348
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x20B"
+      },
+      "timeout": 600,
+      "comment": "take the exit (FieldstgMapEvent type 1: CROSS while standing on its region of the attribute map's event layer): map 0x20B (WSTAG237), arriving at (326, 186)"
+    },
+    {
+      "type": "walk",
+      "x": 200,
+      "y": 245,
+      "comment": "down the corridor to the exit to map 0x201 (map event 0, x 96..150, y 304..334)"
+    },
+    {
+      "type": "walk",
+      "x": 150,
+      "y": 285
+    },
+    {
+      "type": "walk",
+      "x": 123,
+      "y": 318
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x201"
+      },
+      "timeout": 600,
+      "comment": "take the exit (FieldstgMapEvent type 1: CROSS while standing on its region of the attribute map's event layer): map 0x201 (WSTAG202), arriving at (240, 264)"
+    },
+    {
+      "type": "walk",
+      "x": 320,
+      "y": 290,
+      "comment": "through the junction and up the corridor to the arena's door (map event 2, x 466..502, y 142..162); the corridor's last part is entered from the right (the player cannot go straight up at x 460..480)"
+    },
+    {
+      "type": "walk",
+      "x": 400,
+      "y": 240
+    },
+    {
+      "type": "walk",
+      "x": 445,
+      "y": 212
+    },
+    {
+      "type": "walk",
+      "x": 479,
+      "y": 200
+    },
+    {
+      "type": "walk",
+      "x": 520,
+      "y": 200
+    },
+    {
+      "type": "walk",
+      "x": 520,
+      "y": 170
+    },
+    {
+      "type": "walk",
+      "x": 476,
+      "y": 155
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x211"
+      },
+      "timeout": 600,
+      "comment": "take the exit (FieldstgMapEvent type 1: CROSS while standing on its region of the attribute map's event layer): the card arena (map 0x211, WSTAG270), arriving at (534, 226)"
+    },
+    {
+      "type": "walk",
+      "x": 450,
+      "y": 190,
+      "comment": "below the card counter: actor 220 at (379, 163) is the counter, whose talk goes to actor 206 behind it (fieldstg_talk_redirects)"
+    },
+    {
+      "type": "walk",
+      "x": 380,
+      "y": 185
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "UP"
+      ],
+      "frames": 20,
+      "comment": "walk up until the counter stops the player (at about (376, 182), facing up: the front point (x, y - 16) is inside actor 220's box)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_mem",
+        "addr": "0x80048F42",
+        "size": 1,
+        "value": 1
+      },
+      "timeout": 8000,
+      "comment": "talk: without the card case (item 0x192, gamestate_data.items at +0x7C) actor 206's first talk sets flag 0x905C = indexed event 0x5C = event 1415 (the arena's introduction, ~3,700 frames of dialogue), whose end callback gives item 0x192 and sets 0x1A1C and 0x40A1; CROSS through it until the item count is 1"
+    },
+    {
+      "type": "checkpoint",
+      "name": "card_case",
+      "comment": "after event 1415: items[0x192] = 1 (the card case), flags 0x1A1C, 0x40A1, 0x1C48"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_mem",
+        "addr": "0x80099DD0",
+        "size": 4,
+        "value": 1
+      },
+      "timeout": 600,
+      "comment": "open the field menu (START, at progress >= 4) until fieldstg_stage.menu_open (FIELDSTG 0x80099D80 + 0x50) is 1"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "DOWN"
+      ],
+      "frames": 2,
+      "release": 10,
+      "repeat": 12,
+      "comment": "with the card case the menu has a sixth option (fieldmenu_update: items[0x192] != 0, extended); DOWN until the cursor stops on it (it clamps at 5), over the menu's opening animation"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_stage",
+        "stage": 16
+      },
+      "timeout": 600,
+      "comment": "confirm: map 0x1000, STSTATUS (overlay_files[16]) on the party page (ststatus_pages[1][5])"
+    },
+    {
+      "type": "checkpoint",
+      "name": "status_open",
+      "comment": "STSTATUS loaded (map 0x1000, field_map 0x211): the field menu saved the player's position"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_stage",
+        "stage": 18
+      },
+      "timeout": 1500,
+      "comment": "the party page's menu (cursor 0 = the card album): ststatus_party_update step 57, map 0x1200: STCRDABM"
+    },
+    {
+      "type": "checkpoint",
+      "name": "album_open",
+      "comment": "STCRDABM loaded (map 0x1200)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "TRIANGLE"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_stage",
+        "stage": 16
+      },
+      "timeout": 1500,
+      "comment": "Back: STCRDABM returns to the previous map (0x1000, STSTATUS, on the party page again)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "DOWN",
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_stage",
+        "stage": 4
+      },
+      "timeout": 1500,
+      "comment": "DOWN+CROSS together until STCRDDEK: on the party page DOWN sets the cursor to 1 (the deck editor) and CROSS is read in the same frame (ststatus_party_update step 10); map 0x400"
+    },
+    {
+      "type": "checkpoint",
+      "name": "deck_edit_open",
+      "comment": "STCRDDEK loaded (map 0x400)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "TRIANGLE"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_stage",
+        "stage": 16
+      },
+      "timeout": 1500,
+      "comment": "Back: STCRDDEK returns to the previous map (STSTATUS)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "TRIANGLE"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_stage",
+        "stage": 2
+      },
+      "timeout": 1500,
+      "comment": "Back from the status screen to the field (fieldmenu_update on map 0x1000: TRIANGLE sets field_map)"
+    },
+    {
+      "type": "wait_map",
+      "map": "0x211",
+      "timeout": 300
+    },
+    {
+      "type": "walk",
+      "x": 545,
+      "y": 234,
+      "comment": "actor 206's card-shop form (talks D_WSTAG270_800A8090) is placed only with the card case, when the map is entered: out to map 0x201 and back. The arena's exit (map event 0, x 528..566, y 224..246)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x201"
+      },
+      "timeout": 600,
+      "comment": "take the exit (FieldstgMapEvent type 1: CROSS while standing on its region of the attribute map's event layer): map 0x201, arriving on the arena's door at (496, 160)"
+    },
+    {
+      "type": "walk",
+      "x": 520,
+      "y": 170,
+      "comment": "off the door's region and back onto it (an exit is offered when the player steps onto its region)"
+    },
+    {
+      "type": "walk",
+      "x": 482,
+      "y": 155
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x211"
+      },
+      "timeout": 300,
+      "comment": "take the exit (FieldstgMapEvent type 1: CROSS while standing on its region of the attribute map's event layer): the arena again"
+    },
+    {
+      "type": "walk",
+      "x": 450,
+      "y": 190,
+      "comment": "back below the counter"
+    },
+    {
+      "type": "walk",
+      "x": 380,
+      "y": 185
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "UP"
+      ],
+      "frames": 20,
+      "comment": "up against the counter, facing it"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_stage",
+        "stage": 19
+      },
+      "timeout": 2000,
+      "comment": "talk: the shop form's first talk needs 0x1A1C clear (event 1415 set it), the second (progress 4, 0x1A1C set) sets flag 0x7A31 (gamestate_set_flag type 0x7A, index 0x31: map 0x1300, entry 0x31): STCRDSHP"
+    },
+    {
+      "type": "checkpoint",
+      "name": "card_shop_open",
+      "comment": "STCRDSHP loaded (map 0x1300, map_entry 0x31, field_map 0x211)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "UP",
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 20,
+      "repeat": 25,
+      "comment": "UP+CROSS together, 25 times: the shop's menu reads input only once its files are loaded (stcrdshp_is_loading, CD timing: ~170 frames on -interpreter), so the presses span ~550 frames; UP keeps the menu cursor on Buy (0) and CROSS is read in the same frame (stcrdshp_update_menu step 3): stcrdshp_create_buy, stcrdshp_update_buy; in the list UP stays on the first card and CROSS tries it: every card costs more than the 2 BIT left, nothing can be bought. The screen these presses end on depends on the core; the next step leaves from any of them"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "TRIANGLE"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_stage",
+        "stage": 2
+      },
+      "timeout": 2000,
+      "comment": "Back (TRIANGLE) out of the buy screen and the shop: STCRDSHP returns to the field map (stcrdshp_update_main state END, field_map 0x211)"
+    },
+    {
+      "type": "wait_map",
+      "map": "0x211",
+      "timeout": 300
+    },
+    {
+      "type": "checkpoint",
+      "name": "card_shop_left",
+      "comment": "back in the arena: money 2 and the item and card counts unchanged by the shop"
+    },
+    {
+      "type": "walk",
+      "x": 450,
+      "y": 190,
+      "comment": "STGTRAIN, appended after card_shop_left so every earlier checkpoint, sequence entry and input stays as it was: the trainer of map 0x21D, reached through the inn (0x211 -> 0x201 -> 0x20B -> 0x20A -> 0x200 -> 0x202 -> 0x21D). From the arena's counter to its exit (map event 0)"
+    },
+    {
+      "type": "walk",
+      "x": 545,
+      "y": 234
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x201"
+      },
+      "timeout": 600,
+      "comment": "take the exit (FieldstgMapEvent type 1: CROSS while standing on its region of the attribute map's event layer): map 0x201, arriving on the arena's door at (496, 160)"
+    },
+    {
+      "type": "walk",
+      "x": 520,
+      "y": 170,
+      "comment": "the corridor back down to the junction and the exit to map 0x20B (map event 0, x 200..254, y 240..270; the reverse of the walk above)"
+    },
+    {
+      "type": "walk",
+      "x": 520,
+      "y": 200
+    },
+    {
+      "type": "walk",
+      "x": 479,
+      "y": 200
+    },
+    {
+      "type": "walk",
+      "x": 445,
+      "y": 212
+    },
+    {
+      "type": "walk",
+      "x": 400,
+      "y": 240
+    },
+    {
+      "type": "walk",
+      "x": 320,
+      "y": 290
+    },
+    {
+      "type": "walk",
+      "x": 227,
+      "y": 255
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x20B"
+      },
+      "timeout": 600,
+      "comment": "take the exit (FieldstgMapEvent type 1: CROSS while standing on its region of the attribute map's event layer): map 0x20B, arriving at (104, 308)"
+    },
+    {
+      "type": "walk",
+      "x": 150,
+      "y": 285,
+      "comment": "up the corridor to the exit to the inn (map event 2, x 288..334, y 168..190)"
+    },
+    {
+      "type": "walk",
+      "x": 200,
+      "y": 245
+    },
+    {
+      "type": "walk",
+      "x": 311,
+      "y": 180
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x20A"
+      },
+      "timeout": 600,
+      "comment": "take the exit (FieldstgMapEvent type 1: CROSS while standing on its region of the attribute map's event layer): the inn's lower floor (map 0x20A), arriving at (167, 339)"
+    },
+    {
+      "type": "walk",
+      "x": 184,
+      "y": 320,
+      "comment": "the foot of the inn's stairs (map event 5, type 2: climb up, x 170..198, y 298..312)"
+    },
+    {
+      "type": "walk",
+      "x": 184,
+      "y": 305
+    },
+    {
+      "type": "wait_frames",
+      "frames": 10,
+      "comment": "the map event object sees the player on the region before it takes CROSS"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 2,
+      "comment": "climb up (one press); the walk below waits for the animation"
+    },
+    {
+      "type": "walk",
+      "x": 199,
+      "y": 237,
+      "comment": "the top of the stairs"
+    },
+    {
+      "type": "walk",
+      "x": 293,
+      "y": 228,
+      "comment": "the inn's door to Asuka City (map event 1, x 272..314, y 216..240)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x200"
+      },
+      "timeout": 600,
+      "comment": "take the exit (FieldstgMapEvent type 1: CROSS while standing on its region of the attribute map's event layer): Asuka City (map 0x200), arriving at (672, 378)"
+    },
+    {
+      "type": "walk",
+      "x": 600,
+      "y": 420,
+      "comment": "down the upper street, the left-hand ramp and the plaza to the city's south-west exit to map 0x202 (map event 0, x 56..112, y 792..822; offered while flag 0x7007 is clear)"
+    },
+    {
+      "type": "walk",
+      "x": 500,
+      "y": 475
+    },
+    {
+      "type": "walk",
+      "x": 450,
+      "y": 505
+    },
+    {
+      "type": "walk",
+      "x": 420,
+      "y": 560
+    },
+    {
+      "type": "walk",
+      "x": 400,
+      "y": 610
+    },
+    {
+      "type": "walk",
+      "x": 300,
+      "y": 660
+    },
+    {
+      "type": "walk",
+      "x": 200,
+      "y": 720
+    },
+    {
+      "type": "walk",
+      "x": 120,
+      "y": 780
+    },
+    {
+      "type": "walk",
+      "x": 84,
+      "y": 807
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x202"
+      },
+      "timeout": 600,
+      "comment": "take the exit (FieldstgMapEvent type 1: CROSS while standing on its region of the attribute map's event layer): map 0x202 (WSTAG205), arriving at (776, 224)"
+    },
+    {
+      "type": "walk",
+      "x": 700,
+      "y": 260,
+      "comment": "down the diagonal street to the exit to map 0x21D (map event 1, x 208..272, y 480..516)"
+    },
+    {
+      "type": "walk",
+      "x": 690,
+      "y": 280
+    },
+    {
+      "type": "walk",
+      "x": 600,
+      "y": 320
+    },
+    {
+      "type": "walk",
+      "x": 470,
+      "y": 380
+    },
+    {
+      "type": "walk",
+      "x": 390,
+      "y": 420
+    },
+    {
+      "type": "walk",
+      "x": 326,
+      "y": 452
+    },
+    {
+      "type": "walk",
+      "x": 270,
+      "y": 480
+    },
+    {
+      "type": "walk",
+      "x": 240,
+      "y": 496
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 10,
+      "until": {
+        "type": "wait_map",
+        "map": "0x21D"
+      },
+      "timeout": 600,
+      "comment": "take the exit (FieldstgMapEvent type 1: CROSS while standing on its region of the attribute map's event layer): map 0x21D (WSTAG330), arriving at (1506, 224). The whole map is encounter area 1 (rate index 3: encounter_timer -= 6 per step) except its ramps; a step is every 8th frame the player moves (fieldstg_actor_play_steps), so the timer's 926 (since the new game, the same on both cores) lasts ~1,200 moving frames. This walk leaves 809: no random battle, whose enemies would come from pad_random (core-dependent)"
+    },
+    {
+      "type": "walk",
+      "x": 1460,
+      "y": 245,
+      "comment": "down the two ramps to the plaza"
+    },
+    {
+      "type": "walk",
+      "x": 1335,
+      "y": 375
+    },
+    {
+      "type": "walk",
+      "x": 1300,
+      "y": 395
+    },
+    {
+      "type": "walk",
+      "x": 1270,
+      "y": 405
+    },
+    {
+      "type": "walk",
+      "x": 1210,
+      "y": 460
+    },
+    {
+      "type": "walk",
+      "x": 1170,
+      "y": 470
+    },
+    {
+      "type": "walk",
+      "x": 1100,
+      "y": 450,
+      "tol": 6,
+      "comment": "across the plaza below its upper wall (a straight diagonal would run into it)"
+    },
+    {
+      "type": "walk",
+      "x": 1040,
+      "y": 420,
+      "tol": 6
+    },
+    {
+      "type": "walk",
+      "x": 980,
+      "y": 395,
+      "tol": 6
+    },
+    {
+      "type": "walk",
+      "x": 950,
+      "y": 378,
+      "tol": 6,
+      "comment": "right of the trainer (actor 27 at (923, 374), placed while flag 0x802A is clear)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "LEFT"
+      ],
+      "frames": 20,
+      "comment": "walk left until the trainer stops the player (at about (940, 380)), facing him"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_stage",
+        "stage": 10
+      },
+      "timeout": 3000,
+      "comment": "talk: the trainer's first talk (flag 0x8028 clear) sets flag 0x9400 (gamestate_set_flag type 0x94, index 0: map 0xA00): STGTRAIN (overlay_files[10])"
+    },
+    {
+      "type": "checkpoint",
+      "name": "train_open",
+      "comment": "STGTRAIN loaded (map 0xA00, field_map 0x21D); encounter_timer 809"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 60,
+      "repeat": 14,
+      "comment": "CROSS 14 times, 62 frames apart, over the files' loading (CD timing: the first presses land on a black screen or the opening animation, how many depends on the core): Train which Digimon? (the first party member) -> Which training? (Punch, cursor 0) -> Pick TP amount (TP 1, level 0) -> refused: every party member has TP 0 (no level-up yet) and stgtrain_tp_costs[0] is 1, \"Not enough TP.\" (stgtrain_level_run step 10) -> CROSS closes it -> refused again ... The presses end on the level menu or on the warning"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 90,
+      "comment": "then CROSS, TRIANGLE, CROSS, TRIANGLE, 92 frames apart, which ends on the training choice from either screen: the warning takes only CROSS (it closes), every other screen goes back on TRIANGLE"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "TRIANGLE"
+      ],
+      "frames": 2,
+      "release": 90
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 90
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "TRIANGLE"
+      ],
+      "frames": 2,
+      "release": 90
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "TRIANGLE"
+      ],
+      "frames": 2,
+      "release": 30,
+      "until": {
+        "type": "wait_stage",
+        "stage": 2
+      },
+      "timeout": 2000,
+      "comment": "Back (TRIANGLE) out of the choice and the Digimon choice: STGTRAIN returns to the field map (stgtrain_main_update state END, field_map 0x21D)"
+    },
+    {
+      "type": "wait_map",
+      "map": "0x21D",
+      "timeout": 300
+    },
+    {
+      "type": "checkpoint",
+      "name": "train_left",
+      "comment": "back on map 0x21D: TP still 0 (the refusal took nothing), the stats unchanged"
+    }
+  ]
+}

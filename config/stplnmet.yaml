@@ -1,0 +1,72 @@
+# splat config for the tier-1 overlay AAA/PRO/STPLNMET.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: STPLNMET.PRO
+sha1: 033c688b39835931ff0231a94363ceb5b4031ee1
+options:
+  basename: STPLNMET.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/STPLNMET.PRO
+  elf_path: build/stplnmet/STPLNMET.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/stplnmet
+  asm_path: asm/stplnmet
+  src_path: src/stplnmet
+  asset_path: assets/stplnmet
+  ld_script_path: build/stplnmet/STPLNMET.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/stplnmet.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/stplnmet/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/stplnmet/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  ld_bss_is_noload: False  # .bss is in the file as zeros
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: stplnmet
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_STPLNMET_<addr>, D_STPLNMET_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: STPLNMET_$VRAM
+    subsegments:
+      # Three files (docs/DECISIONS.md "Overlay file split"). The three jump tables are all at 0 mod 8 (no parity
+      # break), but the window-anim pair is in the overlay twice (83D70/83E04 = 88438/884CC, byte for byte), so
+      # it holds at least two objects. 83D70..85ECC is the name entry also in STDGNAME (83378..85420): the same
+      # function sizes, the same three jump tables at the same addresses, entry_set_name/get_name byte for
+      # byte; it starts with the window-anim pair (only the name entry calls it) and ends with its create
+      # function in both overlays, so it is its own source file. .data agrees: the first file's data
+      # (885E4, 885EC) < the name entry's (886D4..89A50) < the last file's (89A68..89BAC).
+      - [0x0,   .rodata, stplnmet_80083D70]
+      - [0x2A8,  c, stplnmet_80082F58]   # 0x80082F58 .text: display setup, entry point, four small objects
+      - [0x10C0, c, stplnmet_80083D70]   # 0x80083D70: the name entry (window-anim pair at the top)
+      - [0x321C, c, stplnmet_80085ECC]   # 0x80085ECC: the other objects, the main object and the module's
+                                         # function table (89B90); finer splits not proven
+      # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t stplnmet;
+      # DECISIONS "Overlay .data/.bss per file"). The name entry's .bss comes after
+      # 85ECC's .data, so it is .bss.
+      - [0x5934, .data, stplnmet_80082F58]   # 0x800885E4 (after the last function's jr ra)
+      - [0x5A24, .data, stplnmet_80083D70]   # 0x800886D4 the name entry's character tables
+      - [0x6DB8, .data, stplnmet_80085ECC]   # 0x80089A68 (89A50 is 83D70's, 89A68 85ECC's: references)
+      - [0x6F00, .bss, stplnmet_80083D70]    # 0x80089BB0 stplnmet_keyboard (only 83D70 uses it)
+  - [0x6F0C]

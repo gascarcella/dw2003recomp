@@ -1,0 +1,78 @@
+# splat config for the tier-1 overlay AAA/PRO/FIELDSTG.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: FIELDSTG.PRO
+sha1: bc5fb336d7befa61e34d6d50331eedbc9c40e078
+options:
+  basename: FIELDSTG.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/FIELDSTG.PRO
+  elf_path: build/fieldstg/FIELDSTG.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/fieldstg
+  asm_path: asm/fieldstg
+  src_path: src/fieldstg
+  asset_path: assets/fieldstg
+  ld_script_path: build/fieldstg/FIELDSTG.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/fieldstg.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/fieldstg/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/fieldstg/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: fieldstg
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_FIELDSTG_<addr>, D_FIELDSTG_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: FIELDSTG_$VRAM
+    subsegments:
+      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"): boundaries proven by jump-table
+      # parity (a table at a different address mod 8 than the previous one starts a new object).
+      - [0x0,   .rodata, fieldstg_80083784]
+      - [0x7C,  .rodata, fieldstg_80083D08]
+      - [0x150, .rodata, fieldstg_event]
+      - [0x184, .rodata, fieldstg_80085590]
+      - [0x198, .rodata, fieldstg_80087DB0]
+      - [0xAD4,  c, fieldstg_80083784]   # 0x80083784 .text: the effects script object (813)
+      - [0x1058, c, fieldstg_80083D08]   # 0x80083D08 stage 528's objects: the lift (826), 16 choices (table 96B38), the stage object
+      - [0x20DC, c, fieldstg_event]      # 0x80084D8C the event script runner (position strong)
+      - [0x28E0, c, fieldstg_80085590]   # 0x80085590 warp picture/effect, background streaming, the overlay entry 87580, map title (position weak: 85590..875AC)
+      - [0x5100, c, fieldstg_80087DB0]   # 0x80087DB0 icons, map events, field manager 8AA10, spots, camera, actors, stage 528 setup 91E60, encounters, map attributes (position weak: 87DB0..88288)
+      # .data, then .bss (zeros in the file), per file in link order (tools/data_owners.py -t fieldstg; DECISIONS
+      # "Overlay .data/.bss per file"). fieldstg_event has no data. Each page of tables is referenced by its own file only,
+      # in code order, except:
+      # - 92DFC..96B24, the battles' enemies and the battles (fieldstg_battles), read only by 87DB0's fieldstg_start_battle: by
+      #   link order they belong to the first file, or to a data-only file linked before 83D08 (weak).
+      # - 8009B8EC..8009BA04 stays asm: zero variables referenced by 83784 (B8EC), 85590 (B8F0) and 87DB0 (B8F8..BA00),
+      #   in link order, so most likely the start of .bss (statics of three files); but BA02..BA03 holds two non-zero
+      #   bytes ("IN", psylink's padding between two sections), which C can't emit there.
+      - [0x1014C, .data, fieldstg_80083784]   # 0x80092DFC (after the last function's jr ra)
+      - [0x13E74, .data, fieldstg_80083D08]   # 0x80096B24
+      - [0x14018, .data, fieldstg_80085590]   # 0x80096CC8
+      - [0x14910, .data, fieldstg_80087DB0]   # 0x800975C0
+      - [0x18C3C, data, fieldstg_8009B8EC]    # 0x8009B8EC (owners open, see above)
+      - [0x18D54, .bss, fieldstg_80087DB0]    # 0x8009BA04 (used by 92A90 only)
+  - [0x18E98]

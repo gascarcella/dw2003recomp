@@ -1,0 +1,15 @@
+// WSTAG934 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag934_color = 0x800A5DF8;
+wstag934_lift_update = 0x800A5DFC; // type:func
+wstag934_lift_message = 0x800A6218; // type:func
+wstag934_lift_create = 0x800A628C; // type:func
+wstag934_update = 0x800A62F4; // type:func
+wstag934_start = 0x800A633C; // type:func
+wstag934_setup = 0x800A6398; // type:func
+wstag934_fade_start = 0x800A64B8; // type:func
+wstag934_fade_update = 0x800A654C; // type:func
+wstag934_vram_places = 0x800A65CC;
+wstag934_actors = 0x800A66F0;
+wstag934_sprites = 0x800A66FC;
+wstag934_map_events = 0x800A67F8;
+wstag934_funcs = 0x800A6870;

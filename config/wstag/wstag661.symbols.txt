@@ -1,0 +1,11 @@
+// WSTAG661 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag661_color = 0x800A5DE0;
+wstag661_update = 0x800A5DE4; // type:func
+wstag661_start = 0x800A5E2C; // type:func
+wstag661_setup = 0x800A5E88; // type:func
+wstag661_vram_places = 0x800A6058;
+wstag661_actors = 0x800A6490;
+wstag661_sprites = 0x800A64D0;
+wstag661_map_events = 0x800A6710;
+wstag661_funcs = 0x800A6788;
+wstag661_events = 0x800A678C;

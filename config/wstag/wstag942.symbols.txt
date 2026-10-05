@@ -1,0 +1,11 @@
+// WSTAG942 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag942_color = 0x800A5DE0;
+wstag942_update = 0x800A5DE4; // type:func
+wstag942_start = 0x800A5E2C; // type:func
+wstag942_setup = 0x800A5E88; // type:func
+wstag942_vram_places = 0x800A5FB0;
+wstag942_actors = 0x800A6228;
+wstag942_sprites = 0x800A6240;
+wstag942_map_events = 0x800A6558;
+wstag942_funcs = 0x800A6600;
+wstag942_battle_lists = 0x800A6814;

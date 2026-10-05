@@ -1,0 +1,17 @@
+// WSTAG406 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag406_anim_loop = 0x800A5DE0; // type:func
+wstag406_anim1_update = 0x800A5ED4; // type:func
+wstag406_anim1_create = 0x800A5FA8; // type:func
+wstag406_update = 0x800A5FD4; // type:func
+wstag406_start = 0x800A6084; // type:func
+wstag406_event_1285_end = 0x800A60E0; // type:func
+wstag406_event_1286_end = 0x800A612C; // type:func
+wstag406_setup = 0x800A6178; // type:func
+D_WSTAG406_800A63D8 = 0x800A63D8; // size:0x8C
+wstag406_battle_lists = 0x800A6674;
+wstag406_vram_places = 0x800A6690;
+wstag406_actors = 0x800A68CC;
+wstag406_sprites = 0x800A68E4;
+wstag406_map_events = 0x800A6964;
+wstag406_funcs = 0x800A6A9C;
+wstag406_events = 0x800A6AA0;

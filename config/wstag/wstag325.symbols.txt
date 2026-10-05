@@ -1,0 +1,17 @@
+// WSTAG325 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag325_sprite_switch_update = 0x800A5DE0; // type:func
+wstag325_sprite_switch_create = 0x800A5F60; // type:func
+wstag325_sprite_switch_message = 0x800A5F90; // type:func
+wstag325_update = 0x800A5FC8; // type:func
+wstag325_start = 0x800A6068; // type:func
+wstag325_event_375_end = 0x800A60C4; // type:func
+wstag325_event_376_end = 0x800A6110; // type:func
+wstag325_event_560_end = 0x800A615C; // type:func
+wstag325_setup = 0x800A616C; // type:func
+wstag325_battle_lists = 0x800A6650;
+wstag325_vram_places = 0x800A666C;
+wstag325_actors = 0x800A6964;
+wstag325_sprites = 0x800A6990;
+wstag325_map_events = 0x800A6B1C;
+wstag325_funcs = 0x800A6B4C;
+wstag325_events = 0x800A6B50;

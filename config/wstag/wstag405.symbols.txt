@@ -1,0 +1,17 @@
+// WSTAG405 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag405_anim_loop = 0x800A5DE0; // type:func
+wstag405_anim1_update = 0x800A5ED4; // type:func
+wstag405_anim1_create = 0x800A5FA8; // type:func
+wstag405_update = 0x800A5FD4; // type:func
+wstag405_start = 0x800A6098; // type:func
+wstag405_event_60_end = 0x800A60F4; // type:func
+wstag405_event_61_end = 0x800A6140; // type:func
+wstag405_setup = 0x800A618C; // type:func
+D_WSTAG405_800A63EC = 0x800A63EC; // size:0x8C
+wstag405_battle_lists = 0x800A6688;
+wstag405_vram_places = 0x800A66A4;
+wstag405_actors = 0x800A6C3C;
+wstag405_sprites = 0x800A6C80;
+wstag405_map_events = 0x800A6D00;
+wstag405_funcs = 0x800A6E38;
+wstag405_events = 0x800A6E3C;

@@ -1,0 +1,13 @@
+// WSTAG420 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag420_update = 0x800A5DE0; // type:func
+wstag420_start = 0x800A5E74; // type:func
+wstag420_event_70_end = 0x800A5ED0; // type:func
+wstag420_event_71_end = 0x800A5F1C; // type:func
+wstag420_setup = 0x800A5F74; // type:func
+wstag420_battle_lists = 0x800A63F4;
+wstag420_vram_places = 0x800A6410;
+wstag420_actors = 0x800A7A08;
+wstag420_sprites = 0x800A7B24;
+wstag420_map_events = 0x800A7D9C;
+wstag420_funcs = 0x800A7E5C;
+wstag420_events = 0x800A7E60;

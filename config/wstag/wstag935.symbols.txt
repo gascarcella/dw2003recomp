@@ -1,0 +1,16 @@
+// WSTAG935 (configure.py WSTAG_SYMBOLS): the file's own names, and sizes of the data the C reads inside of.
+wstag935_update = 0x800A5E40; // type:func
+wstag935_start = 0x800A5E88; // type:func
+wstag935_setup = 0x800A5EE4; // type:func
+wstag935_fade_start = 0x800A5FD8; // type:func
+wstag935_fade_update = 0x800A606C; // type:func
+wstag935_menu_1616_update = 0x800A60D8; // type:func
+wstag935_event_1616_start = 0x800A6A04; // type:func
+wstag935_menu_1618_update = 0x800A6A30; // type:func
+wstag935_event_1618_start = 0x800A739C; // type:func
+wstag935_vram_places = 0x800A73C8;
+wstag935_actors = 0x800A7958;
+wstag935_sprites = 0x800A7994;
+wstag935_map_events = 0x800A7AEC;
+wstag935_funcs = 0x800A7B1C;
+wstag935_events = 0x800A7B28;

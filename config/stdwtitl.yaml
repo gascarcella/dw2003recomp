@@ -1,0 +1,86 @@
+# splat config for the tier-1 overlay AAA/PRO/STDWTITL.PRO (docs/DISC_LAYOUT.md "Overlays"): raw code and
+# data with no header, loaded at 0x80082CB0. It links against the EXE's symbols: splat gets the EXE's
+# names (build/exe_symbols.txt), the linker the EXE ELF's symbol table (configure.py, EXE_SYMS).
+# Layout as psylink writes it: .rodata, .text, .data, then .bss as zeros (part of the file, like the EXE).
+name: STDWTITL.PRO
+sha1: 1777ec5d204bce2dcb77495a401291a22bd7e262
+options:
+  basename: STDWTITL.PRO
+  base_path: ..
+  target_path: extracted/disc/AAA/PRO/STDWTITL.PRO
+  elf_path: build/stdwtitl/STDWTITL.PRO.elf
+  platform: psx
+  compiler: GCC
+
+  build_path: build/stdwtitl
+  asm_path: asm/stdwtitl
+  src_path: src/stdwtitl
+  asset_path: assets/stdwtitl
+  ld_script_path: build/stdwtitl/STDWTITL.PRO.ld
+  symbol_addrs_path:
+    - build/exe_symbols.txt   # the EXE's names (configure.py writes it from config/symbol_addrs.txt)
+    - config/stdwtitl.symbols.txt
+  create_undefined_funcs_auto: True
+  undefined_funcs_auto_path: build/stdwtitl/undefined_funcs_auto.txt
+  create_undefined_syms_auto: True
+  undefined_syms_auto_path: build/stdwtitl/undefined_syms_auto.txt
+
+  gp_value: 0x8005CB50
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  ld_bss_is_noload: False  # .bss is in the file as zeros
+  subalign: 4
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
+
+  find_file_boundaries: True
+  migrate_rodata_to_functions: True
+  use_legacy_include_asm: False
+  asm_function_macro: glabel
+  asm_jtbl_label_macro: jlabel
+  asm_data_macro: dlabel
+  make_full_disasm_for_code: True
+  generate_asm_macros_files: True
+  generated_asm_macros_directory: include/asm_generated
+
+segments:
+  - name: stdwtitl
+    type: code
+    start: 0x0
+    vram: 0x80082CB0
+    # Unnamed symbols are func_STDWTITL_<addr>, D_STDWTITL_<addr> (overlays share addresses; DECISIONS naming).
+    symbol_name_format: STDWTITL_$VRAM
+    subsegments:
+      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"). Evidence: jump-table parity (82CFC is
+      # at 4 mod 8 after 82CE8's 0 mod 8: a new object), the shared stage module at the end (a module struct with its
+      # function table, like STGMCARD's and FIELDSTG's 91E60), and the obj->unk_28[1](obj, 1) callback: five
+      # byte-identical copies (833AC, 841E0, 84BB0, 8503C, 85BE4), each shared only by the objects of one group (a
+      # file copied into itself reuses its callback: 844E8 uses 841E0, 84DF0 84BB0, 8529C 8503C), so each group with
+      # its own copy is its own file.
+      - [0x0,  .rodata, stdwtitl_80083F80]   # jump tables of 8453C, 84628
+      - [0x38, .rodata, stdwtitl_800852F0]   # 85594's
+      - [0x4C, .rodata, stdwtitl_80085CD4]   # 869D0's (4 mod 8: parity break)
+      - [0x70, rodata, psyq/libpress/libpress]  # 0x80082D20 LIBPRESS's MDEC messages
+      - [0xC0,   c, stdwtitl_80082D70]   # 0x80082D70 .text: root object (83028 is the entry), logo piece 831E8, movie player 83944, movie selector 83CC0
+      - [0x12D0, c, stdwtitl_80083F80]   # 0x80083F80 logo pieces 840A8/843A4 (callback 841E0), 84628, 848EC (position weak: 83438..83F80)
+      - [0x1D28, c, stdwtitl_800849D8]   # 0x800849D8 logo pieces 84A70/84CD4 (callback 84BB0) (position weak: 8453C..849D8)
+      - [0x2194, c, stdwtitl_80084E44]   # 0x80084E44 logo pieces 84EDC/85160 (callback 8503C) (position strong)
+      - [0x2640, c, stdwtitl_800852F0]   # 0x800852F0 85594 (own callback 85BE4) (position strong)
+      - [0x3024, c, stdwtitl_80085CD4]   # 0x80085CD4 fade 85F44, 86544, title menu 86C70 (position weak: 85CD4..86834)
+      - [0x4148, c, stdwtitl_80086DF8]   # 0x80086DF8 stage module: stdwtitl_module and its table (position strong)
+      # Psy-Q 4.7 LIBPRESS (tools/psyq_match.py --raw), 16-byte padded like the EXE's libraries.
+      - [0x449C, asm, psyq/libpress/libpress]  # 0x8008714C LIBPRESS.LIB/LIBPRESS.OBJ
+      - [0x4B2C, asm, psyq/libpress/vlc_c]     # 0x800877DC LIBPRESS.LIB/VLC_C.OBJ
+      - [0x4EAC, asm, psyq/libpress/build]     # 0x80087B5C LIBPRESS.LIB/BUILD.OBJ
+      # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t stdwtitl;
+      # DECISIONS "Overlay .data/.bss per file"). Units without .data: 849D8, 84E44.
+      # The game's .bss comes after LIBPRESS's .data, so it is .bss; LIBPRESS has no .bss.
+      - [0x4F9C, .data, stdwtitl_80082D70]   # 0x80087C4C (after BUILD.OBJ's padding)
+      - [0x5090, .data, stdwtitl_80083F80]   # 0x80087D40
+      - [0x50D8, .data, stdwtitl_800852F0]   # 0x80087D88
+      - [0x510C, .data, stdwtitl_80085CD4]   # 0x80087DBC
+      - [0x5584, .data, stdwtitl_80086DF8]   # 0x80088234 the stage module stdwtitl_module
+      - [0x55D4, data, psyq/libpress/libpress]  # 0x80088284 (Psy-Q .data: 4-aligned here)
+      - [0x5724, data, psyq/libpress/vlc_c]     # 0x800883D4
+      - [0x5754, data, psyq/libpress/build]     # 0x80088404
+      - [0x6564, .bss, stdwtitl_80082D70]    # 0x80089214
+  - [0x65C0]

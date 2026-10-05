@@ -1,0 +1,19 @@
+// Symbol names for AAA/PRO/STAGSLCT.PRO (splat format). Tier-1 overlays share one address range,
+// so each overlay has its own symbol file; the EXE's names come from config/symbol_addrs.txt.
+
+// Functions (src/stagslct/stagslct_800849CC.c)
+stagslct_update_root = 0x800849CC; // type:func
+stagslct_start = 0x80084A30; // type:func
+stagslct_move_cursor = 0x80084A5C; // type:func
+stagslct_scroll = 0x80084B2C; // type:func
+stagslct_show_version = 0x80084B70; // type:func
+stagslct_fade_title = 0x80084C94; // type:func
+stagslct_update = 0x80084D9C; // type:func
+stagslct_create = 0x80085EA4; // type:func
+stagslct_language_names = 0x80085ED0;
+stagslct_stages = 0x80085EEC;
+stagslct_screen_rect = 0x8008718C;
+
+// Variables (splat writes base + offset for accesses inside them).
+stagslct_bios_version = 0x80087194; // size:0x16
+stagslct_cursor_text = 0x800849C8;

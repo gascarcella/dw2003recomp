@@ -1,0 +1,57 @@
+// Symbol names for AAA/PRO/STDGNAME.PRO (splat format). Tier-1 overlays share one address range,
+// so each overlay has its own symbol file; the EXE's names come from config/symbol_addrs.txt.
+
+// Module structs and tables (sizes: splat writes base + offset for accesses inside them).
+stdgname_funcs = 0x80087F38; // size:0x18
+stdgname_name_glyphs_2 = 0x80087F50;
+stdgname_name_glyphs_ext_2 = 0x80088934;
+stdgname_name_font_2 = 0x80088E1C;
+stdgname_key_buttons = 0x80087B70; // size:0x3C
+stdgname_arrow_palettes = 0x80087BAC;
+stdgname_party_frames = 0x80087BC4;
+stdgname_member_pos = 0x80087D68;
+stdgname_party_windows = 0x80087D98;
+stdgname_party_anims = 0x80087E58;
+stdgname_keyboard = 0x80088E34; // size:0xC
+
+// Functions.
+stdgname_update_main = 0x80082F8C; // type:func
+stdgname_start = 0x80083084; // type:func
+stdgname_fade_start = 0x800830B0; // type:func
+stdgname_fade_draw = 0x80083138; // type:func
+stdgname_fade_update = 0x8008327C; // type:func
+stdgname_fade_create = 0x80083330; // type:func
+stdgname_window_anim_start = 0x80083378; // type:func
+stdgname_window_anim_update = 0x8008340C; // type:func
+stdgname_entry_create_windows = 0x80083478; // type:func
+stdgname_entry_show_text = 0x80083668; // type:func
+stdgname_entry_draw = 0x80083994; // type:func
+stdgname_entry_run = 0x80084318; // type:func
+stdgname_entry_update = 0x80085078; // type:func
+stdgname_entry_set_texture_pos = 0x800851B8; // type:func
+stdgname_entry_set_name = 0x800851C4; // type:func
+stdgname_entry_get_name = 0x80085258; // type:func
+stdgname_entry_close = 0x80085358; // type:func
+stdgname_entry_create = 0x80085364; // type:func
+stdgname_party_show_window = 0x80085420; // type:func
+stdgname_party_draw = 0x8008559C; // type:func
+stdgname_party_input = 0x80085B70; // type:func
+stdgname_party_update = 0x80085DE4; // type:func
+stdgname_party_create = 0x80086144; // type:func
+stdgname_main_run = 0x80086184; // type:func
+stdgname_main_draw_background = 0x80086368; // type:func
+stdgname_main_update = 0x8008645C; // type:func
+stdgname_main_fade_out = 0x8008656C; // type:func
+stdgname_main_create = 0x800865B0; // type:func
+stdgname_load_files = 0x800865F0; // type:func
+stdgname_is_loading = 0x800866AC; // type:func
+stdgname_anim_start = 0x80086730; // type:func
+stdgname_anim_update = 0x800867C4; // type:func
+stdgname_name_glyphs = 0x80086830;
+stdgname_name_glyphs_ext = 0x80087214;
+stdgname_key_tabs_jpn = 0x800876FC;
+stdgname_key_pages_jpn = 0x80087720;
+stdgname_key_tabs_latin = 0x80087998;
+stdgname_key_pages_latin = 0x800879A4;
+stdgname_name_font = 0x80087A78;
+stdgname_entry_anims = 0x80087A90;
