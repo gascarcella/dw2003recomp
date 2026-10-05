@@ -82,8 +82,8 @@ void cardgame_game_load_opponent(CardgameGame *game, CardgameGameData *data) {
     CardgameOpponent *opp;
     s32 i;
 
-    game->opponents = (s32)cdload_module.files.get_file(0x7A4);
-    opp = &((CardgameOpponent *)game->opponents)[(u8)game->opponent - 1];
+    game->opponents = (CardgameOpponent *)cdload_module.files.get_file(0x7A4);
+    opp = &game->opponents[(u8)game->opponent - 1];
     game->opponent_level = opp->level;
     game->prize = cardgame_prize_items[opp->prize];
     for (i = 0; i < 40; i++) {

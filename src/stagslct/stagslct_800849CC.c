@@ -371,9 +371,8 @@ StageSelectEntry stagslct_stages[] = {
 RECT stagslct_screen_rect = { 0, 0, 320, 240 };
 s16 stagslct_bios_version[11]; /* the BIOS version in full-width characters */
 
-extern u8 stagslct_cursor_text[]; /* the cursor, "＞" (its last byte is not 0) */
-
-INCLUDE_RODATA("asm/stagslct/nonmatchings/stagslct_800849CC", stagslct_cursor_text);
+/* The cursor's text, "＞"; its last byte (0x39) is the linker's padding before .text. */
+const u8 stagslct_cursor_text[4] = { 0x81, 0x84, 0, 0x39 };
 
 StageSelect *stagslct_create(void);
 
@@ -445,7 +444,7 @@ void stagslct_show_version(StageSelect *obj, StageSelectData *data) {
 
     if (obj->version_made == 0) {
         data->bios_version = message_create_window(0x1000, 1, 0x10, 0x20);
-        rom = (u8 *)0x1FC0012C;
+        rom = BIOS_PTR(u8 *, 0x1FC0012C);
         for (i = 0; i < 10; i++, rom++) {
             /* Evidence (class C, block placement; DECISIONS "LOOP_BLOCK audit"): the original places the letter and '-'
              * blocks out of line, before their tests. */

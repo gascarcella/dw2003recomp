@@ -130,7 +130,7 @@ StdgnameMain *stdgname_main_create(void) {
 void stdgname_load_files(void) {
     Tim tim;
 
-    heap_funcs.bzero(&stdgname_funcs.member, 4);
+    heap_funcs.bzero(&stdgname_funcs.member, sizeof(stdgname_funcs.member));
     tim_init(&tim);
     tim.set_image_pos(0x280, 0);
     tim.load_all(cdload_module.get_subfile_by_id(0x02890000));

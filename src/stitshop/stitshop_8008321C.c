@@ -690,8 +690,8 @@ void stitshop_buy_run(StitshopBuy *obj, StitshopBuyData *data) {
     }
 }
 
-/* An unreferenced zero word: the rest of this file's .rodata. */
-INCLUDE_RODATA("asm/stitshop/nonmatchings/stitshop_8008321C", D_STITSHOP_80082D7C);
+/* An unreferenced zero word: the rest of this file's .rodata (the padding after the jump table above). */
+const s32 D_STITSHOP_80082D7C = 0;
 
 void stitshop_buy_update(StitshopBuy *obj, StitshopBuyData *data) {
     switch (obj->base.state) {

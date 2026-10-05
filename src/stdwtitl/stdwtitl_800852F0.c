@@ -197,7 +197,7 @@ StdwtitlMenu *stdwtitl_menu_create(s16 arg0) {
 
     obj->start = stdwtitl_menu_start;
     obj->show_press_start = stdwtitl_menu_show_press_start;
-    obj->get_result = stdwtitl_menu_get_result;
+    obj->get_result = (s32 (*)(struct StdwtitlMenu *))stdwtitl_menu_get_result;
     obj->layer_id = 0x1000;
     obj->ot_depth = 2;
     obj->skip_start = arg0;

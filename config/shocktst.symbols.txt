@@ -26,3 +26,7 @@ shocktst_data_path = 0x80084AF0;
 
 // Strings of .data initializers (one label each, so the target asm relocates the table words).
 D_SHOCKTST_80082CEC = 0x80082CEC; // type:asciz
+
+// shocktst_convert_table's "\t" literal (a single byte, which splat does not detect as a string on its own): typed so
+// that it migrates into the function's asm with its other literals (NON_MATCHING: the function's own C literal).
+D_SHOCKTST_80082D40 = 0x80082D40; // type:asciz size:0x4

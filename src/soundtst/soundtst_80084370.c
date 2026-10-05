@@ -659,7 +659,8 @@ SoundTestEntry soundtst_banks[] = {
 
 RECT soundtst_screen_rect = { 0, 0, 320, 240 };
 
-extern u8 soundtst_cursor_text[]; /* the cursor, "＞" */
+extern const u8 soundtst_cursor_text[4]; /* the cursor, "＞" */
+
 
 Object *soundtst_create(void);
 
@@ -852,8 +853,8 @@ void soundtst_update(SoundTest *obj, SoundTestData *data) {
     }
 }
 
-/* The cursor's text; its last byte (0x2D) is the linker's padding before .text, so it stays in asm. */
-INCLUDE_RODATA("asm/soundtst/nonmatchings/soundtst_80084370", soundtst_cursor_text);
+/* The cursor's text, "＞"; its last byte (0x2D) is the linker's padding before .text. */
+const u8 soundtst_cursor_text[4] = { 0x81, 0x84, 0, 0x2D };
 
 Object *soundtst_create(void) {
     return object_new(soundtst_update, sizeof(SoundTest), sizeof(SoundTestData));
