@@ -136,7 +136,7 @@ INCLUDE_ASM("asm/wfightts/nonmatchings/wfightts_800A7A90", wfightts_digimon_menu
 #endif
 
 WfighttsColumnMenu *wfightts_digimon_menu_create(s32 *arg0, s32 *result) {
-    WfighttsColumnMenu *obj = object_new(wfightts_digimon_menu_update, sizeof(WfighttsColumnMenu), 0x70);
+    WfighttsColumnMenu *obj = object_new(wfightts_digimon_menu_update, sizeof(WfighttsColumnMenu), sizeof(WfighttsColumnWindows));
 
     obj->column = arg0;
     obj->result = result;

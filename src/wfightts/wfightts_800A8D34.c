@@ -15,9 +15,9 @@
 
 void wfightts_script_menu_update();
 
-extern u8 wfightts_script_name_0[]; /* the table's first string (its padding bytes are not 0) */
+extern const u8 wfightts_script_name_0[16]; /* the table's first string (its padding bytes are not 0) */
 u8 *wfightts_script_names[20] = { /* entry names */
-    wfightts_script_name_0,
+    (u8 *)wfightts_script_name_0,
     "\x83\x45\x83\x46\x83\x43\x83\x67",
     "\x82\x72\x83\x5F\x83\x81\x81\x5B\x83\x57",
     "\x82\x6B\x83\x5F\x83\x81\x81\x5B\x83\x57",
@@ -38,7 +38,9 @@ u8 *wfightts_script_names[20] = { /* entry names */
     "\x83\x58\x83\x65\x81\x5B\x83\x5E\x83\x58\x81\x46\x83\x5F\x83\x41",
     "\x82\x6F\x82\x71\x82\x6E\x81\x46\x82\xC7\x82\xAD",
 };
-INCLUDE_RODATA("asm/wfightts/nonmatchings/wfightts_800A8D34", wfightts_script_name_0);
+/* the table's first string, as an array: the bytes after its NUL are the non-zero fill psylink left at
+ * the end of the original object's .rodata, so a string literal cannot reproduce them */
+const u8 wfightts_script_name_0[16] = { 0x81, 0x7C, 0x82, 0x6D, 0x82, 0x6E, 0x82, 0x6D, 0x82, 0x64, 0x81, 0x7C, 0x00, 0x00, 0x84, 0x8E };
 WfighttsMenuState wfightts_script_menu_state; /* the menu's state */
 
 /* wfightts_technique_menu_update's menu for the entries flagged in each side's Digimon's script record (data block:
@@ -168,7 +170,7 @@ void wfightts_script_menu_update(WfighttsScriptMenu *obj, WfighttsColumnWindows 
 }
 
 WfighttsScriptMenu *wfightts_script_menu_create(s32 *arg0, s32 *arg1) {
-    WfighttsScriptMenu *obj = object_create(wfightts_script_menu_update, sizeof(WfighttsScriptMenu), 0x70, 0xFFFF);
+    WfighttsScriptMenu *obj = object_create(wfightts_script_menu_update, sizeof(WfighttsScriptMenu), sizeof(WfighttsColumnWindows), 0xFFFF);
 
     obj->column = arg0;
     obj->result = arg1;

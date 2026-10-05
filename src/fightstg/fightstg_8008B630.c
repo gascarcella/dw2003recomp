@@ -656,7 +656,7 @@ void fightstg_script_update(FightstgScript *obj, FightstgScriptData *data) {
 }
 
 FightstgScript *fightstg_script_create(void) {
-    return object_new(fightstg_script_update, 0xB4, 0x40);
+    return object_new(fightstg_script_update, sizeof(FightstgScript), sizeof(FightstgScriptData));
 }
 
 /* Turns the camera round the scene for 240 frames while script 3 runs on stage 0x17. */
@@ -703,7 +703,7 @@ void fightstg_defeat_camera_update(FightstgDefeatCamera *obj, FightstgScript **d
 }
 
 void fightstg_defeat_camera_create(void) {
-    object_new(fightstg_defeat_camera_update, 0x54, 4);
+    object_new(fightstg_defeat_camera_update, sizeof(FightstgDefeatCamera), sizeof(FightstgScript *));
 }
 
 /* Side `side`'s attack: the message (8 or 0x8D), the effect (WFIGHTMN), then per fightstg_action's
@@ -900,7 +900,7 @@ void fightstg_attack_update(FightstgAttack *obj, FightstgMessage **data) {
 }
 
 void fightstg_attack_create(s32 side) {
-    FightstgAttack *obj = object_new(fightstg_attack_update, sizeof(FightstgAttack), 4);
+    FightstgAttack *obj = object_new(fightstg_attack_update, sizeof(FightstgAttack), sizeof(FightstgMessage *));
 
     obj->side = side;
 }

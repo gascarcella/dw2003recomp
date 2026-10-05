@@ -17,9 +17,9 @@ void wfightts_camera_menu_update();
 
 s32 wfightts_camera_menu_column = 0;           /* wfightts_camera_menu_update's column */
 s32 wfightts_camera_menu_cursors[2] = { 0, 0 }; /* its cursor per column */
-extern u8 wfightts_camera_menu_text_0[]; /* the table's first string (its padding bytes are not 0) */
+extern const u8 wfightts_camera_menu_text_0[16]; /* the table's first string (its padding bytes are not 0) */
 u8 *wfightts_camera_menu_text[12] = { /* its first column's text */
-    wfightts_camera_menu_text_0,
+    (u8 *)wfightts_camera_menu_text_0,
     "\x82\xBD\x82\xBD\x82\xA9\x82\xA4\x81\x7C\x82\x51",
     "\x82\xBD\x82\xBD\x82\xA9\x82\xA4\x81\x7C\x82\x52",
     "\x82\xBD\x82\xBD\x82\xA9\x82\xA4\x81\x7C\x82\x53",
@@ -32,7 +32,9 @@ u8 *wfightts_camera_menu_text[12] = { /* its first column's text */
     "\x82\xA9\x82\xA2\x82\xD3\x82\xAD",
     "\x83\x66\x83\x62\x83\x68",
 };
-INCLUDE_RODATA("asm/wfightts/nonmatchings/wfightts_800A8018", wfightts_camera_menu_text_0);
+/* the table's first string, as an array: the bytes after its NUL are the non-zero fill psylink left at
+ * the end of the original object's .rodata, so a string literal cannot reproduce them */
+const u8 wfightts_camera_menu_text_0[16] = { 0x82, 0xBD, 0x82, 0xBD, 0x82, 0xA9, 0x82, 0xA4, 0x81, 0x7C, 0x82, 0x50, 0x00, 0x00, 0x62, 0x10 };
 u8 *wfightts_camera_menu_text_2[3] = { /* its second column's text (entries 8..10 of the first) */
     "\x83\x5F\x83\x81\x81\x5B\x83\x57",
     "\x83\x4C\x83\x81\x83\x7C\x81\x5B\x83\x59",
@@ -125,7 +127,7 @@ void wfightts_camera_menu_update(WfighttsColumnMenu *obj, MessageWindow **window
 }
 
 WfighttsColumnMenu *wfightts_camera_menu_create(s32 *arg0, s32 *result) {
-    WfighttsColumnMenu *obj = object_new(wfightts_camera_menu_update, sizeof(WfighttsColumnMenu), 0x3C);
+    WfighttsColumnMenu *obj = object_new(wfightts_camera_menu_update, sizeof(WfighttsColumnMenu), 15 * sizeof(MessageWindow *));
 
     obj->column = arg0;
     obj->result = result;
