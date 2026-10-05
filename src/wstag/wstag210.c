@@ -5,7 +5,7 @@
 
 extern WstagFadeFuncs wstag210_funcs;
 extern s32 D_WSTAG210_800A7F84[];
-extern CVECTOR wstag210_color;
+extern const CVECTOR wstag210_color;
 extern FieldstgBattleLists wstag210_battle_lists;
 extern FieldstgVramPlace wstag210_vram_places[];
 extern FieldstgPlacedActor *wstag210_actors[];
@@ -502,7 +502,7 @@ s32 wstag210_fade_update(WindowAnim *fade) {
     return 0;
 }
 
-INCLUDE_RODATA("asm/wstag210/nonmatchings/wstag210", wstag210_color);
+const CVECTOR wstag210_color = { 0x54, 0x67, 0x96, 0 };
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag210_setup(void);

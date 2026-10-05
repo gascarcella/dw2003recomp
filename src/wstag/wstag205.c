@@ -32,7 +32,7 @@ typedef struct Wstag205Sprite {
 extern Wstag205Key *D_WSTAG205_800A6660[];
 extern Wstag205Sprite D_WSTAG205_800A6684[];
 extern WstagFuncs wstag205_funcs;
-extern CVECTOR wstag205_color;
+const CVECTOR wstag205_color = { 0x54, 0x67, 0x96, 0 };
 extern FieldstgBattleLists wstag205_battle_lists;
 extern FieldstgVramPlace wstag205_vram_places[];
 extern FieldstgPlacedActor *wstag205_actors[];
@@ -168,8 +168,6 @@ void wstag205_setup(void) {
         fieldstg_stage.sound = 0x607C0000;
     }
 }
-
-INCLUDE_RODATA("asm/wstag205/nonmatchings/wstag205", wstag205_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag205_setup(void);

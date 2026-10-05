@@ -5,7 +5,7 @@
 extern WstagFuncs wstag375_funcs;
 void wstag375_update();
 extern GamestatePos D_WSTAG375_800A63C8[];
-extern CVECTOR wstag375_color;
+const CVECTOR wstag375_color = { 0x80, 0x80, 0x80, 0 };
 extern FieldstgBattleLists wstag375_battle_lists;
 extern FieldstgBattleLists wstag375_battle_lists2;
 extern FieldstgVramPlace wstag375_vram_places[];
@@ -112,8 +112,6 @@ void wstag375_setup(void) {
         fieldstg_stage.battle_lists = &wstag375_battle_lists2;
     }
 }
-
-INCLUDE_RODATA("asm/wstag375/nonmatchings/wstag375", wstag375_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag375_setup(void);

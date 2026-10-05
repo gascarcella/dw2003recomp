@@ -3,7 +3,7 @@
 /* WSTAG934: stage 0x27F (fieldstg_stages_2d). */
 
 extern s16 D_WSTAG934_800A65B8[];
-extern CVECTOR wstag934_color;
+extern const CVECTOR wstag934_color;
 extern FieldstgVramPlace wstag934_vram_places[];
 extern FieldstgPlacedActor *wstag934_actors[];
 extern FieldstgSprite wstag934_sprites[];
@@ -223,7 +223,7 @@ s32 wstag934_fade_update(WindowAnim *fade) {
     return 0;
 }
 
-INCLUDE_RODATA("asm/wstag934/nonmatchings/wstag934", wstag934_color);
+const CVECTOR wstag934_color = { 0x80, 0x80, 0x80, 0 };
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag934_setup(void);

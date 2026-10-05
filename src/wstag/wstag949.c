@@ -4,7 +4,7 @@
 
 extern GamestatePos D_WSTAG949_800A6174[];
 extern WstagFuncs wstag949_funcs;
-extern CVECTOR wstag949_color;
+const CVECTOR wstag949_color = { 0x80, 0x80, 0x80, 0 };
 extern FieldstgVramPlace wstag949_vram_places[];
 extern FieldstgPlacedActor *wstag949_actors[];
 extern FieldstgSprite wstag949_sprites[];
@@ -93,8 +93,6 @@ void wstag949_setup(void) {
     fieldstg_attr.set_file(4, 0x09190001);
     fieldstg_attr.init_layer(0);
 }
-
-INCLUDE_RODATA("asm/wstag949/nonmatchings/wstag949", wstag949_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag949_setup(void);

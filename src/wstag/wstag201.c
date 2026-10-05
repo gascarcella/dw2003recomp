@@ -3,7 +3,7 @@
 /* WSTAG201: stage 0x270 (fieldstg_stages). */
 
 extern WstagFuncs wstag201_funcs;
-extern CVECTOR wstag201_color;
+const CVECTOR wstag201_color = { 0x80, 0x80, 0x80, 0 };
 extern FieldstgBattleLists wstag201_battle_lists;
 extern FieldstgVramPlace wstag201_vram_places[];
 extern FieldstgPlacedActor *wstag201_actors[];
@@ -54,8 +54,6 @@ void wstag201_setup(void) {
         fieldstg_stage.sound = 0x607C0000;
     }
 }
-
-INCLUDE_RODATA("asm/wstag201/nonmatchings/wstag201", wstag201_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag201_setup(void);

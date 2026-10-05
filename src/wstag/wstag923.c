@@ -2,7 +2,7 @@
 
 /* WSTAG923: stage 0x273 (fieldstg_stages_2d). */
 
-extern CVECTOR wstag923_color;
+const CVECTOR wstag923_color = { 0x54, 0x67, 0x96, 0 };
 extern FieldstgVramPlace wstag923_vram_places[];
 extern FieldstgPlacedActor *wstag923_actors[];
 extern FieldstgSprite wstag923_sprites[];
@@ -83,8 +83,6 @@ s32 wstag923_fade_update(WindowAnim *fade) {
     }
     return 0;
 }
-
-INCLUDE_RODATA("asm/wstag923/nonmatchings/wstag923", wstag923_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag923_setup(void);

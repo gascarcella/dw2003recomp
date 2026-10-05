@@ -4,7 +4,7 @@
 /* WSTAG220: stage 0x206 (fieldstg_stages). */
 
 extern WstagFuncs wstag220_funcs;
-extern CVECTOR wstag220_color;
+extern const CVECTOR wstag220_color;
 extern FieldstgVramPlace wstag220_vram_places[];
 extern FieldstgPlacedActor *wstag220_actors[];
 extern FieldstgSprite wstag220_sprites[];
@@ -433,7 +433,7 @@ s32 wstag220_fade_update(WindowAnim *fade) {
     return 0;
 }
 
-INCLUDE_RODATA("asm/wstag220/nonmatchings/wstag220", wstag220_color);
+const CVECTOR wstag220_color = { 0x54, 0x67, 0x96, 0 };
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag220_setup(void);

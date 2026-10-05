@@ -7,7 +7,7 @@ extern WstagAnimKey D_WSTAG741_800A6AF0[];
 extern WstagAnimKey D_WSTAG741_800A6B0C[];
 extern WstagAnimKey *D_WSTAG741_800A6B44[];
 extern WstagFuncs wstag741_funcs;
-extern CVECTOR wstag741_color;
+const CVECTOR wstag741_color = { 0x80, 0x80, 0x80, 0 };
 extern FieldstgBattleLists wstag741_battle_lists;
 extern FieldstgVramPlace wstag741_vram_places[];
 extern FieldstgPlacedActor *wstag741_actors[];
@@ -295,8 +295,6 @@ void wstag741_setup(void) {
     fieldstg_attr.set_file(4, 0x07510003);
     fieldstg_attr.init_layer(0);
 }
-
-INCLUDE_RODATA("asm/wstag741/nonmatchings/wstag741", wstag741_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag741_setup(void);
