@@ -157,8 +157,11 @@ replaces its item 9, the other ten remain.
     **Decided: accepted with the existing mitigations.**
 
 ## 5. Migration checklist (as decided: layout B, clean snapshot)
-0. **Prove the cloud plumbing** (still to do, user: create the cloud environment with both repositories, then one session; the sibling lookup itself is verified by `scripts/publish_snapshot.sh`'s run, and CI proves the same layout with `actions/checkout`) with a throwaway private repo: a cloud environment with this repo and the dummy data repo
-   selected; check that the SessionStart hook sees `../<data repo>` (or can `git clone` it); one session, no code change.
+0. **Done (session 14, cloud).** Prove the cloud plumbing: a cloud environment selecting `dw2003recomp` and `dw2003-gamedata`
+   clones both into `/home/user/` side by side; `scripts/gamedata_dir.sh` finds `../dw2003-gamedata`, the disc is rebuilt from
+   its xz parts, `build.sh --check` and `scripts/test.sh` pass. Caveat: the session's project directory is the parent of the
+   two checkouts, so the repo's `.claude/settings.json` is not loaded and the SessionStart hook does not fire; it is run by
+   hand (`CLAUDE_PROJECT_DIR=$PWD .claude/hooks/session-start.sh`, CLAUDE.md step 0).
 1. **Done (session 12, branch `claude/gallant-feynman-3mcny7`).** Prepare in this repo (normal commits): `LICENSE` (MIT), README notice and the disc requirement, `CONTRIBUTING.md`;
    `setup.sh gamedata`/`redux`, `worktree_init.sh`, the hook, `check_emulator.sh`, `oracle.py`, `replay.py` read
    `$DW3_GAMEDATA`; `.gitignore` loses the `!/gamedata/` lines; `CLAUDE.md` loses the exception; the two DECISIONS

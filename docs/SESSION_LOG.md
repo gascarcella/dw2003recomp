@@ -2,6 +2,23 @@
 
 Newest first. One short entry per session: goal, result, next steps.
 
+## 2026-10-05: Session 14: the two-repository cloud session proven (cloud, branch `claude/optimistic-heisenberg-3b2i6d`)
+- **Asked:** check that building and testing still work after the split into `dw2003recomp` (public, code) and
+  `dw2003-gamedata` (private, data), from a cloud environment that selects both.
+- **Done (docs only, no code change):**
+  - Both repositories were cloned side by side under `/home/user/`; `scripts/gamedata_dir.sh` resolves the sibling. The
+    data checkout's `SHA1SUMS` (disc files, BIOS) and `SHA256SUMS` (the emulator zip) verify.
+  - **The SessionStart hook did not fire:** with two repositories the session's project directory is `/home/user`, the
+    parent of both checkouts, so the repo's `.claude/settings.json` is not loaded (no tools, no `iso/` at the start).
+    Run by hand with `CLAUDE_PROJECT_DIR=$PWD`, it completed (exit 0, ~3 min): the toolchain (one binutils mirror 403,
+    the fallback worked), the pinned emulator with the glibc sysroot, the disc decompressed from the five xz parts and
+    SHA-1 verified, 2,386 files extracted. Recorded in CLAUDE.md step 0, STATUS, OPEN_SOURCE_PLAN step 0.
+  - `scripts/build.sh --check`: 2,100 outputs byte-identical (45 s). `scripts/check_toolchain.sh`: OK.
+    `scripts/check_emulator.sh --bios retail`: CNTY_SEL at frame 1011. `scripts/test.sh`: 4 layers passed, 0 skipped
+    (110 s; the host replay's known mismatches as listed in `tests/host/FINDINGS.md`).
+  - CI on the public `main` is green (run 5, with the data steps).
+- **Next:** the user closes pull requests by hand; then `docs/PC_PORT_PLAN.md` section 4 (the user decides first).
+
 ## 2026-10-05: Session 13: the public repository's GitHub steps (local, on `main`)
 - **Asked:** prove the local setup with the data checkout beside the repo, then finish what the cloud session could not:
   the milestone tag and release, CI's data access and first green run, the repository settings.

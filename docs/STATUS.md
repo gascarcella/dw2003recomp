@@ -1,9 +1,10 @@
 # Status
 
-_Last updated: 2026-10-05 (session 13, local, on `main`: the public repository's GitHub steps finished: the tag
-`v0.1-matching-closed` and its pre-release, CI green with the data checkout (`build.sh --check` + `scripts/test.sh`), the
-repository settings. Two fixes outside the game code: the host replay builds with `-fpermissive` on GCC 14+, and a stray
-`tools/__pycache__` symlink left the tree. Code state unchanged since session 7: every game file rebuilds byte-identical,
+_Last updated: 2026-10-05 (session 14, cloud, branch `claude/optimistic-heisenberg-3b2i6d`: the two-repository cloud
+session proven: both checkouts side by side, the disc from `../dw2003-gamedata`, `build.sh --check`, `check_toolchain.sh`,
+`check_emulator.sh --bios retail` and `scripts/test.sh` all pass. One finding: with two repositories selected the project
+directory is their parent, so the SessionStart hook does not fire and is run by hand (CLAUDE.md step 0). Docs only.
+Code state unchanged since session 7: every game file rebuilds byte-identical,
 98.6% of game code compiles from matching C, the EXE and WSTAG 100%, 8 holdouts stay asm)._
 
 The README's progress table (`tools/progress.py --readme`) has the current numbers per part and per overlay.
@@ -32,7 +33,8 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
 - **Names:** EXE 230+ symbols; FIELDSTG 212/222 functions, FIGHTSTG 272/301, CARDGAME 181/306, all small overlays and
   STGDGLAB/STSTATUS/STGTRAIN/STITSHOP/... mostly named; shared overlay types in `include/overlay_common.h`.
   Structure notes for the field, the battle and the card game: DECISIONS session-6 entries.
-- **Infrastructure:** cloud sessions (SessionStart hook, the data checkout beside the repo), worktree-isolated agents
+- **Infrastructure:** cloud sessions (SessionStart hook, the data checkout beside the repo; with both repositories
+  selected the hook is run by hand, CLAUDE.md step 0, verified session 14), worktree-isolated agents
   (`docs/AGENT_BRIEF.md`), `scripts/merge_checkpoint.sh`, `DW3_JOBS`, README progress table.
 - **CI (session 13):** `.github/workflows/ci.yml` on every push: toolchain, script/Python checks, `check_toolchain.sh`, and
   with the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of `dw2003-gamedata`) `build.sh --check` and
@@ -103,10 +105,9 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
 ## Blocked / needs user
 - **Going public: done 2026-10-05** (`docs/OPEN_SOURCE_PLAN.md` section 5; DECISIONS "Going public"): the clean
   snapshot `c1ca6f2` (from the private `e446f0e`), the tag `v0.1-matching-closed` on it with a pre-release, CI green with
-  the deploy-key secret, description/topics/features set (Issues on; Wiki, Projects, Discussions off). **Left for the
-  user:** a Claude Code cloud environment that selects both `dw2003recomp` and `dw2003-gamedata` (then one cloud session
-  to see the hook find `../dw2003-gamedata`: section 5 step 0), and closing pull requests by hand (GitHub cannot disable
-  them).
+  the deploy-key secret, description/topics/features set (Issues on; Wiki, Projects, Discussions off). The cloud
+  environment with both repositories works (session 14: section 5 step 0 done; the hook is run by hand there). **Left for
+  the user:** closing pull requests by hand (GitHub cannot disable them).
 - **PC-port decisions** (`docs/PC_PORT_PLAN.md` section 4): needed before any port code.
 - **Mechanics sources:** `docs/MECHANICS.md` "Sources wanted" lists the GameFAQs/StrategyWiki URLs the cloud session
   cannot reach; fetched text (or a local copy) would let the tests get names and expected behaviours from written sources.

@@ -10,6 +10,9 @@ with the original-era toolchain). A Linux-native port is a later, separate goal.
    links the disc, extracts it). Commit on the worktree's branch; merging to `main` is the user's call.
    **Cloud sessions** (fresh clone): the SessionStart hook (`.claude/hooks/session-start.sh`) runs `setup.sh` and
    `worktree_init.sh` before the session starts; the disc comes from the data checkout beside the repo (below).
+   In a session that selects **both repositories** the project directory is their parent, so this repo's hook does
+   **not** fire: if `tools/binutils` or `iso/dw2003.bin` is missing, run it yourself (~4 min cold):
+   `CLAUDE_PROJECT_DIR=$PWD .claude/hooks/session-start.sh` (session 14).
 1. **Start:** read `docs/STATUS.md` (current state and next steps). Skim the latest `docs/SESSION_LOG.md` entry.
 2. Work in phases. Stop at the end of each phase to summarize, and wait for the user's go-ahead.
 3. **End:** update `docs/STATUS.md` and add a dated entry to `docs/SESSION_LOG.md`; record any new
