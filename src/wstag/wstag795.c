@@ -144,7 +144,7 @@ void wstag795_door_message(WstagDoorObject *obj, s32 msg) {
 
 
 Object *wstag795_door_create(s32 arg0) {
-    return object_create(wstag795_door_update, 0x68, 0, arg0);
+    return object_create(wstag795_door_update, sizeof(WstagDoorObject), 0, arg0);
 }
 
 WstagDoorObject *wstag795_door_new(void) {
@@ -221,7 +221,7 @@ void wstag795_countdown_update(WstagObject *obj, WstagEventData *data) {
 
 
 Object *wstag795_countdown_new(void) {
-    return object_new(wstag795_countdown_update, 0x54, 0x4);
+    return object_new(wstag795_countdown_update, sizeof(WstagObject), sizeof(FieldstgEvent *)); /* data: the event only */
 }
 
 void wstag795_update(WstagObject *obj, Wstag795Data *data) {

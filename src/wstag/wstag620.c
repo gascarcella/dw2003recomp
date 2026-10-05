@@ -127,7 +127,7 @@ void wstag620_anim_slot_update(WstagAnimSlotObject *obj) {
 }
 
 Object *wstag620_anim_slot_create(s32 arg0) {
-    return object_create(wstag620_anim_slot_update, 0x80, 0, arg0);
+    return object_create(wstag620_anim_slot_update, sizeof(WstagAnimSlotObject), 0, arg0);
 }
 
 void wstag620_update(WstagObject *obj, WstagEventData *data) {

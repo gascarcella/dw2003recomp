@@ -70,7 +70,7 @@ extern Wstag805Key D_WSTAG805_800A7300[];
 extern Wstag805Key D_WSTAG805_800A7348[];
 extern Wstag805Key D_WSTAG805_800A73A0[];
 extern WstagFuncs wstag805_funcs;
-extern CVECTOR wstag805_color;
+const CVECTOR wstag805_color = { 0x80, 0x80, 0x80, 0 };
 extern FieldstgBattleLists wstag805_battle_lists;
 extern FieldstgVramPlace wstag805_vram_places[];
 extern FieldstgPlacedActor *wstag805_actors[];
@@ -440,8 +440,6 @@ void wstag805_setup(void) {
     fieldstg_attr.set_file(0, 0x06720001);
     fieldstg_attr.init_layer(0);
 }
-
-INCLUDE_RODATA("asm/wstag805/nonmatchings/wstag805", wstag805_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag805_setup(void);

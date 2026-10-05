@@ -20,7 +20,7 @@ extern WstagAnimKey D_WSTAG785_800A7118[];
 extern WstagAnimKey D_WSTAG785_800A7154[];
 extern WstagAnimKey D_WSTAG785_800A7188[];
 extern WstagAnimKey D_WSTAG785_800A71A4[];
-extern CVECTOR wstag785_color;
+const CVECTOR wstag785_color = { 0x80, 0x80, 0x80, 0 };
 extern FieldstgVramPlace wstag785_vram_places[];
 extern FieldstgPlacedActor *wstag785_actors[];
 extern FieldstgSprite wstag785_sprites[];
@@ -153,7 +153,7 @@ Wstag785Gate *wstag785_gate_new(void) {
 }
 
 Object *wstag785_gate_create(s32 arg0) {
-    return object_create(wstag785_gate_update, 0x6C, 0, arg0);
+    return object_create(wstag785_gate_update, sizeof(Wstag785Gate), 0, arg0);
 }
 
 void wstag785_mark_draw(Wstag785Mark *obj, s32 frame) {
@@ -323,8 +323,6 @@ void wstag785_setup(void) {
     fieldstg_attr.set_file(0, 0x01C70000);
     fieldstg_attr.init_layer(0);
 }
-
-INCLUDE_RODATA("asm/wstag785/nonmatchings/wstag785", wstag785_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag785_setup(void);

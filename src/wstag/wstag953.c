@@ -3,7 +3,7 @@
 /* WSTAG953: stage 0x299 (fieldstg_stages_2d). */
 
 extern WstagFuncs wstag953_funcs;
-extern CVECTOR wstag953_color;
+const CVECTOR wstag953_color = { 0x54, 0x67, 0x96, 0 };
 extern FieldstgVramPlace wstag953_vram_places[];
 extern FieldstgPlacedActor *wstag953_actors[];
 extern FieldstgSprite wstag953_sprites[];
@@ -53,8 +53,6 @@ void wstag953_setup(void) {
     fieldstg_attr.set_file(4, 0x09210001);
     fieldstg_attr.init_layer(0);
 }
-
-INCLUDE_RODATA("asm/wstag953/nonmatchings/wstag953", wstag953_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag953_setup(void);

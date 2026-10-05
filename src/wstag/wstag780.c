@@ -256,7 +256,7 @@ void wstag780_gauge_update(Wstag780Gauge *obj) {
 }
 
 Object *wstag780_gauge_create(s32 arg0) {
-    return object_create(wstag780_gauge_update, 0x54, 0, arg0);
+    return object_create(wstag780_gauge_update, sizeof(Wstag780Gauge), 0, arg0);
 }
 
 s32 wstag780_anim_loop(WstagAnim *anim, WstagAnimKey *keys, s32 depth) {
@@ -311,7 +311,7 @@ void wstag780_spark_update(Wstag780Spark *obj) {
     case OBJECT_STATE_RUN:
         obj->frame = wstag780_anim_loop(&obj->anim, D_WSTAG780_800A8420[obj->base.key1].keys, 0);
         if (obj->frame != 0) {
-            layer->add_callback(layer, wstag780_spark_draw, obj, obj->y, 0);
+            layer->add_callback(layer, (WstagDrawCallback)wstag780_spark_draw, obj, obj->y, 0);
         }
         break;
     case OBJECT_STATE_DONE:

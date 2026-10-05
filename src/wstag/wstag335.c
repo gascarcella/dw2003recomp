@@ -8,7 +8,7 @@ typedef struct Wstag335Data {
 } Wstag335Data; /* size 0x38 */
 
 extern WstagFuncs wstag335_funcs;
-extern CVECTOR wstag335_color;
+const CVECTOR wstag335_color = { 0x54, 0x67, 0x96, 0 };
 extern FieldstgBattleLists wstag335_battle_lists;
 extern FieldstgBattleLists wstag335_battle_lists2;
 extern FieldstgBattleLists wstag335_battle_lists3;
@@ -72,8 +72,6 @@ void wstag335_setup(void) {
         fieldstg_stage.battle_lists = &wstag335_battle_lists3;
     }
 }
-
-INCLUDE_RODATA("asm/wstag335/nonmatchings/wstag335", wstag335_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag335_setup(void);

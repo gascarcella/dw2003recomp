@@ -3,7 +3,7 @@
 /* WSTAG615: stage 0x254 (fieldstg_stages). */
 
 extern WstagFuncs wstag615_funcs;
-extern CVECTOR wstag615_color;
+const CVECTOR wstag615_color = { 0x80, 0x80, 0x80, 0 };
 extern FieldstgBattleLists wstag615_battle_lists;
 extern FieldstgVramPlace wstag615_vram_places[];
 extern FieldstgPlacedActor *wstag615_actors[];
@@ -71,8 +71,6 @@ void wstag615_setup(void) {
         fieldstg_stage.map_events = wstag615_map_events2;
     }
 }
-
-INCLUDE_RODATA("asm/wstag615/nonmatchings/wstag615", wstag615_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag615_setup(void);

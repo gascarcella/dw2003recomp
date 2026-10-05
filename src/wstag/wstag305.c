@@ -93,7 +93,7 @@ void wstag305_sound_anim_message(WstagSoundAnimObject *obj, s32 msg) {
 
 
 Object *wstag305_sound_anim_create(s32 arg0) {
-    return object_create(wstag305_sound_anim_update, 0x5C, 0, arg0);
+    return object_create(wstag305_sound_anim_update, sizeof(WstagSoundAnimObject), 0, arg0);
 }
 
 void wstag305_update(WstagObject *obj, WstagEventData *data) {

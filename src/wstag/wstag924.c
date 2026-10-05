@@ -3,7 +3,7 @@
 /* WSTAG924: stage 0x275 (fieldstg_stages_2d). */
 
 extern WstagFadeFuncs wstag924_funcs;
-extern CVECTOR wstag924_color;
+const CVECTOR wstag924_color = { 0x54, 0x67, 0x96, 0 };
 extern FieldstgVramPlace wstag924_vram_places[];
 extern FieldstgPlacedActor *wstag924_actors[];
 extern FieldstgSprite wstag924_sprites[];
@@ -82,8 +82,6 @@ s32 wstag924_fade_update(WindowAnim *fade) {
     }
     return 0;
 }
-
-INCLUDE_RODATA("asm/wstag924/nonmatchings/wstag924", wstag924_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag924_setup(void);

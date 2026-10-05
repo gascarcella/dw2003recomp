@@ -123,7 +123,7 @@ void wstag280_choice_update(WstagChoice *obj, WstagChoiceData *data) {
 }
 
 Object *wstag280_event_1522_start(void) {
-    return object_new(wstag280_choice_update, 0x64, 0x14);
+    return object_new(wstag280_choice_update, sizeof(WstagChoice), sizeof(WstagChoiceData));
 }
 
 void wstag280_update(WstagObject *obj, WstagEventData *data) {
