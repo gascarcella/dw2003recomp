@@ -1,4 +1,5 @@
 #include "common.h"
+#include "psyq/libc2.h"
 
 #include "gfx.h"
 #include "message.h"

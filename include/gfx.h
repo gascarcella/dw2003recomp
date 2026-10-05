@@ -116,8 +116,8 @@ extern GfxModule gfx_module;
 extern MATRIX D_800812F8;
 extern MATRIX D_80081358;
 
-/* An identity MATRIX in the EXE data block at 0x8004DC10 (config/main.yaml data_8004DC10, owner open; no EXE
- * code reads it). FIGHTSTG points its models at it. */
+/* An identity MATRIX in the EXE data block at 0x8004DC10 (defined in message.c, the start of its .data; owner open;
+ * no EXE code reads it). FIGHTSTG points its models at it. */
 extern MATRIX D_8004DC20;
 
 /* message.h's types, for Font. */

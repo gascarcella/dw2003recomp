@@ -8,9 +8,7 @@
 #include "object.h"
 #include "psyq/libc2.h"
 
-/* The tier-1 overlays share one address (0x80082CB0), so their entry points are plain addresses. */
-#define OVERLAY_ENTRY(addr) ((s32 (*)(void))(addr))
-
+/* The tier-1 overlays share one address (0x80082CB0), so their entry points are plain addresses (OVERLAY_ENTRY, port.h). */
 /* Per stage (gamestate_data.funcs.get_map() >> 8): the overlay's entry point. */
 s32 (*overlay_entries[])(void) = {
     NULL,                       /*  0 */
@@ -74,7 +72,7 @@ void overlay_run_object(Object *obj, s32 *result) {
     case OBJECT_STATE_INIT:
     default:
         overlay_module.load_stage();
-        *result = overlay_entries[gamestate_data.funcs.get_map() >> 8]();
+        *result = OVERLAY_FN(1, overlay_entries[gamestate_data.funcs.get_map() >> 8])();
         obj->next_state(obj);
         break;
     case OBJECT_STATE_RUN:
@@ -89,7 +87,7 @@ void overlay_run_object(Object *obj, s32 *result) {
 }
 
 Object *overlay_create_object(void) {
-    return object_new(overlay_run_object, 0x50, 4);
+    return object_new(overlay_run_object, sizeof(Object), sizeof(s32));
 }
 
 /* Loads the current stage's overlay (overlay_files) to main_overlay_base, unless it is already there. */
@@ -101,7 +99,7 @@ void overlay_load_stage(void) {
         overlay_module.stage = stage;
         overlay_module.file = -1;
         src = cdload_module.files.get_file(overlay_files[stage]);
-        memcpy(main_overlay_base, src, filetable_funcs.get_sectors(overlay_files[stage]) << 11);
+        OVERLAY_COPY(1, overlay_files[stage], main_overlay_base, src, filetable_funcs.get_sectors(overlay_files[stage]) << 11);
     }
 }
 
@@ -112,7 +110,7 @@ void overlay_load_file(s32 id) {
     if (overlay_module.file != id) {
         overlay_module.file = id;
         src = cdload_module.files.get_file(id);
-        memcpy(main_file_base, src, filetable_funcs.get_sectors(id) << 11);
+        OVERLAY_COPY(2, id, main_file_base, src, filetable_funcs.get_sectors(id) << 11);
     }
 }
 

@@ -73,6 +73,7 @@ void gfx_end_frame(s32 arg0) {
     DrawSync(0);
     gfx_frame_pending = 1;
     while (gfx_frame_pending != 0) {
+        PLATFORM_WAIT();
     }
     if (gfx_module.packet != NULL) {
         for (i = 0; i < 30; i++) {
@@ -124,7 +125,7 @@ void gfx_reset(void) {
                 i--;
             }
         }
-        heap_funcs.bzero(&gfx_module.packet, 0x18);
+        heap_funcs.bzero(&gfx_module.packet, (unsigned long)&((GfxModule *)0)->dispenvs - (unsigned long)&((GfxModule *)0)->packet);
         return;
     }
     gfx_module.buffer = 1;
@@ -306,11 +307,11 @@ void gfx_compact_ot(GfxLayer *obj) {
     p = ot + obj->ot_length - 1;
     while (p != ot) {
         q = p - 1;
-        if ((*p & mask) == ((u32)q & mask)) {
-            while ((*q & mask) == ((u32)(q - 1) & mask)) {
+        if ((*p & mask) == (PTR_TO_U32(q) & mask)) {
+            while ((*q & mask) == (PTR_TO_U32(q - 1) & mask)) {
                 q--;
             }
-            *p = (u32)q & mask;
+            *p = PTR_TO_U32(q) & mask;
         }
         p = q;
     }
@@ -546,9 +547,9 @@ GfxLayer *gfx_new_layer(DRAWENV *env, s32 bits) {
     obj->get_ot_entry = gfx_get_ot_entry;
     obj->get_ot_entry_z = gfx_get_ot_entry_z;
     obj->free = gfx_free_layer;
-    obj->set_clip_pos = gfx_set_clip_pos;
-    obj->set_clip_size = gfx_set_clip_size;
-    obj->set_draw_offset = gfx_set_draw_offset;
+    obj->set_clip_pos = (void (*)(GfxLayer *, s32, s32))gfx_set_clip_pos;
+    obj->set_clip_size = (void (*)(GfxLayer *, s32, s32))gfx_set_clip_size;
+    obj->set_draw_offset = (void (*)(GfxLayer *, s32, s32))gfx_set_draw_offset;
     obj->set_scroll = gfx_set_scroll;
     obj->add_scroll = gfx_add_scroll;
     obj->get_scroll = gfx_get_scroll;
