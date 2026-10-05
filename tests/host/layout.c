@@ -70,6 +70,8 @@ struct host_offset host_offsets[] = {
     { "CardgameGame.display", offsetof(CardgameGame, display) },
     { "CardgameGame.turns", offsetof(CardgameGame, turns) },
     { "CardgameGame.get_score", offsetof(CardgameGame, get_score) },
+    { "CardgameGame.prize", offsetof(CardgameGame, prize) },           /* the last field before the opponents pointer */
+    { "CardgameGame.effect_state", offsetof(CardgameGame, effect_state) }, /* the first after it: the second segment */
     { "sizeof(CardgameBoard)", sizeof(CardgameBoard) },
     { "FightstgBattle.state", offsetof(FightstgBattle, state) },
     { "RecordsState.gauges", offsetof(RecordsState, gauges) },
