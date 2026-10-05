@@ -24,4 +24,8 @@ typedef double f64;
 #define LOOP_BLOCK(body...) do { body } while (0)
 #define LOOP_BARRIER() do { } while (0)
 
+/* The PC port's hook macros (PLATFORM_WAIT, PTR_ADD, SLOT_FUNC, ...): each is the plain PS1 code unless PC_PORT is
+ * defined. */
+#include "port.h"
+
 #endif /* COMMON_H */
