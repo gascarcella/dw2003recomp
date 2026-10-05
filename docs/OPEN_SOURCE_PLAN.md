@@ -157,7 +157,7 @@ replaces its item 9, the other ten remain.
     **Decided: accepted with the existing mitigations.**
 
 ## 5. Migration checklist (as decided: layout B, clean snapshot)
-0. **Prove the cloud plumbing** (still to do; the sibling lookup itself is verified by `scripts/publish_snapshot.sh`'s run) with a throwaway private repo: a cloud environment with this repo and the dummy data repo
+0. **Prove the cloud plumbing** (still to do, user: create the cloud environment with both repositories, then one session; the sibling lookup itself is verified by `scripts/publish_snapshot.sh`'s run, and CI proves the same layout with `actions/checkout`) with a throwaway private repo: a cloud environment with this repo and the dummy data repo
    selected; check that the SessionStart hook sees `../<data repo>` (or can `git clone` it); one session, no code change.
 1. **Done (session 12, branch `claude/gallant-feynman-3mcny7`).** Prepare in this repo (normal commits): `LICENSE` (MIT), README notice and the disc requirement, `CONTRIBUTING.md`;
    `setup.sh gamedata`/`redux`, `worktree_init.sh`, the hook, `check_emulator.sh`, `oracle.py`, `replay.py` read
@@ -178,7 +178,7 @@ replaces its item 9, the other ten remain.
    scripts/test.sh`; the SHA-1s are the proof.
 5. **Hash references:** the docs cite `a424d38` and `0804d5b`, which exist only in the private history; the public docs
    say so once (section 1 of the README's history note) and keep them, since the private repo stays as the archive.
-6. **Partly done:** `main` pushed, the private repository trimmed. **User:** the tag (refused through the proxy), the CI secret, the environment. Publish: push to the new repo, tag `v0.1-matching-closed` on the initial commit, enable CI with the data-repo
+6. **Done 2026-10-05 (session 13), except the environment:** `main` pushed, the private repository trimmed; the tag `v0.1-matching-closed` on `c1ca6f2` with a pre-release "v0.1 — matching milestone"; the read-only deploy key on `dw2003-gamedata` and the secret `GAMEDATA_DEPLOY_KEY` here, CI green (build `--check` and `test.sh` included); description, topics, Issues on, Wiki/Projects/Discussions off; the README notice is in. **User:** the cloud environment with both repositories (step 0); pull requests are closed by hand. Publish: push to the new repo, tag `v0.1-matching-closed` on the initial commit, enable CI with the data-repo
    secret, README notice "pull requests closed by policy until the port exists". Trim this repo at its tip to
    `gamedata/` + `tools/prebuilt/` + READMEs (one commit, history kept). Switch the cloud environment to both repos.
 7. **Port:** decide `PC_PORT_PLAN.md` section 4, then M0 in `port/`.

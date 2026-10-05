@@ -2,6 +2,30 @@
 
 Newest first. One short entry per session: goal, result, next steps.
 
+## 2026-10-05: Session 13: the public repository's GitHub steps (local, on `main`)
+- **Asked:** prove the local setup with the data checkout beside the repo, then finish what the cloud session could not:
+  the milestone tag and release, CI's data access and first green run, the repository settings.
+- **Done:**
+  - Local setup proof (GCC 16.2 host): `scripts/setup.sh` (1.5 min cold, the disc and the emulator from
+    `../dw2003-gamedata`), `worktree_init.sh`, `build.sh --check` (2,100 outputs byte-identical) and, after the fix
+    below, `scripts/test.sh` (4 layers passed, 0 skipped).
+  - **Fix: the host replay on GCC 14+.** GCC 14 and later make implicit declarations and incompatible pointer assignments
+    errors in C (`-w` does not hide them): `cardgame_80096950.c` assigns `cardgame_board_open_dialog` (`s8`/`s16`
+    parameters) and `cardgame_board_set_dialog_answer` (`s16`) to `s32`-typed method slots, and `fieldstg_80087DB0.c`
+    calls `MoveImage` undeclared. `tests/host/build.sh` adds `-fpermissive` (older GCC ignores it for C). The port will
+    need those prototypes fixed instead.
+  - Tag `v0.1-matching-closed` (annotated) on `c1ca6f2`, pushed; GitHub pre-release "v0.1 — matching milestone", no assets.
+  - CI: an ed25519 read-only deploy key on `dw2003-gamedata`, its private half as the Actions secret `GAMEDATA_DEPLOY_KEY`
+    (key files shredded). The two runs from the cloud pushes had failed: the snapshot tracked `tools/__pycache__`, a
+    symlink to the cloud machine's checkout made by `setup.sh`'s worktree link step (`__pycache__/` matches only
+    directories), which dangles on a clone and broke `py_compile`. Untracked; `.gitignore` now says `__pycache__`. Next run
+    green in ~5 min with every step, the data ones included. Host-replay difference noticed: finding 1's six
+    `gamestate_flags` cases agree by accident with GCC 16's layout and mismatch (as listed) with CI's GCC 13.
+  - Settings: description, topics (decompilation, playstation, psx, digimon, reverse-engineering), Issues on, Wiki,
+    Projects and Discussions off (`gh repo edit`).
+- **Next (user):** a Claude Code cloud environment selecting `dw2003recomp` and `dw2003-gamedata` (OPEN_SOURCE_PLAN
+  section 5 step 0); pull requests closed by hand. Then `docs/PC_PORT_PLAN.md` section 4 (the user decides first).
+
 ## 2026-10-05: Session 12: going-public proposal (cloud session, branch `claude/gallant-feynman-3mcny7`)
 - **Asked:** the best repository setup for an open-source release (private repo A, public monorepo B or a separate port
   repo C), how the private material is handled, and the open questions before moving on to the port.

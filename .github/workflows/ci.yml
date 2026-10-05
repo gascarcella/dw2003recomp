@@ -1,5 +1,4 @@
-# CI (DECISIONS "Going public", decision 8). NOT YET RUN: written before the public repo existed; the first run on
-# GitHub will show what to adjust.
+# CI (DECISIONS "Going public", decision 8). First green run 2026-10-05 (session 13), the data steps included.
 #
 # With the maintainers' secret GAMEDATA_DEPLOY_KEY (a read-only deploy key of the private data checkout
 # <owner>/dw2003-gamedata) the job has the disc and the pinned emulator: it rebuilds every game file byte-identical

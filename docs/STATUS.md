@@ -1,11 +1,10 @@
 # Status
 
-_Last updated: 2026-10-05 (session 11, branch `claude/vigilant-lovelace-oed6n1`: the reference tests brought to "good
-shape": 21 golden families (3,437 cases, 5,333 calls; +13 families, +818 cases this session), a 46,597-frame replay from
-boot through the first battle, a save and reload, a shop, every menu overlay and STGTRAIN, four layer-3 format checks,
-function coverage (`tools/coverage.py`), holdout validation by replay (`tests/holdouts/`), and findings 1-8 for the port.
-`scripts/test.sh` green in ~2 min. Code state unchanged since session 7: every game file rebuilds byte-identical, 98.6% of
-game code compiles from matching C, the EXE and WSTAG 100%, 8 holdouts stay asm)._
+_Last updated: 2026-10-05 (session 13, local, on `main`: the public repository's GitHub steps finished: the tag
+`v0.1-matching-closed` and its pre-release, CI green with the data checkout (`build.sh --check` + `scripts/test.sh`), the
+repository settings. Two fixes outside the game code: the host replay builds with `-fpermissive` on GCC 14+, and a stray
+`tools/__pycache__` symlink left the tree. Code state unchanged since session 7: every game file rebuilds byte-identical,
+98.6% of game code compiles from matching C, the EXE and WSTAG 100%, 8 holdouts stay asm)._
 
 The README's progress table (`tools/progress.py --readme`) has the current numbers per part and per overlay.
 
@@ -33,8 +32,11 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
 - **Names:** EXE 230+ symbols; FIELDSTG 212/222 functions, FIGHTSTG 272/301, CARDGAME 181/306, all small overlays and
   STGDGLAB/STSTATUS/STGTRAIN/STITSHOP/... mostly named; shared overlay types in `include/overlay_common.h`.
   Structure notes for the field, the battle and the card game: DECISIONS session-6 entries.
-- **Infrastructure:** cloud sessions (SessionStart hook, `gamedata/`), worktree-isolated agents
+- **Infrastructure:** cloud sessions (SessionStart hook, the data checkout beside the repo), worktree-isolated agents
   (`docs/AGENT_BRIEF.md`), `scripts/merge_checkpoint.sh`, `DW3_JOBS`, README progress table.
+- **CI (session 13):** `.github/workflows/ci.yml` on every push: toolchain, script/Python checks, `check_toolchain.sh`, and
+  with the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of `dw2003-gamedata`) `build.sh --check` and
+  `scripts/test.sh`; first green run 2026-10-05, ~5 min. Fork pull requests get only the disc-free steps.
 - **Emulator (session 8):** `scripts/setup.sh redux` installs the pinned PCSX-Redux build from `tools/prebuilt/` into
   `tools/redux/` (through a pinned glibc sysroot where the host is too old, as in cloud containers) and the SessionStart
   hook runs it. `scripts/check_emulator.sh` boots `iso/dw2003.cue` headlessly to CNTY_SEL in ~16 s, with OpenBIOS
@@ -99,18 +101,17 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   (a constant in a variable before a `LOOP_BARRIER`), `stcrdshp_update_buy` (`q - -count`). `grep -rn "FAKE:" src`.
 
 ## Blocked / needs user
-- **Going public is done** except two GitHub steps for the user (`docs/OPEN_SOURCE_PLAN.md` section 5; DECISIONS "Going
-  public"): this public repository started on 2026-10-05 as a clean snapshot of the private history's `e446f0e`; the
-  private repository is now the data checkout `dw2003-gamedata`. **Needs the user:** the tag `v0.1-matching-closed` on the
-  initial commit (`c1ca6f2`; tag pushes are refused through the cloud session's proxy), the repository description, the
-  `GAMEDATA_DEPLOY_KEY` secret for `.github/workflows/ci.yml` (a read-only deploy key of `dw2003-gamedata`), and a cloud
-  environment that selects both repositories. CI has not run yet.
+- **Going public: done 2026-10-05** (`docs/OPEN_SOURCE_PLAN.md` section 5; DECISIONS "Going public"): the clean
+  snapshot `c1ca6f2` (from the private `e446f0e`), the tag `v0.1-matching-closed` on it with a pre-release, CI green with
+  the deploy-key secret, description/topics/features set (Issues on; Wiki, Projects, Discussions off). **Left for the
+  user:** a Claude Code cloud environment that selects both `dw2003recomp` and `dw2003-gamedata` (then one cloud session
+  to see the hook find `../dw2003-gamedata`: section 5 step 0), and closing pull requests by hand (GitHub cannot disable
+  them).
 - **PC-port decisions** (`docs/PC_PORT_PLAN.md` section 4): needed before any port code.
 - **Mechanics sources:** `docs/MECHANICS.md` "Sources wanted" lists the GameFAQs/StrategyWiki URLs the cloud session
   cannot reach; fetched text (or a local copy) would let the tests get names and expected behaviours from written sources.
-- **Review follow-ups (session 8, recommended, not decided):** a LICENSE file (MIT) before more borrowing; CI while the
-  repo is private (`build.sh --check` + `check_emulator.sh`); the public release as a fresh repo from a filtered export
-  rather than a force-pushed rewrite; a tag for the matching milestone (`v0.1-matching-closed` at `0804d5b`); splitting
+- **Review follow-ups (session 8, recommended, not decided):** done since: the LICENSE (MIT), CI, the public release as a
+  fresh repo, the milestone tag (`v0.1-matching-closed`, on the public `c1ca6f2` rather than the private `0804d5b`). Left: splitting
   the GCC-lessons journal out of `docs/DECISIONS.md`; `gcc-multilib` for a 32-bit layout oracle during the port.
 
 ## Not done / open
