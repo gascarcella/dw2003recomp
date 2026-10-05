@@ -23,8 +23,10 @@ UNITS+=(src/stgdglab/stgdglab_8008EB30.c)
 UNITS+=(src/wfightmn/wfightmn_800A6440.c)
 # FIELDSTG's battle table (fieldstg_battles, data only): fieldstg_start_battle (wfightmn_spoils).
 UNITS+=(src/fieldstg/fieldstg_80083784.c)
+# -fpermissive: GCC 14+ makes implicit declarations and incompatible pointer assignments errors in C; keep them warnings
+# (older GCC ignores it for C with a warning, which -w hides).
 CFLAGS=(-m64 -std=gnu99 -fwrapv -fsigned-char -fno-strict-aliasing -fno-stack-protector -DNON_MATCHING -w
-        -I"$ROOT/tests/host" -I"$ROOT/include" -I"$ROOT")
+        -fpermissive -I"$ROOT/tests/host" -I"$ROOT/include" -I"$ROOT")
 mkdir -p "$(dirname "$OUT")"
 OBJS=()
 for u in "${UNITS[@]}"; do
