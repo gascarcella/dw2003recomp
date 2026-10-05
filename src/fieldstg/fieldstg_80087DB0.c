@@ -300,7 +300,6 @@ extern u8 fieldstg_collision_probe_push[][2];
 extern s16 fieldstg_talk_redirects[][2];
 extern FieldstgAnimFrame *fieldstg_spots_effect_anims[];
 extern s32 fieldstg_spots_effect_depths[];
-extern FieldstgPos D_FIELDSTG_80082E8C;
 extern s32 fieldstg_actor_boxes_frame;
 FieldstgActorBox fieldstg_actor_boxes[20]; /* .bss */
 s32 fieldstg_actor_box_count;
@@ -309,7 +308,6 @@ extern s32 fieldstg_shatter_state;
 extern s16 fieldstg_carry_voice;
 extern RECT fieldstg_shatter_rect;
 extern FieldstgShatterStep fieldstg_shatter_steps[];
-extern CVECTOR D_FIELDSTG_800836F0;
 extern FieldstgSprite D_FIELDSTG_800996C4[];
 extern FieldstgMapEvent D_FIELDSTG_800997C0[];
 extern FieldstgVramPlace D_FIELDSTG_80097D0C[];
@@ -327,6 +325,7 @@ void fieldstg_start_battle(s32 battle);
 void fieldstg_actor_effect_update();
 void fieldstg_launch_update();
 void fieldstg_spots_hint_update();
+FieldstgSpots *fieldstg_spots_create(s32 count);
 void fieldstg_spots_update();
 void fieldstg_spots_pick_target(FieldstgSpots *obj);
 void fieldstg_goto_map_delayed(s32 map, s32 entry, s32 x, s32 y, s32 dir, s32 delay);
@@ -334,7 +333,7 @@ struct FieldstgSpotsHint *fieldstg_spots_hint_create(FieldstgPos from, FieldstgP
 struct FieldstgSpotsEffect *fieldstg_spots_effect_create(s32 arg0);
 void fieldstg_spots_effect_update();
 void fieldstg_meter_update();
-void func_800A6024(void);
+LATE_FUNC(2, 0x800A6024, void, func_800A6024, (void));
 void fieldstg_camera_update();
 void fieldstg_player_control();
 void fieldstg_player_control_height();
@@ -571,9 +570,8 @@ s32 fieldstg_map_events_enter(FieldstgMapEvents *obj, FieldstgMapEventsData *dat
     return 1;
 }
 
-INCLUDE_RODATA("asm/fieldstg/nonmatchings/fieldstg_80087DB0", D_FIELDSTG_80082E8C);
-
 void fieldstg_map_events_run(FieldstgMapEvents *obj) {
+    static const FieldstgPos jump_pos = { 0, 0 };
     FieldstgSprite *sprite;
     s32 key;
     FieldstgMapEvent *entry;
@@ -609,7 +607,7 @@ void fieldstg_map_events_run(FieldstgMapEvents *obj) {
                              (obj->event->param - 1) * 16);
         break;
     case 4:
-        obj->player->jump_down(obj->player, obj->dir, D_FIELDSTG_80082E8C, obj->event->param * 16);
+        obj->player->jump_down(obj->player, obj->dir, jump_pos, obj->event->param * 16);
         break;
     case 7:
         obj->player->start_meter(obj->player, obj->dir,
@@ -910,7 +908,7 @@ void fieldstg_sprites_update(FieldstgSprites *obj, FieldstgSpots **data) {
                         break;
                     }
                     if (entry->priority != 0) {
-                        layer->add_callback(layer, fieldstg_sprites_draw_entry, obj, entry->priority, i);
+                        layer->add_callback(layer, (void (*)(void *, GfxLayer *, s32))fieldstg_sprites_draw_entry, obj, entry->priority, i);
                     } else {
                         sprite.set_layer_id(0x1002, entry->ot_depth);
                         sprite.set_palette(entry->frame);
@@ -1065,7 +1063,7 @@ s32 fieldstg_loader_run(Object *obj) {
                 tim_init(&bg);
                 bg.set_clut_pos(0, 0x1F0);
                 bg.set_image_pos(0x140, 0x100);
-                bg.load_all(cdload_module.files.get_file(fieldstg_stage.mask_file));
+                bg.load_all((s32 *)cdload_module.files.get_file(fieldstg_stage.mask_file));
             }
             obj->next_timer(obj);
         case 3:
@@ -1113,7 +1111,7 @@ void fieldstg_loader_update(Object *obj) {
 }
 
 Object *fieldstg_loader_create(s32 step) {
-    Object *obj = object_new(fieldstg_loader_update, 0x54, 0);
+    Object *obj = object_new(fieldstg_loader_update, 0x54, 0); /* PC_PORT: sizeof(Object) + 4; no field of the extra word is used */
 
     obj->key2 = step;
     return obj;
@@ -1480,7 +1478,7 @@ void fieldstg_manager_update(FieldstgManager *obj, FieldstgManagerData *data) {
         case 0:
         default:
             if (fieldstg_map_has_no_tiles() == 0) {
-                cdload_module.files.free_above(0x8015C674);
+                cdload_module.files.free_above(HEAP_ADDR(0x8015C674));
             }
             gfx_module.reset();
             gfx_module.alloc_packet_buffers(0x6400);
@@ -1509,7 +1507,7 @@ void fieldstg_manager_update(FieldstgManager *obj, FieldstgManagerData *data) {
                 overlay_module.load_file(fieldstg_stage.code_file);
             }
             if (fieldstg_stage.entry != NULL) {
-                data->stage = fieldstg_stage.entry(obj);
+                data->stage = OVERLAY_FN(2, fieldstg_stage.entry)(obj);
             }
             gamestate_flags.update_map_flags();
             gamestate_flags.set_flag(gamestate_data.funcs.get_map() + 0x1E00, 1);
@@ -2344,10 +2342,10 @@ FieldstgLaunch *fieldstg_launch_create(FieldstgActor *arg0, s16 *arg1) {
     obj->actor = arg0;
     obj->params = arg1;
     if (gamestate_data.funcs.get_map() == 0x26C) {
-        func_800A6024();
+        LATE_CALL(func_800A6024)();
     }
     if (gamestate_data.funcs.get_map() == 0x2D4) {
-        func_800A6024();
+        LATE_CALL(func_800A6024)();
     }
     return obj;
 }
@@ -2610,7 +2608,7 @@ void fieldstg_spots_effect_update(FieldstgSpotsEffect *obj) {
         }
         obj->base.timer = time;
         if (obj->sprite != 0) {
-            layer->add_callback(layer, fieldstg_spots_effect_draw, obj, obj->y + fieldstg_spots_effect_depths[obj->dir], 0);
+            layer->add_callback(layer, (void (*)(void *, GfxLayer *, s32))fieldstg_spots_effect_draw, obj, obj->y + fieldstg_spots_effect_depths[obj->dir], 0);
         }
         break;
     }
@@ -4334,7 +4332,7 @@ void fieldstg_actor_update(FieldstgActor *obj, void **data) {
             fieldstg_actor_update_sprite(obj);
             if (obj->pixel_pos.x + obj->pixel_pos.y != 0) {
                 layer = gfx_module.funcs.get_layer(0x1002);
-                layer->add_callback(layer, fieldstg_actor_draw, obj, obj->pixel_pos.y, 0);
+                layer->add_callback(layer, (void (*)(void *, GfxLayer *, s32))fieldstg_actor_draw, obj, obj->pixel_pos.y, 0);
             }
         }
         break;
@@ -4638,9 +4636,9 @@ void fieldstg_choice_end_second_15(void) {
     gamestate_flags.set_flag(0x40F, 1);
 }
 
-INCLUDE_RODATA("asm/fieldstg/nonmatchings/fieldstg_80087DB0", D_FIELDSTG_800836F0);
-
 void fieldstg_stage_setup(void) {
+    static const CVECTOR color = { 0x80, 0x80, 0x80, 0 };
+
     fieldstg_stage.background_file = 0x1AC;
     fieldstg_stage.sprite_file = 0x01AD0000;
     fieldstg_stage.sprites = D_FIELDSTG_800996C4;
@@ -4653,7 +4651,7 @@ void fieldstg_stage_setup(void) {
     fieldstg_stage.music = 0x42;
     fieldstg_stage.actors = D_FIELDSTG_800994F4;
     fieldstg_stage.sound = 0x61080002;
-    fieldstg_stage.color = D_FIELDSTG_800836F0;
+    fieldstg_stage.color = color;
     fieldstg_stage.events = D_FIELDSTG_80099844;
     fieldstg_attr.set_file(0, 0x01AD0002);
     fieldstg_attr.set_file(1, 0x01AD0003);
@@ -4732,7 +4730,7 @@ void fieldstg_find_stage(void) {
         entry = fieldstg_stages_2d;
     }
     id = gamestate_data.funcs.get_map();
-    heap_funcs.bzero(&fieldstg_stage, 0x64);
+    heap_funcs.bzero(&fieldstg_stage, 0x64); /* PC_PORT: the fields before return_pos (offsetof) */
     while (1) {
         if (entry->id == id) {
             fieldstg_stage.code_file = entry->file;
@@ -4746,6 +4744,7 @@ void fieldstg_find_stage(void) {
     }
     if (entry->id == 0) {
         while (1) {
+            PLATFORM_HALT();
         }
     }
 }
@@ -4762,7 +4761,7 @@ FieldstgBattleLists *fieldstg_find_battle_lists(FieldstgBattleLists *entries, s3
 }
 
 void fieldstg_timer_reset(void) {
-    heap_funcs.bzero(&fieldstg_timer, 8);
+    heap_funcs.bzero(&fieldstg_timer, 8); /* PC_PORT: frames and running, not the functions (offsetof) */
 }
 
 FieldstgActor *fieldstg_find_actor(s32 id) {
@@ -4833,7 +4832,7 @@ Object *fieldstg_start_script_object(s32 id) {
     Object *ret = NULL;
 
     if (entry != NULL) {
-        ret = entry->start(id);
+        ret = OVERLAY_FN(2, entry->start)(id);
     }
     return ret;
 }
@@ -4842,7 +4841,7 @@ void fieldstg_send_script_object(void *obj, s32 id, s32 arg2, s32 arg3) {
     FieldstgScriptObject *entry = fieldstg_find_script_object(id);
 
     if (entry != NULL && entry->message != NULL) {
-        entry->message(obj, arg2, arg3);
+        OVERLAY_FN(2, entry->message)(obj, arg2, arg3);
     }
 }
 
@@ -4918,12 +4917,12 @@ s32 fieldstg_attr_load_layer(s32 i) {
         return 0;
     }
     data = cdload_module.get_subfile_by_id(id);
-    fieldstg_attr.blocks = (u8 *)(data[0] + (s32)data);
-    fieldstg_attr.quarters_64 = (u8 *)(data[1] + (s32)data);
-    fieldstg_attr.quarters_32 = (s16 *)(data[2] + (s32)data);
-    fieldstg_attr.quarters_16 = (s16 *)(data[3] + (s32)data);
-    fieldstg_attr.quarters_8 = (s16 *)(data[4] + (s32)data);
-    fieldstg_attr.cells = (u8 *)(data[5] + (s32)data);
+    fieldstg_attr.blocks = PTR_ADD(u8 *, data[0], data);
+    fieldstg_attr.quarters_64 = PTR_ADD(u8 *, data[1], data);
+    fieldstg_attr.quarters_32 = PTR_ADD(s16 *, data[2], data);
+    fieldstg_attr.quarters_16 = PTR_ADD(s16 *, data[3], data);
+    fieldstg_attr.quarters_8 = PTR_ADD(s16 *, data[4], data);
+    fieldstg_attr.cells = PTR_ADD(u8 *, data[5], data);
     fieldstg_attr.width = fieldstg_attr.blocks[0];
     fieldstg_attr.height = fieldstg_attr.blocks[1];
     fieldstg_attr.blocks += 2;
@@ -5674,71 +5673,71 @@ FieldstgMapEvent D_FIELDSTG_800997C0[5] = {
 FieldstgStageFuncs fieldstg_stage_funcs = { fieldstg_stage_setup, fieldstg_window_anim_start, fieldstg_window_anim_update };
 
 FieldstgEventDef D_FIELDSTG_80099844[67] = {
-    { 1320, (s16 *)0x800A5DE0, 0x1190040, NULL, NULL }, { 1325, (s16 *)0x800A5EC4, 0x1190041, NULL, NULL },
-    { 1331, (s16 *)0x800A5FA8, 0x1190000, NULL, NULL },
+    { 1320, SLOT_PTR(2, s16 *, 0x800A5DE0), 0x1190040, NULL, NULL }, { 1325, SLOT_PTR(2, s16 *, 0x800A5EC4), 0x1190041, NULL, NULL },
+    { 1331, SLOT_PTR(2, s16 *, 0x800A5FA8), 0x1190000, NULL, NULL },
     { 1332, NULL, 0, (s32 (*)(void))fieldstg_choice_start_0, NULL },
-    { 1333, (s16 *)0x800A6124, 0x1190001, NULL, fieldstg_choice_end_first_0 },
-    { 1334, (s16 *)0x800A62BC, 0x1190003, NULL, fieldstg_choice_end_second_0 },
-    { 1336, (s16 *)0x800A63A0, 0x1190004, NULL, NULL },
+    { 1333, SLOT_PTR(2, s16 *, 0x800A6124), 0x1190001, NULL, fieldstg_choice_end_first_0 },
+    { 1334, SLOT_PTR(2, s16 *, 0x800A62BC), 0x1190003, NULL, fieldstg_choice_end_second_0 },
+    { 1336, SLOT_PTR(2, s16 *, 0x800A63A0), 0x1190004, NULL, NULL },
     { 1337, NULL, 0, (s32 (*)(void))fieldstg_choice_start_1, NULL },
-    { 1338, (s16 *)0x800A651C, 0x1190006, NULL, fieldstg_choice_end_first_1 },
-    { 1339, (s16 *)0x800A66B4, 0x1190007, NULL, fieldstg_choice_end_second_1 },
-    { 1341, (s16 *)0x800A6798, 0x1190008, NULL, NULL },
+    { 1338, SLOT_PTR(2, s16 *, 0x800A651C), 0x1190006, NULL, fieldstg_choice_end_first_1 },
+    { 1339, SLOT_PTR(2, s16 *, 0x800A66B4), 0x1190007, NULL, fieldstg_choice_end_second_1 },
+    { 1341, SLOT_PTR(2, s16 *, 0x800A6798), 0x1190008, NULL, NULL },
     { 1342, NULL, 0, (s32 (*)(void))fieldstg_choice_start_2, NULL },
-    { 1343, (s16 *)0x800A6914, 0x119000A, NULL, fieldstg_choice_end_first_2 },
-    { 1344, (s16 *)0x800A6AAC, 0x119000B, NULL, fieldstg_choice_end_second_2 },
-    { 1346, (s16 *)0x800A6B90, 0x119000C, NULL, NULL },
+    { 1343, SLOT_PTR(2, s16 *, 0x800A6914), 0x119000A, NULL, fieldstg_choice_end_first_2 },
+    { 1344, SLOT_PTR(2, s16 *, 0x800A6AAC), 0x119000B, NULL, fieldstg_choice_end_second_2 },
+    { 1346, SLOT_PTR(2, s16 *, 0x800A6B90), 0x119000C, NULL, NULL },
     { 1347, NULL, 0, (s32 (*)(void))fieldstg_choice_start_3, NULL },
-    { 1348, (s16 *)0x800A6D0C, 0x119000E, NULL, fieldstg_choice_end_first_3 },
-    { 1349, (s16 *)0x800A6EA4, 0x119000F, NULL, fieldstg_choice_end_second_3 },
-    { 1351, (s16 *)0x800A6F88, 0x1190010, NULL, NULL },
+    { 1348, SLOT_PTR(2, s16 *, 0x800A6D0C), 0x119000E, NULL, fieldstg_choice_end_first_3 },
+    { 1349, SLOT_PTR(2, s16 *, 0x800A6EA4), 0x119000F, NULL, fieldstg_choice_end_second_3 },
+    { 1351, SLOT_PTR(2, s16 *, 0x800A6F88), 0x1190010, NULL, NULL },
     { 1352, NULL, 0, (s32 (*)(void))fieldstg_choice_start_4, NULL },
-    { 1353, (s16 *)0x800A7104, 0x1190012, NULL, fieldstg_choice_end_first_4 },
-    { 1354, (s16 *)0x800A729C, 0x1190013, NULL, fieldstg_choice_end_second_4 },
-    { 1356, (s16 *)0x800A7388, 0x1190014, NULL, NULL },
+    { 1353, SLOT_PTR(2, s16 *, 0x800A7104), 0x1190012, NULL, fieldstg_choice_end_first_4 },
+    { 1354, SLOT_PTR(2, s16 *, 0x800A729C), 0x1190013, NULL, fieldstg_choice_end_second_4 },
+    { 1356, SLOT_PTR(2, s16 *, 0x800A7388), 0x1190014, NULL, NULL },
     { 1357, NULL, 0, (s32 (*)(void))fieldstg_choice_start_5, NULL },
-    { 1358, (s16 *)0x800A7504, 0x1190016, NULL, fieldstg_choice_end_first_5 },
-    { 1359, (s16 *)0x800A769C, 0x1190017, NULL, fieldstg_choice_end_second_5 },
-    { 1361, (s16 *)0x800A7780, 0x1190018, NULL, NULL },
+    { 1358, SLOT_PTR(2, s16 *, 0x800A7504), 0x1190016, NULL, fieldstg_choice_end_first_5 },
+    { 1359, SLOT_PTR(2, s16 *, 0x800A769C), 0x1190017, NULL, fieldstg_choice_end_second_5 },
+    { 1361, SLOT_PTR(2, s16 *, 0x800A7780), 0x1190018, NULL, NULL },
     { 1362, NULL, 0, (s32 (*)(void))fieldstg_choice_start_6, NULL },
-    { 1363, (s16 *)0x800A78FC, 0x119001A, NULL, fieldstg_choice_end_first_6 },
-    { 1364, (s16 *)0x800A7A9C, 0x119001B, NULL, fieldstg_choice_end_second_6 },
-    { 1366, (s16 *)0x800A7B80, 0x119001C, NULL, NULL },
+    { 1363, SLOT_PTR(2, s16 *, 0x800A78FC), 0x119001A, NULL, fieldstg_choice_end_first_6 },
+    { 1364, SLOT_PTR(2, s16 *, 0x800A7A9C), 0x119001B, NULL, fieldstg_choice_end_second_6 },
+    { 1366, SLOT_PTR(2, s16 *, 0x800A7B80), 0x119001C, NULL, NULL },
     { 1367, NULL, 0, (s32 (*)(void))fieldstg_choice_start_7, NULL },
-    { 1368, (s16 *)0x800A7CFC, 0x119001E, NULL, fieldstg_choice_end_first_7 },
-    { 1369, (s16 *)0x800A7E94, 0x119001F, NULL, fieldstg_choice_end_second_7 },
-    { 1371, (s16 *)0x800A7F78, 0x1190020, NULL, NULL },
+    { 1368, SLOT_PTR(2, s16 *, 0x800A7CFC), 0x119001E, NULL, fieldstg_choice_end_first_7 },
+    { 1369, SLOT_PTR(2, s16 *, 0x800A7E94), 0x119001F, NULL, fieldstg_choice_end_second_7 },
+    { 1371, SLOT_PTR(2, s16 *, 0x800A7F78), 0x1190020, NULL, NULL },
     { 1372, NULL, 0, (s32 (*)(void))fieldstg_choice_start_8, NULL },
-    { 1373, (s16 *)0x800A80F4, 0x1190022, NULL, fieldstg_choice_end_first_8 },
-    { 1374, (s16 *)0x800A828C, 0x1190023, NULL, fieldstg_choice_end_second_8 },
-    { 1376, (s16 *)0x800A8370, 0x1190024, NULL, NULL },
+    { 1373, SLOT_PTR(2, s16 *, 0x800A80F4), 0x1190022, NULL, fieldstg_choice_end_first_8 },
+    { 1374, SLOT_PTR(2, s16 *, 0x800A828C), 0x1190023, NULL, fieldstg_choice_end_second_8 },
+    { 1376, SLOT_PTR(2, s16 *, 0x800A8370), 0x1190024, NULL, NULL },
     { 1377, NULL, 0, (s32 (*)(void))fieldstg_choice_start_9, NULL },
-    { 1378, (s16 *)0x800A84EC, 0x1190026, NULL, fieldstg_choice_end_first_9 },
-    { 1379, (s16 *)0x800A8684, 0x1190027, NULL, fieldstg_choice_end_second_9 },
-    { 1381, (s16 *)0x800A8768, 0x1190028, NULL, NULL },
+    { 1378, SLOT_PTR(2, s16 *, 0x800A84EC), 0x1190026, NULL, fieldstg_choice_end_first_9 },
+    { 1379, SLOT_PTR(2, s16 *, 0x800A8684), 0x1190027, NULL, fieldstg_choice_end_second_9 },
+    { 1381, SLOT_PTR(2, s16 *, 0x800A8768), 0x1190028, NULL, NULL },
     { 1382, NULL, 0, (s32 (*)(void))fieldstg_choice_start_10, NULL },
-    { 1383, (s16 *)0x800A88E4, 0x119002A, NULL, fieldstg_choice_end_first_10 },
-    { 1384, (s16 *)0x800A8A7C, 0x119002B, NULL, fieldstg_choice_end_second_10 },
-    { 1386, (s16 *)0x800A8B60, 0x119002C, NULL, NULL },
+    { 1383, SLOT_PTR(2, s16 *, 0x800A88E4), 0x119002A, NULL, fieldstg_choice_end_first_10 },
+    { 1384, SLOT_PTR(2, s16 *, 0x800A8A7C), 0x119002B, NULL, fieldstg_choice_end_second_10 },
+    { 1386, SLOT_PTR(2, s16 *, 0x800A8B60), 0x119002C, NULL, NULL },
     { 1387, NULL, 0, (s32 (*)(void))fieldstg_choice_start_11, NULL },
-    { 1388, (s16 *)0x800A8CDC, 0x119002E, NULL, fieldstg_choice_end_first_11 },
-    { 1389, (s16 *)0x800A8E88, 0x119002F, NULL, fieldstg_choice_end_second_11 },
-    { 1391, (s16 *)0x800A8F6C, 0x1190030, NULL, NULL },
+    { 1388, SLOT_PTR(2, s16 *, 0x800A8CDC), 0x119002E, NULL, fieldstg_choice_end_first_11 },
+    { 1389, SLOT_PTR(2, s16 *, 0x800A8E88), 0x119002F, NULL, fieldstg_choice_end_second_11 },
+    { 1391, SLOT_PTR(2, s16 *, 0x800A8F6C), 0x1190030, NULL, NULL },
     { 1392, NULL, 0, (s32 (*)(void))fieldstg_choice_start_12, NULL },
-    { 1393, (s16 *)0x800A90E8, 0x1190032, NULL, fieldstg_choice_end_first_12 },
-    { 1394, (s16 *)0x800A9270, 0x1190033, NULL, fieldstg_choice_end_second_12 },
-    { 1396, (s16 *)0x800A9354, 0x1190034, NULL, NULL },
+    { 1393, SLOT_PTR(2, s16 *, 0x800A90E8), 0x1190032, NULL, fieldstg_choice_end_first_12 },
+    { 1394, SLOT_PTR(2, s16 *, 0x800A9270), 0x1190033, NULL, fieldstg_choice_end_second_12 },
+    { 1396, SLOT_PTR(2, s16 *, 0x800A9354), 0x1190034, NULL, NULL },
     { 1397, NULL, 0, (s32 (*)(void))fieldstg_choice_start_13, NULL },
-    { 1398, (s16 *)0x800A94D4, 0x1190036, NULL, fieldstg_choice_end_first_13 },
-    { 1399, (s16 *)0x800A965C, 0x1190037, NULL, fieldstg_choice_end_second_13 },
-    { 1401, (s16 *)0x800A9740, 0x1190038, NULL, NULL },
+    { 1398, SLOT_PTR(2, s16 *, 0x800A94D4), 0x1190036, NULL, fieldstg_choice_end_first_13 },
+    { 1399, SLOT_PTR(2, s16 *, 0x800A965C), 0x1190037, NULL, fieldstg_choice_end_second_13 },
+    { 1401, SLOT_PTR(2, s16 *, 0x800A9740), 0x1190038, NULL, NULL },
     { 1402, NULL, 0, (s32 (*)(void))fieldstg_choice_start_14, NULL },
-    { 1403, (s16 *)0x800A98BC, 0x119003A, NULL, fieldstg_choice_end_first_14 },
-    { 1404, (s16 *)0x800A9A64, 0x119003B, NULL, fieldstg_choice_end_second_14 },
-    { 1406, (s16 *)0x800A9B48, 0x119003C, NULL, NULL },
+    { 1403, SLOT_PTR(2, s16 *, 0x800A98BC), 0x119003A, NULL, fieldstg_choice_end_first_14 },
+    { 1404, SLOT_PTR(2, s16 *, 0x800A9A64), 0x119003B, NULL, fieldstg_choice_end_second_14 },
+    { 1406, SLOT_PTR(2, s16 *, 0x800A9B48), 0x119003C, NULL, NULL },
     { 1407, NULL, 0, (s32 (*)(void))fieldstg_choice_start_15, NULL },
-    { 1408, (s16 *)0x800A9CC8, 0x119003E, NULL, fieldstg_choice_end_first_15 },
-    { 1409, (s16 *)0x800A9E60, 0x119003F, NULL, fieldstg_choice_end_second_15 }, { -1, NULL, 0, NULL, NULL },
+    { 1408, SLOT_PTR(2, s16 *, 0x800A9CC8), 0x119003E, NULL, fieldstg_choice_end_first_15 },
+    { 1409, SLOT_PTR(2, s16 *, 0x800A9E60), 0x119003F, NULL, fieldstg_choice_end_second_15 }, { -1, NULL, 0, NULL, NULL },
 };
 
 FieldstgStageState fieldstg_stage = {
@@ -5832,205 +5831,205 @@ u8 fieldstg_actor_widths[408] = {
 };
 
 FieldstgStageEntry fieldstg_stages_2d[55] = {
-    { 624, 1851, (void *(*)())0x800A5E2C }, { 625, 2217, (void *(*)())0x800A5E2C },
-    { 626, 2219, (void *(*)())0x800A5E2C }, { 627, 2220, (void *(*)())0x800A5E2C },
-    { 629, 2221, (void *(*)())0x800A5E8C }, { 630, 2222, (void *(*)())0x800A5E64 },
-    { 631, 2223, (void *(*)())0x800A5E28 }, { 632, 2224, (void *(*)())0x800A60BC },
-    { 633, 2225, (void *(*)())0x800A5E28 }, { 634, 2226, (void *(*)())0x800A5E28 },
-    { 635, 2227, (void *(*)())0x800A5E28 }, { 636, 2228, (void *(*)())0x800A5E28 },
-    { 637, 2229, (void *(*)())0x800A5E28 }, { 638, 2230, (void *(*)())0x800A5E28 },
-    { 639, 2231, (void *(*)())0x800A633C }, { 640, 2232, (void *(*)())0x800A5E88 },
-    { 641, 2233, (void *(*)())0x800A5E2C }, { 642, 2234, (void *(*)())0x800A5E28 },
-    { 650, 2235, (void *(*)())0x800A5E2C }, { 651, 2236, (void *(*)())0x800A5E28 },
-    { 652, 2237, (void *(*)())0x800A5E2C }, { 653, 2238, (void *(*)())0x800A5E28 },
-    { 654, 2239, (void *(*)())0x800A5E2C }, { 655, 2240, (void *(*)())0x800A5E2C },
-    { 656, 2241, (void *(*)())0x800A5E28 }, { 657, 2242, (void *(*)())0x800A5E28 },
-    { 658, 2243, (void *(*)())0x800A5E28 }, { 659, 2244, (void *(*)())0x800A5E28 },
-    { 660, 2245, (void *(*)())0x800A5E28 }, { 661, 2246, (void *(*)())0x800A5FC8 },
-    { 662, 2247, (void *(*)())0x800A5E2C }, { 663, 2248, (void *(*)())0x800A5E2C },
-    { 664, 2249, (void *(*)())0x800A5E28 }, { 665, 2250, (void *(*)())0x800A5E2C },
-    { 666, 2251, (void *(*)())0x800A6038 }, { 667, 2252, (void *(*)())0x800A5E2C },
-    { 668, 2253, (void *(*)())0x800A5E28 }, { 669, 2254, (void *(*)())0x800A5E28 },
-    { 670, 2255, (void *(*)())0x800A5E28 }, { 671, 2256, (void *(*)())0x800A5E28 },
-    { 736, 2257, (void *(*)())0x800A5F58 }, { 737, 2258, (void *(*)())0x800A5F58 },
-    { 738, 2259, (void *(*)())0x800A5F58 }, { 739, 2260, (void *(*)())0x800A5F58 },
-    { 740, 2261, (void *(*)())0x800A5F58 }, { 741, 2262, (void *(*)())0x800A5F58 },
-    { 742, 2263, (void *(*)())0x800A5F58 }, { 743, 2264, (void *(*)())0x800A5F58 },
-    { 744, 2265, (void *(*)())0x800A5F54 }, { 745, 2266, (void *(*)())0x800A5F54 },
-    { 746, 2267, (void *(*)())0x800A5F54 }, { 747, 2268, (void *(*)())0x800A5F54 },
-    { 748, 2269, (void *(*)())0x800A5F54 }, { 749, 2270, (void *(*)())0x800A5F54 },
-    { 750, 2271, (void *(*)())0x800A5F54 },
+    { 624, 1851, WSTAG_ENTRY(0x800A5E2C) }, { 625, 2217, WSTAG_ENTRY(0x800A5E2C) },
+    { 626, 2219, WSTAG_ENTRY(0x800A5E2C) }, { 627, 2220, WSTAG_ENTRY(0x800A5E2C) },
+    { 629, 2221, WSTAG_ENTRY(0x800A5E8C) }, { 630, 2222, WSTAG_ENTRY(0x800A5E64) },
+    { 631, 2223, WSTAG_ENTRY(0x800A5E28) }, { 632, 2224, WSTAG_ENTRY(0x800A60BC) },
+    { 633, 2225, WSTAG_ENTRY(0x800A5E28) }, { 634, 2226, WSTAG_ENTRY(0x800A5E28) },
+    { 635, 2227, WSTAG_ENTRY(0x800A5E28) }, { 636, 2228, WSTAG_ENTRY(0x800A5E28) },
+    { 637, 2229, WSTAG_ENTRY(0x800A5E28) }, { 638, 2230, WSTAG_ENTRY(0x800A5E28) },
+    { 639, 2231, WSTAG_ENTRY(0x800A633C) }, { 640, 2232, WSTAG_ENTRY(0x800A5E88) },
+    { 641, 2233, WSTAG_ENTRY(0x800A5E2C) }, { 642, 2234, WSTAG_ENTRY(0x800A5E28) },
+    { 650, 2235, WSTAG_ENTRY(0x800A5E2C) }, { 651, 2236, WSTAG_ENTRY(0x800A5E28) },
+    { 652, 2237, WSTAG_ENTRY(0x800A5E2C) }, { 653, 2238, WSTAG_ENTRY(0x800A5E28) },
+    { 654, 2239, WSTAG_ENTRY(0x800A5E2C) }, { 655, 2240, WSTAG_ENTRY(0x800A5E2C) },
+    { 656, 2241, WSTAG_ENTRY(0x800A5E28) }, { 657, 2242, WSTAG_ENTRY(0x800A5E28) },
+    { 658, 2243, WSTAG_ENTRY(0x800A5E28) }, { 659, 2244, WSTAG_ENTRY(0x800A5E28) },
+    { 660, 2245, WSTAG_ENTRY(0x800A5E28) }, { 661, 2246, WSTAG_ENTRY(0x800A5FC8) },
+    { 662, 2247, WSTAG_ENTRY(0x800A5E2C) }, { 663, 2248, WSTAG_ENTRY(0x800A5E2C) },
+    { 664, 2249, WSTAG_ENTRY(0x800A5E28) }, { 665, 2250, WSTAG_ENTRY(0x800A5E2C) },
+    { 666, 2251, WSTAG_ENTRY(0x800A6038) }, { 667, 2252, WSTAG_ENTRY(0x800A5E2C) },
+    { 668, 2253, WSTAG_ENTRY(0x800A5E28) }, { 669, 2254, WSTAG_ENTRY(0x800A5E28) },
+    { 670, 2255, WSTAG_ENTRY(0x800A5E28) }, { 671, 2256, WSTAG_ENTRY(0x800A5E28) },
+    { 736, 2257, WSTAG_ENTRY(0x800A5F58) }, { 737, 2258, WSTAG_ENTRY(0x800A5F58) },
+    { 738, 2259, WSTAG_ENTRY(0x800A5F58) }, { 739, 2260, WSTAG_ENTRY(0x800A5F58) },
+    { 740, 2261, WSTAG_ENTRY(0x800A5F58) }, { 741, 2262, WSTAG_ENTRY(0x800A5F58) },
+    { 742, 2263, WSTAG_ENTRY(0x800A5F58) }, { 743, 2264, WSTAG_ENTRY(0x800A5F58) },
+    { 744, 2265, WSTAG_ENTRY(0x800A5F54) }, { 745, 2266, WSTAG_ENTRY(0x800A5F54) },
+    { 746, 2267, WSTAG_ENTRY(0x800A5F54) }, { 747, 2268, WSTAG_ENTRY(0x800A5F54) },
+    { 748, 2269, WSTAG_ENTRY(0x800A5F54) }, { 749, 2270, WSTAG_ENTRY(0x800A5F54) },
+    { 750, 2271, WSTAG_ENTRY(0x800A5F54) },
 };
 
 FieldstgStageEntry fieldstg_stages[240] = {
-    { 512, 466, (void *(*)())0x800A5E7C }, { 513, 523, (void *(*)())0x800A5E2C },
-    { 514, 467, (void *(*)())0x800A6194 }, { 515, 468, (void *(*)())0x800A74A4 },
-    { 516, 536, (void *(*)())0x800A63DC }, { 517, 560, (void *(*)())0x800A5E2C },
-    { 518, 469, (void *(*)())0x800A7074 }, { 519, 470, (void *(*)())0x800A62B4 },
-    { 520, 471, (void *(*)())0x800A5E28 }, { 521, 594, (void *(*)())0x800A605C },
-    { 522, 472, (void *(*)())0x800A5E28 }, { 523, 639, (void *(*)())0x800A5E28 },
-    { 524, 473, (void *(*)())0x800A5E28 }, { 525, 474, (void *(*)())0x800A5E28 },
-    { 526, 475, (void *(*)())0x800A5E28 }, { 527, 476, (void *(*)())0x800A5E28 },
-    { 528, 477, (void *(*)())fieldstg_stage_entry }, { 529, 478, (void *(*)())0x800A6A58 },
-    { 530, 479, (void *(*)())0x800A5E2C }, { 531, 480, (void *(*)())0x800A64B8 },
-    { 532, 694, (void *(*)())0x800A5EAC }, { 533, 685, (void *(*)())0x800A5E28 },
-    { 534, 840, (void *(*)())0x800A5EE0 }, { 535, 848, (void *(*)())0x800A5ED8 },
-    { 536, 844, (void *(*)())0x800A63A8 }, { 537, 836, (void *(*)())0x800A6D7C },
-    { 538, 936, (void *(*)())0x800A5E28 }, { 539, 677, (void *(*)())0x800A5E88 },
-    { 540, 1031, (void *(*)())0x800A6068 }, { 541, 481, (void *(*)())0x800A5E2C },
-    { 542, 482, (void *(*)())0x800A5E3C }, { 543, 931, (void *(*)())0x800A5E2C },
-    { 544, 935, (void *(*)())0x800A5E2C }, { 545, 483, (void *(*)())0x800A5E28 },
-    { 546, 484, (void *(*)())0x800A5E28 }, { 547, 495, (void *(*)())0x800A5E28 },
-    { 548, 541, (void *(*)())0x800A5E28 }, { 549, 485, (void *(*)())0x800A5E28 },
-    { 550, 486, (void *(*)())0x800A6018 }, { 551, 700, (void *(*)())0x800A5E2C },
-    { 552, 1231, (void *(*)())0x800A5E84 }, { 553, 493, (void *(*)())0x800A5EB8 },
-    { 554, 1035, (void *(*)())0x800A5E8C }, { 555, 573, (void *(*)())0x800A6098 },
-    { 556, 926, (void *(*)())0x800A5E2C }, { 557, 1259, (void *(*)())0x800A6FC0 },
-    { 558, 1260, (void *(*)())0x800A5E74 }, { 559, 566, (void *(*)())0x800A5E28 },
-    { 560, 496, (void *(*)())0x800A5E28 }, { 561, 487, (void *(*)())0x800A5E28 },
-    { 562, 894, (void *(*)())0x800A5E50 }, { 563, 1298, (void *(*)())0x800A5E84 },
-    { 564, 922, (void *(*)())0x800A5E84 }, { 565, 914, (void *(*)())0x800A60D4 },
-    { 566, 868, (void *(*)())0x800A701C }, { 567, 488, (void *(*)())0x800A5E2C },
-    { 568, 533, (void *(*)())0x800A5E28 }, { 569, 497, (void *(*)())0x800A5F88 },
-    { 570, 871, (void *(*)())0x800A6230 }, { 571, 951, (void *(*)())0x800A5E2C },
-    { 572, 1024, (void *(*)())0x800A5EC8 }, { 573, 968, (void *(*)())0x800A5E28 },
-    { 574, 1039, (void *(*)())0x800A5E28 }, { 575, 540, (void *(*)())0x800A5E28 },
-    { 576, 547, (void *(*)())0x800A5E74 }, { 577, 964, (void *(*)())0x800A5E80 },
-    { 578, 589, (void *(*)())0x800A5E28 }, { 579, 661, (void *(*)())0x800A5E80 },
-    { 580, 1365, (void *(*)())0x800A5E88 }, { 581, 1402, (void *(*)())0x800A5E28 },
-    { 582, 574, (void *(*)())0x800A6984 }, { 583, 1135, (void *(*)())0x800A5E84 },
-    { 584, 544, (void *(*)())0x800A60D0 }, { 585, 689, (void *(*)())0x800A5E2C },
-    { 586, 1308, (void *(*)())0x800A5E80 }, { 587, 1061, (void *(*)())0x800A5E2C },
-    { 588, 1154, (void *(*)())0x800A5E74 }, { 589, 1430, (void *(*)())0x800A5EA8 },
-    { 590, 1292, (void *(*)())0x800A5E88 }, { 591, 1293, (void *(*)())0x800A5E28 },
-    { 592, 1294, (void *(*)())0x800A5E28 }, { 593, 1282, (void *(*)())0x800A5E28 },
-    { 594, 1158, (void *(*)())0x800A5E68 }, { 595, 1217, (void *(*)())0x800A5E28 },
-    { 596, 1374, (void *(*)())0x800A5E78 }, { 597, 1165, (void *(*)())0x800A6314 },
-    { 598, 1166, (void *(*)())0x800A6204 }, { 599, 1173, (void *(*)())0x800A60D0 },
-    { 600, 1181, (void *(*)())0x800A61F4 }, { 601, 1185, (void *(*)())0x800A61F4 },
-    { 602, 1193, (void *(*)())0x800A60D0 }, { 603, 1359, (void *(*)())0x800A5E28 },
-    { 604, 1177, (void *(*)())0x800A5E74 }, { 605, 1224, (void *(*)())0x800A5E2C },
-    { 606, 1201, (void *(*)())0x800A5E74 }, { 607, 1499, (void *(*)())0x800A6454 },
-    { 608, 1225, (void *(*)())0x800A5E58 }, { 609, 1504, (void *(*)())0x800A5E28 },
-    { 610, 1512, (void *(*)())0x800A5E28 }, { 611, 1520, (void *(*)())0x800A5E28 },
-    { 612, 1528, (void *(*)())0x800A5E28 }, { 613, 681, (void *(*)())0x800A5E28 },
-    { 614, 1540, (void *(*)())0x800A5E28 }, { 615, 1544, (void *(*)())0x800A5E28 },
-    { 616, 1556, (void *(*)())0x800A5E28 }, { 617, 1564, (void *(*)())0x800A6024 },
-    { 618, 1572, (void *(*)())0x800A5EE4 }, { 619, 1619, (void *(*)())0x800A6138 },
-    { 620, 1621, (void *(*)())0x800A62B8 }, { 621, 1623, (void *(*)())0x800A6424 },
-    { 622, 1624, (void *(*)())0x800A5E6C }, { 623, 1626, (void *(*)())0x800A5E28 },
-    { 624, 522, (void *(*)())0x800A5E2C }, { 625, 524, (void *(*)())0x800A5E2C },
-    { 626, 525, (void *(*)())0x800A5EC0 }, { 627, 535, (void *(*)())0x800A5E2C },
-    { 628, 564, (void *(*)())0x800A5E2C }, { 629, 590, (void *(*)())0x800A5E2C },
-    { 630, 592, (void *(*)())0x800A62C8 }, { 631, 593, (void *(*)())0x800A5E28 },
-    { 632, 595, (void *(*)())0x800A605C }, { 633, 624, (void *(*)())0x800A5E28 },
-    { 634, 667, (void *(*)())0x800A5E28 }, { 635, 672, (void *(*)())0x800A5E28 },
-    { 636, 697, (void *(*)())0x800A5E28 }, { 637, 701, (void *(*)())0x800A5E28 },
-    { 638, 658, (void *(*)())0x800A5E28 }, { 639, 702, (void *(*)())0x800A634C },
-    { 640, 711, (void *(*)())0x800A5E28 }, { 641, 809, (void *(*)())0x800A5E2C },
-    { 642, 810, (void *(*)())0x800A5E28 }, { 643, 826, (void *(*)())0x800A5E28 },
-    { 644, 830, (void *(*)())0x800A5E28 }, { 645, 874, (void *(*)())0x800A5E28 },
-    { 646, 875, (void *(*)())0x800A5E28 }, { 647, 876, (void *(*)())0x800A6160 },
-    { 648, 877, (void *(*)())0x800A6DD0 }, { 649, 937, (void *(*)())0x800A5E28 },
-    { 650, 1030, (void *(*)())0x800A5E2C }, { 651, 1077, (void *(*)())0x800A6068 },
-    { 652, 1100, (void *(*)())0x800A5E2C }, { 653, 1120, (void *(*)())0x800A5E28 },
-    { 654, 1121, (void *(*)())0x800A5E28 }, { 655, 1122, (void *(*)())0x800A5E28 },
-    { 656, 1123, (void *(*)())0x800A5E28 }, { 657, 1140, (void *(*)())0x800A5E28 },
-    { 658, 1150, (void *(*)())0x800A5E28 }, { 659, 1189, (void *(*)())0x800A5E28 },
-    { 660, 1197, (void *(*)())0x800A5E28 }, { 661, 1205, (void *(*)())0x800A5E84 },
-    { 662, 1209, (void *(*)())0x800A5E2C }, { 663, 1235, (void *(*)())0x800A5E28 },
-    { 664, 1236, (void *(*)())0x800A5E28 }, { 665, 1241, (void *(*)())0x800A5E2C },
-    { 666, 1245, (void *(*)())0x800A6084 }, { 667, 1249, (void *(*)())0x800A5E2C },
-    { 668, 1261, (void *(*)())0x800A5F1C }, { 669, 1273, (void *(*)())0x800A5E28 },
-    { 670, 1278, (void *(*)())0x800A5E28 }, { 671, 1300, (void *(*)())0x800A5E28 },
-    { 672, 1304, (void *(*)())0x800A5E2C }, { 673, 1312, (void *(*)())0x800A5E2C },
-    { 674, 1316, (void *(*)())0x800A5E2C }, { 675, 1320, (void *(*)())0x800A5E2C },
-    { 676, 1324, (void *(*)())0x800A5E2C }, { 677, 1328, (void *(*)())0x800A5E28 },
-    { 678, 1332, (void *(*)())0x800A5E28 }, { 679, 1351, (void *(*)())0x800A61F4 },
-    { 680, 1352, (void *(*)())0x800A5E2C }, { 681, 1353, (void *(*)())0x800A5E28 },
-    { 682, 1354, (void *(*)())0x800A5E28 }, { 683, 1355, (void *(*)())0x800A5E28 },
-    { 684, 1360, (void *(*)())0x800A5E28 }, { 685, 1386, (void *(*)())0x800A5E74 },
-    { 686, 1390, (void *(*)())0x800A7460 }, { 687, 1394, (void *(*)())0x800A5E28 },
-    { 688, 1398, (void *(*)())0x800A5E80 }, { 689, 1406, (void *(*)())0x800A5E28 },
-    { 690, 1410, (void *(*)())0x800A5E28 }, { 691, 1414, (void *(*)())0x800A5E28 },
-    { 692, 1418, (void *(*)())0x800A5E28 }, { 693, 1422, (void *(*)())0x800A5E28 },
-    { 694, 1426, (void *(*)())0x800A5E28 }, { 695, 1431, (void *(*)())0x800A5E28 },
-    { 696, 1435, (void *(*)())0x800A5E28 }, { 697, 1439, (void *(*)())0x800A5E28 },
-    { 698, 1443, (void *(*)())0x800A5E28 }, { 699, 1447, (void *(*)())0x800A5E28 },
-    { 700, 1451, (void *(*)())0x800A5E80 }, { 701, 1455, (void *(*)())0x800A5E28 },
-    { 702, 1459, (void *(*)())0x800A5E84 }, { 703, 1463, (void *(*)())0x800A5E28 },
-    { 704, 1467, (void *(*)())0x800A5E28 }, { 705, 1471, (void *(*)())0x800A5F54 },
-    { 706, 1475, (void *(*)())0x800A5F54 }, { 707, 1479, (void *(*)())0x800A5E28 },
-    { 708, 1483, (void *(*)())0x800A5E28 }, { 709, 1487, (void *(*)())0x800A5E28 },
-    { 710, 1491, (void *(*)())0x800A5E2C }, { 711, 1495, (void *(*)())0x800A5E68 },
-    { 712, 1503, (void *(*)())0x800A5E28 }, { 713, 1508, (void *(*)())0x800A5E28 },
-    { 714, 1516, (void *(*)())0x800A5E28 }, { 715, 1524, (void *(*)())0x800A5E28 },
-    { 716, 1532, (void *(*)())0x800A5E28 }, { 717, 1536, (void *(*)())0x800A5E28 },
-    { 718, 1543, (void *(*)())0x800A5E28 }, { 719, 1552, (void *(*)())0x800A5E28 },
-    { 720, 1560, (void *(*)())0x800A5E28 }, { 721, 1568, (void *(*)())0x800A6024 },
-    { 722, 1588, (void *(*)())0x800A5EE4 }, { 723, 1620, (void *(*)())0x800A6138 },
-    { 724, 1622, (void *(*)())0x800A62B8 }, { 725, 1625, (void *(*)())0x800A5EA0 },
-    { 726, 1627, (void *(*)())0x800A5E28 }, { 727, 489, (void *(*)())0x800A75B0 },
-    { 728, 490, (void *(*)())0x800A66B0 }, { 729, 491, (void *(*)())0x800A631C },
-    { 730, 1631, (void *(*)())0x800A6654 }, { 731, 1635, (void *(*)())0x800A69CC },
-    { 732, 1639, (void *(*)())0x800A6B44 }, { 733, 1643, (void *(*)())0x800A6418 },
-    { 734, 1647, (void *(*)())0x800A6184 }, { 735, 1651, (void *(*)())0x800A6160 },
-    { 736, 1655, (void *(*)())0x800A5F50 }, { 737, 1659, (void *(*)())0x800A5F58 },
-    { 738, 1665, (void *(*)())0x800A5F50 }, { 739, 1669, (void *(*)())0x800A5F50 },
-    { 740, 1673, (void *(*)())0x800A5F50 }, { 741, 1697, (void *(*)())0x800A5F50 },
-    { 742, 1701, (void *(*)())0x800A5F50 }, { 743, 1705, (void *(*)())0x800A5F50 },
-    { 744, 1709, (void *(*)())0x800A5F54 }, { 745, 1713, (void *(*)())0x800A5F54 },
-    { 746, 1677, (void *(*)())0x800A5F54 }, { 747, 1690, (void *(*)())0x800A5F54 },
-    { 748, 1691, (void *(*)())0x800A5F54 }, { 749, 1692, (void *(*)())0x800A5F54 },
-    { 750, 1693, (void *(*)())0x800A5F54 }, { 0, 0, NULL },
+    { 512, 466, WSTAG_ENTRY(0x800A5E7C) }, { 513, 523, WSTAG_ENTRY(0x800A5E2C) },
+    { 514, 467, WSTAG_ENTRY(0x800A6194) }, { 515, 468, WSTAG_ENTRY(0x800A74A4) },
+    { 516, 536, WSTAG_ENTRY(0x800A63DC) }, { 517, 560, WSTAG_ENTRY(0x800A5E2C) },
+    { 518, 469, WSTAG_ENTRY(0x800A7074) }, { 519, 470, WSTAG_ENTRY(0x800A62B4) },
+    { 520, 471, WSTAG_ENTRY(0x800A5E28) }, { 521, 594, WSTAG_ENTRY(0x800A605C) },
+    { 522, 472, WSTAG_ENTRY(0x800A5E28) }, { 523, 639, WSTAG_ENTRY(0x800A5E28) },
+    { 524, 473, WSTAG_ENTRY(0x800A5E28) }, { 525, 474, WSTAG_ENTRY(0x800A5E28) },
+    { 526, 475, WSTAG_ENTRY(0x800A5E28) }, { 527, 476, WSTAG_ENTRY(0x800A5E28) },
+    { 528, 477, (void *(*)())fieldstg_stage_entry }, { 529, 478, WSTAG_ENTRY(0x800A6A58) },
+    { 530, 479, WSTAG_ENTRY(0x800A5E2C) }, { 531, 480, WSTAG_ENTRY(0x800A64B8) },
+    { 532, 694, WSTAG_ENTRY(0x800A5EAC) }, { 533, 685, WSTAG_ENTRY(0x800A5E28) },
+    { 534, 840, WSTAG_ENTRY(0x800A5EE0) }, { 535, 848, WSTAG_ENTRY(0x800A5ED8) },
+    { 536, 844, WSTAG_ENTRY(0x800A63A8) }, { 537, 836, WSTAG_ENTRY(0x800A6D7C) },
+    { 538, 936, WSTAG_ENTRY(0x800A5E28) }, { 539, 677, WSTAG_ENTRY(0x800A5E88) },
+    { 540, 1031, WSTAG_ENTRY(0x800A6068) }, { 541, 481, WSTAG_ENTRY(0x800A5E2C) },
+    { 542, 482, WSTAG_ENTRY(0x800A5E3C) }, { 543, 931, WSTAG_ENTRY(0x800A5E2C) },
+    { 544, 935, WSTAG_ENTRY(0x800A5E2C) }, { 545, 483, WSTAG_ENTRY(0x800A5E28) },
+    { 546, 484, WSTAG_ENTRY(0x800A5E28) }, { 547, 495, WSTAG_ENTRY(0x800A5E28) },
+    { 548, 541, WSTAG_ENTRY(0x800A5E28) }, { 549, 485, WSTAG_ENTRY(0x800A5E28) },
+    { 550, 486, WSTAG_ENTRY(0x800A6018) }, { 551, 700, WSTAG_ENTRY(0x800A5E2C) },
+    { 552, 1231, WSTAG_ENTRY(0x800A5E84) }, { 553, 493, WSTAG_ENTRY(0x800A5EB8) },
+    { 554, 1035, WSTAG_ENTRY(0x800A5E8C) }, { 555, 573, WSTAG_ENTRY(0x800A6098) },
+    { 556, 926, WSTAG_ENTRY(0x800A5E2C) }, { 557, 1259, WSTAG_ENTRY(0x800A6FC0) },
+    { 558, 1260, WSTAG_ENTRY(0x800A5E74) }, { 559, 566, WSTAG_ENTRY(0x800A5E28) },
+    { 560, 496, WSTAG_ENTRY(0x800A5E28) }, { 561, 487, WSTAG_ENTRY(0x800A5E28) },
+    { 562, 894, WSTAG_ENTRY(0x800A5E50) }, { 563, 1298, WSTAG_ENTRY(0x800A5E84) },
+    { 564, 922, WSTAG_ENTRY(0x800A5E84) }, { 565, 914, WSTAG_ENTRY(0x800A60D4) },
+    { 566, 868, WSTAG_ENTRY(0x800A701C) }, { 567, 488, WSTAG_ENTRY(0x800A5E2C) },
+    { 568, 533, WSTAG_ENTRY(0x800A5E28) }, { 569, 497, WSTAG_ENTRY(0x800A5F88) },
+    { 570, 871, WSTAG_ENTRY(0x800A6230) }, { 571, 951, WSTAG_ENTRY(0x800A5E2C) },
+    { 572, 1024, WSTAG_ENTRY(0x800A5EC8) }, { 573, 968, WSTAG_ENTRY(0x800A5E28) },
+    { 574, 1039, WSTAG_ENTRY(0x800A5E28) }, { 575, 540, WSTAG_ENTRY(0x800A5E28) },
+    { 576, 547, WSTAG_ENTRY(0x800A5E74) }, { 577, 964, WSTAG_ENTRY(0x800A5E80) },
+    { 578, 589, WSTAG_ENTRY(0x800A5E28) }, { 579, 661, WSTAG_ENTRY(0x800A5E80) },
+    { 580, 1365, WSTAG_ENTRY(0x800A5E88) }, { 581, 1402, WSTAG_ENTRY(0x800A5E28) },
+    { 582, 574, WSTAG_ENTRY(0x800A6984) }, { 583, 1135, WSTAG_ENTRY(0x800A5E84) },
+    { 584, 544, WSTAG_ENTRY(0x800A60D0) }, { 585, 689, WSTAG_ENTRY(0x800A5E2C) },
+    { 586, 1308, WSTAG_ENTRY(0x800A5E80) }, { 587, 1061, WSTAG_ENTRY(0x800A5E2C) },
+    { 588, 1154, WSTAG_ENTRY(0x800A5E74) }, { 589, 1430, WSTAG_ENTRY(0x800A5EA8) },
+    { 590, 1292, WSTAG_ENTRY(0x800A5E88) }, { 591, 1293, WSTAG_ENTRY(0x800A5E28) },
+    { 592, 1294, WSTAG_ENTRY(0x800A5E28) }, { 593, 1282, WSTAG_ENTRY(0x800A5E28) },
+    { 594, 1158, WSTAG_ENTRY(0x800A5E68) }, { 595, 1217, WSTAG_ENTRY(0x800A5E28) },
+    { 596, 1374, WSTAG_ENTRY(0x800A5E78) }, { 597, 1165, WSTAG_ENTRY(0x800A6314) },
+    { 598, 1166, WSTAG_ENTRY(0x800A6204) }, { 599, 1173, WSTAG_ENTRY(0x800A60D0) },
+    { 600, 1181, WSTAG_ENTRY(0x800A61F4) }, { 601, 1185, WSTAG_ENTRY(0x800A61F4) },
+    { 602, 1193, WSTAG_ENTRY(0x800A60D0) }, { 603, 1359, WSTAG_ENTRY(0x800A5E28) },
+    { 604, 1177, WSTAG_ENTRY(0x800A5E74) }, { 605, 1224, WSTAG_ENTRY(0x800A5E2C) },
+    { 606, 1201, WSTAG_ENTRY(0x800A5E74) }, { 607, 1499, WSTAG_ENTRY(0x800A6454) },
+    { 608, 1225, WSTAG_ENTRY(0x800A5E58) }, { 609, 1504, WSTAG_ENTRY(0x800A5E28) },
+    { 610, 1512, WSTAG_ENTRY(0x800A5E28) }, { 611, 1520, WSTAG_ENTRY(0x800A5E28) },
+    { 612, 1528, WSTAG_ENTRY(0x800A5E28) }, { 613, 681, WSTAG_ENTRY(0x800A5E28) },
+    { 614, 1540, WSTAG_ENTRY(0x800A5E28) }, { 615, 1544, WSTAG_ENTRY(0x800A5E28) },
+    { 616, 1556, WSTAG_ENTRY(0x800A5E28) }, { 617, 1564, WSTAG_ENTRY(0x800A6024) },
+    { 618, 1572, WSTAG_ENTRY(0x800A5EE4) }, { 619, 1619, WSTAG_ENTRY(0x800A6138) },
+    { 620, 1621, WSTAG_ENTRY(0x800A62B8) }, { 621, 1623, WSTAG_ENTRY(0x800A6424) },
+    { 622, 1624, WSTAG_ENTRY(0x800A5E6C) }, { 623, 1626, WSTAG_ENTRY(0x800A5E28) },
+    { 624, 522, WSTAG_ENTRY(0x800A5E2C) }, { 625, 524, WSTAG_ENTRY(0x800A5E2C) },
+    { 626, 525, WSTAG_ENTRY(0x800A5EC0) }, { 627, 535, WSTAG_ENTRY(0x800A5E2C) },
+    { 628, 564, WSTAG_ENTRY(0x800A5E2C) }, { 629, 590, WSTAG_ENTRY(0x800A5E2C) },
+    { 630, 592, WSTAG_ENTRY(0x800A62C8) }, { 631, 593, WSTAG_ENTRY(0x800A5E28) },
+    { 632, 595, WSTAG_ENTRY(0x800A605C) }, { 633, 624, WSTAG_ENTRY(0x800A5E28) },
+    { 634, 667, WSTAG_ENTRY(0x800A5E28) }, { 635, 672, WSTAG_ENTRY(0x800A5E28) },
+    { 636, 697, WSTAG_ENTRY(0x800A5E28) }, { 637, 701, WSTAG_ENTRY(0x800A5E28) },
+    { 638, 658, WSTAG_ENTRY(0x800A5E28) }, { 639, 702, WSTAG_ENTRY(0x800A634C) },
+    { 640, 711, WSTAG_ENTRY(0x800A5E28) }, { 641, 809, WSTAG_ENTRY(0x800A5E2C) },
+    { 642, 810, WSTAG_ENTRY(0x800A5E28) }, { 643, 826, WSTAG_ENTRY(0x800A5E28) },
+    { 644, 830, WSTAG_ENTRY(0x800A5E28) }, { 645, 874, WSTAG_ENTRY(0x800A5E28) },
+    { 646, 875, WSTAG_ENTRY(0x800A5E28) }, { 647, 876, WSTAG_ENTRY(0x800A6160) },
+    { 648, 877, WSTAG_ENTRY(0x800A6DD0) }, { 649, 937, WSTAG_ENTRY(0x800A5E28) },
+    { 650, 1030, WSTAG_ENTRY(0x800A5E2C) }, { 651, 1077, WSTAG_ENTRY(0x800A6068) },
+    { 652, 1100, WSTAG_ENTRY(0x800A5E2C) }, { 653, 1120, WSTAG_ENTRY(0x800A5E28) },
+    { 654, 1121, WSTAG_ENTRY(0x800A5E28) }, { 655, 1122, WSTAG_ENTRY(0x800A5E28) },
+    { 656, 1123, WSTAG_ENTRY(0x800A5E28) }, { 657, 1140, WSTAG_ENTRY(0x800A5E28) },
+    { 658, 1150, WSTAG_ENTRY(0x800A5E28) }, { 659, 1189, WSTAG_ENTRY(0x800A5E28) },
+    { 660, 1197, WSTAG_ENTRY(0x800A5E28) }, { 661, 1205, WSTAG_ENTRY(0x800A5E84) },
+    { 662, 1209, WSTAG_ENTRY(0x800A5E2C) }, { 663, 1235, WSTAG_ENTRY(0x800A5E28) },
+    { 664, 1236, WSTAG_ENTRY(0x800A5E28) }, { 665, 1241, WSTAG_ENTRY(0x800A5E2C) },
+    { 666, 1245, WSTAG_ENTRY(0x800A6084) }, { 667, 1249, WSTAG_ENTRY(0x800A5E2C) },
+    { 668, 1261, WSTAG_ENTRY(0x800A5F1C) }, { 669, 1273, WSTAG_ENTRY(0x800A5E28) },
+    { 670, 1278, WSTAG_ENTRY(0x800A5E28) }, { 671, 1300, WSTAG_ENTRY(0x800A5E28) },
+    { 672, 1304, WSTAG_ENTRY(0x800A5E2C) }, { 673, 1312, WSTAG_ENTRY(0x800A5E2C) },
+    { 674, 1316, WSTAG_ENTRY(0x800A5E2C) }, { 675, 1320, WSTAG_ENTRY(0x800A5E2C) },
+    { 676, 1324, WSTAG_ENTRY(0x800A5E2C) }, { 677, 1328, WSTAG_ENTRY(0x800A5E28) },
+    { 678, 1332, WSTAG_ENTRY(0x800A5E28) }, { 679, 1351, WSTAG_ENTRY(0x800A61F4) },
+    { 680, 1352, WSTAG_ENTRY(0x800A5E2C) }, { 681, 1353, WSTAG_ENTRY(0x800A5E28) },
+    { 682, 1354, WSTAG_ENTRY(0x800A5E28) }, { 683, 1355, WSTAG_ENTRY(0x800A5E28) },
+    { 684, 1360, WSTAG_ENTRY(0x800A5E28) }, { 685, 1386, WSTAG_ENTRY(0x800A5E74) },
+    { 686, 1390, WSTAG_ENTRY(0x800A7460) }, { 687, 1394, WSTAG_ENTRY(0x800A5E28) },
+    { 688, 1398, WSTAG_ENTRY(0x800A5E80) }, { 689, 1406, WSTAG_ENTRY(0x800A5E28) },
+    { 690, 1410, WSTAG_ENTRY(0x800A5E28) }, { 691, 1414, WSTAG_ENTRY(0x800A5E28) },
+    { 692, 1418, WSTAG_ENTRY(0x800A5E28) }, { 693, 1422, WSTAG_ENTRY(0x800A5E28) },
+    { 694, 1426, WSTAG_ENTRY(0x800A5E28) }, { 695, 1431, WSTAG_ENTRY(0x800A5E28) },
+    { 696, 1435, WSTAG_ENTRY(0x800A5E28) }, { 697, 1439, WSTAG_ENTRY(0x800A5E28) },
+    { 698, 1443, WSTAG_ENTRY(0x800A5E28) }, { 699, 1447, WSTAG_ENTRY(0x800A5E28) },
+    { 700, 1451, WSTAG_ENTRY(0x800A5E80) }, { 701, 1455, WSTAG_ENTRY(0x800A5E28) },
+    { 702, 1459, WSTAG_ENTRY(0x800A5E84) }, { 703, 1463, WSTAG_ENTRY(0x800A5E28) },
+    { 704, 1467, WSTAG_ENTRY(0x800A5E28) }, { 705, 1471, WSTAG_ENTRY(0x800A5F54) },
+    { 706, 1475, WSTAG_ENTRY(0x800A5F54) }, { 707, 1479, WSTAG_ENTRY(0x800A5E28) },
+    { 708, 1483, WSTAG_ENTRY(0x800A5E28) }, { 709, 1487, WSTAG_ENTRY(0x800A5E28) },
+    { 710, 1491, WSTAG_ENTRY(0x800A5E2C) }, { 711, 1495, WSTAG_ENTRY(0x800A5E68) },
+    { 712, 1503, WSTAG_ENTRY(0x800A5E28) }, { 713, 1508, WSTAG_ENTRY(0x800A5E28) },
+    { 714, 1516, WSTAG_ENTRY(0x800A5E28) }, { 715, 1524, WSTAG_ENTRY(0x800A5E28) },
+    { 716, 1532, WSTAG_ENTRY(0x800A5E28) }, { 717, 1536, WSTAG_ENTRY(0x800A5E28) },
+    { 718, 1543, WSTAG_ENTRY(0x800A5E28) }, { 719, 1552, WSTAG_ENTRY(0x800A5E28) },
+    { 720, 1560, WSTAG_ENTRY(0x800A5E28) }, { 721, 1568, WSTAG_ENTRY(0x800A6024) },
+    { 722, 1588, WSTAG_ENTRY(0x800A5EE4) }, { 723, 1620, WSTAG_ENTRY(0x800A6138) },
+    { 724, 1622, WSTAG_ENTRY(0x800A62B8) }, { 725, 1625, WSTAG_ENTRY(0x800A5EA0) },
+    { 726, 1627, WSTAG_ENTRY(0x800A5E28) }, { 727, 489, WSTAG_ENTRY(0x800A75B0) },
+    { 728, 490, WSTAG_ENTRY(0x800A66B0) }, { 729, 491, WSTAG_ENTRY(0x800A631C) },
+    { 730, 1631, WSTAG_ENTRY(0x800A6654) }, { 731, 1635, WSTAG_ENTRY(0x800A69CC) },
+    { 732, 1639, WSTAG_ENTRY(0x800A6B44) }, { 733, 1643, WSTAG_ENTRY(0x800A6418) },
+    { 734, 1647, WSTAG_ENTRY(0x800A6184) }, { 735, 1651, WSTAG_ENTRY(0x800A6160) },
+    { 736, 1655, WSTAG_ENTRY(0x800A5F50) }, { 737, 1659, WSTAG_ENTRY(0x800A5F58) },
+    { 738, 1665, WSTAG_ENTRY(0x800A5F50) }, { 739, 1669, WSTAG_ENTRY(0x800A5F50) },
+    { 740, 1673, WSTAG_ENTRY(0x800A5F50) }, { 741, 1697, WSTAG_ENTRY(0x800A5F50) },
+    { 742, 1701, WSTAG_ENTRY(0x800A5F50) }, { 743, 1705, WSTAG_ENTRY(0x800A5F50) },
+    { 744, 1709, WSTAG_ENTRY(0x800A5F54) }, { 745, 1713, WSTAG_ENTRY(0x800A5F54) },
+    { 746, 1677, WSTAG_ENTRY(0x800A5F54) }, { 747, 1690, WSTAG_ENTRY(0x800A5F54) },
+    { 748, 1691, WSTAG_ENTRY(0x800A5F54) }, { 749, 1692, WSTAG_ENTRY(0x800A5F54) },
+    { 750, 1693, WSTAG_ENTRY(0x800A5F54) }, { 0, 0, NULL },
 };
 
 FieldstgTimer fieldstg_timer = { 0, 0, fieldstg_timer_reset, fieldstg_find_actor };
 FieldstgEventFuncs fieldstg_event_funcs = { fieldstg_to_screen_pos, fieldstg_wait_frames, fieldstg_wait_anim_done, fieldstg_wait_walk_done, fieldstg_player_clear_unk_10C };
 
 FieldstgScriptObject fieldstg_script_objects[58] = {
-    { 800, (Object *(*)(s32))0x800A6F8C, (void (*)(void *, s32, s32))0x800A6F40 },
-    { 801, (Object *(*)(s32))0x800A749C, (void (*)(void *, s32, s32))0x800A7450 },
-    { 802, (Object *(*)(s32))0x800A635C, NULL },
+    { 800, SLOT_FUNC(Object *(*)(s32), 0x800A6F8C), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6F40) },
+    { 801, SLOT_FUNC(Object *(*)(s32), 0x800A749C), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A7450) },
+    { 802, SLOT_FUNC(Object *(*)(s32), 0x800A635C), NULL },
     { 803, (Object *(*)(s32))fieldstg_icon_start, (void (*)(void *, s32, s32))fieldstg_icon_message },
     { 804, (Object *(*)(s32))fieldstg_icon_start, (void (*)(void *, s32, s32))fieldstg_icon_message },
     { 805, (Object *(*)(s32))fieldstg_icon_start, (void (*)(void *, s32, s32))fieldstg_icon_message },
     { 806, (Object *(*)(s32))fieldstg_icon_start, (void (*)(void *, s32, s32))fieldstg_icon_message },
-    { 807, (Object *(*)(s32))0x800A6510, (void (*)(void *, s32, s32))0x800A6540 },
-    { 808, (Object *(*)(s32))0x800A625C, (void (*)(void *, s32, s32))0x800A6224 },
-    { 809, (Object *(*)(s32))0x800A6108, (void (*)(void *, s32, s32))0x800A60D0 },
-    { 810, (Object *(*)(s32))0x800A61FC, (void (*)(void *, s32, s32))0x800A6148 },
-    { 811, (Object *(*)(s32))0x800A6A98, (void (*)(void *, s32, s32))0x800A698C },
-    { 812, NULL, (void (*)(void *, s32, s32))0x800A6E88 },
+    { 807, SLOT_FUNC(Object *(*)(s32), 0x800A6510), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6540) },
+    { 808, SLOT_FUNC(Object *(*)(s32), 0x800A625C), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6224) },
+    { 809, SLOT_FUNC(Object *(*)(s32), 0x800A6108), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A60D0) },
+    { 810, SLOT_FUNC(Object *(*)(s32), 0x800A61FC), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6148) },
+    { 811, SLOT_FUNC(Object *(*)(s32), 0x800A6A98), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A698C) },
+    { 812, NULL, SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6E88) },
     { 813, (Object *(*)(s32))fieldstg_effects_start, (void (*)(void *, s32, s32))fieldstg_effects_message },
-    { 814, (Object *(*)(s32))0x800A63AC, (void (*)(void *, s32, s32))0x800A627C },
-    { 815, (Object *(*)(s32))0x800A61E0, (void (*)(void *, s32, s32))0x800A6174 },
-    { 816, (Object *(*)(s32))0x800A6230, NULL }, { 817, (Object *(*)(s32))0x800A6264, NULL },
-    { 818, (Object *(*)(s32))0x800A629C, NULL }, { 819, (Object *(*)(s32))0x800A62D4, NULL },
-    { 820, (Object *(*)(s32))0x800A630C, NULL }, { 821, (Object *(*)(s32))0x800A6344, NULL },
-    { 822, (Object *(*)(s32))0x800A637C, NULL }, { 823, (Object *(*)(s32))0x800A63B4, NULL },
-    { 824, (Object *(*)(s32))0x800A63EC, NULL }, { 825, (Object *(*)(s32))0x800A6424, NULL },
+    { 814, SLOT_FUNC(Object *(*)(s32), 0x800A63AC), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A627C) },
+    { 815, SLOT_FUNC(Object *(*)(s32), 0x800A61E0), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6174) },
+    { 816, SLOT_FUNC(Object *(*)(s32), 0x800A6230), NULL }, { 817, SLOT_FUNC(Object *(*)(s32), 0x800A6264), NULL },
+    { 818, SLOT_FUNC(Object *(*)(s32), 0x800A629C), NULL }, { 819, SLOT_FUNC(Object *(*)(s32), 0x800A62D4), NULL },
+    { 820, SLOT_FUNC(Object *(*)(s32), 0x800A630C), NULL }, { 821, SLOT_FUNC(Object *(*)(s32), 0x800A6344), NULL },
+    { 822, SLOT_FUNC(Object *(*)(s32), 0x800A637C), NULL }, { 823, SLOT_FUNC(Object *(*)(s32), 0x800A63B4), NULL },
+    { 824, SLOT_FUNC(Object *(*)(s32), 0x800A63EC), NULL }, { 825, SLOT_FUNC(Object *(*)(s32), 0x800A6424), NULL },
     { 826, (Object *(*)(s32))fieldstg_lift_create, (void (*)(void *, s32, s32))fieldstg_lift_message },
-    { 827, (Object *(*)(s32))0x800A628C, (void (*)(void *, s32, s32))0x800A6218 },
-    { 828, (Object *(*)(s32))0x800A6010, NULL },
-    { 829, (Object *(*)(s32))0x800A6028, (void (*)(void *, s32, s32))0x800A5FF0 },
-    { 830, (Object *(*)(s32))0x800A5FC8, (void (*)(void *, s32, s32))0x800A5F90 },
-    { 831, (Object *(*)(s32))0x800A65D4, (void (*)(void *, s32, s32))0x800A6598 },
-    { 832, (Object *(*)(s32))0x800A6B58, (void (*)(void *, s32, s32))0x800A6B1C },
-    { 833, (Object *(*)(s32))0x800A5F60, (void (*)(void *, s32, s32))0x800A5F90 },
-    { 834, (Object *(*)(s32))0x800A5F60, (void (*)(void *, s32, s32))0x800A5F90 },
-    { 835, (Object *(*)(s32))0x800A61D8, NULL }, { 836, NULL, (void (*)(void *, s32, s32))0x800A6180 },
-    { 837, NULL, (void (*)(void *, s32, s32))0x800A6174 }, { 838, (Object *(*)(s32))0x800A73E4, NULL },
-    { 839, (Object *(*)(s32))0x800A6510, NULL }, { 840, NULL, (void (*)(void *, s32, s32))0x800A63C4 },
-    { 841, NULL, (void (*)(void *, s32, s32))0x800A5F64 }, { 842, NULL, (void (*)(void *, s32, s32))0x800A6178 },
-    { 843, NULL, (void (*)(void *, s32, s32))0x800A6178 }, { 844, NULL, (void (*)(void *, s32, s32))0x800A6178 },
-    { 845, NULL, (void (*)(void *, s32, s32))0x800A67BC }, { 846, NULL, (void (*)(void *, s32, s32))0x800A6170 },
-    { 847, NULL, (void (*)(void *, s32, s32))0x800A6304 },
-    { 848, (Object *(*)(s32))0x800A6894, (void (*)(void *, s32, s32))0x800A6780 },
-    { 849, (Object *(*)(s32))0x800A6198, NULL }, { 850, NULL, (void (*)(void *, s32, s32))0x800A6018 },
-    { 851, NULL, (void (*)(void *, s32, s32))0x800A6018 }, { 852, (Object *(*)(s32))0x800A72CC, NULL },
-    { 853, (Object *(*)(s32))0x800A5FB4, NULL }, { 854, (Object *(*)(s32))0x800A609C, NULL },
-    { 855, (Object *(*)(s32))0x800A639C, NULL }, { 0, NULL, NULL },
+    { 827, SLOT_FUNC(Object *(*)(s32), 0x800A628C), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6218) },
+    { 828, SLOT_FUNC(Object *(*)(s32), 0x800A6010), NULL },
+    { 829, SLOT_FUNC(Object *(*)(s32), 0x800A6028), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A5FF0) },
+    { 830, SLOT_FUNC(Object *(*)(s32), 0x800A5FC8), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A5F90) },
+    { 831, SLOT_FUNC(Object *(*)(s32), 0x800A65D4), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6598) },
+    { 832, SLOT_FUNC(Object *(*)(s32), 0x800A6B58), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6B1C) },
+    { 833, SLOT_FUNC(Object *(*)(s32), 0x800A5F60), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A5F90) },
+    { 834, SLOT_FUNC(Object *(*)(s32), 0x800A5F60), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A5F90) },
+    { 835, SLOT_FUNC(Object *(*)(s32), 0x800A61D8), NULL }, { 836, NULL, SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6180) },
+    { 837, NULL, SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6174) }, { 838, SLOT_FUNC(Object *(*)(s32), 0x800A73E4), NULL },
+    { 839, SLOT_FUNC(Object *(*)(s32), 0x800A6510), NULL }, { 840, NULL, SLOT_FUNC(void (*)(void *, s32, s32), 0x800A63C4) },
+    { 841, NULL, SLOT_FUNC(void (*)(void *, s32, s32), 0x800A5F64) }, { 842, NULL, SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6178) },
+    { 843, NULL, SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6178) }, { 844, NULL, SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6178) },
+    { 845, NULL, SLOT_FUNC(void (*)(void *, s32, s32), 0x800A67BC) }, { 846, NULL, SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6170) },
+    { 847, NULL, SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6304) },
+    { 848, SLOT_FUNC(Object *(*)(s32), 0x800A6894), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6780) },
+    { 849, SLOT_FUNC(Object *(*)(s32), 0x800A6198), NULL }, { 850, NULL, SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6018) },
+    { 851, NULL, SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6018) }, { 852, SLOT_FUNC(Object *(*)(s32), 0x800A72CC), NULL },
+    { 853, SLOT_FUNC(Object *(*)(s32), 0x800A5FB4), NULL }, { 854, SLOT_FUNC(Object *(*)(s32), 0x800A609C), NULL },
+    { 855, SLOT_FUNC(Object *(*)(s32), 0x800A639C), NULL }, { 0, NULL, NULL },
     { 0, NULL, (void (*)(void *, s32, s32))fieldstg_encounter_reset },
 };
 
