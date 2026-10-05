@@ -195,7 +195,7 @@ void wfightts_technique_menu_update(WfighttsTechniqueMenu *obj, WfighttsColumnWi
 }
 
 WfighttsTechniqueMenu *wfightts_technique_menu_create(s32 *arg0, s32 *arg1) {
-    WfighttsTechniqueMenu *obj = object_create(wfightts_technique_menu_update, sizeof(WfighttsTechniqueMenu), 0x70, 0xFFFF);
+    WfighttsTechniqueMenu *obj = object_create(wfightts_technique_menu_update, sizeof(WfighttsTechniqueMenu), sizeof(WfighttsColumnWindows), 0xFFFF);
 
     obj->column = arg0;
     obj->result = arg1;

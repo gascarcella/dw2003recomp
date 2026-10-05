@@ -584,7 +584,7 @@ void fightstg_model_mesh_light(FightstgMesh *obj) {
     gte_CompMatrix(&D_800812F8, &obj->matrix, &m);
     gte_SetLightMatrix(&m);
     if (obj->colors == NULL) {
-        obj->colors = heap_funcs.alloc(n * 4, 2);
+        obj->colors = heap_funcs.alloc(n * sizeof(s32), 2);
     }
     c = obj->colors;
     gte_ldv0_u(v);
@@ -615,11 +615,11 @@ void fightstg_model_mesh_project(FightstgMesh *obj, GfxLayer *layer) {
 
     v++;
     if (obj->screen_xy == NULL) {
-        obj->screen_xy = heap_funcs.alloc(n * 4, 2);
+        obj->screen_xy = heap_funcs.alloc(n * sizeof(s32), 2);
     }
     xy = obj->screen_xy;
     if (obj->screen_z == NULL) {
-        obj->screen_z = heap_funcs.alloc(n * 4, 2);
+        obj->screen_z = heap_funcs.alloc(n * sizeof(s32), 2);
     }
     z = obj->screen_z;
     gte_ldv0_u(v);

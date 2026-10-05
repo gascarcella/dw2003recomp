@@ -125,7 +125,7 @@ void wfightts_camera_menu_update(WfighttsColumnMenu *obj, MessageWindow **window
 }
 
 WfighttsColumnMenu *wfightts_camera_menu_create(s32 *arg0, s32 *result) {
-    WfighttsColumnMenu *obj = object_new(wfightts_camera_menu_update, sizeof(WfighttsColumnMenu), 0x3C);
+    WfighttsColumnMenu *obj = object_new(wfightts_camera_menu_update, sizeof(WfighttsColumnMenu), 15 * sizeof(MessageWindow *));
 
     obj->column = arg0;
     obj->result = result;

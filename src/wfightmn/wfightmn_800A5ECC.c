@@ -124,5 +124,5 @@ void wfightmn_loader_update(Object *obj) {
 
 /* Creates wfightmn_loader_update's object (0x54 bytes; called by wfightmn_main_update). */
 Object *wfightmn_loader_create(void) {
-    return object_new(wfightmn_loader_update, 0x54, 0);
+    return object_new(wfightmn_loader_update, sizeof(Object) + 4, 0); /* PC_PORT: 4 unused bytes past the header (the update reads only Object) */
 }

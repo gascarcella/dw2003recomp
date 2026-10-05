@@ -168,7 +168,7 @@ void wfightts_script_menu_update(WfighttsScriptMenu *obj, WfighttsColumnWindows 
 }
 
 WfighttsScriptMenu *wfightts_script_menu_create(s32 *arg0, s32 *arg1) {
-    WfighttsScriptMenu *obj = object_create(wfightts_script_menu_update, sizeof(WfighttsScriptMenu), 0x70, 0xFFFF);
+    WfighttsScriptMenu *obj = object_create(wfightts_script_menu_update, sizeof(WfighttsScriptMenu), sizeof(WfighttsColumnWindows), 0xFFFF);
 
     obj->column = arg0;
     obj->result = arg1;

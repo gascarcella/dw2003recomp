@@ -377,7 +377,7 @@ void fightstg_entrance_update(FightstgEntrance *obj, FightstgEntranceData *data)
 }
 
 FightstgEntrance *fightstg_entrance_create(s32 id, s32 enemy, s32 weak) {
-    FightstgEntrance *obj = object_new(fightstg_entrance_update, sizeof(FightstgEntrance), 0xC);
+    FightstgEntrance *obj = object_new(fightstg_entrance_update, sizeof(FightstgEntrance), 0xC); /* PC_PORT: 3 children; only data->flash is known */
 
     obj->base.key1 = id;
     if (enemy != 0) {
@@ -417,7 +417,7 @@ void fightstg_main_update(Object *obj, Object **data) {
 
 /* The overlay's entry point: creates the battle's main object. */
 void fightstg_entry(void) {
-    object_new(fightstg_main_update, sizeof(Object), 4);
+    object_new(fightstg_main_update, sizeof(Object), sizeof(Object *));
 }
 
 /* The idle camera: plays camera sequences (fightstg_idle_camera_steps: frames and a mode per step), each
@@ -602,7 +602,7 @@ void fightstg_idle_camera_update(FightstgIdleCamera *obj) {
 }
 
 void fightstg_idle_camera_create(void) {
-    object_new(fightstg_idle_camera_update, 0x6C, 0);
+    object_new(fightstg_idle_camera_update, sizeof(FightstgIdleCamera), 0);
 }
 
 void fightstg_slots_update(FightstgSlots *obj) {
@@ -820,7 +820,7 @@ void fightstg_player_reaction_update(FightstgPlayerReaction *obj, FightstgPlayer
 }
 
 void fightstg_player_reaction_create(s32 arg0, s32 arg1) {
-    FightstgPlayerReaction *obj = object_new(fightstg_player_reaction_update, sizeof(FightstgPlayerReaction), 8);
+    FightstgPlayerReaction *obj = object_new(fightstg_player_reaction_update, sizeof(FightstgPlayerReaction), sizeof(FightstgPlayerReactionData));
 
     obj->reaction = arg0;
     obj->unk_5C = arg1;
@@ -1070,7 +1070,7 @@ void fightstg_enemy_turn_update(FightstgEnemyTurn *obj, FightstgEnemyTurnData *d
 }
 
 void fightstg_enemy_turn_create(void) {
-    object_new(fightstg_enemy_turn_update, 0x80, 8);
+    object_new(fightstg_enemy_turn_update, sizeof(FightstgEnemyTurn), sizeof(FightstgEnemyTurnData));
 }
 
 /* Whether condition `type` holds with `value` (an action's condition): a random chance out of 128,
@@ -1396,7 +1396,7 @@ s32 fightstg_prop_get_file(s32 id) {
 }
 
 FightstgProp *fightstg_prop_create(s32 id, SVECTOR *pos, SVECTOR *rot) {
-    FightstgProp *obj = object_new(fightstg_prop_update, sizeof(FightstgProp), 4);
+    FightstgProp *obj = object_new(fightstg_prop_update, sizeof(FightstgProp), sizeof(FightstgModel *));
     FightstgPropEntry *entry;
 
     obj->id = 0;
@@ -1487,7 +1487,7 @@ void fightstg_effect_update(FightstgEffect *obj, FightstgSpriteAnim **anims) {
 }
 
 FightstgEffect *fightstg_effect_create(s32 id, SVECTOR *pos) {
-    FightstgEffect *obj = object_new(fightstg_effect_update, sizeof(FightstgEffect), 30 * 4);
+    FightstgEffect *obj = object_new(fightstg_effect_update, sizeof(FightstgEffect), 30 * sizeof(FightstgSpriteAnim *));
     FightstgEffectEntry *entry;
 
     obj->id = -1;
@@ -1801,7 +1801,7 @@ void fightstg_digivolve_update(FightstgDigivolve *obj, FightstgDigivolveData *da
 }
 
 void fightstg_digivolve_create(s32 digimon, s32 blast) {
-    Object *obj = object_new(fightstg_digivolve_update, 0x74, 0x18);
+    Object *obj = object_new(fightstg_digivolve_update, sizeof(FightstgDigivolve), sizeof(FightstgDigivolveData));
 
     obj->key1 = digimon;
     obj->key2 = blast;

@@ -180,7 +180,7 @@ s32 fightstg_stage_get_file(s32 index) {
 }
 
 void fightstg_stage_create(s32 stage, s32 fade_in) {
-    FightstgStage *obj = object_create(fightstg_stage_update, sizeof(FightstgStage), 4, 0x15);
+    FightstgStage *obj = object_create(fightstg_stage_update, sizeof(FightstgStage), sizeof(FightstgModel *), 0x15);
 
     obj->change = fightstg_stage_change;
     obj->stage = stage;

@@ -143,7 +143,7 @@ void wfightts_stage_menu_update(WfighttsStageMenu *obj, MessageWindow **windows)
 }
 
 WfighttsStageMenu *wfightts_stage_menu_create(s32 *arg0) {
-    WfighttsStageMenu *obj = object_new(wfightts_stage_menu_update, sizeof(WfighttsStageMenu), 0x38);
+    WfighttsStageMenu *obj = object_new(wfightts_stage_menu_update, sizeof(WfighttsStageMenu), 14 * sizeof(MessageWindow *));
 
     obj->result = arg0;
     return obj;
