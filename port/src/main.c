@@ -1,6 +1,6 @@
 /* The port's entry point: options, the runtime's setup, then the game's main() (src/main/main.c, compiled as
  * game_main). The game never returns; the run ends in port_exit (the frame cap, status 0; a stub that cannot fake
- * its result, 3; PLATFORM_HALT, 2; the watchdog, 4). */
+ * its result, 3; PLATFORM_HALT, 2; the watchdog, 4; the window closed, 0; --input-test failed, 6). */
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +34,7 @@ static void usage(const char *argv0) {
     fprintf(stderr,
             "usage: %s [--disc CUE|BIN] [--no-disc-check] [--cd-speed instant|realistic] [--memcard1|2 MCD|none]\n          [--script JSON]\n"
             "          [--log FILE] [--record FILE] [--max-frames N] [--watchdog SEC] [--trace]\n"
+            "          [--window] [--scale N] [--fullscreen] [--fps N] [--input-test] [--screenshot FRAME:PATH]\n"
             "  --disc PATH      the user's disc (.cue or .bin; SHA-1 checked); without it reads find no data\n"
             "  --no-disc-check  skip the disc's SHA-1 check (experiments with another image)\n"
             "  --cd-speed S     the CD's timing: realistic (default: double speed and seeks) or instant\n"
@@ -42,9 +43,20 @@ static void usage(const char *argv0) {
             "  --script JSON    an input script (tests/replay/scripts/*.json); the run ends when it does\n"
             "  --log FILE       the per-frame log (frame, overlay, map, primitive-stream hash; events)\n"
             "  --record FILE    the run's record at exit (JSON: checkpoints, overlay and map sequences)\n"
-            "  --max-frames N   stop with status 0 after N vsync ticks (default 600, none with --script; 0: no cap)\n"
+            "  --max-frames N   stop with status 0 after N vsync ticks (default 600; none with --script or --window;\n"
+            "                   0: none)\n"
             "  --watchdog SEC   stop with status 4 after SEC seconds without a vsync tick (default 10; 0: none)\n"
-            "  --trace          log every tick, overlay resolve and Psy-Q stub call\n",
+            "  --trace          log every tick, overlay resolve and Psy-Q stub call\n"
+            "  --window         show the display in a window (SDL3; a build with -DDW3_PORT_SDL=ON), real time;\n"
+            "                   keys: arrows, X cross, C circle, Z square, S triangle, Enter START, Backspace SELECT,\n"
+            "                   Q/E L1/R1, 1/3 L2/R2, F11 fullscreen; gamepads too (port/src/input.c); with --script\n"
+            "                   the script owns the pad\n"
+            "  --scale N        the window's size: 320*N x 240*N (default 2; implies --window)\n"
+            "  --fullscreen     a fullscreen window (implies --window)\n"
+            "  --fps N          the window's pace: N vsyncs per second (default 50, PAL; 0: unthrottled)\n"
+            "  --input-test     the window's input self-test: injected key and gamepad events (implies --window);\n"
+            "                   exit 0 = passed, 6 = failed\n"
+            "  --screenshot F:P write the display at vsync F to P (binary PPM); repeatable; any build\n",
             argv0);
 }
 
@@ -65,6 +77,7 @@ int main(int argc, char **argv) {
     const char *memcard[2] = { NULL, NULL };
     int memcard_given[2] = { 0, 0 };
     int disc_check = 1, max_frames_given = 0;
+    int window = 0, scale = 2, fullscreen = 0, input_test = 0;
     int i;
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--max-frames") == 0 && i + 1 < argc) {
@@ -93,6 +106,30 @@ int main(int argc, char **argv) {
             i++;
         } else if (strcmp(argv[i], "--trace") == 0) {
             port_trace = 1;
+        } else if (strcmp(argv[i], "--window") == 0) {
+            window = 1;
+        } else if (strcmp(argv[i], "--scale") == 0 && i + 1 < argc) {
+            scale = (int)number(argv[i + 1], argv[i]);
+            window = 1;
+            i++;
+            if (scale < 1 || scale > 16) {
+                fprintf(stderr, "port: --scale: 1 to 16\n");
+                return 64;
+            }
+        } else if (strcmp(argv[i], "--fullscreen") == 0) {
+            fullscreen = 1;
+            window = 1;
+        } else if (strcmp(argv[i], "--fps") == 0 && i + 1 < argc) {
+            port_fps = number(argv[i + 1], argv[i]);
+            i++;
+        } else if (strcmp(argv[i], "--input-test") == 0) {
+            input_test = 1;
+            window = 1;
+        } else if (strcmp(argv[i], "--screenshot") == 0 && i + 1 < argc) {
+            if (!port_video_screenshot_add(argv[++i])) {
+                fprintf(stderr, "port: --screenshot: FRAME:PATH (FRAME >= 1; at most 64): %s\n", argv[i]);
+                return 64;
+            }
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             usage(argv[0]);
             return 0;
@@ -100,6 +137,11 @@ int main(int argc, char **argv) {
             usage(argv[0]);
             return 64;
         }
+    }
+    if (window && !port_video_available()) {
+        fprintf(stderr, "port: --window: this build has no window: configure with -DDW3_PORT_SDL=ON "
+                        "(port/README.md \"The window\")\n");
+        return 64;
     }
     setvbuf(stderr, NULL, _IOLBF, 0);
     if (port_trace) {
@@ -126,6 +168,13 @@ int main(int argc, char **argv) {
         if (!max_frames_given) {
             port_max_frames = 0; /* the script's own max_frames ends the run */
         }
+    }
+    if (window) {
+        if (!max_frames_given) {
+            port_max_frames = 0; /* a window runs until it is closed */
+        }
+        port_video_open(scale, fullscreen);
+        port_input_init(input_test);
     }
     port_pump_init();
     port_log("start: max-frames %ld, watchdog %d s", port_max_frames, port_watchdog_sec);

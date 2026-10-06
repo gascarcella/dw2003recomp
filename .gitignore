@@ -42,6 +42,7 @@ tools/gcc
 tools/ext
 tools/bin
 tools/redux
+tools/sdl3
 tools/local.env
 
 # --- Copyrighted SDK files (Psy-Q etc.): user-supplied only ---

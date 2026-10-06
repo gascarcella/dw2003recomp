@@ -59,4 +59,23 @@ extern jmp_buf port_reset_jmp;
 void port_reset_request(void) __attribute__((noreturn));
 void port_reset_state(void);
 
+/* ---- video.c, input.c: the window and the screenshots (M2; the window only with -DDW3_PORT_SDL=ON: SDL3) ----
+ * video.c converts the display area of the VRAM (psyq.h "The video output") into 32-bit pixels at the display's size;
+ * port_video_frame (pump.c, once per vsync) writes the screenshots due at this frame (`--screenshot FRAME:PATH`: a
+ * binary PPM; any build) and, with a window, presents the image (4:3, integer-scaled). port_video_open: the window
+ * (`--scale N`: 320*N x 240*N, `--fullscreen`), fatal without SDL (port_video_available() 0) or when SDL fails.
+ * port_input_frame (pump.c, once per vsync before the script's step, window mode only): SDL's events: the keyboard
+ * and the gamepads to psyq_pad_set unless a script owns the pad, the window's close (port_exit 0); `test`
+ * (`--input-test`) runs input.c's injection self-test. port_video_close: from port_exit (the present count). */
+extern int port_window; /* a window is open: pump.c paces the vsyncs to real time */
+extern long port_fps;   /* pump.c: the pace in window mode (`--fps`; 50, PAL; 0: unthrottled); headless: unthrottled */
+int port_video_available(void);
+int port_video_screenshot_add(const char *spec); /* "FRAME:PATH"; 0 when malformed (or too many) */
+void port_video_open(int scale, int fullscreen);
+void port_video_frame(void);
+void port_video_toggle_fullscreen(void);
+void port_video_close(void);
+void port_input_init(int test);
+void port_input_frame(void);
+
 #endif /* PORT_HARNESS_H */
