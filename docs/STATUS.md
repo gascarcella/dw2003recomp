@@ -92,7 +92,7 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   emulator saves, layer 3), `port/psyq/mdec.c` (LIBPRESS: the movies' video; family `mdec`), `port/psyq/xa.c` (their XA
   audio; `tests/xa/` goldens).
 - **PC port, desktop play-test (session 17; docs/PLAYTEST.md):** the SDL build played by the user through the first battle, a save and its load; picture, sound and timing right except the battle's 3D camera (`GsSetRefView2` a stub: the view sits at the world origin). `port_video_quit` tears SDL down before `exit()` (NVIDIA's EGL crashed an `atexit` `SDL_Quit` on Wayland/offscreen).
-- **CI (session 13):** `.github/workflows/ci.yml` on every push: toolchain, script/Python checks, `check_toolchain.sh`, and
+- **CI (session 13):** `.github/workflows/ci.yml` on pull requests and pushes to `main`, skipped when only documentation changed (DECISIONS "CI only when it is needed"): toolchain, script/Python checks, `check_toolchain.sh`, and
   with the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of `dw2003-gamedata`) `build.sh --check` and
   `scripts/test.sh`; first green run 2026-10-05, ~5 min. Fork pull requests get only the disc-free steps.
 - **Emulator (session 8):** `scripts/setup.sh redux` installs the pinned PCSX-Redux build from `tools/prebuilt/` into

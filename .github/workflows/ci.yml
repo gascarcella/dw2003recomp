@@ -6,11 +6,32 @@
 # them, also on the port's -m32 build. Fork pull requests get no secrets, so
 # they only get the disc-free part: the toolchain is built and smoke-tested, the scripts parse, the Python compiles, and
 # every game unit compiles for the host at -m64 (tools/port_inventory.py probe and link, the PC port's gate).
+#
+# When it runs (DECISIONS "CI only when it is needed"): on pull requests and on pushes to main, not on changes that
+# touch only documentation (paths-ignore: no step reads those files), and a newer push to a pull request cancels the
+# run of the older one. A branch without a pull request: `gh workflow run CI --ref <branch>`.
 name: CI
 on:
   push:
-    branches: ["**"]
+    branches: [main]
+    paths-ignore:   # the same list as pull_request's
+      - "docs/**"
+      - "**/*.md"
+      - "LICENSE"
+      - ".gitignore"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "LICENSE"
+      - ".gitignore"
+  workflow_dispatch:
+
+# One run per pull request (the newest push wins); pushes to main and manual runs are keyed by commit, so none of
+# them cancels another commit's run.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
 
 jobs:
   build:

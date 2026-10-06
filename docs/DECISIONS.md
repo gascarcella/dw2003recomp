@@ -1947,3 +1947,24 @@ by the user:
   `--memcard1` a save is lost at exit; the watchdog would kill a paused game; the battle's rules run before the
   animation script starts; GNU ld links an invalid PE silently when a script puts data sections inside `.text`'s page
   (the Wine crash of this session's experiment).
+
+## 2026-10-06: CI only when it is needed (user decision)
+- **Asked:** the user does not want a CI run for changes that cannot change the build (a docs update triggered one).
+- **Measured** (`gh run list`, 2026-10-06): a run takes ~11 min; every push to a branch with a pull request started two
+  (the `push` event and the `pull_request` event), and the docs-only pull request #12 started three (push, pull
+  request, the merge on `main`).
+- **Decision** (`.github/workflows/ci.yml`):
+  1. `paths-ignore` on both events: `docs/**`, `**/*.md`, `LICENSE`, `.gitignore`. No CI step reads them (checked:
+     `scripts/test.sh`, `build.sh`, the probe and the tests only name docs in comments). A change that also touches any
+     other file runs everything, as before; for a pull request GitHub looks at the whole pull request's diff, for a
+     push to `main` at the pushed commits.
+  2. `push` only on `main`; branches are tested by their pull request (one run per push, not two). A branch without a
+     pull request: `gh workflow run CI --ref <branch>` (`workflow_dispatch`). This narrows "Going public"'s "on `main`
+     and our branches".
+  3. `concurrency`: a newer push to a pull request cancels the older push's run. Runs on `main` are keyed by commit and
+     never cancel each other.
+- **Consequences:** a docs-only pull request shows no checks (there is no branch protection on `main`, so nothing
+  waits for one; if a required check is ever added, this needs an always-green stand-in job). The session rule "CI must
+  be green" means: green when a run was started.
+- **Not done:** finer filters (for example skipping the byte-identical rebuild when only `port/` changed). The port's
+  tests build on the game's units and the split's output, so the saving is small against the risk of a wrong filter.
