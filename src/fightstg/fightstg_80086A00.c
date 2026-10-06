@@ -30,7 +30,8 @@ typedef struct FightstgEntrance {
 /* Data block of fightstg_entrance_create's object. */
 typedef struct FightstgEntranceData {
     /* 0x0 */ struct FightstgFlash *flash; /* a fade */
-} FightstgEntranceData; /* size 0x4 */
+    /* 0x4 */ Object *unk_4[2]; /* never written */
+} FightstgEntranceData; /* size 0xC */
 
 /* A step of a camera sequence (fightstg_idle_camera_steps): frames, then the camera mode (base.step). */
 typedef struct FightstgCameraStep {
@@ -377,7 +378,7 @@ void fightstg_entrance_update(FightstgEntrance *obj, FightstgEntranceData *data)
 }
 
 FightstgEntrance *fightstg_entrance_create(s32 id, s32 enemy, s32 weak) {
-    FightstgEntrance *obj = object_new(fightstg_entrance_update, sizeof(FightstgEntrance), 0xC); /* PC_PORT: 3 children; only data->flash is known */
+    FightstgEntrance *obj = object_new(fightstg_entrance_update, sizeof(FightstgEntrance), sizeof(FightstgEntranceData));
 
     obj->base.key1 = id;
     if (enemy != 0) {
@@ -415,9 +416,10 @@ void fightstg_main_update(Object *obj, Object **data) {
     }
 }
 
-/* The overlay's entry point: creates the battle's main object. */
-void fightstg_entry(void) {
-    object_new(fightstg_main_update, sizeof(Object), sizeof(Object *));
+/* The overlay's entry point: creates the battle's main object, which overlay_run_object keeps (v0; PC_PORT:
+ * FINDINGS 8). */
+OBJECT_V0(Object *) fightstg_entry(void) {
+    OBJECT_V0_TAIL(object_new(fightstg_main_update, sizeof(Object), sizeof(Object *)))
 }
 
 /* The idle camera: plays camera sequences (fightstg_idle_camera_steps: frames and a mode per step), each

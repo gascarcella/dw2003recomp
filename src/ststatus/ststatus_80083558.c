@@ -71,7 +71,7 @@ void ststatus_update_main(Object *obj, Object **data) {
 
 /* The overlay's entry point (overlay_entries). */
 Object *ststatus_start(void) {
-    return object_new(ststatus_update_main, sizeof(Object), 4);
+    return object_new(ststatus_update_main, sizeof(Object), sizeof(Object *));
 }
 
 /* Creates the page's text windows. */

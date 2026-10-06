@@ -242,7 +242,7 @@ Not replayed by a golden (no case reaches these creators); found by the M0 agent
   Not changed: `heap_run_children` (`heap.c`) still runs the block as `child_count` 8-byte slots, which is right for
   these blocks as long as their non-pointer fields are 0 while the object runs (the PS1 runs every non-zero word as an
   object each frame, so they must be) and `started` is whole in its slot.
-- **(d) Literal data sizes (session 16, open).** At least 122 `object_new`/`object_create` calls still pass the data
+- **(d) Literal data sizes (session 16).** At least 122 `object_new`/`object_create` calls still pass the data
   block's size as a PS1 byte count (`grep -rnE "object_new\([^,]+,[^,]+, *(0x[0-9A-Fa-f]+|[1-9][0-9]*)\)|object_create\([^,]+,[^,]+, *(0x[0-9A-Fa-f]+|[1-9][0-9]*)," src`:
   72 in WSTAG files, 27 in FIELDSTG, every overlay's root object `object_new(..._update_root, sizeof(Object), 4)`,
   `message_create_cursor`, `fieldstg_dialog_create` (4), `fieldstg_manager_create` (0x7C), `fieldstg_choice_start_*`
@@ -251,6 +251,46 @@ Not replayed by a golden (no case reaches these creators); found by the M0 agent
   none for a 4-byte block: CNTY_SEL's root (`cnty_sel_start`) never runs its menu. Each needs its host size under
   `PC_PORT` (`N * sizeof(void *)` for N pointers, or a `sizeof` of the block's type); `object_destroy` above scans only
   the bytes allocated, so it stays safe either way.
+- **Port (session 16): (d) done**, in plain C that has the PS1's value (no `#ifdef`; the PS1 build is byte-identical).
+  The rule: a data size is `sizeof(<T>Data)` where the block has a type, `sizeof(T *)` or `N * sizeof(T *)` for a block
+  of N pointers (T: what the update's second parameter points at; `Object *` for a block nothing writes), and an
+  object size is `sizeof(<T>)` or `sizeof(Object) + N` (N unused bytes); a literal that is a true byte count stays and
+  is marked `PC_PORT: bytes` (none is). What each block holds was read from its update function and the code it calls.
+  The 122 calls: 72 in WSTAG (45 `WstagEventData` updates whose block is only `event`, 4 bytes: `sizeof(FieldstgEvent *)`,
+  not `sizeof(WstagEventData)`, which is 8, and one `FieldstgEvent **`; 24 of `Object **`/`WstagAnimObject **`/
+  `WstagLiftObject **` or with no data parameter: `sizeof(T *)`; WSTAG355 0x50 and WSTAG934 8, unused: `20 *` / `2 * sizeof(Object *)`; the copies of a
+  `--funcs` group all got the same expression), 27 in FIELDSTG (`sizeof` of the existing `FieldstgChoiceData` x16,
+  `FieldstgStageData`, `FieldstgBackgroundData`, `FieldstgMapTitleData`, `FieldstgMapEventsData`, `FieldstgManagerData`,
+  `FieldstgSpotsData`; `sizeof(MessageDialog *)` x2, `sizeof(FieldstgSpots *)`; `fieldstg_start`'s 0xC: 3 manager
+  pointers of which only `[0]` is used; `fieldstg_actor_update`'s 0x10: `4 * sizeof(void *)`, slots 0-3 all used), and
+  23 elsewhere: the 15 overlay roots (`sizeof(CntySelMenu *)`, `sizeof(StcrddekMain *)`, ...), `message_create_cursor`
+  (`sizeof(MessageCursorData)`), CARDGAME's deck window, board and fade (`sizeof(CardgameDeckWindowData)`,
+  `sizeof(CardgameBoardData)`, `sizeof(Object *)` unused), `stcrddek`'s editor (`sizeof(StcrddekEditorData)`),
+  `stdgname_party_create` (0x28: `10 * sizeof(MessageWindow *)`, windows 0-5 used), `stgmcard_contents_create` (0x4C:
+  `19 * sizeof(MessageWindow *)`, one per `stgmcard_contents_windows` entry), `fightstg_entrance_create` (0xC:
+  `FightstgEntranceData` grows the two words nothing writes, `Object *unk_4[2]`, to its 0xC). Also: the object sizes
+  0x54 (`fieldstg_loader_create`) and 0x58 (`stgmcard_create_root`) are `sizeof(Object) + 4` / `+ 8` (the host's
+  0x54 bytes were smaller than its 0x80-byte `Object`), `fightstg_model_new`'s `(data[1] + 2) * 4` is
+  `* sizeof(void *)` (`FightstgModelData`: `texture_anim`, then a mesh per part), and `overlay_create_object`'s
+  `sizeof(s32)` is `sizeof(Object *)`: its block holds the stage's root object, which `overlay_run_object` now stores
+  as an `Object *` (on the host it calls the entry as returning `Object *`: the table's `s32 (*)(void)` truncated it),
+  and the five entries defined `void` (`fieldstg_start`, `fightstg_entry`, `cardgame_start`, `stgmcard_create_root`,
+  `stdwtitl_create_root`) return it (`OBJECT_V0`, as in 8). The mixed blocks (pointers and other fields:
+  `FieldstgEventData`, `FightstgDigivolveData`, `FightstgEnemyTurnData`, `FightstgStatusData`, `StageSelectData`,
+  `StcrddekNameWindows` (`u8 unk_14[0xC]`, not in the list of (c): no code writes it), `StgdglabFormsetData`,
+  `StstatusEquipPageData`, `StstatusItemListData`, `Wstag800Data`) keep their layout on both sides: the host block is
+  `sizeof` of the host's struct, so large enough, `object_destroy` (c) finds their objects by scanning the bytes, and
+  `heap_run_children` runs them as 8-byte slots, right while their non-pointer fields are 0 (as the PS1 needs them to
+  be: it runs every non-zero word). The class stays closed: `tools/port_inventory.py object-sizes` lists every call
+  with a bare literal object or data size (0 data and the PS1 side of `#ifndef PC_PORT` allowed, `PC_PORT: bytes`
+  exempt) and exits 1 if any: 0 of 663 calls. Also on the host (`src/main/heap.c`): blocks are rounded to 8 bytes
+  (`HEAP_ALIGN`; 4 on the PS1), so every block's data is 8-aligned behind the 24-byte header (UBSan's misaligned
+  `FieldstgActor`/`MessageWindow` accesses on the new_game path are gone). With these, `build/port/dw2003 --disc`
+  with START/UP/CROSS taps goes CNTY_SEL, 0xE02, 0xE00, New Game, FIELDSTG map 0x2D7 (WSTAG780) and runs there; two
+  more host faults on that path were fixed in `fieldstg_80087DB0.c`: `fieldstg_loader_load_action_anims` walks
+  `fieldstg_stage.map_events`, NULL for WSTAG780 (no map events; the PS1 reads the end marker's 0 from low RAM at
+  0x00000008, 0 there in the emulator), and `FieldstgBackgroundView`'s byte pad put `get_size` at the PS1 offset, not
+  the host's (`FieldstgBackground` has two pointers before it).
 
 ## What the host does not replay (by design, not findings)
 

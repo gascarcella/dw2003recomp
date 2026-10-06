@@ -115,7 +115,7 @@ void shocktst_update_root(Object *obj, ShockLoader **data) {
 }
 
 Object *shocktst_start(void) {
-    return object_new(shocktst_update_root, sizeof(Object), 4);
+    return object_new(shocktst_update_root, sizeof(Object), sizeof(ShockLoader *));
 }
 
 /* Highlights the window `sel` (shocktst_cursor_rows) and resets the others. */

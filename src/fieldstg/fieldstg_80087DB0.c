@@ -225,7 +225,17 @@ typedef struct FieldstgCamera {
 /* The object of type 4 that fieldstg_camera_apply asks for the map size. */
 typedef struct FieldstgBackgroundView {
     /* 0x000 */ Object base;
+#ifndef PC_PORT
     /* 0x050 */ u8 unk_050[0xE0];
+#else
+    /* PC_PORT: FieldstgBackground's (fieldstg_80085590.c) two pointers before get_size, so that it lies at the
+     * object's offset on the host too */
+    u8 unk_050[0x4];
+    void *header;
+    u8 unk_058[0xAC]; /* x .. slots */
+    void *tiles;
+    u8 unk_108[0x28]; /* visible .. first_y */
+#endif
     /* 0x130 */ FieldstgPos *(*get_size)(struct FieldstgBackgroundView *obj);
 } FieldstgBackgroundView;
 
@@ -666,7 +676,7 @@ void fieldstg_map_events_update(FieldstgMapEvents *obj, FieldstgMapEventsData *d
 }
 
 FieldstgMapEvents *fieldstg_map_events_create(s32 arg0, FieldstgMapEvent *arg1) {
-    FieldstgMapEvents *obj = object_new(fieldstg_map_events_update, sizeof(FieldstgMapEvents), 8);
+    FieldstgMapEvents *obj = object_new(fieldstg_map_events_update, sizeof(FieldstgMapEvents), sizeof(FieldstgMapEventsData));
 
     obj->sprite_file = arg0;
     return obj;
@@ -724,7 +734,7 @@ void fieldstg_dialog_update(FieldstgDialog *obj, MessageDialog **data) {
 }
 
 FieldstgDialog *fieldstg_dialog_create(FieldstgActor *actor, s32 message, s32 type, s32 fixed) {
-    FieldstgDialog *obj = object_new(fieldstg_dialog_update, sizeof(FieldstgDialog), 4);
+    FieldstgDialog *obj = object_new(fieldstg_dialog_update, sizeof(FieldstgDialog), sizeof(MessageDialog *));
 
     obj->actor = actor;
     obj->message = message;
@@ -735,7 +745,7 @@ FieldstgDialog *fieldstg_dialog_create(FieldstgActor *actor, s32 message, s32 ty
 }
 
 FieldstgDialog *fieldstg_dialog_create_talk(FieldstgActor *actor, s32 message) {
-    FieldstgDialog *obj = object_new(fieldstg_dialog_update, sizeof(FieldstgDialog), 4);
+    FieldstgDialog *obj = object_new(fieldstg_dialog_update, sizeof(FieldstgDialog), sizeof(MessageDialog *));
     FieldstgPos pos;
 
     obj->actor = actor;
@@ -925,7 +935,7 @@ void fieldstg_sprites_update(FieldstgSprites *obj, FieldstgSpots **data) {
 }
 
 FieldstgSprites *fieldstg_sprites_create(s32 file, FieldstgSprite *sprites) {
-    FieldstgSprites *obj = object_new(fieldstg_sprites_update, sizeof(FieldstgSprites), 4);
+    FieldstgSprites *obj = object_new(fieldstg_sprites_update, sizeof(FieldstgSprites), sizeof(FieldstgSpots *));
 
     obj->sprites = sprites;
     obj->file = file;
@@ -978,6 +988,13 @@ void fieldstg_loader_load_action_anims(Object *obj) {
     s32 b = 0;
     s32 c = 0;
 
+#ifdef PC_PORT
+    /* PC_PORT: a stage without map events (WSTAG780, map 0x2D7: fieldstg_find_stage zeroed the field) leaves NULL
+     * here; the PS1 reads the end marker's 0 from low RAM (0x00000008, 0 there: checked in the emulator). */
+    if (entry == NULL) {
+        return;
+    }
+#endif
     for (; entry->type != 0; entry++) {
         switch (entry->type) {
         case 2:
@@ -1111,7 +1128,7 @@ void fieldstg_loader_update(Object *obj) {
 }
 
 Object *fieldstg_loader_create(s32 step) {
-    Object *obj = object_new(fieldstg_loader_update, 0x54, 0); /* PC_PORT: sizeof(Object) + 4; no field of the extra word is used */
+    Object *obj = object_new(fieldstg_loader_update, sizeof(Object) + 4, 0); /* 4 unused bytes past the header */
 
     obj->key2 = step;
     return obj;
@@ -1748,7 +1765,7 @@ INCLUDE_ASM("asm/fieldstg/nonmatchings/fieldstg_80087DB0", fieldstg_manager_upda
 #endif
 
 FieldstgManager *fieldstg_manager_create(void) {
-    return object_create(fieldstg_manager_update, sizeof(FieldstgManager), 0x7C, 7);
+    return object_create(fieldstg_manager_update, sizeof(FieldstgManager), sizeof(FieldstgManagerData), 7);
 }
 
 void fieldstg_goto_map_delayed(s32 map, s32 entry, s32 x, s32 y, s32 dir, s32 delay) {
@@ -2488,7 +2505,7 @@ void fieldstg_spots_update(FieldstgSpots *obj, FieldstgSpotsData *data) {
 }
 
 FieldstgSpots *fieldstg_spots_create(s32 count) {
-    FieldstgSpots *obj = object_create(fieldstg_spots_update, sizeof(FieldstgSpots), 8, 0xB);
+    FieldstgSpots *obj = object_create(fieldstg_spots_update, sizeof(FieldstgSpots), sizeof(FieldstgSpotsData), 0xB);
     FieldstgSprite *sprite;
     s32 i;
     s32 n;
@@ -4349,7 +4366,7 @@ void fieldstg_actor_update(FieldstgActor *obj, void **data) {
 }
 
 FieldstgActor *fieldstg_actor_create(s32 id, s32 type, s32 vram, FieldstgPlacedActor *placed) {
-    FieldstgActor *obj = object_create(fieldstg_actor_update, sizeof(FieldstgActor), 0x10, 5);
+    FieldstgActor *obj = object_create(fieldstg_actor_update, sizeof(FieldstgActor), 4 * sizeof(void *), 5);
     s32 flag;
 
     obj->walk_out = fieldstg_actor_walk_out;

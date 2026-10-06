@@ -80,7 +80,7 @@ void wstag730_update(WstagObject *obj, Object **data) {
 }
 
 WstagObject *wstag730_start(void *arg0) {
-    WstagObject *obj = object_new(wstag730_update, sizeof(WstagObject), 4);
+    WstagObject *obj = object_new(wstag730_update, sizeof(WstagObject), sizeof(Object *));
 
     obj->manager = arg0;
     wstag730_funcs.setup();

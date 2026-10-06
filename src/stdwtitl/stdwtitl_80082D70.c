@@ -94,9 +94,9 @@ void stdwtitl_root_update(Object *obj, StdwtitlRootData *data) {
     }
 }
 
-/* The overlay's entry point (overlay_entries). */
-void stdwtitl_create_root(void) {
-    object_new(stdwtitl_root_update, sizeof(Object), sizeof(StdwtitlRootData));
+/* The overlay's entry point (overlay_entries): overlay_run_object keeps the object (v0; PC_PORT: FINDINGS 8). */
+OBJECT_V0(Object *) stdwtitl_create_root(void) {
+    OBJECT_V0_TAIL(object_new(stdwtitl_root_update, sizeof(Object), sizeof(StdwtitlRootData)))
 }
 
 extern s16 stdwtitl_glow_frames[2][13]; /* frames of the two animations, ended by -1 */

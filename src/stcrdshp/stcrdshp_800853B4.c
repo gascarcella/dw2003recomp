@@ -848,7 +848,7 @@ void stcrdshp_update_root(Object *obj, StcrdshpMain **data) {
 
 /* The overlay's entry. */
 Object *stcrdshp_start(void) {
-    return object_new(stcrdshp_update_root, sizeof(Object), 4);
+    return object_new(stcrdshp_update_root, sizeof(Object), sizeof(StcrdshpMain *));
 }
 
 /* Creates the main object's windows; all of its children go to ordering table entry ot_depth - 2. */

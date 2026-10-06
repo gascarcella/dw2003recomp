@@ -164,7 +164,7 @@ void wstag934_update(WstagObject *obj) {
 /* The stage object is 4 bytes bigger here. */
 /* The stage object is 4 bytes bigger here. */
 WstagObject *wstag934_start(void *arg0) {
-    WstagObject *obj = object_new(wstag934_update, sizeof(WstagObject) + 4, 8);
+    WstagObject *obj = object_new(wstag934_update, sizeof(WstagObject) + 4, 2 * sizeof(Object *)); /* unused */
 
     obj->manager = arg0;
     wstag934_funcs.setup();

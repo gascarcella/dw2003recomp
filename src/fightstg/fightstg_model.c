@@ -523,7 +523,8 @@ FightstgModel *fightstg_model_new(s32 id, s32 anim_file, FightstgPos pos, Fights
     s32 count = data[1] + 1;
     s32 i;
 
-    obj = object_create(fightstg_model_update, sizeof(FightstgModel), (data[1] + 2) * 4, 0x11);
+    /* The data block (FightstgModelData): texture_anim, then meshes[count]. */
+    obj = object_create(fightstg_model_update, sizeof(FightstgModel), (data[1] + 2) * sizeof(void *), 0x11);
     obj->parts = heap_funcs.alloc(count * sizeof(FightstgModelPart), 2);
     obj->params = params;
     obj->has_idle = has_idle;

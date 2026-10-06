@@ -59,8 +59,8 @@ void object_next_timer(Object *obj) {
 void object_destroy(Object *obj);
 
 /* `p` as an object that is alive: in the heap, its block's header neither free (0) nor the terminator (1) and linked
- * both ways, and object_create's methods in it. The reads go through memcpy: host heap blocks are only 4-byte aligned
- * (heap_try_alloc rounds sizes to 4), and `p` may be any value. Deterministic: it reads only the arena. */
+ * both ways, and object_create's methods in it. The reads go through memcpy: `p` may be any 4-aligned value (host heap
+ * blocks are 8-aligned, heap.c's HEAP_ALIGN). Deterministic: it reads only the arena. */
 static Object *object_live(const u8 *p) {
     HeapBlock block;
     u8 *back;

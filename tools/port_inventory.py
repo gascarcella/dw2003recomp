@@ -8,6 +8,7 @@
   tools/venv/bin/python tools/port_inventory.py probe --m32            # the same at -m32 (compile only)
   tools/venv/bin/python tools/port_inventory.py link                   # probe, then nm: duplicate / undefined globals
   tools/venv/bin/python tools/port_inventory.py structs                # sizeof every typedef'd struct, -m32 and -m64
+  tools/venv/bin/python tools/port_inventory.py object-sizes           # literal object/data sizes (exit 0 = none)
 
 counts reads only tracked files (src/**/*.c, include/**/*.h, config/): comments and strings are stripped, identifiers
 after `.`/`->`, prototypes and definitions are not calls. Site kinds for --sites (KIND or KIND:TAG, e.g. `psyq:LIBGPU`,
@@ -32,6 +33,12 @@ touched). A file fails on a gating diagnostic (GATE), on any other compiler erro
 asm). GCC 14+ gets -fpermissive so that its other default errors (return-mismatch, implicit-int, ...) stay warnings, as
 on GCC 13: the gate is the same on every version. Only the `[-Wflag]` tags of the messages are parsed.
 link and structs run the compiler themselves. Needs: gcc and nm on PATH. Nothing here touches the PS1 build.
+
+object-sizes (FINDINGS 9d) lists every object_new / object_create call in src/ whose object size (second argument) or
+data size (third) is a bare integer literal: the host's Object and pointers are wider, so these sizes are written in
+sizeof units (sizeof(<T>Data), N * sizeof(T *), sizeof(Object) + 4, ...). Allowed: a data size of 0 (no block), a call
+in the PS1-only side of `#ifndef PC_PORT` / `#ifdef PC_PORT ... #else`, and a literal that is a true byte count, marked
+`PC_PORT: bytes` in a comment on the call's lines or the line above. Exit 1 when any is left.
 """
 import argparse
 import bisect
@@ -982,6 +989,61 @@ def cmd_structs(args):
     return 0
 
 
+def ps1_only_lines(src):
+    """Per line of src: True inside the PS1-only side of a PC_PORT conditional (`#ifndef PC_PORT`, or the #else of
+    `#ifdef PC_PORT` / `#if defined(PC_PORT)`)."""
+    out, stack = [], []
+    for line in src.text.split("\n"):
+        m = re.match(r"\s*#\s*(ifdef|ifndef|if|else|elif|endif)\b\s*(.*)", line)
+        if m:
+            kind, rest = m.groups()
+            if kind in ("ifdef", "ifndef", "if"):
+                pc = re.search(r"\bPC_PORT\b", rest) is not None
+                neg = kind == "ifndef" or (kind == "if" and re.search(r"!\s*defined", rest) is not None)
+                stack.append((pc, neg))
+            elif kind in ("else", "elif") and stack:
+                pc, neg = stack[-1]
+                stack[-1] = (pc, not neg)
+            elif kind == "endif" and stack:
+                stack.pop()
+        out.append(any(pc and neg for pc, neg in stack))
+    return out
+
+
+def cmd_object_sizes(args):
+    """FINDINGS 9d: object_new/object_create calls with a bare literal object or data size (exit 1 if any)."""
+    bad, total = [], 0
+    for path in c_files():
+        src = Source(path)
+        ps1 = None
+        for m in re.finditer(r"\bobject_(?:new|create)\b", src.text):
+            if not src.is_use(m):
+                continue
+            total += 1
+            ps1 = ps1 or ps1_only_lines(src)
+            ln = src.line(m.start())
+            if ps1[ln - 1]:
+                continue
+            i = src.text.index("(", m.end())
+            a = src.args(i)
+            if len(a) < 3:
+                continue
+            lits = [(what, v) for what, v in (("size", a[1]), ("data", a[2]))
+                    if INT_LITERAL.match(v) and (what == "size" or int(v.strip("()uUlL ").rstrip("uUlL"), 0) != 0)]
+            if not lits:
+                continue
+            end = src.line(src.close_paren(i))
+            lo = src.line_starts[max(ln - 2, 0)]
+            hi = src.line_starts[end] if end < len(src.line_starts) else len(src.raw)
+            if "PC_PORT: bytes" in src.raw[lo:hi]:
+                continue
+            bad.append(f"{src.rel}:{ln}: {m.group()} " + ", ".join(f"{what} {v}" for what, v in lits))
+    for b in bad:
+        print(b)
+    print(f"object-sizes: {total} object_new/object_create calls in src/, {len(bad)} with a bare literal size")
+    return 1 if bad else 0
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -1004,8 +1066,10 @@ def main():
     p.add_argument("--brief", action="store_true", help="do not list the documented structs that differ at -m64")
     p.add_argument("-v", "--verbose", action="store_true", help="also list the undocumented structs that change")
     p.set_defaults(func=cmd_structs)
+    p = sub.add_parser("object-sizes", help="object_new/object_create calls with a bare literal size (exit 0 = none)")
+    p.set_defaults(func=cmd_object_sizes)
     args = ap.parse_args()
-    if shutil.which("gcc") is None and args.cmd != "counts":
+    if shutil.which("gcc") is None and args.cmd not in ("counts", "object-sizes"):
         sys.exit("gcc not found on PATH")
     return args.func(args)
 

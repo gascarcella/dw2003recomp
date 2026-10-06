@@ -134,7 +134,7 @@ void stcrddek_update_root(Object *obj, StcrddekMain **data) {
 
 /* The overlay's entry. */
 Object *stcrddek_start(void) {
-    return object_new(stcrddek_update_root, sizeof(Object), 4);
+    return object_new(stcrddek_update_root, sizeof(Object), sizeof(StcrddekMain *));
 }
 
 /* Starts a fade in (out == 0) or out over `frames` frames. */
@@ -1000,7 +1000,7 @@ void stcrddek_update_editor(StcrddekEditor *obj, StcrddekEditorData *data) {
 }
 
 StcrddekEditor *stcrddek_create_editor(StcrddekMain *main, s32 deck) {
-    StcrddekEditor *obj = object_new(stcrddek_update_editor, sizeof(StcrddekEditor), 0xD4);
+    StcrddekEditor *obj = object_new(stcrddek_update_editor, sizeof(StcrddekEditor), sizeof(StcrddekEditorData));
 
     obj->layer_id = 0x1000;
     obj->ot_depth = 6;
