@@ -1,10 +1,11 @@
 /* The audio output (M3; port_harness.h "audio.c", docs/SOUND.md): the SPU core's samples, rendered once per vsync and
  * sent to a WAV file and to SDL3's audio device.
  *
- * The rendering is the emulated hardware's, not the device's: every vsync (pump.c, after the game's vsync callback,
- * where LIBSND's per-tick flush writes the SPU) port_audio_frame renders exactly that vsync's samples with spu_render,
- * whether anything listens or not, because LIBSND reads the voices' envelopes back (ENVX) to allocate voices: the game
- * must not run differently with or without --wav or a device. Vsync n (from 0) gets
+ * The rendering is the emulated hardware's, not the device's: at the start of every vsync (pump.c's vsync pre-hook,
+ * before the game's VSyncCallback handler, where LIBSND's per-tick flush reads the envelopes and writes the SPU)
+ * port_audio_frame renders exactly the frame's samples with spu_render, whether anything listens or not, because
+ * LIBSND reads the voices' envelopes back (ENVX) to allocate voices: the game must not run differently with or without
+ * --wav or a device. Vsync n (from 0) gets
  *     floor((n + 1) * 44100 / rate) - floor(n * 44100 / rate)
  * stereo frames, rate = --fps (the vsyncs per second the window paces to; 50 by default, PAL), or 50 with --fps 0
  * (unthrottled): 882 per vsync at 50, 735 at 60 (the NTSC patch's rate: SsSetTickMode(0x1000) then ticks 60 times a

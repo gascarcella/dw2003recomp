@@ -244,8 +244,8 @@ stub); its tests are host-only: `tests/spu/run.sh [--all]` (unit goldens from a 
 `tests/spu/envelope_oracle.py` and `tests/spu/capture.py` (against PCSX-Redux). 53× real time at `-O2`, 13× at `-O0`.
 
 ## Audio (M3: `--wav`, the SDL3 audio device)
-`src/audio.c` renders the SPU core once per vsync (`port_audio_frame`, from `pump.c` after the game's vsync callback,
-where LIBSND writes the SPU): vsync n gets `floor((n + 1) * 44100 / rate) - floor(n * 44100 / rate)` stereo frames
+`src/audio.c` renders the SPU core once per vsync (`port_audio_frame`, `pump.c`'s vsync pre-hook: at the start of the
+tick, before the game's VSyncCallback handler, where LIBSND's flush reads the envelopes and writes the SPU): vsync n gets `floor((n + 1) * 44100 / rate) - floor(n * 44100 / rate)` stereo frames
 with `rate` = `--fps` (50 by default: 882 frames a vsync; `--fps 60`: 735, the NTSC patch's 60 ticks a second; `--fps
 0`: 50). So the audio lasts exactly as long as the vsyncs at their nominal pace and its pitch never changes (a PAL game
 paced at 60 plays its music 20 % faster). It renders whether anything listens or not: LIBSND reads the voices'
@@ -258,8 +258,7 @@ build/port-sdl/dw2003 --disc iso/dw2003.cue --window --mute     # no device
 SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=disk SDL_AUDIO_DISK_OUTPUT_FILE=out.raw build/port-sdl/dw2003 --disc iso/dw2003.cue --window --max-frames 3000
 ```
 `--wav FILE`: 44,100 Hz, stereo, signed 16-bit little-endian PCM; the header's sizes are written at exit
-(`port_exit`), so the file is `44 + vsyncs × 882 × 4` bytes (the vsync that ends a script run is not rendered: the
-script ends the run before that vsync's audio). The window's device (unless `--mute`) is an SDL3 audio stream fed the
+(`port_exit`), so the file is `44 + vsyncs × 882 × 4` bytes (every vsync of the run, the last one too). The window's device (unless `--mute`) is an SDL3 audio stream fed the
 same samples. Its clock and the window's pace (`CLOCK_MONOTONIC`, `pump.c`) drift apart; the queue (frames put and
 not yet played, measured before each vsync's put) is held without touching the game's timing or the samples: a moving
 average above the band (target ± one vsync, target = the device's period + two vsyncs: 63 ms ± 20 ms at 1,024 frames)

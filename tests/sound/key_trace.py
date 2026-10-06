@@ -4,12 +4,13 @@ recorded with tests/sound/spu_trace.lua. The oracle for the port's LIBSND beyond
 (docs/SOUND.md "More coverage"; T14's check).
 
   tools/venv/bin/python tests/sound/key_trace.py plan            # print the plan (steps, ticks); --write: plan.json
-  tools/venv/bin/python tests/sound/key_trace.py gen [--banks 1,2] [--counts]   # run the emulator, write the goldens
-  tools/venv/bin/python tests/sound/key_trace.py check [--banks 1,2]            # run it again, compare step by step
+  tools/venv/bin/python tests/sound/key_trace.py gen [--boots 0,1] [--counts]   # run the emulator twice, write the goldens
+  tools/venv/bin/python tests/sound/key_trace.py check [--boots 0]              # run it again, compare step by step
   tools/venv/bin/python tests/sound/key_trace.py diff A B [--steps 5,6] [--max N] # two key traces, step by step
   tools/venv/bin/python tests/sound/key_trace.py list [--bank N]                  # the committed steps, their sizes
 
-How it runs (one emulator boot, tests/golden/oracle.lua's call mechanism, -debugger -interpreter): the game boots
+How it runs (tests/golden/oracle.lua's call mechanism, -debugger -interpreter; one emulator boot per group of banks
+of the plan, "boot" in plan.json: 5 boots of at most 12,500 ticks, bank 1 alone in boot 0): the game boots
 with OpenBIOS until CNTY_SEL is resident, the oracle stops it in its main loop (pad_update) and calls, one after the
 other, routines of this script written into scratch RAM (0x80181000; MIPS, assembled below): first sound_stop_all and
 50 vsyncs, then one call per step of the plan:
@@ -40,8 +41,15 @@ The goldens (tests/sound/expected/keys/): plan.json (the steps) and one xz-compr
 bankNN.trace.xz, holding that bank's steps, each from its marker to the next one (ticks absolute, as in the run).
 `check` and `diff` compare step by step with each step's ticks rebased to its marker (and with the comments
 ignored, as spu_trace.py diff does); a port trace of the same driver must carry the same `# mark <tick> step <n>`
-lines. With --banks only those banks' steps run (and are compared): LIBSND's state is carried from step to step,
-so a step's trace is only promised in the full run's order (whether a subset reproduces it is reported).
+lines. LIBSND's state carries over from step to step within a boot, so a port run of a boot must make the same
+steps in the same order from the same start (a fresh boot to CNTY_SEL, sound_stop_all, 50 vsyncs). --boots runs
+(and compares) only those boots: each is reproduced exactly on its own.
+
+Why boots: one boot of the whole plan (~45,000 ticks) failed twice at the same step (bank 49's load, near tick
+32,500): first a Lua stack overflow in a burst, then a Lua error in the oracle's sentinel breakpoint, after which the
+CPU ran into the sentinel; each bank alone runs clean. PCSX-Redux also leaks Lua stack slots per vsync (2; see
+tests/replay/run.lua): the wrapper raises an error out of a listener every 256 vsyncs to reset the stack (the other
+listeners still run for that vsync: checked).
 
 Exit codes: 0 pass, 1 mismatch or emulator failure, 2 usage / missing tool.
 """
@@ -473,8 +481,8 @@ def run_emulator(plan, out_dir, counts=False, bios=oracle.OPENBIOS):
     if bytes.fromhex(back) != code:
         raise RuntimeError("the step routines were overwritten during the run (the heap reached 0x80181000?)")
     emu = json.loads(oracle.REDUX_VERSION.read_text())
-    header = [f"key trace: {len(plan['steps'])} steps of tests/sound/expected/keys/plan.json, plan sha1 "
-              f"{hashlib.sha1(plan_text(plan).encode()).hexdigest()[:12]}",
+    header = [f"key trace boot {plan['steps'][0]['boot']}: {len(plan['steps'])} steps of"
+              f" tests/sound/expected/keys/plan.json",
               f"emulator {emu['version']} build {emu['buildId']} ({emu['changeset'][:8]}), core interpreter,"
               f" bios {bios.name} ({oracle.hashlib.sha1(bios.read_bytes()).hexdigest()[:12]})"]
     text, stats = spu_trace.build_trace(out_dir, header, {}, False)
