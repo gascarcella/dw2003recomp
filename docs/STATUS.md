@@ -98,7 +98,7 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   `--print-settings` prints the effective settings (`port/src/settings.c`; `tests/port/settings.py`, in the port layer
   of `scripts/test.sh`). The bare binary's logs, records and WAVs are unchanged. `input` and `mods` are read but not
   applied yet.
-- **CI (session 13):** `.github/workflows/ci.yml` on every push: toolchain, script/Python checks, `check_toolchain.sh`, and
+- **CI (session 13):** `.github/workflows/ci.yml` on pull requests and pushes to `main`, skipped when only documentation changed (DECISIONS "CI only when it is needed"): toolchain, script/Python checks, `check_toolchain.sh`, and
   with the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of `dw2003-gamedata`) `build.sh --check` and
   `scripts/test.sh`; first green run 2026-10-05, ~5 min. Fork pull requests get only the disc-free steps.
 - **Emulator (session 8):** `scripts/setup.sh redux` installs the pinned PCSX-Redux build from `tools/prebuilt/` into

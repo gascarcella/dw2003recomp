@@ -8,7 +8,7 @@ with the original-era toolchain). A Linux-native port is a later, separate goal.
    `iso/`, `extracted/`, built `tools/*`, `tools/local.env`, `build/`, `asm/`. If `tools/binutils` or
    `iso/dw2003.bin` is missing, run `scripts/worktree_init.sh` first (~1 s: links the main checkout's tools,
    links the disc, extracts it). Commit on the worktree's branch, push it, and open a **pull request** to `main`
-   (`gh pr create`; CI must be green); the user reviews and merges. Commit straight to `main` only when the user says
+   (`gh pr create`; CI must be green; a docs-only pull request starts no run); the user reviews and merges. Commit straight to `main` only when the user says
    so for that change (DECISIONS "Pull requests for our own work").
    **Cloud sessions** (fresh clone): the SessionStart hook (`.claude/hooks/session-start.sh`) runs `setup.sh` and
    `worktree_init.sh` before the session starts; the disc comes from the data checkout beside the repo (below).
