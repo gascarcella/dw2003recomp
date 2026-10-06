@@ -4,6 +4,7 @@
 #include "psyq/libetc.h"
 
 static void (*psyq_vsync_handler)(void);
+static void (*psyq_vsync_hook)(void); /* the port runtime's per-frame work (psyq_set_vsync_hook) */
 static int psyq_vsync_count;      /* frames since boot: what VSync(0) returns */
 static int psyq_video_mode = MODE_PAL;
 
@@ -23,6 +24,13 @@ void psyq_vsync_tick(void) {
     if (psyq_vsync_handler != NULL) {
         psyq_vsync_handler();
     }
+    if (psyq_vsync_hook != NULL) {
+        psyq_vsync_hook();
+    }
+}
+
+void psyq_set_vsync_hook(void (*hook)(void)) {
+    psyq_vsync_hook = hook;
 }
 
 /* Stub that keeps time moving: the PS1's VSync(0) waits for the next vsync and VSync(n > 1) for n of them, with the

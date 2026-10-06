@@ -47,7 +47,8 @@ const PortOverlay *port_overlay_current(int tier);
 
 /* ---- The interrupt pump (pump.c) */
 extern long port_max_frames;  /* --max-frames: port_wait() exits 0 after this many vsync ticks (0: no cap) */
-extern long port_frames;      /* vsync ticks so far */
+extern long port_frames;      /* vsync ticks so far (frames) */
+extern int port_script_active; /* --script given: port_script_frame runs every frame */
 extern int port_watchdog_sec; /* --watchdog: exit 4 after this many wall-clock seconds without a port_wait() */
 void port_pump_init(void);
 void port_exit(int status, const char *reason) __attribute__((noreturn)); /* logs the frame count and the reason */

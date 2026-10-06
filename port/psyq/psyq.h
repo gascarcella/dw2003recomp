@@ -7,6 +7,9 @@
 
 /* Runs the handler VSyncCallback registered (if any) once and advances the frame counter VSync() reports. */
 void psyq_vsync_tick(void);
+/* The runtime's per-frame hook: called at the end of every vsync tick (from VSync() as from the pump), after the
+ * game's VSyncCallback handler. NULL: none. */
+void psyq_set_vsync_hook(void (*hook)(void));
 /* Completes the pending CD command: calls the CdSyncCallback / CdReadyCallback handlers as the PS1 would for a
  * command that finished (the stub has no data: a read completes with no sectors). Returns 1 if a handler ran. */
 int psyq_cd_tick(void);
