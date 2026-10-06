@@ -305,7 +305,7 @@ Only changes that leave every PS1 byte identical:
 **Test:** `build.sh --check`; the probe is clean.
 
 ### M1: Headless host build that boots the title logic
-**Skeleton done in session 15** (STATUS "PC port, M1 skeleton"): the build, the arena, the overlay manager with its tables and data restore, the pump and the stub shim; the game's `main()` runs to a frame cap. Left: LIBCD over the BIN, the scripted pad, the logs and the determinism/sanitizer/`-m32` checks below.
+**Skeleton done in session 15** (STATUS "PC port, M1 skeleton"): the build, the arena, the overlay manager with its tables and data restore, the pump and the stub shim; the game's `main()` runs to a frame cap. **Done in session 16** (DECISIONS "M1: the headless port replays new_game"): LIBCD over the BIN, the scripted pad (the layer-2 scripts themselves), the per-frame log and record; the test below passes through FIELDSTG's first map (`tests/port/run.py --m32 --sanitize`).
 - **Build:** `port/CMakeLists.txt`, with the `src/` file list generated from `configure.py`'s unit list
   (`-DNON_MATCHING -DPC_PORT -std=gnu99 -fno-strict-aliasing -fwrapv -fsigned-char`).
 - **Stub shim:**

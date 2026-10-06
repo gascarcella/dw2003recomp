@@ -1747,3 +1747,48 @@ The user's answers to `docs/PC_PORT_PLAN.md` section 4 (asked item by item; ever
   (`scripts/build.sh --check` takes 22 s on ~12 cores, 110 MB peak per process); `docs/AGENT_BRIEF.md`'s `DW3_JOBS=1` is
   the shared-4-core default, overridden per brief.
 
+
+## 2026-10-06: M1: the headless port replays new_game (session 16, agents T1-T5)
+- **What the port test compares** (`tests/port/run.py`, the `port` layer of `scripts/test.sh`, a CI step): the port
+  replays `tests/replay/scripts/new_game.json` from `--disc` twice; the two logs and records must be byte-identical, and
+  the record's **cross-core view** (`replay.py`'s own `cross_core_view`/`compare`: each checkpoint's name, stage, map and
+  stable `gamestate_data` hash; the overlay and map sequences without frames) must equal `tests/replay/expected/new_game.json`.
+  Frames, `random_index`, the full hash and the inputs are not compared, as between the emulator's two cores (the port's
+  CD timing differs again: 1,831 frames against 2,462). `--m32` also requires the 32-bit build's log and record to equal
+  the 64-bit build's; `--sanitize` requires no ASan/UBSan report. Movies are streamed but not decoded; the script skips
+  the opening movie with START as in the emulator.
+- **The checkpoint hash is of `gamestate_data`'s PS1 image:** its first 0x26FC bytes (no pointer before `funcs`, which
+  sits at 0x2700 at `-m64`), then the 24 `funcs` entries as the PS1 addresses of the host functions (a table generated
+  from `config/symbol_addrs.txt`, filtered by `nm`). Checked on all five of the emulator's dumps (T2).
+- **A frame is a vsync tick** wherever it comes from (`VSync()`, `PLATFORM_WAIT()`, LIBCD's `StGetNext` every 5000 empty
+  polls); `port_frame` (`port/src/pump.c`) runs the CD tick, the log and the script on each, as run.lua's vsync listener.
+- **CD latency is simulated in vsync ticks, deterministically** (`--cd-speed`, `port/psyq/libcd.c`): `realistic` (the
+  default) delivers the Setmode speed (bit 0x80: 3 sectors a tick, else 1.5) after a seek of 3 + distance / 8192 ticks,
+  at most 40, following a Setloc (a stand-in: psx-spx gives no formula); `instant` has no seek and up to 75 sectors a
+  tick. Each sector calls the ready handler once; a command from a handler stops the delivery. Movies stream from the BIN
+  at the drive's rate into the game's own `StSetRing` buffer (StHEADER + data per frame, XA sectors skipped): the opening
+  movie plays its 1,776 frames at exactly 15 fps. The disc's SHA-1 (`457cb233...`, as `setup.sh`) is checked at every
+  start, with a stamp cache in `$XDG_CACHE_HOME/dw2003-port/` keyed by path, size, mtime, inode and device.
+- **Pinned quirks the port reproduces** (each under `PC_PORT`, byte-identical on the PS1, or in `port/`):
+  - the R3000A's division by zero (`x % 0 == x`, FINDINGS 7): the first battle's end takes its draw and gives no item;
+  - `void` object creators whose callers use `v0` return the object on the host (`OBJECT_V0`, 36 + 5 overlay entries,
+    FINDINGS 8);
+  - `object_destroy` stops exactly the live objects the PS1's 4-byte word scan stops (FINDINGS 9c: a byte scan of the
+    block checked against the heap's live objects), and objects created with size 0 get their real size (9a, 9b);
+  - FIELDSTG reads a NULL map-event list as empty (the PS1 reads low RAM, 0 there in the emulator);
+  - the overlay copy's CPU time: LIBC2's byte-loop `memcpy` (~12 cycles a byte) keeps the emulator one or two frames in
+    the state between the copy and the overlay's start-up, and a checkpoint (`new_game_field`) sees that state, so the
+    overlay manager runs `size * 12 / 677376` vsync ticks after a copy;
+  - STPLNMET's trim from `name[19]` of a `u16[12]` reads the same half-word on the host (FINDINGS 10: nothing to do).
+- **Data sizes are host sizes** (FINDINGS 9d): every `object_new`/`object_create` size is in `sizeof` units that equal the
+  PS1 value (122 sites), and `tools/port_inventory.py object-sizes` fails on a bare literal; the host heap is 8-aligned
+  (`HEAP_ALIGN`); overlay entries return `Object *`; `OFFSETOF` (`common.h`) for a partial clear whose prefix holds
+  pointers (`fieldstg_find_stage`).
+- **The primitive-stream hash ignores bits the GPU ignores** (the padding halves of textured polygons' texture words),
+  or heap leftovers make `-m32` and `-m64` differ.
+- **The script engine** (`port/src/script.c`) is run.lua's in C: every step but `reset` (exit 6; it would need the whole
+  runtime restarted). `walk` reads FIELDSTG's player actor from `heap_objects`. `wait_mem` reads only layout-identical
+  ranges (`port_state_read`); `memcard_state` and overlay data are not mapped yet.
+- **This machine (cloud, session 16):** 4 cores, 15 GB: 3 worktree agents at once with `DW3_JOBS=1`, `-j2` for the port.
+  `gcc-multilib` installed by the user's approval (apt, root); ASan/UBSan were already present. The `Agent` tool's
+  worktrees start from `main`, not the current branch: every brief must say to reset onto the session branch.

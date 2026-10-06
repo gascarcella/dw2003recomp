@@ -5,6 +5,8 @@ files (its prompt lists them) and works in its own git worktree. Read `CLAUDE.md
 DECISIONS entries named below.
 
 ## Setup (once, in your worktree)
+**Worktree base:** an `Agent` worktree may start from `main`, not the session branch: if `git log --oneline -1` is not
+the branch your prompt names, `git reset --hard <that branch>` first (your worktree branch has no commits yet).
 ```sh
 scripts/worktree_init.sh          # links tools/, iso/, extracted/ from the main checkout (~1 s)
 export DW3_JOBS=1                 # several agents share one machine (16 GB, 4 cores): one job each, unless your brief says otherwise
