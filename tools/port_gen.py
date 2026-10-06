@@ -2,7 +2,8 @@
 """Generators for the PC port's build (port/CMakeLists.txt runs them; docs/PC_PORT_PLAN.md 2.5, "Build-system changes").
 
   tools/port_gen.py units --out build/port/gen/units.cmake          # the game's C units, as CMake variables
-  tools/port_gen.py overrides --out build/port/gen/include            # include_asm.h and psyq/gtemac.h for the host
+  tools/port_gen.py overrides --out build/port/gen/include            # include_asm.h and psyq/gtemac.h (the GTE
+                                                                      # macros on port/psyq/gte.c) for the host
   tools/port_gen.py ldscript --out build/port/gen/overlays.ld         # the EXE's and each overlay's .data/.bss
                                                                       # sections, the arena symbols
   tools/port_gen.py sections --map build/port/dw2003.map              # after the link: no game data outside them
@@ -121,10 +122,167 @@ def include_guard(path):
     return m.group(1) if m else None
 
 
+# The generated gtemac.h's prelude: the GTE's entry points (port/psyq/gte.c; psyq_internal.h declares them for the
+# shim) and the memory accesses of the macros' loads and stores (byte copies: the host is little-endian like the PS1,
+# and a struct the game passes may be only halfword-aligned, as gte_ldv0_u's SVECTORs are).
+GTEMAC_PRELUDE = """#include "common.h"
+
+void psyq_gte_mtc2(int reg, u32 v);
+u32 psyq_gte_mfc2(int reg);
+void psyq_gte_ctc2(int reg, u32 v);
+u32 psyq_gte_cfc2(int reg);
+void psyq_gte_cmd(u32 op);
+
+static inline u32 psyq_gte_lw_(const void *p) {
+    u32 v;
+
+    __builtin_memcpy(&v, p, 4);
+    return v;
+}
+
+static inline u32 psyq_gte_lhu_(const void *p) {
+    u16 v;
+
+    __builtin_memcpy(&v, p, 2);
+    return v;
+}
+
+static inline void psyq_gte_sw_(void *p, u32 v) {
+    __builtin_memcpy(p, &v, 4);
+}
+
+static inline void psyq_gte_sh_(void *p, u32 v) {
+    u16 h = (u16)v;
+
+    __builtin_memcpy(p, &h, 2);
+}
+"""
+
+
+def split_top(text, sep):
+    """Splits at `sep` outside quotes and parentheses."""
+    parts, depth, quote, cur = [], 0, False, ""
+    for ch in text:
+        if ch == '"':
+            quote = not quote
+        elif not quote and ch == "(":
+            depth += 1
+        elif not quote and ch == ")":
+            depth -= 1
+        if ch == sep and depth == 0 and not quote:
+            parts.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    parts.append(cur)
+    return parts
+
+
+def gte_macro_c(name, params, body):
+    """One gte_* macro of include/psyq/gtemac.h for the host: an inline-asm macro becomes the same sequence of GTE
+    accesses as calls (port/psyq/gte.c), with the same registers, operands and command words; a composite macro (a
+    block of other macros) is kept as it is. Raises ValueError on anything it does not know, so a new macro in
+    gtemac.h is translated or fails the configure."""
+    body = body.strip()
+    if body.startswith("{"):
+        return f"#define {name}{params} " + re.sub(r"\s+", " ", body)
+    m = re.fullmatch(r"__asm__\s+volatile\s*\((.*)\)", body, flags=re.S)
+    if not m:
+        raise ValueError(f"{name}: neither an asm statement nor a block")
+    sections = split_top(m.group(1), ":")
+    asm = "".join(re.findall(r'"((?:[^"\\]|\\.)*)"', sections[0]))
+    if len(sections) > 1 and sections[1].strip():
+        raise ValueError(f"{name}: output operands are not supported")
+    operands = []
+    if len(sections) > 2 and sections[2].strip():
+        for op in split_top(sections[2], ","):
+            om = re.fullmatch(r'\s*"r"\s*\((.*)\)\s*', op, flags=re.S)
+            if not om:
+                raise ValueError(f"{name}: operand {op.strip()!r} is not \"r\"(...)")
+            operands.append(om.group(1).strip())
+    insns = [i.strip() for i in asm.split(";") if i.strip()]
+    pointers, values, temps, out = set(), set(), set(), []
+
+    def gpr(tok):
+        if tok.startswith("%"):
+            values.add(int(tok[1:]))
+            return f"gte_a{tok[1:]}_"
+        rm = re.fullmatch(r"\$(\d+)", tok)
+        if not rm:
+            raise ValueError(f"{name}: register {tok!r}")
+        temps.add(int(rm.group(1)))
+        return f"gte_r{rm.group(1)}_"
+
+    def cop2(tok):
+        rm = re.fullmatch(r"\$(\d+)", tok)
+        if not rm or int(rm.group(1)) > 31:
+            raise ValueError(f"{name}: GTE register {tok!r}")
+        return rm.group(1)
+
+    def mem(tok, adjust=0):
+        mm = re.fullmatch(r"(-?\d+)\(%(\d+)\)", tok)
+        if not mm:
+            raise ValueError(f"{name}: memory operand {tok!r}")
+        pointers.add(int(mm.group(2)))
+        return f"gte_p{mm.group(2)}_ + {int(mm.group(1)) + adjust}"
+
+    i = 0
+    while i < len(insns):
+        parts = insns[i].replace(",", " ").split()
+        op, a = parts[0], parts[1:]
+        if op == "nop":
+            pass
+        elif op == ".word":
+            word = int(a[0], 0)
+            if word >> 25 != 0x25:
+                raise ValueError(f"{name}: .word {a[0]} is not a GTE command")
+            out.append(f"psyq_gte_cmd({word & 0x1FFFFFF:#x});")
+        elif op in ("lw", "lhu"):
+            out.append(f"{gpr(a[0])} = psyq_gte_{op}_({mem(a[1])});")
+        elif op == "lwl":
+            # lwl $r, n+3(p); lwr $r, n(p): an unaligned word load at n.
+            nxt = insns[i + 1].replace(",", " ").split() if i + 1 < len(insns) else []
+            if nxt[:2] != ["lwr", a[0]]:
+                raise ValueError(f"{name}: lwl without its lwr")
+            out.append(f"{gpr(a[0])} = psyq_gte_lw_({mem(nxt[2])});")
+            if mem(a[1], -3) != mem(nxt[2]):
+                raise ValueError(f"{name}: lwl/lwr offsets")
+            i += 1
+        elif op in ("sw", "sh"):
+            out.append(f"psyq_gte_{op}_({mem(a[1])}, {gpr(a[0])});")
+        elif op == "sll":
+            out.append(f"{gpr(a[0])} = {gpr(a[1])} << {int(a[2])};")
+        elif op == "sra":
+            out.append(f"{gpr(a[0])} = (u32)((s32){gpr(a[1])} >> {int(a[2])});")
+        elif op == "or":
+            out.append(f"{gpr(a[0])} = {gpr(a[1])} | {gpr(a[2])};")
+        elif op in ("mtc2", "ctc2"):
+            out.append(f"psyq_gte_{op}({cop2(a[1])}, {gpr(a[0])});")
+        elif op in ("mfc2", "cfc2"):
+            out.append(f"{gpr(a[0])} = psyq_gte_{op}({cop2(a[1])});")
+        elif op == "lwc2":
+            out.append(f"psyq_gte_mtc2({cop2(a[0])}, psyq_gte_lw_({mem(a[1])}));")
+        elif op == "swc2":
+            out.append(f"psyq_gte_sw_({mem(a[1])}, psyq_gte_mfc2({cop2(a[0])}));")
+        else:
+            raise ValueError(f"{name}: instruction {insns[i]!r}")
+        i += 1
+    if pointers & values:
+        raise ValueError(f"{name}: an operand used both as an address and as a value")
+    decls = [f"u8 *gte_p{n}_ = (u8 *)({operands[n]});" for n in sorted(pointers)]
+    decls += [f"u32 gte_a{n}_ = (u32)({operands[n]});" for n in sorted(values)]
+    if temps:
+        decls.append("u32 " + ", ".join(f"gte_r{t}_" for t in sorted(temps)) + ";")
+    stmts = " ".join(decls + out)
+    return f"#define {name}{params} do {{ {stmts} }} while (0)"
+
+
 def cmd_overrides(args):
-    """The override headers (first on the include path): INCLUDE_ASM/INCLUDE_RODATA empty, every gte_* macro of
-    include/psyq/gtemac.h a no-op (M5 implements the GTE). They carry the real headers' include guards, so the real
-    ones are skipped wherever they are included from (what tools/port_inventory.py's probe does)."""
+    """The override headers (first on the include path): INCLUDE_ASM/INCLUDE_RODATA empty, and every gte_* macro of
+    include/psyq/gtemac.h translated for the host: its MIPS sequence becomes the same register accesses and commands
+    on the software GTE (port/psyq/gte.c: psyq_gte_mtc2/mfc2/ctc2/cfc2/cmd). They carry the real headers' include
+    guards, so the real ones are skipped wherever they are included from (tools/port_inventory.py's probe keeps its own
+    no-op GTE header: it only compiles)."""
     out = Path(args.out)
     (out / "psyq").mkdir(parents=True, exist_ok=True)
     gen = ROOT / "include/asm_generated/include_asm.h"
@@ -134,12 +292,13 @@ def cmd_overrides(args):
     real = ROOT / "include/psyq/gtemac.h"
     text = re.sub(r"/\*.*?\*/", "", real.read_text(), flags=re.S)
     text = re.sub(r"\\\n", " ", text)
-    macros = re.findall(r"^[ \t]*#[ \t]*define[ \t]+(gte_\w+)(\([^)]*\))", text, flags=re.M)
-    body = "".join(f"#define {n}{a} ((void)0)\n" for n, a in macros)
+    macros = re.findall(r"^[ \t]*#[ \t]*define[ \t]+(gte_\w+)(\([^)]*\))(.*)$", text, flags=re.M)
+    body = "".join(gte_macro_c(n, a, b) + "\n" for n, a, b in macros)
+    g = include_guard(real) or "PSYQ_GTEMAC_H"
     write(out / "psyq/gtemac.h", f"/* Generated by tools/port_gen.py overrides from include/psyq/gtemac.h; do not edit.\n"
-          f" * Every GTE macro is a no-op until M5 (docs/PC_PORT_PLAN.md 1.3). */\n#ifndef "
-          f"{include_guard(real) or 'PSYQ_GTEMAC_H'}\n#define {include_guard(real) or 'PSYQ_GTEMAC_H'}\n{body}#endif\n")
-    print(f"port_gen overrides: include_asm.h, psyq/gtemac.h ({len(macros)} gte_* no-ops) -> {out}")
+          f" * Every GTE macro runs on the software GTE (port/psyq/gte.c) with the original's registers and commands. */\n"
+          f"#ifndef {g}\n#define {g}\n{GTEMAC_PRELUDE}\n{body}#endif\n")
+    print(f"port_gen overrides: include_asm.h, psyq/gtemac.h ({len(macros)} gte_* macros on the software GTE) -> {out}")
 
 
 # ------------------------------------------------------------------------------------------------------------- overlays

@@ -29,6 +29,17 @@ void psyq_gte_reset(void);
 void psyq_press_reset(void);
 void psyq_snd_reset(void);
 
+/* gte.c: the GTE (COP2). The generated gtemac.h (tools/port_gen.py overrides) calls these with the registers and
+ * command words of include/psyq/gtemac.h's MIPS sequences, and declares them itself (the game's units do not see
+ * this header): mtc2/lwc2 write data register `reg` (0..31), mfc2/swc2 read it, ctc2/cfc2 the control registers,
+ * psyq_gte_cmd runs a command (the cop2 word's low 25 bits). psyq_gte_clear zeroes every register. */
+void psyq_gte_mtc2(int reg, u32 v);
+u32 psyq_gte_mfc2(int reg);
+void psyq_gte_ctc2(int reg, u32 v);
+u32 psyq_gte_cfc2(int reg);
+void psyq_gte_cmd(u32 op);
+void psyq_gte_clear(void);
+
 /* libpad.c: the controllers were polled again (run by the vsync tick). */
 void psyq_pad_vsync(void);
 
