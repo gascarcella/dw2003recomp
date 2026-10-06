@@ -10,7 +10,7 @@ each layer is in `docs/STATUS.md`.
 |---|---|---|---|
 | 1 | **Golden tests of pure logic:** `fightstg_rules_*`, the card game's CPU and rules, `gamestate_*`, `records_*`, digivolution, experience and training (`stfgtrep_*`, `stgtrain_*`), items and shops, `memcard_get_checksum`, `pad_random`, the encounter redraw, the battle's event queue, the enemy's choice of action, the battle's spoils, `sprite_draw`, the GTE's commands and the GPU's drawing (23 families, table below). A fixture fills the globals a function reads, the golden records what it returned and wrote. | `tests/golden/` (fixtures and goldens, JSON, one file per function family), `tests/host/` (the host-side replay the port uses) | The game's own code run in the emulator (PCSX-Redux, Lua-driven): resolves the UB the way the original did. |
 | 2 | **Record/replay:** a pad script run from boot; at named checkpoints the SHA-1 of `gamestate_data` (the pointer-free save struct, `0x80048D34`, `0x275C` bytes), the frame, map and `pad_random.index`; plus the overlay load sequence and the map sequence. | `tests/replay/` (`run.lua`, `replay.py`, `scripts/*.json`, `expected/*.json`) | The disc in PCSX-Redux with OpenBIOS. The port replays the same script through its pad shim and compares at checkpoints only (CD latency differs, so frames do not). |
-| 3 | **Formats and save round trips:** the `docs/FORMATS.md` verification scripts; `.mcd` saves exchanged between emulator and port. | `tests/formats/` (`run.sh` over the verification tools in `tools/`) | The disc files and the emulator's memory cards. |
+| 3 | **Formats and save round trips:** the `docs/FORMATS.md` verification scripts; `.mcd` saves exchanged between emulator and port. | `tests/formats/` (`run.sh` over the verification tools in `tools/`), `tests/saves/` (`run.py`, `cards.py`) | The disc files and the emulator's memory cards. |
 
 ## Rules
 
@@ -276,7 +276,14 @@ one summary line with its counts and fails non-zero on a violation:
 | flag ranges | `tools/flag_census.py --check` (reads `src/`) | every one of the 7,061 bit-array flag uses (types 0x00–0x40, part of the save data) has an index inside its `include/gamestate.h` array; the tightest are type 0x04 (index 15 of 16 bits) and 0x06 (7 of 8) |
 | sound banks | `tests/sound/sound_formats.py --check` | the 71 banks: VAB header sizes and tone records, every ADPCM block's shift/filter and each VAG's end flag, the 72 SEPs' 16 sequences each ending exactly at their end-of-track (FORMATS "Sound") |
 
-Save round trips (`.mcd` files exchanged between the emulator and the port) join it once the port writes saves.
+**Save round trips** (`tests/saves/run.py`, ~1 min; `scripts/test.sh` layer 3 runs it after `tests/formats/run.sh`, and
+skips it when the emulator, the disc, CMake/Ninja or gcc is missing): the port and the emulator each save at the Asuka Inn
+(a cut of `first_battle_save` to `saved`, on a new card: `--memcard1` / `-memcard1`), then each loads the other's card
+(the script's steps after `reset` to `loaded`, from a fresh boot); both `saved` and both `loaded` checkpoints must have
+`tests/replay/expected/first_battle_save.json`'s stable hashes. `tests/saves/cards.py` then checks both cards (directory
+checksums, the save file's blocks, the Sony header, the game's header and slot with exact XOR sums) and requires them equal
+byte for byte except 8 named fields: directory frame 63 (the emulator's BIOS), the play time and the encounter timer with
+the two checksums that cover them, and the two stale buffer tails (`tests/saves/README.md`). No card is committed.
 
 ## The port's M1 test (`scripts/test.sh` layer `port`)
 
