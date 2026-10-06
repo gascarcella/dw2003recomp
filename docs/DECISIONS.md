@@ -1983,5 +1983,5 @@ launcher (path A, built in parallel) writes. Choices made while building it, eac
 - **A mod is off unless the settings enable it**, and off under `--script` unless `--script-mods` (a flag, not a
   script field, for now; a script field can come with the first mod that needs its own expected results).
 - **Only `fast_forward` has a manifest yet:** the others come with their behaviour (phases 3-4), so the launcher never
-  shows a mod that does nothing. Its `speed` is an enum of multiples (`2x 3x 4x 6x 8x unlimited`), the default `4x`
-  provisional until the user picks it.
+  shows a mod that does nothing. Its `speed` is an enum of multiples (`2x 3x 4x 6x 8x unlimited`) of the nominal rate,
+  **default `4x`: the user's pick** (2026-10-06; 200 fps at PAL, 240 at 60 Hz).

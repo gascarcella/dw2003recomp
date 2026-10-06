@@ -195,7 +195,7 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   and CARDGAME's (DECISIONS "Naming pass names-9": what is left there is unread, padding or per-effect scratch).
 - Kept as is: object list in `heap`, random module in `pad`, gamestate one file vs two, `object` vs `main`.
 - Launcher and mods: game side phase 1 done (session 19, path B); next phase 2 (fast-forward, 50/60 Hz); fast-forward's
-  default speed is the user's to pick (provisional `4x`). Launcher: path A (`docs/LAUNCHER_MODS_PLAN.md`). Found on the way (its section 3): without
+  default speed: `4x` (the user's pick). Launcher: path A (`docs/LAUNCHER_MODS_PLAN.md`). Found on the way (its section 3): without
   `--memcard1` a save is lost at exit; no pause or reset key; the watchdog would kill a paused game; 60 Hz
   (`records_60hz`) has never been compared with the emulator; no Windows build (its section 6 has the staged route).
 - PC port: decided and started (`docs/PC_PORT_PLAN.md`: M0 and M1 done); `docs/PC_PORT_RESEARCH.md` stays background.
@@ -233,5 +233,5 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
    is the game-side foundations (`--config FILE`, the settings directory, memory cards there by default, rebindable inputs
    and hotkey actions, `port/src/mods.c` and the manifests, the pace split from the nominal rate, a pause key); then
    fast-forward and the 50/60 toggle; the launcher; skip dialogues and battle animations (after the camera fix, issue #7);
-   Windows; skip intro and data overrides. Still to pick: fast-forward's default speed, where the launcher's source lives.
+   Windows; skip intro and data overrides. Still to pick: where the launcher's source lives.
 4. Holdouts/FAKEs: opportunistic retries with new techniques.

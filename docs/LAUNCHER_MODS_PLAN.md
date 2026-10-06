@@ -464,8 +464,8 @@ written the same way). No `string` or `path` type for now.
   `tests/port/settings.py` requires each `port/mods/<id>/mod.json` to equal it. The manifests are copied beside the
   binary (`build/port*/mods/<id>/mod.json`). Manifests also need `requires_port` (an integer: the game's mod interface,
   1 now). Under `--script` every mod is off unless `--script-mods` is given.
-- The first manifest: `fast_forward` (hold `Tab`, toggle unbound, speed an enum `2x 3x 4x 6x 8x unlimited` with a
-  **provisional default of `4x`** (200 fps at PAL) until the user picks it, mute on). Its behaviour is phase 2.
+- The first manifest: `fast_forward` (hold `Tab`, toggle unbound, speed an enum `2x 3x 4x 6x 8x unlimited` with the
+  default `4x` (200 fps at PAL; **the user's pick, 2026-10-06**), mute on). Its behaviour is phase 2.
 
 ### 4.6 The launcher
 
@@ -488,7 +488,7 @@ written the same way). No `string` or `path` type for now.
 - Audio is cleared and muted while it is active (`spu_render` keeps running: LIBSND reads the envelopes). A pitched-up
   mode can come later. No time-stretching.
 - Bindings: hold and toggle. Options: the speed (a multiple of the nominal rate, or a frame rate, or unlimited: the
-  user named 200 or 300 fps; **the default value is still to pick**), mute.
+  user named 200 or 300 fps; **decided: a multiple, default `4x`**), mute.
 - Tests: the record of a run with fast-forward held is the unthrottled run's (already byte-identical at `--fps 0`);
   pace changes up and down without a stall.
 
@@ -594,7 +594,7 @@ Each phase ends with a summary and waits for the user's go-ahead (CLAUDE.md).
 - Every statement about the dialogue and the battle is from reading the code: the hooks' sites and the "verify first"
   lists are the first work of phase 4.
 - The Windows scheme is verified on test objects only (3.11).
-- **Still to pick:** fast-forward's default speed (200 or 300 fps, or a multiple of the nominal rate); where the
+- **Still to pick:** where the
   launcher's source lives; how the launcher reuses the disc check (linked code or a check mode of the game); the
   per-user directory's name.
 

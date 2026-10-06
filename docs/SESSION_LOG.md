@@ -17,7 +17,7 @@ Newest first. One short entry per session: goal, result, next steps.
 - **Verified:** the bare binary's logs, records and WAVs byte-identical to `main`'s (`new_game`, `first_battle_save`;
   the window `--fps 0` run and the window run with `--input-test` under a script too); `scripts/test.sh` green (probe
   and 8 layers); `tests/port/run.py --m32 new_game` (PR #10). No game C changed.
-- **Open, for the user:** fast-forward's default speed (provisional `4x`, 200 fps at PAL).
+- **Decided by the user:** fast-forward's default speed `4x` (a multiple of the nominal rate: 200 fps at PAL).
 - **Next:** phase 2 (fast-forward, the 50/60 Hz setting with an emulator comparison) on the user's go-ahead.
 
 ## 2026-10-06: Session 18: the launcher and mods planned (local worktree `gascarcella/PC-Release`, docs only, pushed to `main`)
