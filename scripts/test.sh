@@ -37,7 +37,7 @@ if [[ $BUILD -eq 1 ]]; then
     "$ROOT/scripts/build.sh"
 fi
 
-# The host-compile gate (docs/PC_PORT_PLAN.md section 1): needs only the host gcc and nm (the probe writes its own
+# The host-compile gate (docs/PORT.md "Compiling the game C for the host"): needs only the host gcc and nm (the probe writes its own
 # INCLUDE_ASM/gte override headers under build/port_inventory/; include/asm_generated/ is not needed), a few seconds.
 if [[ $PROBE -eq 1 ]]; then
     echo "=== probe: every unit host-clean at -m64 (tools/port_inventory.py probe, link)"
@@ -109,10 +109,10 @@ for L in $LAYERS; do
             skip "no disc image (iso/dw2003.cue; scripts/setup.sh disc or gamedata)"
         else
             "$PY" "$ROOT/tests/port/run.py"; ran=$((ran + 1))
-            "$PY" "$ROOT/tests/port/settings.py"   # --config, the launcher's contract (docs/LAUNCHER_MODS_PLAN.md 4.3)
-            "$PY" "$ROOT/tests/port/hz60.py"       # the 60 Hz mode against the patched game's records (5.5)
-            "$PY" "$ROOT/tests/port/battle.py"     # the battle scripts on the disc, for battle_animations (5.3)
-            "$PY" "$ROOT/tests/port/mods.py"       # the mods that change the game, run with the mod on (5.2, 5.3)
+            "$PY" "$ROOT/tests/port/settings.py"   # --config, the launcher's contract (docs/LAUNCHER.md "Settings file")
+            "$PY" "$ROOT/tests/port/hz60.py"       # the 60 Hz mode against the patched game's records
+            "$PY" "$ROOT/tests/port/battle.py"     # the battle scripts on the disc, for battle_animations
+            "$PY" "$ROOT/tests/port/mods.py"       # the mods that change the game, run with the mod on
         fi ;;
     *) echo "unknown layer $L" >&2; exit 2 ;;
     esac

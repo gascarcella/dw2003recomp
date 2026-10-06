@@ -1,4 +1,4 @@
-// Starting the game (LAUNCHER_MODS_PLAN 4.1): `dw2003 --config <dir>/settings.json` through SDL_CreateProcess, its
+// Starting the game (docs/LAUNCHER.md "Contract"): `dw2003 --config <dir>/settings.json` through SDL_CreateProcess, its
 // output (stdout and stderr together) read without blocking, the last lines kept for an error report.
 #pragma once
 

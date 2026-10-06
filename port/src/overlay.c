@@ -1,4 +1,4 @@
-/* The overlay manager (include/port.h OVERLAY_COPY/OVERLAY_FN/LATE_CALL; docs/PC_PORT_PLAN.md 2.5).
+/* The overlay manager (include/port.h OVERLAY_COPY/OVERLAY_FN/LATE_CALL; docs/PORT.md "Overlays").
  *
  * Every overlay is linked into the binary. A load (port_overlay_load, the game's two memcpy sites) makes the file the
  * tier's current overlay and puts its .data/.bss back as they were at startup, which is what the PS1's copy of the

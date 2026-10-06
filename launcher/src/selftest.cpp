@@ -58,7 +58,7 @@ static void remove_tree(const std::string &path) {
     SDL_RemovePath(path.c_str());
 }
 
-// The settled example of the file (LAUNCHER_MODS_PLAN 4.3, schema 1), with other values, a chord, no card 2 and a
+// The settled example of the file (docs/LAUNCHER.md "Settings file", schema 1), with other values, a chord, no card 2 and a
 // member no one knows yet.
 static const char SAMPLE_SETTINGS[] = R"({
   "schema": 1,
@@ -368,7 +368,7 @@ static void test_input(const std::string &root) {
 
 // ---- the mods
 
-// Path B's manifest (port/mods/fast_forward/mod.json, PR #11) as it was, the plan's example (4.4), one with every
+// Path B's manifest (port/mods/fast_forward/mod.json, PR #11) as it was, the example in docs/LAUNCHER.md "Mod manifest", one with every
 // option type, and three that cannot be used.
 static const char FAST_FORWARD_MANIFEST[] = R"({
   "schema": 1,
@@ -460,7 +460,7 @@ static void test_mods(const std::string &root) {
               ff->option("speed")->type == ModOption::Type::Enum && ff->option("speed")->values.size() == 6 &&
               ff->option("hold")->group == "Controls",
           "path B's fast_forward manifest reads: " + (ff != nullptr ? ff->error : std::string("missing")));
-    check(find("skip_dialogues") != nullptr && find("skip_dialogues")->error.empty(), "the plan's example reads");
+    check(find("skip_dialogues") != nullptr && find("skip_dialogues")->error.empty(), "the documented example reads");
     check(every != nullptr && every->error.empty() && every->option("ratio")->restart &&
               every->option("ratio")->step == 0.05 && every->option("mode")->values[1].label == "b",
           "every option type reads: " + (every != nullptr ? every->error : std::string()));

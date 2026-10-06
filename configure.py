@@ -57,7 +57,7 @@ TARGETS = [
                 "STITSHOP", "STPLNMET", "STSTATUS")),
 ]
 
-# ---- Tier-2 overlays (docs/DISC_LAYOUT.md "Overlays", DECISIONS "Tier-2 overlays link against their parent") ----
+# ---- Tier-2 overlays (docs/DISC_LAYOUT.md "Overlays", DECISIONS "Overlays link against the EXE and their parent") ----
 # A tier-2 overlay is loaded at TIER2_BASE (overlay_load_file) while its parent, the tier-1 overlay that
 # loads it, stays resident below TIER2_BASE; it calls and reads the parent as well as the EXE. So it links
 # against the EXE's symbols (EXE_SYMS) and the parent's: the linker gets the parent ELF's global symbols in
@@ -275,7 +275,7 @@ def g_for(src: str) -> int:
 
 # C files that define all their own data (every .data/.sdata/.sbss/.bss subsegment of theirs in the
 # YAML is the C object's): compiled without maspsx's --use-comm-section, so their variables without
-# an initializer get storage in the object (docs/DECISIONS.md "Data split per file"). The other C
+# an initializer get storage in the object (DECISIONS "Data in C, split per object"). The other C
 # files' tentative definitions stay COMMON and resolve to the data asm.
 DATA_IN_C: set[str] = {
     "src/main/card.c",
@@ -294,7 +294,7 @@ DATA_IN_C: set[str] = {
     "src/main/sound.c",
     "src/main/sprite.c",
     "src/main/tim.c",
-    # Tier-1 overlays (DECISIONS "Overlay .data/.bss per file").
+    # Tier-1 overlays (DECISIONS "Data in C, split per object").
     "src/cardgame/cardgame_80083E34.c",
     "src/cardgame/cardgame_80085DE8.c",
     "src/cardgame/cardgame_800954F8.c",
@@ -438,7 +438,7 @@ def write_parent_names(parent: str):
 
 def align_small_data(ld_script: Path):
     """psylink starts every game object's .sdata, .sbss and .bss 8-aligned (.data and .text only
-    4-aligned; docs/DECISIONS.md "Data split per file"). splat's linker script (SUBALIGN(4)) gets
+    4-aligned; DECISIONS "Data in C, split per object"). splat's linker script (SUBALIGN(4)) gets
     `. = ALIGN(8);` in front of those sections of the EXE's game units, C or asm (an asm subsegment
     already ends with the padding, so it is a no-op there). Psy-Q objects are left alone."""
     text = ld_script.read_text()
@@ -508,7 +508,7 @@ def main():
                 split(t)
         # The stage overlays are small and independent once FIELDSTG's names exist: split them in parallel.
         print(f"splat: {len(WSTAG_TARGETS)} WSTAG configs ({GEN_CONFIG}/wstag*.yaml)")
-        # DW3_JOBS limits it (parallel agents on one machine share its memory; docs/AGENT_BRIEF.md).
+        # DW3_JOBS limits it (parallel agents on one machine share its memory; docs/MATCHING.md "Working in parallel").
         with concurrent.futures.ThreadPoolExecutor(int(os.environ.get("DW3_JOBS", os.cpu_count()))) as pool:
             list(pool.map(split, WSTAG_TARGETS, [True] * len(WSTAG_TARGETS)))
 

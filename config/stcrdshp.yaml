@@ -49,7 +49,7 @@ segments:
     # Unnamed symbols are func_STCRDSHP_<addr>, D_STCRDSHP_<addr> (overlays share addresses; DECISIONS naming).
     symbol_name_format: STCRDSHP_$VRAM
     subsegments:
-      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"): the jump table at 0x80082DA4
+      # .rodata and .text per file (DECISIONS "File boundaries come from evidence"): the jump table at 0x80082DA4
       # (offset 0xF4, odd word) after 0x80082CB0's breaks parity, so a new object starts between 0x8008536C
       # and 0x80086DC4.
       - [0x0,  .rodata, stcrdshp_8008300C]
@@ -64,7 +64,7 @@ segments:
                                         # STCRDDEK 8A100), then the price lookups 89160, 8923C (tables
                                         # 8CB98/8CB9C; maybe their own file: data after the helper table's)
       # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t stcrdshp;
-      # DECISIONS "Overlay .data/.bss per file").
+      # DECISIONS "Data in C, split per object").
       - [0x65D8, .data, stcrdshp_8008300C]   # 0x80089288 (after the last function's jr ra)
       - [0x9E60, .data, stcrdshp_800853B4]   # 0x8008CB10 (8CAF8 is 8300C's, 8CB10 853B4's: references)
       - [0x9ED0, .data, stcrdshp_80088E24]   # 0x8008CB80 stcrdshp_util (its function table); no .bss

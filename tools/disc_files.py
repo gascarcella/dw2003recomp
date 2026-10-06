@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Map the game's file IDs to disc paths, and read files by ID (docs/FORMATS.md "File table").
+"""Map the game's file IDs to disc paths, and read files by ID (docs/FORMATS.md "Disc access: the file table and cdload").
 
   tools/venv/bin/python tools/disc_files.py                 # every file ID: id, LBA, sectors, path
   tools/venv/bin/python tools/disc_files.py 0x1CB 520       # the given IDs only

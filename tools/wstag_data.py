@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Move a WSTAG### C unit's .data into its C file (DECISIONS "WSTAG .data in C").
+"""Move a WSTAG### C unit's .data into its C file (DECISIONS "Data in C, split per object").
 
   tools/venv/bin/python tools/wstag_data.py WSTAG201 [...]        # print the C definitions of each file's .data
   tools/venv/bin/python tools/wstag_data.py --survey [WSTAG201 ...] # what each data symbol is typed as (? = unknown)

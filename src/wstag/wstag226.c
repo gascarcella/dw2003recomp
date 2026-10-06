@@ -153,7 +153,7 @@ void wstag226_update(WstagObject *obj, WstagEventData *data) {
     case OBJECT_STATE_INIT:
     default:
         data->object = wstag226_sprite_anim_new();
-        /* Evidence (class B, register priority only; DECISIONS "LOOP_BLOCK audit"): without the block only the
+        /* Evidence (class B, register priority only; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): without the block only the
          * obj, data and flags-base saved registers differ, also with scheduling off. */
         LOOP_BLOCK(if (gamestate_data.progress == 0x25 && gamestate_flags.get_flag(0x4060, 1)) {
             data->event = fieldstg_event_start(0x3A7);

@@ -1,4 +1,4 @@
-# The release (DECISIONS "Releases"; docs/RELEASE.md): one Linux x86_64 AppImage with the launcher, the game and the
+# The release (DECISIONS "Releases: tagged drafts, published by hand"; docs/RELEASE.md): one Linux x86_64 AppImage with the launcher, the game and the
 # mods' manifests (scripts/package_appimage.sh). Players bring their own disc; they never compile anything.
 #
 # On a pushed tag vX.Y.Z (e.g. v0.1.0; also v0.2.0-rc1, not the decomp's milestone tags such as v0.1-matching-closed):

@@ -1,5 +1,5 @@
 // Paths and files through SDL's filesystem and I/O calls only (no POSIX: the launcher goes to Windows later,
-// LAUNCHER_MODS_PLAN section 6). Paths are UTF-8; both separators are accepted, '/' is written.
+// the Windows track on the project board). Paths are UTF-8; both separators are accepted, '/' is written.
 #pragma once
 
 #include <string>

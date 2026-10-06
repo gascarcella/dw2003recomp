@@ -1,4 +1,4 @@
-# The PC port (docs/PC_PORT_PLAN.md; DECISIONS "PC port decisions (session 15)"): the game's 388 C units, the port
+# The PC port (docs/PORT.md; DECISIONS "PC port architecture"): the game's 388 C units, the port
 # runtime (port/src/) and the Psy-Q shim (port/psyq/) linked into one host binary, build/port/dw2003.
 #
 #   cmake -S port -B build/port -G Ninja && cmake --build build/port && build/port/dw2003 --max-frames 60
@@ -146,7 +146,7 @@ target_link_options(dw2003 PRIVATE "-Wl,-T,${DW3_GEN}/overlays.ld" "-Wl,-Map,${C
 add_custom_command(TARGET dw2003 POST_BUILD
                    COMMAND "${DW3_PYTHON}" "${DW3_PORT_GEN}" sections --map "${CMAKE_BINARY_DIR}/dw2003.map"
                    COMMENT "port_gen.py sections (the game's data is all in the reset's ranges)" VERBATIM)
-# The built-in mods' manifests (port/mods/<id>/mod.json; docs/LAUNCHER_MODS_PLAN.md 4.4) beside the binary, where the
+# The built-in mods' manifests (port/mods/<id>/mod.json; docs/LAUNCHER.md "Mod manifest") beside the binary, where the
 # launcher lists them: copied on every build (a few small files).
 add_custom_target(dw3_mods ALL COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/mods"
                   "${CMAKE_BINARY_DIR}/mods" COMMENT "the mods' manifests -> ${CMAKE_BINARY_DIR}/mods" VERBATIM)

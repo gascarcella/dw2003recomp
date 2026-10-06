@@ -1,14 +1,13 @@
 # The launcher
 
-`dw2003-launcher` finds the user's settings, edits `settings.json` and starts the PC port. The plan and the decisions
-behind it are in `docs/LAUNCHER_MODS_PLAN.md` (sections 4.1-4.4 are the contract with the game; 4.6 is this program)
-and DECISIONS "Launcher and mods (session 18)". It is C++17 with Dear ImGui on SDL3 + `SDL_Renderer`; the game stays C.
+`dw2003-launcher` finds the user's settings, edits `settings.json` and starts the PC port. The contract with the game
+(the settings file, the mods' manifests) is `docs/LAUNCHER.md`, the decisions behind it DECISIONS "Launcher and mods".
+It is C++17 with Dear ImGui on SDL3 + `SDL_Renderer`; the game stays C.
 
-**Status (all four phases of the plan's section 7, phase 3, on Linux):** the window and its navigation, the settings
-directory, reading and writing `settings.json`, the disc screen (file dialog, drag-and-drop, typed path, the SHA-1
+**Status (Linux):** the window and its navigation, the settings directory, reading and writing `settings.json`, the disc screen (file dialog, drag-and-drop, typed path, the SHA-1
 check), the play button (the game's exit status and last lines on an error), the settings screen (video, 50/60 Hz,
 audio, memory cards), the controls screen (keyboard, gamepad, hotkeys), the mods screen (each mod's page generated from
-its `mod.json`), the self-test. Windows comes later (the plan's section 6); the code uses SDL's calls, not POSIX.
+its `mod.json`), the self-test. Windows comes later (the Windows track on the project board); the code uses SDL's calls, not POSIX.
 
 ## Build
 
@@ -26,7 +25,7 @@ build (`scripts/setup.sh` "sdl3"); without them only the offscreen driver exists
 Two files of the port's runtime are compiled into the launcher as they are, never changed for it:
 `port/src/json.c` (the strict JSON reader) and `port/src/sha1.c`.
 
-## The settings directory (plan 4.2)
+## The settings directory
 
 The first of these that applies:
 
@@ -39,9 +38,9 @@ The first of these that applies:
 The status bar and the Settings screen show the directory and which rule chose it. The directory holds
 `settings.json`, the memory card (`card1.mcd`) and, later, `mods/`.
 
-## settings.json (plan 4.3)
+## settings.json
 
-Schema 1, as settled by the game's side (`docs/LAUNCHER_MODS_PLAN.md` 4.3: `port/src/settings.c` reads it, `dw2003
+Schema 1, as settled by the game's side (`docs/LAUNCHER.md` "Settings file": `port/src/settings.c` reads it, `dw2003
 --config FILE --print-settings` validates it). The launcher edits these members and **keeps every other one as it was**
 (order included): `input`, `mods`, `watchdog`, `video.window` and keys it does not know.
 
@@ -52,11 +51,11 @@ Schema 1, as settled by the game's side (`docs/LAUNCHER_MODS_PLAN.md` 4.3: `port
 | `disc.sha1` | string | none | The SHA-1 the launcher verified for that path (the game checks the disc again itself) |
 | `video.scale` | 1-16 | 2 | The window is 320*scale x 240*scale |
 | `video.fullscreen` | bool | false | |
-| `video.refresh` | 50 or 60 | 50 | PAL, or the game's own 60 Hz mode (plan 5.5) |
+| `video.refresh` | 50 or 60 | 50 | PAL, or the game's own 60 Hz mode (docs/LAUNCHER.md "50/60 Hz") |
 | `audio.mute` | bool | false | |
 | `memcard1`, `memcard2` | string or null | `"card1.mcd"`, `"card2.mcd"` | The memory cards (created by the game when missing); null: no card |
 | `input.keyboard.<button>` | name or list | the game's | Keys (SDL3 scancode names) for a PS1 button |
-| `input.gamepad.<button>` | name or list | the game's | Gamepad inputs (the plan's names: `south`, `dpup`, `lefty-`, ...) |
+| `input.gamepad.<button>` | name or list | the game's | Gamepad inputs (docs/LAUNCHER.md "Input bindings": `south`, `dpup`, `lefty-`, ...) |
 | `input.hotkeys.<action>` | binding | `pause` P, `fullscreen` F11 | A string or a list of triggers; a trigger is an input or a chord (a list); pads as `"pad:<name>"` |
 | `launcher.last_dir` | string | none | The launcher's own state: where the file dialog opens. The game never reads `launcher` |
 
@@ -105,9 +104,9 @@ half way (Gamepad), or, for a hotkey, any of them or a chord (everything held to
 most 4 inputs, and 8 triggers a binding: the game's limits). Escape alone, or Cancel, closes it. The prompt takes its
 events before ImGui, and gamepad navigation pauses until the gamepad is released, so the press that was bound does
 not also click a button. An input used by two buttons (or a button and a single-input hotkey) is marked, with a
-tooltip naming the other use. A mod's own bindings are its options (phase 4).
+tooltip naming the other use. A mod's own bindings are its options (Mods, below).
 
-## Mods (plan 4.4)
+## Mods
 
 The launcher lists the manifests beside the game, `<game dir>/mods/<id>/mod.json` (the port's CMake copies
 `port/mods/` there), sorted by name. Each mod has an on/off switch and a page generated from its manifest: its name,
@@ -118,7 +117,7 @@ prompt of the hotkeys (any key, gamepad input or chord). An option's `descriptio
 is marked. A manifest that cannot be used (not JSON, another schema, an `id` that is not its directory's name, a bad
 option, a `kind` other than `builtin` until data mods exist) is listed with the reason and cannot be switched on.
 
-In `settings.json` (`mods.<id>`, the plan's 4.3): `"enabled": true` when on; an option is written only when it differs
+In `settings.json` (`mods.<id>`, docs/LAUNCHER.md "Mods section"): `"enabled": true` when on; an option is written only when it differs
 from the manifest's default (setting it back, or **Default**, removes it); a mod turned off keeps its changed options
 with `"enabled": false`; a mod with nothing left is removed, and so is an empty `mods`. Unknown mods and options are
 kept. A stored value the manifest rejects is reported on the mod's page, and its default shown. The mods' bindings
@@ -137,13 +136,13 @@ SDL_VIDEO_DRIVER=offscreen build/launcher/dw2003-launcher --self-test DIR    # e
 ```
 
 No disc and no display needed (CI runs it). It replaces `DIR/launcher-self-test/` and checks: the path helpers (Windows
-forms too), the JSON writer, the lookup order, the settings file's round trips (the plan's example with its unknown
+forms too), the JSON writer, the lookup order, the settings file's round trips (the documented example with its unknown
 members kept, invalid values, a broken file, a newer schema), the binding grammar and the input prompt (keys, gamepad buttons, stick directions, chords, Escape), the `.cue` reader
 and the SHA-1 check, the launch path
 with **the launcher itself as the game's stand-in** (`DW3_LAUNCHER_FAKE_GAME=mode`: a game with and without
 `--config`, one that rejects the file, one that crashes, one that fails after 250 lines), then opens the window, walks
 every screen with injected key events and a virtual gamepad, plays with the stand-in (a file of the BIN's size stands
-for the verified disc), rebinds a key through the prompt and checks the file, drops a wrong file on the window, renders the mods screen over test manifests (path B's `fast_forward`, the plan's
+for the verified disc), rebinds a key through the prompt and checks the file, drops a wrong file on the window, renders the mods screen over test manifests (path B's `fast_forward`, the documented
 example, one with every option type, three unusable ones) and rebinds a mod's key through the prompt, and saves a picture of each screen in
 `DIR/launcher-self-test/screens/`.
 

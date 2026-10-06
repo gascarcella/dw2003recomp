@@ -1,6 +1,6 @@
-// The mods (LAUNCHER_MODS_PLAN 4.4): their manifests (`mod.json`, installed beside the game in mods/<id>/) and the
+// The mods (docs/LAUNCHER.md "Mod manifest"): their manifests (`mod.json`, installed beside the game in mods/<id>/) and the
 // user's values in settings.json (`mods.<id>`: { "enabled": bool, "<option id>": value }). The launcher renders every
-// mod's screen from its manifest; the values follow 4.3: a mod that is absent, or has no `enabled`, is off; an absent
+// mod's screen from its manifest; the values follow "Mods section": a mod that is absent, or has no `enabled`, is off; an absent
 // option keeps the manifest's default. As for the bindings, only what the user changed is written.
 #pragma once
 
@@ -28,7 +28,7 @@ struct ModOption {
     double min = 0, max = 0, step = 0; // int and float
     std::vector<Value> values;         // enum
 
-    // Whether `v` is a valid value of this option (a binding in 4.3's grammar, an enum id, a number in range...).
+    // Whether `v` is a valid value of this option (a binding in the settings' grammar, an enum id, a number in range...).
     bool valid(const Json &v, std::string *err) const;
 };
 

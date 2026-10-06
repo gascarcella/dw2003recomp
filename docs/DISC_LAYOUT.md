@@ -96,8 +96,7 @@ then `.text`, then `.data`, then `.bss`, **written into the file as zeros** like
 `0x8009B8EC`–`0x8009BB48` and FIGHTSTG's `0x800A46D0`–`0x800A47A0` are zero variables in code order, not `.data`
 order, and nothing is referenced past the file's end). Every tier-1 overlay builds byte-identical
 (`config/<overlay>.yaml`; boundaries from `tools/overlay_layout.py`). Functions = splat's count (game code only).
-Every tier-1 overlay's code is split into C files (session 6; evidence in each config and in DECISIONS "C patterns
-learned in session 6"); each overlay's `.data`/`.bss` is still one asm unit. Matching = functions objdiff scores 100%
+Every tier-1 overlay's code is split into C files (session 6; evidence in each config and in docs/MATCHING.md "C patterns"); each overlay's `.data`/`.bss` is still one asm unit. Matching = functions objdiff scores 100%
 (2026-10-02, `objdiff-cli report generate`); the others are `INCLUDE_ASM` or WIP C. `STGTRAIN`'s `.text` starts
 0x1CC bytes before where `overlay_layout.py` put it (11 frameless setters), hence 94 functions rather than 85.
 
@@ -133,7 +132,7 @@ Overlay SHA-1s: `config/overlays.sha1`. `SOUNDTST`, `SHOCKTST` and `STAGSLCT` lo
 The EXE's `overlay_load_file(id)` (`overlay_module.unk_C`) copies a file to `main_file_base` = `0x800A5DE0`, just past
 the largest tier-1 overlay, while the tier-1 overlay that called it (its **parent**) stays loaded. Tier-2 code
 therefore calls and reads its parent as well as the EXE, and links against both (`configure.py` `TIER2_PARENT`,
-DECISIONS "Tier-2 overlays link against their parent"). Same psylink layout as tier 1 (`.rodata`, `.text`,
+DECISIONS "Overlays link against the EXE and their parent"). Same psylink layout as tier 1 (`.rodata`, `.text`,
 `.data`); `tools/overlay_layout.py --tier2` finds the boundaries. File IDs from the EXE's file table.
 
 | Overlay | ID | Parent | Size | `.text` | `.data` to | Functions | Evidence |

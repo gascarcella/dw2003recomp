@@ -144,8 +144,8 @@ step_mkpsxiso() {
     log "mkpsxiso: installed to $prefix"
 }
 
-# SDL3 (zlib licence) for the PC port's window (port/README.md "The window"; DECISIONS "PC port decisions (session 15)"
-# item 3): the pinned release tarball (signed by Sam Lantinga; the SHA-256 pins it), built with CMake into
+# SDL3 (zlib licence) for the PC port's window (port/README.md "The window"; DECISIONS "PC port architecture"):
+# the pinned release tarball (signed by Sam Lantinga; the SHA-256 pins it), built with CMake into
 # tools/sdl3/ as a static library. Static: the port stays one binary that runs from anywhere (no rpath, no
 # LD_LIBRARY_PATH), and SDL still loads its platform libraries (X11, Wayland, ALSA, PulseAudio, PipeWire, udev, ...)
 # with dlopen at run time (SDL_DEPS_SHARED), so the binary needs none of them on a headless host. Which backends get
@@ -240,7 +240,7 @@ sdl3_build() {
 step_sdl3() { sdl3_build sdl3 "$INSTALL/sdl3" 0; }
 step_sdl3-desktop() { sdl3_build sdl3-desktop "$INSTALL/sdl3-desktop" 1; }
 
-# The AppImage tools for the release (scripts/package_appimage.sh; DECISIONS "Releases"): appimagetool (MIT) and the
+# The AppImage tools for the release (scripts/package_appimage.sh; DECISIONS "Releases: tagged drafts, published by hand"): appimagetool (MIT) and the
 # static type-2 runtime (MIT, with musl, libfuse 3 (LGPL-2.1), squashfuse, zstd and zlib linked in: the AppImage needs
 # no libfuse2 on the player's machine), each a pinned release asset checked by SHA-256, and the runtime's LICENSE at
 # its tag's commit (bundled in the AppImage's LICENSES/). appimagetool is itself an AppImage: it is unpacked once
@@ -282,7 +282,7 @@ step_appimage() {
     log "appimage: installed appimagetool $APPIMAGETOOL_VER and runtime $APPIMAGE_RUNTIME_VER to $dir"
 }
 
-# Dear ImGui (MIT) for the launcher (launcher/README.md; DECISIONS "Launcher and mods (session 18)"): the pinned
+# Dear ImGui (MIT) for the launcher (launcher/README.md; DECISIONS "Launcher and mods"): the pinned
 # release tag cloned into tools/imgui/, its commit checked (the commit hash is the checksum, as for the ext step). The
 # launcher's CMake compiles its core files and the SDL3 + SDL_Renderer backends from there. Optional (not in the
 # default steps; the launcher needs sdl3 too): scripts/setup.sh sdl3 imgui

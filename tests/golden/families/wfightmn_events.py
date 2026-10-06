@@ -4,7 +4,7 @@ wfightmn_run_events; src/wfightmn/wfightmn_800A6440.c wfightmn_note_copied_tech)
 The fightstg_rules battle fixture (tests/golden/families/fightstg_rules.py: FIGHTSTG.PRO in the slot, SDIGIEDT.PRO as
 the enemy records, two party members, two enemies). A family of its own (added by sweep3, 2026-10-05) and named to run
 last: appending these cases to fightstg_rules moved a vblank into gamestate_flags' check_condition_70_1 (the vsync
-handler's playtime word is inside that case's whole-struct read; DECISIONS "Session 10 oracle lessons"), so a family
+handler's playtime word is inside that case's whole-struct read; DECISIONS "Replay and golden contracts"), so a family
 that runs after every existing one leaves their goldens byte-identical."""
 from _battle import BATTLE_STATE, STATE, setup_case
 from fightstg_rules import (FIXTURE, GS, READ_RNG, READ_STATE, READ_STATS, SAVES, WFIGHTMN_PRO, WFIGHTMN_SLOT, case, rng)

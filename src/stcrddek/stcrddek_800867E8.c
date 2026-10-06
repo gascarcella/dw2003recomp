@@ -275,7 +275,7 @@ void stcrddek_run_name_entry(StcrddekNameEntry *obj, StcrddekNameWindows *data) 
     s32 i;
     s32 j;
     u16 c;
-    u32 glyph; /* the typed character: its own u32 (DECISIONS "The US decomp as a reference") */
+    u32 glyph; /* the typed character: its own u32 (DECISIONS "Independent EU-only project on the unpatched disc") */
 
     switch (obj->base.step) {
     case 0:

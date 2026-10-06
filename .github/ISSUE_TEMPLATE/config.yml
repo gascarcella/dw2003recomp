@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Planned work (project board)
+    url: https://github.com/users/gascarcella/projects
+    about: What is already planned; check here before requesting a feature.
+  - name: Contributing guide
+    url: https://github.com/gascarcella/dw2003recomp/blob/main/CONTRIBUTING.md
+    about: How to set up, match functions and open a pull request.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""PC-port inventory: what the game C needs from the PS1, and the host-compile gate (docs/PC_PORT_PLAN.md section 1).
+"""PC-port inventory: what the game C needs from the PS1, and the host-compile gate (docs/PORT.md "Compiling the game C for the host").
 
-  tools/venv/bin/python tools/port_inventory.py counts                 # the plan's section-1 numbers on this tree
+  tools/venv/bin/python tools/port_inventory.py counts                 # the inventory's numbers on this tree
   tools/venv/bin/python tools/port_inventory.py counts --sites KIND    # file:line of every site of one kind
   tools/venv/bin/python tools/port_inventory.py probe [FILES...]       # host-compile gate at -m64 (exit 0 = clean)
   tools/venv/bin/python tools/port_inventory.py probe --warnings       # also count the non-gating -Wall warnings
@@ -458,7 +458,7 @@ def cmd_counts(args):
         print(f"{n} sites", file=sys.stderr)
         return 0
 
-    print(f"port inventory: counts at {git_head()} (docs/PC_PORT_PLAN.md section 1)")
+    print(f"port inventory: counts at {git_head()} (docs/PORT.md \"Compiling the game C for the host\")")
     lines = sum(c.raw.count("\n") for c in cs)
     per_dir = Counter()
     for c in cs:
@@ -1047,7 +1047,7 @@ def cmd_object_sizes(args):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    p = sub.add_parser("counts", help="the plan's section-1 numbers on the current tree")
+    p = sub.add_parser("counts", help="the inventory's numbers on the current tree")
     p.add_argument("--sites", metavar="KIND[:TAG]", help="list file:line of one kind of site")
     p.set_defaults(func=cmd_counts)
     p = sub.add_parser("probe", help="host-compile gate (exit 0 = every file compiles without a gating error)")

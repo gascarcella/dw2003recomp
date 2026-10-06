@@ -102,7 +102,7 @@ void wstag820_update(WstagObject *obj, Wstag820Data *data) {
                 data->objs[i] = wstag820_two_sprite_create_fixed(0x34D);
             }
         }
-        /* Evidence (class B, register priority only; DECISIONS "LOOP_BLOCK audit"): without the block only the
+        /* Evidence (class B, register priority only; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): without the block only the
          * obj, data and flags-base saved registers differ, also with scheduling off. */
         LOOP_BLOCK(if (gamestate_data.progress == 0x29 && gamestate_flags.get_flag(0x4074, 0)) {
             data->event = fieldstg_event_start(0x424);

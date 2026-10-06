@@ -1289,7 +1289,7 @@ void fieldstg_manager_shatter(FieldstgManager *obj, FieldstgManagerData *data) {
         layer = gfx_module.funcs.get_layer(0x1002);
         ot = layer->get_ot_entry(layer, 0);
         dt = gfx_module.funcs.get_frame_ticks() * 40;
-        /* Evidence (class A2, sched2 barrier; DECISIONS "LOOP_BLOCK audit"): the original loads gfx_module.buffer only
+        /* Evidence (class A2, sched2 barrier; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original loads gfx_module.buffer only
          * after step, leaving two load-delay nops. */
         LOOP_BARRIER();
         step = &fieldstg_shatter_steps[obj->base.timer];
@@ -3268,7 +3268,7 @@ void fieldstg_player_control(FieldstgActor *obj) {
         flag = gamestate_flags.get_flag(0x12, 1);
         if (pressed || flag) {
             obj->get_front(obj, &pos);
-            /* Evidence (class B, register priority only; DECISIONS "LOOP_BLOCK audit"): the block's loop-weighted
+            /* Evidence (class B, register priority only; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the block's loop-weighted
              * references give the original's saved registers (with scheduling off only registers differ). */
             LOOP_BLOCK(
                 if (gamestate_flags.get_flag(0x8004, 1) == 0 || flag || (sel = fieldstg_spots_find(&pos.x, 1)) == NULL) {
@@ -3677,7 +3677,7 @@ void fieldstg_actor_update_sprite(FieldstgActor *obj) {
 
     if (obj->loaded_anim != id) {
         if (obj->base.key1 == 2) {
-            /* Evidence (class C, block placement; DECISIONS "LOOP_BLOCK audit"): the original places the ==8, <0x16,
+            /* Evidence (class C, block placement; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original places the ==8, <0x16,
              * <0x1A and <0x25 bodies out of line, before their tests. */
             LOOP_BLOCK(
                 if (id < 8) {
@@ -3726,7 +3726,7 @@ void fieldstg_actor_update_sprite(FieldstgActor *obj) {
         i = 8 - obj->dir;
     }
     script = cdload_module.get_subfile_by_id(obj->anim_scripts[i]);
-    /* Evidence (class C, block placement; DECISIONS "LOOP_BLOCK audit"): the original places the end-of-script (-1)
+    /* Evidence (class C, block placement; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original places the end-of-script (-1)
      * block out of line, after the dir < 5 branch. */
     LOOP_BLOCK(
         if (obj->anim_time > 0) {
@@ -4926,7 +4926,7 @@ s32 fieldstg_attr_load_layer(s32 i) {
     s32 *data;
     s32 id;
 
-    /* Evidence (class A2, sched2 barrier; DECISIONS "LOOP_BLOCK audit"): the original finishes the register saves
+    /* Evidence (class A2, sched2 barrier; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original finishes the register saves
      * before loading the fieldstg_attr base. */
     LOOP_BARRIER();
     id = fieldstg_attr.files[i];

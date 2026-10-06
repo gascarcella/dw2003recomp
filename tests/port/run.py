@@ -46,7 +46,7 @@ RUN_TIMEOUT = 600  # seconds; a plain run takes well under one, the sanitizer bu
 # Scripts whose -m32 log must equal the -m64 log byte for byte (the M1 criterion). In the others the game frees cached
 # files by heap address (FIELDSTG's cdload free_above(0x8015C674)), and the host's heap layout differs between the two
 # pointer widths (as both differ from the PS1's), so which files stay cached, and so the CD timing and the frames, can
-# differ; their cross-core view must still be the same (DECISIONS "first_battle_save in the port").
+# differ; their cross-core view must still be the same (DECISIONS "The port is checked against the emulator").
 M32_LOG_EXACT = ("new_game",)
 # Known out-of-bounds indexes of the game's own C that stay inside one struct whose layout is the same on the host
 # (tests/host/FINDINGS.md 5 and 10): UBSan's bounds check reports them, the result is the PS1's.

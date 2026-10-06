@@ -1,4 +1,4 @@
-// A JSON document the launcher can edit and write back (LAUNCHER_MODS_PLAN 4.3, 4.4). Parsing goes through the
+// A JSON document the launcher can edit and write back (docs/LAUNCHER.md "Settings file", "Mod manifest"). Parsing goes through the
 // port's strict reader (port/src/json.c, shared, not modified); this file adds an editable tree that keeps the
 // members' order and a writer. Unknown members survive a load and a save: the game's side (path B) may add keys the
 // launcher does not know yet.

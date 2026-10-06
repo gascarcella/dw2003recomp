@@ -446,7 +446,7 @@ void stagslct_show_version(StageSelect *obj, StageSelectData *data) {
         data->bios_version = message_create_window(0x1000, 1, 0x10, 0x20);
         rom = BIOS_PTR(u8 *, 0x1FC0012C);
         for (i = 0; i < 10; i++, rom++) {
-            /* Evidence (class C, block placement; DECISIONS "LOOP_BLOCK audit"): the original places the letter and '-'
+            /* Evidence (class C, block placement; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original places the letter and '-'
              * blocks out of line, before their tests. */
             LOOP_BLOCK(
                 if (*rom >= '0' && *rom <= '9') {

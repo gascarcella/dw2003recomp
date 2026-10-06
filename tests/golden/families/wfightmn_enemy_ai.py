@@ -3,8 +3,7 @@ fightstg_enemy_turn_find_target; run by fightstg_enemy_turn_update on the enemy'
 
 The fightstg_rules battle fixture (tests/golden/families/fightstg_rules.py: FIGHTSTG.PRO in the slot, SDIGIEDT.PRO as
 the enemy records; party member 0 Kotemon 300/300 HP, enemies 0x20 400 HP (current) and 0xD9 800 HP). Added by sweep4
-(2026-10-05): no golden ran the enemy's choice. A family of its own named to run after gamestate_flags (DECISIONS "Third
-sweep": cases added before it can move a vblank into its whole-struct read).
+(2026-10-05): no golden ran the enemy's choice. A family of its own named to run after gamestate_flags (DECISIONS "Replay and golden contracts": cases added before it can move a vblank into its whole-struct read).
 
 The rule (fightstg_enemy_turn_update): the enemy's record (file 0x1CF) has actions[3] {type, condition, value}; the first
 whose condition holds is taken, and when none holds the loop ends at i = 3 and reads the 4 bytes after the array (record

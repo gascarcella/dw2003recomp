@@ -3,7 +3,7 @@
 
   tests/holdouts/run.sh [--out DIR] [--scripts NAME ...] [--control] [--no-replay] [--no-probe]
 
-DECISIONS "Reference tests for the port": "The -DNON_MATCHING build replayed through the holdouts' scenes validates the
+DECISIONS "Reference tests: three layers": "The -DNON_MATCHING build replayed through the holdouts' scenes validates the
 WIP C before the port." The holdouts are the functions whose C is under `#ifdef NON_MATCHING` (the `#else` keeps the
 original's asm). This script:
 

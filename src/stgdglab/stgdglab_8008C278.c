@@ -167,7 +167,7 @@ void stgdglab_techs_update(StgdglabTechs *obj, StgdglabTechsData *data) {
         gamestate_data.funcs.get_chosen_forms(obj->digimon, obj->set_forms);
         gamestate_data.funcs.get_form(obj->digimon, obj->set_forms[obj->set_form], &obj->form_record);
         obj->techniques = 6;
-        /* Evidence (class A2, sched2 barrier; DECISIONS "LOOP_BLOCK audit"): the original stores unk_A8 through obj
+        /* Evidence (class A2, sched2 barrier; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original stores unk_A8 through obj
          * before the call's argument moves. */
         LOOP_BARRIER();
         stgdglab_techs_create_windows(obj, data);

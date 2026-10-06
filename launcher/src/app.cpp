@@ -208,7 +208,7 @@ App::App(SDL_Window *window, SDL_Renderer *renderer, const SettingsDir &location
         }
     }
     SDL_strlcpy(disc_input_, settings_.values.disc_path.c_str(), sizeof(disc_input_));
-    // First run, or the disc went away: start on the disc screen (LAUNCHER_MODS_PLAN 1). A disc set by hand (no
+    // First run, or the disc went away: start on the disc screen (docs/LAUNCHER.md "Launcher"). A disc set by hand (no
     // verified SHA-1, or its size changed) is checked right away.
     switch (disc_status()) {
     case DiscStatus::Unset:

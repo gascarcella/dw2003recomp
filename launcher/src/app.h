@@ -1,5 +1,5 @@
-// The launcher's window: Dear ImGui over SDL3 + SDL_Renderer (LAUNCHER_MODS_PLAN 4.6). The screens are drawn into
-// one full-window ImGui window, so they could later be drawn inside the game's window too (4.1).
+// The launcher's window: Dear ImGui over SDL3 + SDL_Renderer (docs/LAUNCHER.md "Launcher"). The screens are drawn into
+// one full-window ImGui window, so they could later be drawn inside the game's window too.
 #pragma once
 
 #include <mutex>

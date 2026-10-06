@@ -1,0 +1,20 @@
+name: Feature request
+description: An idea for the port, the launcher, a mod, or the tools.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What you would like, and the problem it solves.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Other ways you considered, or how you work around it today.
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else

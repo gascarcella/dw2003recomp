@@ -4,7 +4,7 @@
  * the GPU; LoadImage, MoveImage, ClearImage(2) draw into its VRAM; psyq_gpu_vram/psyq_gpu_display are the video
  * output (psyq.h).
  *
- * Tags (PC_PORT_PLAN 2.4): a tag's low 24 bits are an offset inside the 16 MB window the ordering table lives in, so
+ * Tags (docs/PORT.md "Ordering tables on 64-bit"): a tag's low 24 bits are an offset inside the 16 MB window the ordering table lives in, so
  * the walk resolves `tag & 0xFFFFFF` against `ot & ~0xFFFFFF` and follows it only inside the window psyq_set_arena
  * gave (by default the heap, port_heap_start..port_heap_end). */
 #include <stdint.h>

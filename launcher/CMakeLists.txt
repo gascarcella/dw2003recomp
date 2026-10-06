@@ -1,4 +1,4 @@
-# The launcher (LAUNCHER_MODS_PLAN 4.6; launcher/README.md): Dear ImGui on SDL3 + SDL_Renderer, C++ (the game stays
+# The launcher (docs/LAUNCHER.md "Launcher"; launcher/README.md): Dear ImGui on SDL3 + SDL_Renderer, C++ (the game stays
 # C). Its own CMake project, beside the port's: the game's build and tests are untouched by it.
 #
 #   scripts/setup.sh sdl3 imgui

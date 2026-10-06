@@ -1,6 +1,6 @@
 -- Function-level execution coverage recorder, loaded into PCSX-Redux before a test runner (tools/coverage.py writes a
 -- wrapper chunk that does dofile(this) and then dofile(the runner: tests/golden/oracle.lua or tests/replay/run.lua)).
--- Needs -debugger -interpreter: exec breakpoints never fire under the dynarec (DECISIONS "Layer-1 oracle").
+-- Needs -debugger -interpreter: exec breakpoints never fire under the dynarec (DECISIONS "Layer-1 goldens: calls on the running game").
 --
 -- Input (DW3_COVERAGE_SPEC, a Lua chunk tools/coverage.py writes):
 --   return { exe = { 0x80010f4c, ... },                       -- every EXE function start

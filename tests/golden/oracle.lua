@@ -3,7 +3,7 @@
 -- and records what they return and write. That is the golden: the original code, compiled by the original compiler,
 -- running on the emulated R3000, resolving every piece of UB the way the console did.
 --
--- How a call works (DECISIONS "Layer-1 oracle"): an exec breakpoint on a hook function the main loop calls every
+-- How a call works (DECISIONS "Layer-1 goldens: calls on the running game"): an exec breakpoint on a hook function the main loop calls every
 -- frame (pad_update) stops the game at a known point outside any interrupt handler. There the registers are saved,
 -- the job's fixture bytes are written (the overwritten bytes are kept for the restore), a0..a3 are set, ra is pointed
 -- at a sentinel address that is never executed (0x80010000, inn's .rodata) and pc at the function. The CPU runs the

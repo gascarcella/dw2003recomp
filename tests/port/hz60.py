@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The port's 60 Hz mode against the 60 Hz game in the emulator (docs/LAUNCHER_MODS_PLAN.md 5.5).
+"""The port's 60 Hz mode against the 60 Hz game in the emulator (docs/LAUNCHER.md "50/60 Hz").
 
 Usage: tests/port/hz60.py [check] [--out DIR] [-j N]
        tests/port/hz60.py record [--out DIR]          # needs the emulator (scripts/setup.sh redux); ~8 min

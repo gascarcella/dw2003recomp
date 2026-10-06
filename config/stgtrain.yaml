@@ -50,7 +50,7 @@ segments:
     # Unnamed symbols are func_STGTRAIN_<addr>, D_STGTRAIN_<addr> (overlays share addresses; DECISIONS naming).
     symbol_name_format: STGTRAIN_$VRAM
     subsegments:
-      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"). Jump-table parity: the table at
+      # .rodata and .text per file (DECISIONS "File boundaries come from evidence"). Jump-table parity: the table at
       # 0x80082D84 (used by 0x8008706C) is at 4 mod 8 after 0x80082CB0's 0, and 0x80082E50 (0x800888BC) is back at
       # 0 mod 8, so both start new objects. 0x80082E50, 0x80082F20 and 0x80082FF8 (0x8008AAD4, 0x8008B520) are
       # contiguous (0x80082FF4 is alignment padding inside one object). .data order agrees (84838: 8C224; class
@@ -69,7 +69,7 @@ segments:
                                          # object 881CC/88138, then objects 89764, 8A274, 8B838 and the module
                                          # table's functions 8B8A4.. (position weak: 88100..88214)
       # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t stgtrain;
-      # DECISIONS "Overlay .data/.bss per file"). .bss: four zero pointers only
+      # DECISIONS "Data in C, split per object"). .bss: four zero pointers only
       # 88100 uses (its parse cursors, set before use); they could be zero-initialised .data (weak).
       - [0x9574, .data, stgtrain_80083058]   # 0x8008C224 (after the last function's jr ra)
       - [0x9654, .data, stgtrain_800861BC]   # 0x8008C304 (8C224 is 83058's, 8C304 861BC's: references)

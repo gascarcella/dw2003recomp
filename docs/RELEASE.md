@@ -1,9 +1,9 @@
 # Releases
 
-The rules are in DECISIONS "Releases": **one Linux x86_64 AppImage** for players (the launcher, the game and the mods'
+The rules are in DECISIONS "Releases: tagged drafts, published by hand": **one Linux x86_64 AppImage** for players (the launcher, the game and the mods'
 manifests in one file; the player supplies the disc in the launcher and never compiles anything), built on CI's
 `ubuntu-24.04` runner (glibc 2.39), **only for a pushed tag `vX.Y.Z`**, and only as a **draft** GitHub Release: the
-maintainer downloads it, tests it and presses Publish. Windows comes later (`docs/LAUNCHER_MODS_PLAN.md` section 6).
+maintainer downloads it, tests it and presses Publish. Windows comes later (the Windows track on the project board).
 
 ## Making a release
 
@@ -20,7 +20,7 @@ maintainer downloads it, tests it and presses Publish. Windows comes later (`doc
    requests.
 4. Download the draft's AppImage, run it on a desktop (Play with the real disc, a window, sound, a gamepad), and
    **Publish** it on GitHub when it is good (or delete the draft and the tag). Publishing puts binaries built from the
-   decompiled code on the public page: the maintainer's decision each time (DECISIONS "Releases").
+   decompiled code on the public page: the maintainer's decision each time (DECISIONS "Releases: tagged drafts, published by hand").
 
 A failed run creates no release. To retry after a fix, delete the tag (`git push --delete origin v0.1.0; git tag -d
 v0.1.0`), tag the fixed commit and push again.

@@ -98,7 +98,7 @@ void wfightts_script_menu_update(WfighttsScriptMenu *obj, WfighttsColumnWindows 
         obj->base.next_state(obj);
         break;
     case OBJECT_STATE_RUN:
-        /* Evidence (class C, block placement; DECISIONS "LOOP_BLOCK audit"): the original places the column and cancel
+        /* Evidence (class C, block placement; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original places the column and cancel
          * blocks out of line, before case 1's code. */
         LOOP_BLOCK(
             pressed = pad_state.get_pressed(0) | pad_state.get_repeat(0);

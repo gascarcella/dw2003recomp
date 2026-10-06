@@ -49,12 +49,12 @@ segments:
     # Unnamed symbols are func_SOUNDTST_<addr>, D_SOUNDTST_<addr> (overlays share addresses; DECISIONS naming).
     symbol_name_format: SOUNDTST_$VRAM
     subsegments:
-      # One file (docs/DECISIONS.md "Overlay file split"): no jump tables, .rodata in code order (first the
+      # One file (DECISIONS "File boundaries come from evidence"): no jump tables, .rodata in code order (first the
       # strings of the .data tables at 84D74.., then 8432C, 8435C, 8436C in the order of their functions), .data
       # referenced in code order (856E4..85A40), no duplicated helpers.
       - [0x0,    .rodata, soundtst_80084370]
       - [0x16C0, c, soundtst_80084370]   # 0x80084370 .text (tools/overlay_layout.py)
       # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t soundtst;
-      # DECISIONS "Overlay .data/.bss per file").
+      # DECISIONS "Data in C, split per object").
       - [0x20C4, .data, soundtst_80084370]   # 0x80084D74 (after the last function's jr ra); no .bss
   - [0x2D98]

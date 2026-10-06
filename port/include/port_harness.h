@@ -12,7 +12,7 @@
 
 #include "common.h"
 
-/* ---- disc.c: LIBCD's sector source over the user's BIN/CUE (PC_PORT_PLAN 2.8; DECISIONS item 7) ----
+/* ---- disc.c: LIBCD's sector source over the user's BIN/CUE (docs/PORT.md "Disc, memory cards and movies"; DECISIONS "PC port architecture") ----
  * port_disc_open: `path` is the .cue (its first FILE line names the BIN, relative to the cue) or the .bin itself
  * (raw 2352-byte sectors, MODE2/2352). With `check_sha1`, the whole BIN's SHA-1 must be the unpatched EU disc's
  * (457cb233..., scripts/setup.sh DISC_SHA1): anything else is fatal. Registers the reader with psyq_cd_set_reader.
@@ -45,7 +45,7 @@ int port_state_read(u32 addr, int size, int is_signed, s32 *out);
 void port_script_load(const char *path);
 void port_script_frame(void);
 
-/* ---- memcard.c: the memory cards (LIBMCRD's backing store; PC_PORT_PLAN 2.8: raw 128 KB .mcd images) ----
+/* ---- memcard.c: the memory cards (LIBMCRD's backing store: raw 128 KB .mcd images; docs/PORT.md "Disc, memory cards and movies") ----
  * port_memcard_open: card `slot` (0 or 1) is the .mcd image at `path` (created formatted if it does not exist,
  * written back as the game writes); NULL: a fresh formatted card in memory only, as the emulator's replay runner
  * starts with (tests/replay/replay.py "Fresh (empty) memory cards per run"). Without a call a slot has no card. */
@@ -68,7 +68,8 @@ void port_reset_state(void);
  * port_input_frame (pump.c, once per vsync before the script's step, window mode only): SDL's events: the keyboard
  * and the gamepads to psyq_pad_set unless a script owns the pad, the window's close (port_exit 0); `test`
  * (`--input-test`) runs input.c's injection self-test. port_video_close: from port_exit (the present count).
- * port_video_quit: from port_exit after the audio's close, SDL torn down before exit() (docs/PLAYTEST.md). */
+ * port_video_quit: from port_exit after the audio's close, SDL torn down before exit() (NVIDIA's EGL on Wayland crashed
+ * in an SDL_Quit inside exit(): video.c port_video_quit). */
 extern int port_window; /* a window is open: pump.c paces the vsyncs to real time */
 /* pump.c: the nominal rate (vsyncs per second the game is made for: 50, PAL; `--fps N`: N), which the audio's samples
  * per vsync follow, and the pace (vsyncs per second of the wall clock in window mode; 0: unthrottled; headless:
@@ -90,10 +91,10 @@ void port_video_quit(void);
 void port_input_init(int test);
 void port_input_frame(void);
 
-/* ---- input.c: the settings' input section and the hotkey actions (docs/LAUNCHER_MODS_PLAN.md 4.3, 4.5) ----
+/* ---- input.c: the settings' input section and the hotkey actions (docs/LAUNCHER.md "Input bindings") ----
  * port_input_settings: the pad map (the defaults, then `input.keyboard`/`input.gamepad`) and the port's own actions
  * (`input.hotkeys`: pause, fullscreen); `input` may be NULL (the defaults: the bare binary). Before port_input_init.
- * port_input_action: registers an action with its `binding` (a PortJson in 4.3's grammar; NULL: `default_json`, the
+ * port_input_action: registers an action with its `binding` (a PortJson in the settings' binding grammar; NULL: `default_json`, the
  * same grammar as JSON text) and returns its id; a bad binding fails the settings naming `where`. pressed: a trigger
  * completed at this vsync's poll; held: a trigger is complete. Both 0 headless and during --input-test.
  * port_input_poll_paused: the events and the actions only, nothing to the pad (pump.c's pause). */
@@ -126,7 +127,7 @@ void port_audio_pause(int paused); /* the device paused (the pump's pause); noth
  * starts again from its target. The WAV and the SPU never change. */
 void port_audio_set_mute(int mute);
 
-/* ---- mods.c: the built-in mods (docs/LAUNCHER_MODS_PLAN.md 4.4, 4.5) ----
+/* ---- mods.c: the built-in mods (docs/LAUNCHER.md "Mod manifest", "Mod runtime") ----
  * port_mods_settings: the settings' `mods` section (NULL: every mod off) read against the registry; a bad value fails
  * the settings. port_mods_start: `active` 0 keeps every mod off (a --script run that did not ask for them); else the
  * enabled mods register their hotkeys (after port_input_settings). port_mods_frame: every vsync (pump.c), the enabled

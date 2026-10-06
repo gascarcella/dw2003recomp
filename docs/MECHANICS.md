@@ -1,7 +1,7 @@
 # Game mechanics reference for the reference tests (Track A)
 
 Purpose: give the golden tests (layer 1), record/replay tests (layer 2) and save round trips (layer 3) of
-DECISIONS "Reference tests for the port: three layers" names, fixtures and expected behaviours.
+DECISIONS "Reference tests: three layers" names, fixtures and expected behaviours.
 Date: 2026-10-04 (first pass, research agent, read-only over the repo; the `[T]` marks were added by later sessions).
 
 **Budget used:** 2 web fetches (both blocked), about 140k tokens (almost all of it reading the C and headers).
@@ -661,7 +661,7 @@ writing side by `gamestate_actions` (marked below):
 - `gamestate_update_map_flags` (on entering a field map): `map_is_new` clears `map_flags` (the 24 type-0 flags); back from a card game (`prev_map == 0x700`) sets flags 0x11 and
   0x12, sets flag 0x10 to `card_game_won` and clears `card_game_won` [T] (`gamestate_actions`).
 - `gamestate_check_flags(list)`: list of `(flag, value)` u16 pairs ending in 0xFFFF; true when every pair matches (empty list true). `gamestate_set_flags` same shape.
-- Where flag words come from (census [C], `tools/flag_census.py`; DECISIONS "Flag census"): the field's talk lists (`FieldstgTalk.flags_required`, `flags_set`), placed actors'
+- Where flag words come from (census [C], `tools/flag_census.py`; DECISIONS "Reference tests: three layers"): the field's talk lists (`FieldstgTalk.flags_required`, `flags_set`), placed actors'
   `flags_required`, `FieldstgMapEvent.flag`/`flag_2`, `fieldstg_flag_events` and constants in FIELDSTG/STSTATUS/WSTAG code; nothing else reads them (no event or card script, text or
   battle data). 16,169 uses (12,658 get, 3,511 set) of 31 types. Computed: `set_flag(get_map() + 0x1E00, 1)` on entering a field map sets the visited-map bit (type 0x20, index
   `map - 0x200`, maps 0x200..0x2EE), which STSTATUS's map reads back as `(i & 0xFF) | 0x2000`. Every bit-array index used is inside its array [T] (layer 3, `flag_census.py --check`; the tightest: type 0x04 index 15 of 16 bits, 0x06 7 of 8), and **type 0x72 is used only with

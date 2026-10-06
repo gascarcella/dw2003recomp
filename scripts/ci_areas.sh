@@ -25,7 +25,7 @@ area_of() {
         # CI itself, and this mapping: everything.
         .github/workflows/ci.yml|scripts/ci_areas.sh) echo all ;;
         # Documentation (ci.yml's paths-ignore too): no step reads it.
-        docs/*|*.md|LICENSE|.gitignore) echo none ;;
+        docs/*|*.md|LICENSE|.gitignore|.github/ISSUE_TEMPLATE/*) echo none ;;
         # The release's own files: release.yml tests them (a manual run); here only `bash -n`, which always runs.
         .github/workflows/release.yml|scripts/package_appimage.sh|packaging/*) echo none ;;
         # The launcher's own tree.

@@ -48,7 +48,7 @@ void port_unimplemented(const char *fn);
  * Optional extras (the runtime may ignore every one of them; none is needed to link or to run the skeleton).
  * ---------------------------------------------------------------------------------------------------------------- */
 
-/* The window DrawOTag may walk. A 24-bit tag is resolved as `(ot & ~0xFFFFFF) + tag` (PC_PORT_PLAN 2.4) and followed
+/* The window DrawOTag may walk. A 24-bit tag is resolved as `(ot & ~0xFFFFFF) + tag` (docs/PORT.md "Ordering tables on 64-bit") and followed
  * only while it stays inside [base, base + size); the default window is [port_heap_start, port_heap_end). Call it
  * once with the whole arena so that primitives outside the heap (FIGHTSTG's cursor OT) are walked too. */
 void psyq_set_arena(const void *base, unsigned long size);

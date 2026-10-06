@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The battle scripts on the disc, for the battle_animations mod (docs/LAUNCHER_MODS_PLAN.md 5.3).
+"""The battle scripts on the disc, for the battle_animations mod (docs/LAUNCHER.md "Disable battle animations").
 
 Usage: tests/port/battle.py [--out DIR] [-v]
 

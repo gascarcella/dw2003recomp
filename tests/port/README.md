@@ -72,7 +72,7 @@ every store and DMA block at the same tick. `run.py` runs it once on the committ
 trace equal to the replay of its own calls (once `port/src/audio.c` renders), and for `new_game` the same LIBSND calls
 as the emulator's, with a report of where the two games' frames differ.
 
-## The settings file (`settings.py`; docs/LAUNCHER_MODS_PLAN.md 4.3)
+## The settings file (`settings.py`; docs/LAUNCHER.md "Settings file")
 `tests/port/settings.py` checks `--config FILE`, the contract with the launcher, through `--print-settings` (the
 effective settings as a file with every key and absolute paths): the round trip (printed, loaded from another directory,
 printed again: the same text), the defaults of an empty file, relative paths from the file's directory, `null` cards,
@@ -85,7 +85,7 @@ types, defaults, ranges, enum ids; names, descriptions and labels present) and b
 `tests/port/settings/rebound.json` (rebound keys and pads, chord hotkeys, a mod's bindings, the pause's round trip).
 `scripts/test.sh --layer port` runs it after `run.py` (~5 s built).
 
-## The 60 Hz mode (`hz60.py`; docs/LAUNCHER_MODS_PLAN.md 5.5)
+## The 60 Hz mode (`hz60.py`; docs/LAUNCHER.md "50/60 Hz")
 `tests/port/hz60.py` runs the port with `--refresh 60` (and `DW3_PORT_RESET_CHECK=1`) and compares it with the 60 Hz
 game in the emulator, whose records are committed in `tests/port/hz60/` (`hz60.py record`: the unpatched disc with
 `tests/port/ntsc_patch.lua`, which writes the NTSC patch's two words at `main`'s entry): `new_game` (twice: the same
@@ -94,7 +94,7 @@ emulator's cross-core view; `new_game`'s SPU trace against LIBSND's replay of it
 NTSC tick) and the emulator's calls (`sound.py`'s `port` check). The fast-forward test is in `settings.py`.
 `scripts/test.sh --layer port` runs it (~20 s built).
 
-## The mods with the mod on (`mods.py`; docs/LAUNCHER_MODS_PLAN.md 4.5, 5.2)
+## The mods with the mod on (`mods.py`; docs/LAUNCHER.md "Mod runtime")
 A run with a mod on has its own expected results (the emulator has no mods; the random generator follows the frames),
 so `tests/port/mods.py` keeps the port's own record (`tests/port/mods/expected/`, `mods.py record` after a review) and
 checks what the mod must keep from the emulator's run. `skip_dialogues`: `tests/port/mods/scripts/skip_dialogues.json`

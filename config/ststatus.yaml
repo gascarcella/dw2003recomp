@@ -49,7 +49,7 @@ segments:
     # Unnamed symbols are func_STSTATUS_<addr>, D_STSTATUS_<addr> (overlays share addresses; DECISIONS naming).
     symbol_name_format: STSTATUS_$VRAM
     subsegments:
-      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"). The overlay is a set of status
+      # .rodata and .text per file (DECISIONS "File boundaries come from evidence"). The overlay is a set of status
       # pages, each an object group in the same order (window init, text helper, draw, state machine with a
       # jump table, update, create; the creates are in the page table ststatus_pages). Evidence:
       # jump-table parity (82E4C, 8340C at 4 mod 8 after a table at 0; 83008, 834F0 at 0 after one at 4),
@@ -84,7 +84,7 @@ segments:
                                           # loaded?, window open/step, lerp start/step, ...), the same tail as
                                           # STCRDDEK 8A100 and STDWTITL 86DF8; then 9A670..9A6B8 (table 9B6EC)
                                           # (position moderate)
-      # .data per file in link order (tools/data_owners.py -t ststatus; DECISIONS "Overlay .data/.bss per file"); no
+      # .data per file in link order (tools/data_owners.py -t ststatus; DECISIONS "Data in C, split per object"); no
       # .bss. Every boundary is forced by references (each page's tables are referenced by its own file only), and
       # agrees with the .text split; the page table 9A988 (all the pages' creates) is referenced by the root object
       # (96590's), the stage module's tables 9A9C0.. are reached through ststatus_module (99B6C's).

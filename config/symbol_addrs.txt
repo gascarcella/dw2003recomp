@@ -2,7 +2,7 @@
 // Single source of truth for names; see docs/DECISIONS.md.
 
 // ---- Game code (0x80010F4C-0x80020D8C) and data, by file in link order ----
-// Naming: docs/DECISIONS.md "Naming conventions" (snake_case, module prefix = source file name).
+// Naming: DECISIONS "Naming conventions" (snake_case, module prefix = source file name).
 // A module's state + function table is one struct with a size, so splat writes base + offset.
 // Small .sdata/.sbss/.bss variables and arrays followed by padding also get a size: splat's symbol
 // (objdiff's target) then leaves out the padding, as the C object's symbol does.

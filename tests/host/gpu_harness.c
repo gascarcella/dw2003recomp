@@ -11,7 +11,7 @@
  *   D HEX_ENV x y w h       SetDefDrawEnv(DRAWENV with these bytes, x, y, w, h)           -> the DRAWENV's bytes
  *   V HEX_DRMOVE x y w h dx dy  SetDrawMove(DR_MOVE with these bytes, RECT, dx, dy)       -> the DR_MOVE's bytes
  *   B                       BreakDraw                                                     -> 0 for NULL, else 1
- * The ordering-table walk resolves 24-bit tags inside a 16 MB-aligned arena, like the port's (PC_PORT_PLAN 2.4): a
+ * The ordering-table walk resolves 24-bit tags inside a 16 MB-aligned arena, like the port's (docs/PORT.md "Ordering tables on 64-bit"): a
  * list at the PS1 address A sits at arena + (A & 0xFFFFFF), so the golden's tags work unchanged. */
 #include <stdint.h>
 #include <stdio.h>

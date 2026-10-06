@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The port's mods that change the game's behaviour, run with the mod on (docs/LAUNCHER_MODS_PLAN.md 4.5, 5.2, 5.3).
+"""The port's mods that change the game's behaviour, run with the mod on (docs/LAUNCHER.md "Mod runtime").
 
 Usage: tests/port/mods.py [check] [--out DIR] [-j N]
        tests/port/mods.py record [--out DIR]     # rewrite tests/port/mods/expected/ from this build (after a review)
@@ -20,7 +20,7 @@ with no press through the scenes and one press per NPC talk and per choice, each
     message waits go on by themselves; first_battle_save's route to the battle for the mod-off run);
   - `fast_forward_waits` on: the same log and record (only the pace changes), and fast-forward is asked for during
     the scenes' events.
-battle_animations (5.3): first_battle_save itself with the mod on, `hit_reaction` on and off: the emulator's
+battle_animations: first_battle_save itself with the mod on, `hit_reaction` on and off: the emulator's
 cross-core view (the battle's rules run before its animations), and the first battle's three actions cut, the last
 one keeping its KO reaction. tests/port/battle.py checks the scripts on the disc that the cut relies on.
 Exit codes: 0 pass, 1 fail, 2 something missing.

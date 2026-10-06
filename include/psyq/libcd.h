@@ -2,7 +2,7 @@
 #define PSYQ_LIBCD_H
 
 /* Our own declarations of the Psy-Q 4.7 LIBCD interface, added as the game needs them
- * (no Sony headers are used; docs/WORKFLOW.md section 2). */
+ * (no Sony headers are used; DECISIONS "Code only: no game data, SDK or BIOS in the repo"). */
 
 #include "common.h"
 

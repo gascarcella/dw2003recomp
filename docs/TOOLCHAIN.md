@@ -28,7 +28,7 @@ Psy-Q releases kept those object revisions, so the strings alone can't pin the e
   `0x80020D8C`–`0x8003EDCC` with no unmatched gaps. Overlays: only `STDWTITL` has library code
   (LIBPRESS, `0x8008714C`–`0x80087C4C`); the 293 `WSTAG###` were not scanned yet.
 - 4.7 shipped GCC 2.95.2, but games often used an older compiler with newer libraries, so this does
-  not settle the game's compiler (see the compiler-ID experiment in `WORKFLOW.md`).
+  not settle the game's compiler (see the compiler-ID experiment below).
 
 | Library | Objects | Bytes |
 |---|---|---|

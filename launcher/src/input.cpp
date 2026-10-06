@@ -83,7 +83,7 @@ struct PadName {
     const char *label;
 };
 
-// The order of SDL_GamepadButton up to the touchpad, then the axes (LAUNCHER_MODS_PLAN 4.3).
+// The order of SDL_GamepadButton up to the touchpad, then the axes (docs/LAUNCHER.md "Input bindings").
 static const PadName PAD_NAMES[] = {
     { "south", "South" },
     { "east", "East" },

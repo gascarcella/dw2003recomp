@@ -1893,7 +1893,7 @@ s32 wfightmn_cap_damage(u8 side, s32 value, s32 count) {
     return value;
 }
 
-/* The overlay's .data (DECISIONS "Overlay .data/.bss per file"): all of it is this file's. */
+/* The overlay's .data (DECISIONS "Data in C, split per object"): all of it is this file's. */
 RECT wfightmn_screen_rect = { 0, 0, 320, 240 };
 WfightmnKindEffect wfightmn_kind_effects[7] = {
     { 2, 19, 26 }, { 3, 20, 26 }, { 4, 21, 27 }, { 5, 22, 50 }, { 6, 26, 50 }, { 8, 28, 39 }, { -1, 37, 49 },

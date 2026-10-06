@@ -49,7 +49,7 @@ segments:
     # Unnamed symbols are func_STITSHOP_<addr>, D_STITSHOP_<addr> (overlays share addresses; DECISIONS naming).
     symbol_name_format: STITSHOP_$VRAM
     subsegments:
-      # Two files (docs/DECISIONS.md "Overlay file split"). The six jump tables are all at 0 mod 8 and each is a
+      # Two files (DECISIONS "File boundaries come from evidence"). The six jump tables are all at 0 mod 8 and each is a
       # multiple of 8 bytes long, so parity can't show a break; .data is referenced in an order consistent with
       # any split. The evidence is a duplicated helper: 85934 and 8739C are byte for byte the same method, one
       # in each of two parallel window objects (8360C..859C0, create 8596C; 859C0..87428, create 873D4), as a
@@ -60,6 +60,6 @@ segments:
       - [0x2D10, c, stitshop_800859C0]   # 0x800859C0: the second window object, ..., the main object and the
                                          # module's function table (8D1AC); finer splits not proven
       # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t stitshop;
-      # DECISIONS "Overlay .data/.bss per file"). 8321C has no .data.
+      # DECISIONS "Data in C, split per object"). 8321C has no .data.
       - [0x9DF8, .data, stitshop_800859C0]   # 0x8008CAA8 (only 859C0 references it); no .bss
   - [0xA528]

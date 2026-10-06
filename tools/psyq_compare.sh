@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Compile one C file with Sony's real Psy-Q chain (CC1PSX.EXE + ASPSX.EXE through wibo; scripts/setup.sh psyq) and
 # with ours (old-gcc cc1 + maspsx + GNU as), then compare one function's instructions. Relocation addends are
-# masked (psyq-obj-parser and GNU as store them differently). DECISIONS "Psy-Q check".
+# masked (psyq-obj-parser and GNU as store them differently). DECISIONS "Compiler: GCC 2.8.1 with maspsx".
 #
 # Usage: tools/psyq_compare.sh [-v 4.3|4.4] [-G N] [-D DEF ...] src/<t>/<unit>.c <function>
 set -euo pipefail

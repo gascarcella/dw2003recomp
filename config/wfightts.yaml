@@ -55,7 +55,7 @@ segments:
     # Unnamed symbols are func_WFIGHTTS_<addr>, D_WFIGHTTS_<addr> (overlays share addresses; DECISIONS naming).
     symbol_name_format: WFIGHTTS_$VRAM
     subsegments:
-      # Six files (docs/DECISIONS.md "Overlay file split", session 6 wfight2): the main object and one per menu it
+      # Six files (DECISIONS "File boundaries come from evidence", session 6 wfight2): the main object and one per menu it
       # opens. Evidence: the menus' string tables (.data 93D0, 9414, 94F0, 95E8) have their strings in .rodata in
       # table order, and each group ends with non-zero padding bytes (the end of an object's .rodata: psylink fills
       # the gap) and repeats strings an earlier group already has (GCC shares identical literals within a file
@@ -74,7 +74,7 @@ segments:
       - [0x29B8, c, wfightts_800A8798]  # 0x800A8798 menu 4 (techniques) and its creator 8CE8
       - [0x2F54, c, wfightts_800A8D34]  # 0x800A8D34 menu 5 (scripts) and its creator 931C
       # .data, then .bss (zeros in the file), per file in link order, in C (tools/data_owners.py -t wfightts;
-      # DECISIONS "Overlay .data/.bss per file"). .bss: the zeros from 0x800A9638 to the end (they could be
+      # DECISIONS "Data in C, split per object"). .bss: the zeros from 0x800A9638 to the end (they could be
       # zero-initialised .data: weak); wfightts_camera_0 is 0x40 bytes, its last 0xC unreferenced.
       - [0x3588, .data, wfightts_800A67B8]  # 0x800A9368 (after the last function's jr ra)
       - [0x35D0, .data, wfightts_800A7A90]  # 0x800A93B0 menu 1's column, cursors, first lines

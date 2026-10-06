@@ -49,12 +49,12 @@ segments:
     # Unnamed symbols are func_SHOCKTST_<addr>, D_SHOCKTST_<addr> (overlays share addresses; DECISIONS naming).
     symbol_name_format: SHOCKTST_$VRAM
     subsegments:
-      # One file (docs/DECISIONS.md "Overlay file split"): both jump tables at the same parity (82CB0, 82D10),
+      # One file (DECISIONS "File boundaries come from evidence"): both jump tables at the same parity (82CB0, 82D10),
       # .rodata in code order (the strings of .data initializers D_..84AE8/84AF0 sit between the functions
       # that use their neighbours), .data referenced in code order (849C8..84AF0), no duplicated helpers.
       - [0x0,  .rodata, shocktst_80082DA0]
       - [0xF0, c, shocktst_80082DA0]   # 0x80082DA0 .text (tools/overlay_layout.py)
       # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t shocktst;
-      # DECISIONS "Overlay .data/.bss per file").
+      # DECISIONS "Data in C, split per object").
       - [0x1D18, .data, shocktst_80082DA0]   # 0x800849C8 (after the last function's jr ra); no .bss
   - [0x1E44]

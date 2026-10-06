@@ -61,7 +61,7 @@ segments:
     vram: 0x80010000
     bss_size: 0x25FC8          # 0x8005CCE8-0x80082CB0, cleared by crt0
     subsegments:
-      # File boundaries: docs/DECISIONS.md "Game code file split". psylink puts every object's
+      # File boundaries: DECISIONS "File boundaries come from evidence". psylink puts every object's
       # .rodata (in link order) before all .text, so .rodata is split per file too.
       - [0x800, .rodata, inn]             # 0x80010000
       - [0x884, .rodata, fieldmenu]       # 0x80010084
@@ -402,8 +402,7 @@ segments:
       - [0x2EA7C, asm, psyq/libmcrd/low]
       - [0x2F50C, asm, psyq/libcard/a79]
       - [0x2F51C, asm, psyq/libmcrd/unformat]
-      # .data/.sdata/.sbss/.bss per file, in link order (DECISIONS "Plan for splitting .data/.bss per
-      # file", "Data split per file"; evidence per symbol: tools/data_owners.py). Game objects' .data is
+      # .data/.sdata/.sbss/.bss per file, in link order (DECISIONS "Data in C, split per object"; evidence per symbol: tools/data_owners.py). Game objects' .data is
       # packed at 4; their .sdata/.sbss/.bss start 8-aligned (configure.py align_small_data).
       - [0x2F5CC, .data, inn]                 # 0x8003EDCC inn_table
       - [0x2F67C, .data, fieldmenu]           # 0x8003EE7C

@@ -1,4 +1,4 @@
-/* The built-in mods (docs/LAUNCHER_MODS_PLAN.md 4.4, 4.5; port_harness.h "mods.c"): the registry, their option values
+/* The built-in mods (docs/LAUNCHER.md "Mod manifest", "Mod runtime"; port_harness.h "mods.c"): the registry, their option values
  * from the settings (`mods.<id>`), their hotkeys, and port_mods_frame, called by pump.c at every vsync.
  *
  * Each mod has a manifest, port/mods/<id>/mod.json, which the launcher reads to list the mods and draw their screens
@@ -7,7 +7,7 @@
  * it to equal the manifests. A mod that the settings do not enable is off; under --script every mod is off unless the
  * run asks for them (--script-mods), so the replays, the goldens and the records stay the bare binary's.
  *
- * Rules for a mod that changes the game's behaviour (4.5): its hook in the game's C sits in an `#ifdef PC_PORT` block
+ * Rules for a mod that changes the game's behaviour (docs/LAUNCHER.md "Mod runtime"): its hook in the game's C sits in an `#ifdef PC_PORT` block
  * testing a port_mod_* flag (never an expression that is constant on the PS1), its state lives here, and a game
  * global it sets is set before port_overlay_init() (the reset's snapshot). */
 #include <stdlib.h>
@@ -23,7 +23,7 @@
 
 #define PORT_BATTLE_SCAN_MAX 4096 /* words: the longest script on the disc has 567 */
 
-/* The game's mod interface: a manifest's `requires_port` (4.4) must not be higher. */
+/* The game's mod interface: a manifest's `requires_port` ("Mod manifest") must not be higher. */
 #define PORT_MODS_API 1
 
 typedef enum ModType { MOD_BOOL, MOD_INT, MOD_FLOAT, MOD_ENUM, MOD_BINDING } ModType;
@@ -32,7 +32,7 @@ static const char *const mod_type_names[] = { "bool", "int", "float", "enum", "b
 typedef struct ModOption {
     const char *id;
     ModType type;
-    const char *def;            /* the default, as JSON text (4.3's grammar for a binding) */
+    const char *def;            /* the default, as JSON text (the settings' grammar for a binding) */
     double min, max, step;      /* int, float */
     const char *const *values;  /* enum: the value ids, NULL-terminated */
     const char *applies;        /* "live" or "restart" */
@@ -57,11 +57,11 @@ typedef struct Mod {
     ModValue values[MOD_MAX_OPTIONS];
 } Mod;
 
-/* ---- fast_forward (5.1): runtime only, no game C. While it is on (the hold binding held, or the toggle pressed once)
+/* ---- fast_forward (docs/LAUNCHER.md "Fast-forward"): runtime only, no game C. While it is on (the hold binding held, or the toggle pressed once)
  * the pace is the nominal rate times the speed (unlimited: no pace; the schedule starts over at each change, pump.c),
  * the window presents at most 60 images a second (every vsync is still drawn), and with `mute` the audio device's
  * queue is cleared and nothing is queued (the SPU renders on: LIBSND reads its envelopes). The game, its log and its
- * record are the unpaced run's, which they are already byte for byte (DECISIONS "The settings file, schema 1").
+ * record are the unpaced run's, which they are already byte for byte (DECISIONS "The settings file").
  *
  * DW3_PORT_FAST_FORWARD=ON:OFF (a test hook, used by tests/port/settings.py; only while the mod is enabled): on for ON
  * vsyncs, off for OFF vsyncs, repeating, as if the hold key were pressed so; each change is logged with the wall
@@ -112,7 +112,7 @@ static void ff_frame(struct Mod *mod) {
     }
 }
 
-/* ---- skip_dialogues (5.2): while it is on (the toggle pressed once, or the hold binding held) the game's C hooks
+/* ---- skip_dialogues (docs/LAUNCHER.md "Skip dialogues"): while it is on (the toggle pressed once, or the hold binding held) the game's C hooks
  * (port_mod_skip_dialogues, include/port.h) show every revealing message window's page at once and go on from its
  * confirm waits and the battle's message waits by themselves; choices, menus, name entry and the other overlays'
  * code-driven prompts are separate code and still wait for the player. With `fast_forward_waits` it also asks for
@@ -155,7 +155,7 @@ static void sd_frame(struct Mod *mod) {
                    strcmp(field->name, "FIELDSTG") == 0 && fieldstg_stage.event_running != 0;
 }
 
-/* ---- battle_animations (5.3): while enabled, port_mod_battle_animations makes fightstg_script_update ask
+/* ---- battle_animations (docs/LAUNCHER.md "Disable battle animations"): while enabled, port_mod_battle_animations makes fightstg_script_update ask
  * port_battle_cut at the INIT of every script 5 and up (the attacks', techniques' and items' animations; the rules
  * already ran): one with a child command becomes the target's reaction (results[3] + 1: flinch, heavy hit, KO, dodge)
  * with `hit_reaction` (the default), else ends at once; one without ends at once. A knock-out keeps its KO reaction in
@@ -250,7 +250,7 @@ static void mod_value(const ModOption *o, const PortJson *j, const char *where, 
     }
     case MOD_BINDING:
         if (j->type != PORT_JSON_STRING && j->type != PORT_JSON_ARRAY) {
-            port_settings_fail(where, "a binding (a string or a list: docs/LAUNCHER_MODS_PLAN.md 4.3)");
+            port_settings_fail(where, "a binding (a string or a list: docs/LAUNCHER.md \"Input bindings\")");
         }
         port_input_check_binding(j, where);
         v->json = j;
