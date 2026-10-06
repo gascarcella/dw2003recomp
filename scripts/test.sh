@@ -110,6 +110,7 @@ for L in $LAYERS; do
         else
             "$PY" "$ROOT/tests/port/run.py"; ran=$((ran + 1))
             "$PY" "$ROOT/tests/port/settings.py"   # --config, the launcher's contract (docs/LAUNCHER_MODS_PLAN.md 4.3)
+            "$PY" "$ROOT/tests/port/hz60.py"       # the 60 Hz mode against the patched game's records (5.5)
         fi ;;
     *) echo "unknown layer $L" >&2; exit 2 ;;
     esac

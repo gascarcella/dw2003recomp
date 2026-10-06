@@ -8,7 +8,7 @@ from RAM records the block's SPU address, length and SHA-1.
 
 Usage:
   tests/sound/spu_trace.py run <script.json> [--until CHECKPOINT] [--extra-frames N] [--repeat N] [--calls] [--detail]
-                               [--out DIR] [--bios openbios|retail|FILE]
+                               [--out DIR] [--bios openbios|retail|FILE] [--prelude LUA]
   tests/sound/spu_trace.py check [--record] # the committed short traces (tests/sound/expected/*.trace) reproduce
   tests/sound/spu_trace.py diff A.trace B.trace [--align MARKER] [--no-ticks] [--max N]
 
@@ -220,14 +220,15 @@ def build_trace(run_dir, header, result, detail):
     return "\n".join(out) + "\n", stats
 
 
-def run_trace(script_path, script, out_dir, bios, calls=False, detail=False):
+def run_trace(script_path, script, out_dir, bios, calls=False, detail=False, prelude=None):
     """One emulator run with the tracer; returns (trace text, stats, seconds)."""
     out_dir = Path(out_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     spec = out_dir / "spu_trace_spec.lua"
     write_spec(spec, calls)
     wrapper = out_dir / "spu_trace_wrapper.lua"
-    wrapper.write_text(f"dofile({json.dumps(str(TRACE_LUA))})\ndofile({json.dumps(str(replay.RUN_LUA))})\n")
+    wrapper.write_text((f"dofile({json.dumps(str(Path(prelude).resolve()))})\n" if prelude else "") +
+                       f"dofile({json.dumps(str(TRACE_LUA))})\ndofile({json.dumps(str(replay.RUN_LUA))})\n")
     os.environ["DW3_SPU_TRACE_OUT"] = str(out_dir)
     os.environ["DW3_SPU_TRACE_SPEC"] = str(spec)
     t0 = time.time()
@@ -300,7 +301,8 @@ def cmd_run(args):
     for i in range(args.repeat):
         print(f"spu_trace {script['name']} (bios {args.bios}), run {i + 1}/{args.repeat}")
         try:
-            text, stats, elapsed = run_trace(script_path, script, base / f"run{i + 1}", bios, args.calls, args.detail)
+            text, stats, elapsed = run_trace(script_path, script, base / f"run{i + 1}", bios, args.calls, args.detail,
+                                             args.prelude)
         except (RuntimeError, subprocess.TimeoutExpired) as e:
             print(f"  FAIL: {e}")
             return 1
@@ -387,6 +389,7 @@ def main():
     r.add_argument("--detail", action="store_true", help="add the storing pc and the DMA registers as comments")
     r.add_argument("--bios", default="openbios", help="openbios (default), retail, or a BIOS file")
     r.add_argument("--out", help="output directory (default: a temp dir)")
+    r.add_argument("--prelude", help="a Lua chunk run first (e.g. tests/port/ntsc_patch.lua: the 60 Hz game)")
     r.set_defaults(func=cmd_run)
     c = sub.add_parser("check", help="reproduce the committed short traces")
     c.add_argument("--record", action="store_true", help="write them instead (two runs must agree)")

@@ -44,10 +44,11 @@ void port_unimplemented(const char *fn) {
     exit(3);
 }
 
+static int video_mode = 1; /* MODE_PAL; the 4th argument "ntsc": 0 (the 60 Hz game: SsSetTickMode(0x1000) ticks at 60) */
+
 int SetVideoMode(int mode) {
-    static int current = 1; /* MODE_PAL */
-    int prev = current;
-    current = mode;
+    int prev = video_mode;
+    video_mode = mode;
     return prev;
 }
 
@@ -309,11 +310,14 @@ static void call(const Item *it) {
 int main(int argc, char **argv) {
     long i;
 
-    if (argc != 3 && argc != 4) {
-        fprintf(stderr, "usage: sound_replay SCRIPT OUT.trace [SAMPLES_PER_VSYNC_X10]\n");
+    if (argc < 3 || argc > 5 || (argc == 5 && strcmp(argv[4], "ntsc") != 0 && strcmp(argv[4], "pal") != 0)) {
+        fprintf(stderr, "usage: sound_replay SCRIPT OUT.trace [SAMPLES_PER_VSYNC_X10 [pal|ntsc]]\n");
         return 2;
     }
-    if (argc == 4) {
+    if (argc == 5) {
+        video_mode = strcmp(argv[4], "ntsc") == 0 ? 0 : 1;
+    }
+    if (argc >= 4) {
         rate_x10 = atol(argv[3]);
         if (rate_x10 < 1000 || rate_x10 > 9990) {
             fatal("bad samples per vsync: ", argv[3]);

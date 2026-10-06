@@ -12,6 +12,7 @@
  * global it sets is set before port_overlay_init() (the reset's snapshot). */
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "json.h"
 #include "port_harness.h"
@@ -46,13 +47,24 @@ typedef struct Mod {
     const char *version;
     const ModOption *options;
     int option_count;
+    void (*start)(struct Mod *mod); /* once, when enabled, after its hotkeys are registered; NULL: none */
     void (*frame)(struct Mod *mod); /* every vsync while enabled; NULL: none */
     int enabled;
     ModValue values[MOD_MAX_OPTIONS];
 } Mod;
 
-/* ---- fast_forward (5.1; its frame work is phase 2's) */
+/* ---- fast_forward (5.1): runtime only, no game C. While it is on (the hold binding held, or the toggle pressed once)
+ * the pace is the nominal rate times the speed (unlimited: no pace; the schedule starts over at each change, pump.c),
+ * the window presents at most 60 images a second (every vsync is still drawn), and with `mute` the audio device's
+ * queue is cleared and nothing is queued (the SPU renders on: LIBSND reads its envelopes). The game, its log and its
+ * record are the unpaced run's, which they are already byte for byte (DECISIONS "The settings file, schema 1").
+ *
+ * DW3_PORT_FAST_FORWARD=ON:OFF (a test hook, used by tests/port/settings.py; only while the mod is enabled): on for ON
+ * vsyncs, off for OFF vsyncs, repeating, as if the hold key were pressed so; each change is logged with the wall
+ * clock's time. */
 static const char *const ff_speeds[] = { "2x", "3x", "4x", "6x", "8x", "unlimited", NULL };
+static const int ff_multiples[] = { 2, 3, 4, 6, 8, 0 };
+enum { FF_HOLD, FF_TOGGLE, FF_SPEED, FF_MUTE };
 static const ModOption ff_options[] = {
     { .id = "hold", .type = MOD_BINDING, .def = "\"Tab\"", .applies = "live" },
     { .id = "toggle", .type = MOD_BINDING, .def = "\"\"", .applies = "live" },
@@ -60,9 +72,55 @@ static const ModOption ff_options[] = {
     { .id = "mute", .type = MOD_BOOL, .def = "true", .applies = "live" },
 };
 
+static struct {
+    int toggled, active;
+    long base_pace;         /* the pace when it is off */
+    long test_on, test_off; /* DW3_PORT_FAST_FORWARD */
+    struct timespec t0;
+} ff;
+
+static double ff_seconds(void) {
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return (double)(now.tv_sec - ff.t0.tv_sec) + (double)(now.tv_nsec - ff.t0.tv_nsec) / 1e9;
+}
+
+static void ff_start(struct Mod *mod) {
+    const char *test = getenv("DW3_PORT_FAST_FORWARD");
+    (void)mod;
+    ff.base_pace = port_pace_get();
+    clock_gettime(CLOCK_MONOTONIC, &ff.t0);
+    if (test != NULL && sscanf(test, "%ld:%ld", &ff.test_on, &ff.test_off) == 2 && ff.test_on > 0 && ff.test_off > 0) {
+        port_log("fast-forward: test pattern %ld vsyncs on, %ld off", ff.test_on, ff.test_off);
+    } else {
+        ff.test_on = ff.test_off = 0;
+    }
+}
+
+static void ff_frame(struct Mod *mod) {
+    int on, mult = ff_multiples[(int)mod->values[FF_SPEED].number];
+    if (port_input_pressed(mod->values[FF_TOGGLE].action)) {
+        ff.toggled = !ff.toggled;
+    }
+    on = ff.toggled || port_input_held(mod->values[FF_HOLD].action);
+    if (ff.test_on > 0) {
+        on |= port_frames % (ff.test_on + ff.test_off) < ff.test_on;
+    }
+    if (on == ff.active) {
+        return;
+    }
+    ff.active = on;
+    port_pace_set(on ? (mult > 0 ? port_rate * mult : 0) : ff.base_pace);
+    port_video_set_present_cap(on ? 60 : 0);
+    port_audio_set_mute(on && mod->values[FF_MUTE].number != 0);
+    port_video_set_status(on ? (mult > 0 ? "fast-forward" : "fast-forward, unlimited") : "");
+    port_log("fast-forward: %s at frame %ld, %.3f s (pace %ld)", on ? "on" : "off", port_frames, ff_seconds(),
+             port_pace_get());
+}
+
 static Mod mods[] = {
     { .id = "fast_forward", .version = "0.1", .options = ff_options,
-      .option_count = (int)(sizeof(ff_options) / sizeof(ff_options[0])) },
+      .option_count = (int)(sizeof(ff_options) / sizeof(ff_options[0])), .start = ff_start, .frame = ff_frame },
 };
 #define MOD_COUNT ((int)(sizeof(mods) / sizeof(mods[0])))
 
@@ -194,6 +252,9 @@ void port_mods_start(int active) {
             }
         }
         port_log("mods: %s on", mod->id);
+        if (mod->start != NULL) {
+            mod->start(mod);
+        }
     }
 }
 

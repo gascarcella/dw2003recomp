@@ -266,7 +266,7 @@ def trace_name(path):
     return Path(path).name.split(".")[0]
 
 
-def replay(trace_path, variants, out_dir, rate, against="the emulator"):
+def replay(trace_path, variants, out_dir, rate, against="the emulator", ntsc=False):
     """Replays a trace's calls on its timeline (sound_replay, each build variant) and compares the result with the
     trace. Returns the failures."""
     name = trace_name(trace_path)
@@ -289,8 +289,8 @@ def replay(trace_path, variants, out_dir, rate, against="the emulator"):
         exe = build(v, out_dir)
         got_path = work / f"replay_{v}.trace"
         env = dict(os.environ, ASAN_OPTIONS="detect_leaks=0", UBSAN_OPTIONS="print_stacktrace=1")
-        proc = subprocess.run([str(exe), str(script), str(got_path), str(round(rate * 10))], capture_output=True,
-                              text=True, env=env, timeout=1200)
+        proc = subprocess.run([str(exe), str(script), str(got_path), str(round(rate * 10)), "ntsc" if ntsc else "pal"],
+                              capture_output=True, text=True, env=env, timeout=1200)
         if proc.returncode != 0 or "runtime error" in proc.stderr or "AddressSanitizer" in proc.stderr:
             failures.append(f"{name} [{v}]: sound_replay exit {proc.returncode}\n{proc.stderr[-3000:]}")
             continue
@@ -356,7 +356,7 @@ def segments(text):
     return segs
 
 
-def check_port_run(port_trace, emu_trace, out_dir, rate=PORT_RATE, rendered=True):
+def check_port_run(port_trace, emu_trace, out_dir, rate=PORT_RATE, rendered=True, ntsc=False):
     """A port run's trace: (1) LIBSND's replay of the port's own calls on the port's timeline gives it exactly (the
     integration: the vsync handler's tick, the DMA's completion, CdInit's stores); (2) the game made the same LIBSND
     calls as on the emulator, in the same order, with the same arguments; (3) where their frames differ: the
@@ -365,7 +365,7 @@ def check_port_run(port_trace, emu_trace, out_dir, rate=PORT_RATE, rendered=True
     failures = []
     if rendered:
         print(f"sound: the port's trace against LIBSND's replay of its own calls: {port_trace}")
-        failures += replay(port_trace, ["m64"], Path(out_dir), rate, against="the port run")
+        failures += replay(port_trace, ["m64"], Path(out_dir), rate, against="the port run", ntsc=ntsc)
     else:
         print("sound: the port's trace against LIBSND's replay: skipped: the port's audio output (port/src/audio.c) is"
               " the step-0 stub, which renders nothing, so the envelopes LIBSND reads stay at their key-on values")
