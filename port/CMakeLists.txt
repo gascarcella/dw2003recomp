@@ -133,6 +133,9 @@ set_source_files_properties(${DW3_RUNTIME_SRCS} "${DW3_GEN}/overlay_tables.c" "$
 if(DW3_PORT_PSYQ_WERROR AND DW3_PSYQ_SRCS)
     set_source_files_properties(${DW3_PSYQ_SRCS} PROPERTIES COMPILE_OPTIONS "-Werror")
 endif()
+# The software GPU runs every frame: optimised in every build (-O3: its span loops rely on inlining and on the
+# vectorised select loops; port/psyq/gpu.c, "Speed").
+set_property(SOURCE "${DW3_PORT_PSYQ_DIR}/gpu.c" APPEND PROPERTY COMPILE_OPTIONS -O3)
 # The ld script: the EXE's and each overlay's .data/.bss sections and the arena's symbols. The link map is checked
 # after every link: a game object's writable data outside those sections would survive the console's reset
 # (port/src/reset.c; port_gen.py sections).
