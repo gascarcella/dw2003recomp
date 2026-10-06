@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Runs the host-compile probe, then every reference-test layer that is available here (tests/README.md), and exits
 # non-zero on the first failure. Headless; DW3_JOBS=1 by default (cloud sessions, shared machines).
-# Usage: scripts/test.sh [--build] [--layer 1|2|3]... [--no-probe]
+# Usage: scripts/test.sh [--build] [--layer 1|2|3|port]... [--no-probe]
 #   --build     run scripts/build.sh first (the matching build must stay byte-identical; tests never change it)
-#   --layer N   run only that layer (repeatable); the probe still runs
+#   --layer N   run only that layer (repeatable); the probe still runs. "port": the PC port's M1 test (tests/port)
 #   --no-probe  skip the host-compile probe (tools/port_inventory.py probe + link: every unit compiles at -m64 with no
 #               pointer/int cast, implicit declaration or incompatible pointer type, and no global is defined twice)
 set -euo pipefail
@@ -22,7 +22,7 @@ while [[ $# -gt 0 ]]; do
         *) echo "unknown argument: $1" >&2; exit 2 ;;
     esac
 done
-[[ -z "$LAYERS" ]] && LAYERS="1 2 3"
+[[ -z "$LAYERS" ]] && LAYERS="1 2 3 port"
 PY="$ROOT/tools/venv/bin/python"
 [[ -x "$PY" ]] || PY=python3
 
@@ -85,6 +85,19 @@ for L in $LAYERS; do
             "$ROOT/tests/formats/run.sh"; ran=$((ran + 1))
         else
             skip "tests/formats/run.sh does not exist yet (STATUS: Next)"
+        fi ;;
+    port)
+        layer port "the PC port replays new_game like the emulator (tests/port)"
+        if ! { command -v cmake || [[ -x "$ROOT/tools/venv/bin/cmake" ]]; } >/dev/null; then
+            skip "no cmake (on PATH or in tools/venv: scripts/setup.sh cmake)"
+        elif ! { command -v ninja || [[ -x "$ROOT/tools/venv/bin/ninja" ]]; } >/dev/null; then
+            skip "no ninja (on PATH or in tools/venv: scripts/setup.sh cmake)"
+        elif ! command -v gcc >/dev/null; then
+            skip "no gcc for the port"
+        elif [[ ! -f "$ROOT/iso/dw2003.cue" ]]; then
+            skip "no disc image (iso/dw2003.cue; scripts/setup.sh disc or gamedata)"
+        else
+            "$PY" "$ROOT/tests/port/run.py"; ran=$((ran + 1))
         fi ;;
     *) echo "unknown layer $L" >&2; exit 2 ;;
     esac

@@ -16,12 +16,13 @@ void *heap_alloc(s32 size, s32 arg1);
 
 /* The unit block sizes are rounded to. PS1: 4. Host: 8 (PC_PORT), so that every block's data is 8-aligned like its
  * pointers: the heap starts 8-aligned in the arena (0x800AB800's offset) and the header (two pointers and the state)
- * is 24 bytes. */
+ * is 24 bytes. In the -m32 build (DW3_PORT_M32) the header is 12 bytes and the data 4-aligned, which is what its
+ * pointers need; the sizes are rounded the same way in both builds. */
 #ifndef PC_PORT
 #define HEAP_ALIGN 4
 #else
 #define HEAP_ALIGN 8
-_Static_assert(sizeof(HeapBlock) % HEAP_ALIGN == 0, "PC_PORT: the heap block header keeps the data 8-aligned");
+_Static_assert(sizeof(HeapBlock) % sizeof(void *) == 0, "PC_PORT: the heap block header keeps the data pointer-aligned");
 #endif
 
 /* Frees a block and merges it with free neighbours. */
