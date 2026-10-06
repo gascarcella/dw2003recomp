@@ -268,9 +268,10 @@ of silence; above target + three vsyncs (an unthrottled `--fps 0`, a device that
 dropped. The log (stderr) gets the device, the watermarks, and every 10 s and at exit the queue's minimum, maximum and
 mean, the ratio changes, refills and drops. Without a device (none on the host, or SDL fails) the run goes on silent.
 SDL's `disk` driver plays in real time into a file (S16LE stereo at 44,100 Hz) and `dummy` discards: headless tests of
-the path (CI runs the input self-test with `dummy`). Measured (session 16, a scratch voice keyed through `spu.h`): the
-WAV of a window run equals the headless run's; over 60 s on the `disk` driver the queue stayed at 27-122 ms (mean 59)
-with no refill and no drop, and the disk file holds the tone at the WAV's times plus the queue's ~90 ms.
+the path (CI runs the input self-test with `dummy`). Measured (session 16): the WAV of a window run equals the
+headless run's, byte for byte; over 60 s of the game (CNTY_SEL's music, LIBSND) on the `disk` driver the queue stayed
+at 24-85 ms (mean 57) with no refill and no drop, and the disk file holds the WAV's sound ~90 ms later (the same RMS,
+5,198 vs 5,200). `new_game` headless: silent until CNTY_SEL's music at 4.1 s (vsync 207), RMS ~3,000-6,400 a second.
 
 ## Known gaps (M1)
 - Fixed in session 16 (kept here as the record of what the `-m32`/`-m64` log comparison and the sanitizer found):
