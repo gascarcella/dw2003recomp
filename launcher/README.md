@@ -4,16 +4,16 @@
 behind it are in `docs/LAUNCHER_MODS_PLAN.md` (sections 4.1-4.4 are the contract with the game; 4.6 is this program)
 and DECISIONS "Launcher and mods (session 18)". It is C++17 with Dear ImGui on SDL3 + `SDL_Renderer`; the game stays C.
 
-**Status (phase 1 of 4):** the window and its navigation, the settings directory, reading and writing
-`settings.json`, the self-test. The disc screen and the play button, the settings and controls screens, and the mods
-screen follow.
+**Status (phase 2 of 4):** the window and its navigation, the settings directory, reading and writing
+`settings.json`, the disc screen (file dialog, drag-and-drop, typed path, the SHA-1 check), the play button (the game's
+exit status and last lines on an error), the self-test. The settings and controls screens and the mods screen follow.
 
 ## Build
 
 ```sh
 scripts/setup.sh sdl3 imgui        # SDL3 (static) and Dear ImGui at their pinned versions, into tools/
 cmake -S launcher -B build/launcher -G Ninja && cmake --build build/launcher
-build/launcher/dw2003-launcher [--config-dir DIR]
+build/launcher/dw2003-launcher [--config-dir DIR] [--game PATH]
 ```
 
 Its own CMake project beside `port/`: the game's build and tests do not depend on it. SDL3 comes from `tools/sdl3`
@@ -39,24 +39,51 @@ The status bar and the Settings screen show the directory and which rule chose i
 
 ## settings.json (plan 4.3)
 
-Schema 1. The launcher reads and writes these members; **every other member is kept as it was** (order included), so
-the game's side can add keys the launcher does not know yet:
+Schema 1, as settled by the game's side (`docs/LAUNCHER_MODS_PLAN.md` 4.3: `port/src/settings.c` reads it, `dw2003
+--config FILE --print-settings` validates it). The launcher edits these members and **keeps every other one as it was**
+(order included): `input`, `mods`, `watchdog`, `video.window` and keys it does not know.
 
 | Member | Type | Default | Meaning |
 |---|---|---|---|
 | `schema` | number | 1 | The file's version; a newer one than the launcher's is read but never written |
-| `disc.path` | string | `""` | The disc image (`.cue` or `.bin`) |
-| `disc.sha1` | string | `""` | The SHA-1 the launcher verified for that path |
-| `video.scale` | 1-16 | 3 | The window is 320*scale x 240*scale |
+| `disc.path` | string | none | The disc image (`.cue` or `.bin`); the launcher stores it absolute |
+| `disc.sha1` | string | none | The SHA-1 the launcher verified for that path (the game checks the disc again itself) |
+| `video.scale` | 1-16 | 2 | The window is 320*scale x 240*scale |
 | `video.fullscreen` | bool | false | |
 | `video.refresh` | 50 or 60 | 50 | PAL, or the game's own 60 Hz mode (plan 5.5) |
 | `audio.mute` | bool | false | |
-| `memcard1` | string | `"card1.mcd"` | Memory card 1 |
+| `memcard1`, `memcard2` | string or null | `"card1.mcd"`, `"card2.mcd"` | The memory cards (created by the game when missing); null: no card |
+| `launcher.last_dir` | string | none | The launcher's own state: where the file dialog opens. The game never reads `launcher` |
 
 **Paths in the file are relative to the file's directory** (or absolute). The file is written only when its text
 changes, through a temporary file and a rename. An unreadable file is reported, the defaults are used, and the first
 save keeps the old file as `settings.json.broken`. A value of the wrong type or out of range is reported and its
 default used.
+
+## The disc
+
+The Disc screen takes the image three ways: **Choose a file...** (`SDL_ShowOpenFileDialog`: the XDG portal, else
+`zenity`, on Linux; when neither is there it says so), **dropping** the `.cue` or `.bin` on the window, or **typing**
+its path. The launcher reads the `.cue` itself (the first `FILE` line, relative to the cue: the rules of
+`port/src/disc.c`) and hashes the whole BIN with `port/src/sha1.c` on a worker thread (~4 s warm, longer from a cold
+disk), with a progress bar and Cancel. Only the European disc (SHA-1 `457cb233...`) is stored, with its SHA-1; a wrong
+file is refused and the previous disc stays. A stored disc is not hashed again while its SHA-1 matches and its BIN has
+the expected size (692,146,560 bytes); a disc set by hand without a SHA-1 is checked at start.
+
+## Starting the game
+
+**Play** is enabled when the disc is verified and the game is found: `--game PATH`, else `$DW3_GAME`, else `dw2003`
+beside the launcher, else the development tree's SDL build (`build/port-sdl/dw2003` beside `build/launcher/`). Play
+saves the settings, runs `dw2003 --config FILE --print-settings` (the game's own check of the file), then starts
+`dw2003 --config FILE` in the settings directory and hides the launcher's window. The game's output (stdout and
+stderr) is read without blocking, copied to the launcher's stderr, and its last 200 lines kept. When the game ends the
+window comes back; on an error status it shows the status in words (1 a fatal error, 4 the watchdog, 64 bad
+settings, a signal) and the last 40 lines, with a Copy button. Closing the launcher does not end a running game.
+
+**Interim, until `--config` is on `main` (PR #10):** a game build that rejects `--config` (its usage, exit 64) is
+started with the equivalent options instead (`--window --scale N [--fullscreen] [--mute] --watchdog 0 --disc PATH
+--memcard1 PATH|none --memcard2 PATH|none`; `game_args_interim` in `src/game.cpp`, to delete at integration). 60 Hz is
+not passed that way.
 
 ## Keys
 
@@ -71,9 +98,18 @@ SDL_VIDEO_DRIVER=offscreen build/launcher/dw2003-launcher --self-test DIR    # e
 ```
 
 No disc and no display needed (CI runs it). It replaces `DIR/launcher-self-test/` and checks: the path helpers (Windows
-forms too), the JSON writer, the lookup order, the settings file's round trips (the plan's sample with its unknown
-members kept, invalid values, a broken file, a newer schema), then opens the window and walks every screen with injected
-key events and a virtual gamepad, saving a picture of each in `DIR/launcher-self-test/screens/`.
+forms too), the JSON writer, the lookup order, the settings file's round trips (the plan's example with its unknown
+members kept, invalid values, a broken file, a newer schema), the `.cue` reader and the SHA-1 check, the launch path
+with **the launcher itself as the game's stand-in** (`DW3_LAUNCHER_FAKE_GAME=mode`: a game with and without
+`--config`, one that rejects the file, one that crashes, one that fails after 250 lines), then opens the window, walks
+every screen with injected key events and a virtual gamepad, plays with the stand-in (a file of the BIN's size stands
+for the verified disc), drops a wrong file on the window, and saves a picture of each screen in
+`DIR/launcher-self-test/screens/`.
+
+Optional, with the data: `DW3_SELFTEST_DISC=iso/dw2003.cue` also checks the real disc;
+`DW3_SELFTEST_GAME=build/port-sdl/dw2003` also probes the real game and, with the disc, runs it 300 frames from the
+launcher's command (offscreen, unthrottled), which must end with status 0 and the disc checked. CI runs both in its
+data-gated part.
 
 ## Files
 
@@ -83,5 +119,7 @@ key events and a virtual gamepad, saving a picture of each in `DIR/launcher-self
 | `src/app.cpp`, `app.h` | The window, the style, the screens |
 | `src/settings.cpp`, `settings.h` | The settings directory's lookup, the settings file |
 | `src/json_value.cpp`, `json_value.h` | An editable JSON tree over the port's reader, and a writer |
+| `src/disc.cpp`, `disc.h` | The `.cue` reader and the SHA-1 check on a thread |
+| `src/game.cpp`, `game.h` | Finding the game, its `--print-settings` probe, the command (and the interim options), the running game |
 | `src/paths.cpp`, `paths.h` | Paths and files through SDL's calls only (no POSIX: Windows comes later) |
 | `src/selftest.cpp`, `selftest.h` | The self-test |

@@ -48,15 +48,22 @@ struct SettingsDir {
 DirLookup dir_lookup_from_system(const std::string &arg);
 SettingsDir settings_dir_choose(const DirLookup &in);
 
-// ---- 4.3: the values the launcher edits (the rest of the file is kept as it was).
+// ---- 4.3 (schema 1, settled by the game's side): the values the launcher edits. The rest of the file is kept as it
+// was; the defaults are the game's (port/src/settings.c), so a missing member means the same on both sides.
+struct MemoryCard {
+    bool present = true; // false: null in the file, no card in the slot
+    std::string path;    // a .mcd image, relative to the settings directory (created formatted by the game)
+};
+
 struct Settings {
     std::string disc_path; // "" = unset
     std::string disc_sha1; // the SHA-1 the launcher verified for disc_path ("" = not verified)
-    int scale = 3;         // the window: 320*scale x 240*scale (1..16)
+    int scale = 2;         // the window: 320*scale x 240*scale (1..16)
     bool fullscreen = false;
     int refresh = 50; // 50 (PAL) or 60 (the game's own 60 Hz mode; LAUNCHER_MODS_PLAN 5.5)
     bool mute = false;
-    std::string memcard1 = "card1.mcd"; // memory card 1, relative to the settings directory
+    MemoryCard memcard[2] = { { true, "card1.mcd" }, { true, "card2.mcd" } };
+    std::string last_dir; // launcher.last_dir: where the file dialog opens (the launcher's own state)
 };
 
 // Reads the known members of `doc` into a Settings (defaults for missing ones; a warning for each invalid one).

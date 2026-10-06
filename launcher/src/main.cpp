@@ -14,19 +14,28 @@
 
 static void usage(const char *argv0) {
     std::fprintf(stderr,
-                 "usage: %s [--config-dir DIR] [--self-test DIR]\n"
+                 "usage: %s [--config-dir DIR] [--game PATH] [--self-test DIR]\n"
                  "  --config-dir DIR  the settings directory (else $%s, portable.txt beside the launcher, a\n"
                  "                    settings.json in the current directory, the per-user directory)\n"
+                 "  --game PATH       the game's executable (else $DW3_GAME, dw2003 beside the launcher,\n"
+                 "                    ../port-sdl/dw2003 from the launcher's directory)\n"
                  "  --self-test DIR   run the self-test (it writes into DIR/launcher-self-test/, replacing it),\n"
                  "                    on any video driver (CI: SDL_VIDEO_DRIVER=offscreen); exit 0 = passed\n",
                  argv0, dw3::SETTINGS_DIR_ENV);
 }
 
 int main(int argc, char **argv) {
+    // The self-test starts this executable as a stand-in for the game (selftest.cpp).
+    if (const char *mode = SDL_getenv(dw3::SELF_TEST_GAME_ENV)) {
+        return dw3::self_test_fake_game(mode, argc, argv);
+    }
     std::string config_dir, self_test;
+    dw3::AppOptions options;
     for (int i = 1; i < argc; i++) {
         if (std::strcmp(argv[i], "--config-dir") == 0 && i + 1 < argc) {
             config_dir = argv[++i];
+        } else if (std::strcmp(argv[i], "--game") == 0 && i + 1 < argc) {
+            options.game = argv[++i];
         } else if (std::strcmp(argv[i], "--self-test") == 0 && i + 1 < argc) {
             self_test = argv[++i];
         } else if (std::strcmp(argv[i], "--help") == 0 || std::strcmp(argv[i], "-h") == 0) {
@@ -56,12 +65,13 @@ int main(int argc, char **argv) {
         return 1;
     }
     {
-        dw3::App app(window, renderer, location);
+        dw3::App app(window, renderer, location, options);
         int busy = 0; // frames still drawn without waiting after an event (ImGui spreads a press and its release)
         while (!app.quit_requested()) {
             SDL_Event e;
-            // Idle: wait for an event (up to a quarter of a second, so the frames keep coming for ImGui's timers).
-            if (busy > 0 ? SDL_PollEvent(&e) : SDL_WaitEventTimeout(&e, 250)) {
+            // Idle: wait for an event (up to a quarter of a second, so the frames keep coming for ImGui's timers; a
+            // tenth while the disc check or the game runs, for the progress bar and the game's output).
+            if (busy > 0 ? SDL_PollEvent(&e) : SDL_WaitEventTimeout(&e, app.busy() ? 100 : 250)) {
                 busy = 4;
                 do {
                     app.handle_event(e);

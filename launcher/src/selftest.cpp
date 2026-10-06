@@ -1,11 +1,16 @@
 #include "selftest.h"
 
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <functional>
 #include <string>
 
 #include <SDL3/SDL.h>
 
 #include "app.h"
+#include "disc.h"
+#include "game.h"
 #include "json_value.h"
 #include "paths.h"
 #include "settings.h"
@@ -51,23 +56,26 @@ static void remove_tree(const std::string &path) {
     SDL_RemovePath(path.c_str());
 }
 
-// The plan's sketch of the file (LAUNCHER_MODS_PLAN 4.3), plus a member no one knows yet.
+// The settled example of the file (LAUNCHER_MODS_PLAN 4.3, schema 1), with other values, a chord, no card 2 and a
+// member no one knows yet.
 static const char SAMPLE_SETTINGS[] = R"({
   "schema": 1,
   "disc": { "path": "/games/dw2003.cue", "sha1": "457cb233349ba841e03b33d8060f8fbcadd45cb3" },
-  "video": { "scale": 4, "fullscreen": true, "refresh": 60 },
+  "video": { "window": true, "scale": 4, "fullscreen": true, "refresh": 60 },
   "audio": { "mute": true },
   "memcard1": "cards/card1.mcd",
+  "memcard2": null,
+  "watchdog": 0,
   "input": {
-    "keyboard": { "cross": "X", "circle": "C", "start": "Return" },
-    "gamepad":  { "cross": "south", "circle": "east" },
-    "hotkeys":  { "fast_forward.hold": "Tab", "fast_forward.toggle": "F1", "skip_dialogues.toggle": "F2" }
+    "keyboard": { "cross": "X", "start": ["Return", "Keypad Enter"] },
+    "gamepad":  { "cross": "south", "up": ["dpup", "lefty-"] },
+    "hotkeys":  { "pause": "P", "fullscreen": "F11" }
   },
   "mods": {
-    "fast_forward":      { "enabled": true,  "speed": 4, "mute": true },
-    "skip_dialogues":    { "enabled": false, "fast_forward_waits": false },
-    "battle_animations": { "enabled": false, "hit_reaction": true }
+    "fast_forward":   { "enabled": true, "hold": [["pad:guide", "pad:south"], "Tab"] },
+    "skip_dialogues": { "enabled": false, "toggle": "F2", "fast_forward_waits": false }
   },
+  "launcher": { "last_dir": "/games" },
   "future": [1, 2.5, "x\ny", null, {}]
 }
 )";
@@ -146,7 +154,8 @@ static void test_settings_file(const std::string &root) {
     const std::string fresh = path_join(root, "new/settings");
     SettingsFile f;
     f.load(fresh);
-    check(f.state() == SettingsFile::State::New && f.values.scale == 3 && f.values.memcard1 == "card1.mcd",
+    check(f.state() == SettingsFile::State::New && f.values.scale == 2 && f.values.memcard[0].path == "card1.mcd" &&
+              f.values.memcard[1].path == "card2.mcd" && f.values.memcard[1].present,
           "a missing file gives the defaults");
     f.values.disc_path = "../disc/dw2003.cue";
     check(f.save(&err), "the first save: " + err);
@@ -171,7 +180,7 @@ static void test_settings_file(const std::string &root) {
     const Settings &v = s.values;
     check(s.state() == SettingsFile::State::Loaded && s.messages().empty(), "the sample loads without a warning");
     check(v.disc_path == "/games/dw2003.cue" && v.scale == 4 && v.fullscreen && v.refresh == 60 && v.mute &&
-              v.memcard1 == "cards/card1.mcd",
+              v.memcard[0].present && v.memcard[0].path == "cards/card1.mcd" && !v.memcard[1].present,
           "the sample's values");
     s.values.scale = 2;
     check(s.save(&err), "saving the sample: " + err);
@@ -185,11 +194,12 @@ static void test_settings_file(const std::string &root) {
     const std::string bad = path_join(root, "bad");
     path_make_dir(bad, nullptr);
     write(path_join(bad, SETTINGS_FILE),
-          R"({"schema":1,"video":{"scale":99,"refresh":55,"fullscreen":"yes"},"audio":3,"memcard1":7})");
+          R"({"schema":1,"video":{"scale":99,"refresh":55,"fullscreen":"yes"},"audio":3,"memcard1":7,"memcard2":""})");
     SettingsFile b;
     b.load(bad);
-    check(b.state() == SettingsFile::State::Loaded && b.messages().size() == 5, "five warnings for five bad values");
-    check(b.values.scale == 3 && b.values.refresh == 50 && !b.values.fullscreen && b.values.memcard1 == "card1.mcd",
+    check(b.state() == SettingsFile::State::Loaded && b.messages().size() == 6, "six warnings for six bad values");
+    check(b.values.scale == 2 && b.values.refresh == 50 && !b.values.fullscreen &&
+              b.values.memcard[0].path == "card1.mcd" && b.values.memcard[1].path == "card2.mcd",
           "bad values fall back to the defaults");
 
     // Not JSON: the defaults; the first save keeps the old file aside.
@@ -216,6 +226,218 @@ static void test_settings_file(const std::string &root) {
     check(!n.save(&err) && read(n.path()) == newer_text, "a newer schema is never written");
 }
 
+// ---- the disc check
+
+static DiscCheck::State wait_check(DiscCheck &c) {
+    for (int i = 0; i < 120000 / 5 && c.poll() == DiscCheck::State::Running; i++) {
+        SDL_Delay(5);
+    }
+    return c.state();
+}
+
+// A file of the EU BIN's exact size without its data (sparse where the filesystem allows): with the right disc.sha1 in
+// the settings the launcher counts it as verified (it never hashes a verified disc again), so the play path can be
+// tested without the disc.
+static bool write_sized_bin(const std::string &path) {
+    SDL_IOStream *io = SDL_IOFromFile(path.c_str(), "wb");
+    if (io == nullptr) {
+        return false;
+    }
+    bool ok = SDL_SeekIO(io, (Sint64)DISC_BIN_SIZE - 1, SDL_IO_SEEK_SET) >= 0 && SDL_WriteU8(io, 0);
+    return SDL_CloseIO(io) && ok;
+}
+
+static void test_disc(const std::string &root) {
+    std::string bin, err;
+    path_make_dir(path_join(root, "sub dir"), nullptr);
+    write(path_join(root, "a.cue"), "FILE \"sub dir/Game (Europe).bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n");
+    check(disc_bin_path(path_join(root, "a.cue"), &bin, &err) && bin == path_join(root, "sub dir/Game (Europe).bin"),
+          "a .cue: a quoted relative FILE, CRLF lines: " + bin + err);
+    write(path_join(root, "b.CUE"), "REM x\n\tFILE b.bin BINARY\n");
+    check(disc_bin_path(path_join(root, "b.CUE"), &bin, &err) && bin == path_join(root, "b.bin"),
+          "a .CUE: an unquoted FILE after a tab");
+    write(path_join(root, "c.cue"), "FILE \"/abs/c.bin\" BINARY\n");
+    check(disc_bin_path(path_join(root, "c.cue"), &bin, &err) && bin == "/abs/c.bin", "a .cue: an absolute FILE");
+    write(path_join(root, "d.cue"), "TRACK 01 MODE2/2352\n");
+    check(!disc_bin_path(path_join(root, "d.cue"), &bin, &err) && err.find("no FILE") != std::string::npos,
+          "a .cue without a FILE line");
+    check(disc_bin_path(path_join(root, "x.bin"), &bin, &err) && bin == path_join(root, "x.bin"), "a .bin is itself");
+
+    // The check over a small file: the SHA-1 of "abc" (FIPS 180-4's example), and the wrong disc.
+    write(path_join(root, "abc.bin"), "abc");
+    DiscCheck c;
+    c.start(path_join(root, "abc.bin"));
+    check(wait_check(c) == DiscCheck::State::Failed && c.sha1() == "a9993e364706816aba3e25717850c26c9cd0d89d" &&
+              c.message().find("not the unpatched European disc") != std::string::npos,
+          "the check of a wrong file: its SHA-1 and the message");
+    c.start(path_join(root, "a.cue"));
+    check(wait_check(c) == DiscCheck::State::Failed && c.message().find("cannot open") != std::string::npos &&
+              c.sha1().empty(),
+          "the check of a .cue whose BIN is missing");
+    // The real disc, when the environment names one (DW3_SELFTEST_DISC: a .cue or .bin of the EU disc).
+    if (const char *disc = SDL_getenv("DW3_SELFTEST_DISC")) {
+        Uint64 t0 = SDL_GetTicks();
+        c.start(disc);
+        check(wait_check(c) == DiscCheck::State::Passed && c.sha1() == DISC_SHA1, "the real disc passes: " + c.message());
+        std::fprintf(stderr, "self-test: the real disc checked in %.1f s\n", (SDL_GetTicks() - t0) / 1000.0);
+    }
+}
+
+// ---- the game's stand-in and the launch path
+
+int self_test_fake_game(const char *mode, int argc, char **argv) {
+    bool config = false, print = false;
+    for (int i = 1; i < argc; i++) {
+        config |= std::strcmp(argv[i], "--config") == 0;
+        print |= std::strcmp(argv[i], "--print-settings") == 0;
+    }
+    if (std::strcmp(mode, "old") == 0) { // a game before --config: rejects it like any unknown option
+        if (config) {
+            std::fprintf(stderr, "usage: %s [--disc CUE|BIN] [--no-disc-check] ...\n", argv[0]);
+            return 64;
+        }
+        for (int i = 1; i < argc; i++) {
+            std::printf("arg %s\n", argv[i]);
+        }
+        return 0;
+    }
+    if (std::strcmp(mode, "invalid") == 0 && print) {
+        std::fprintf(stderr, "port: settings %s: video.scale: an integer from 1 to 16, not 17\n", argv[2]);
+        return 64;
+    }
+    if (std::strcmp(mode, "abort") == 0) {
+        std::abort();
+    }
+    if (print) {
+        std::puts("{}");
+        return 0;
+    }
+    if (std::strcmp(mode, "fail") == 0) { // more lines than the launcher keeps, then a fatal error
+        for (int i = 0; i < 250; i++) {
+            std::printf("line %d\n", i);
+        }
+        std::fflush(stdout);
+        std::fprintf(stderr, "port: fatal: the stand-in's error");
+        return 1;
+    }
+    std::puts("port: start");
+    return 0;
+}
+
+static std::string self_exe() {
+    const char *base = SDL_GetBasePath();
+#ifdef SDL_PLATFORM_WINDOWS
+    return path_join(base != nullptr ? base : "", "dw2003-launcher.exe");
+#else
+    return path_join(base != nullptr ? base : "", "dw2003-launcher");
+#endif
+}
+
+static void set_fake_mode(const char *mode) {
+    SDL_SetEnvironmentVariable(SDL_GetEnvironment(), SELF_TEST_GAME_ENV, mode, true);
+}
+
+static void test_game(const std::string &root) {
+    const std::string exe = self_exe();
+    const std::string settings = path_join(root, SETTINGS_FILE);
+    path_make_dir(root, nullptr);
+    write(settings, "{\"schema\": 1}\n");
+    check(path_is_file(exe), "the launcher's own executable: " + exe);
+
+    std::vector<std::string> tried;
+    check(game_find(exe, "/nowhere", &tried) == exe && tried.size() == 1, "--game is the only place looked at");
+    tried.clear();
+    check(game_find("", "/nowhere/launcher", &tried).empty() && tried.back() == "/nowhere/port-sdl/dw2003",
+          "the development tree's SDL build is looked at last");
+
+    set_fake_mode("new");
+    check(game_probe(exe, settings).result == GameProbe::Result::Valid, "the probe: a game with --config");
+    set_fake_mode("old");
+    check(game_probe(exe, settings).result == GameProbe::Result::NoConfig, "the probe: a game without --config");
+    set_fake_mode("invalid");
+    GameProbe p = game_probe(exe, settings);
+    check(p.result == GameProbe::Result::Invalid && p.message.find("video.scale") != std::string::npos,
+          "the probe: a file the game rejects, with its message");
+    set_fake_mode("abort");
+    p = game_probe(exe, settings);
+    check(p.result == GameProbe::Result::Failed && p.message.find("signal 6") != std::string::npos,
+          "the probe: a game that crashes: " + p.message);
+
+    // A run that writes 251 lines and fails: the status, the last lines kept, the line without a newline.
+    set_fake_mode("fail");
+    GameRun run;
+    std::string err;
+    check(run.start({ exe, "--config", settings }, root, &err, false), "the stand-in starts: " + err);
+    for (int i = 0; i < 2000 && run.poll(); i++) {
+        SDL_Delay(5);
+    }
+    check(!run.running() && run.exit_code() == 1, "the run's exit status");
+    check(run.lines().size() == GameRun::kept_lines && run.lines().back() == "port: fatal: the stand-in's error" &&
+              run.lines().front() == "line 51",
+          "the last 200 lines are kept, the unterminated last one too");
+
+    // The interim options (until --config is on main).
+    SettingsFile f;
+    f.load(path_join(root, "interim"));
+    f.values.disc_path = "disc/dw.cue";
+    f.values.scale = 4;
+    f.values.mute = true;
+    f.values.memcard[1].present = false;
+    std::vector<std::string> a = game_args_interim("g", f);
+    std::string line;
+    for (const std::string &x : a) {
+        line += x + " ";
+    }
+    check(line == "g --window --scale 4 --watchdog 0 --disc " + f.resolve("disc/dw.cue") + " --mute --memcard1 " +
+                      f.resolve("card1.mcd") + " --memcard2 none ",
+          "the interim options: " + line);
+    check(game_args("g", f) == std::vector<std::string>({ "g", "--config", f.path() }), "the --config command");
+    SDL_UnsetEnvironmentVariable(SDL_GetEnvironment(), SELF_TEST_GAME_ENV);
+
+    // The real game, when the environment names it (DW3_SELFTEST_GAME: an SDL build of dw2003): the probe tells
+    // --config from the interim options; with DW3_SELFTEST_DISC too, the game runs 300 frames from the launcher's
+    // command (offscreen video, no audio device, unthrottled) and must end normally with the disc checked.
+    const char *real = SDL_getenv("DW3_SELFTEST_GAME");
+    if (real == nullptr) {
+        return;
+    }
+    const std::string real_dir = path_join(root, "real");
+    SettingsFile r;
+    r.load(real_dir);
+    if (const char *disc = SDL_getenv("DW3_SELFTEST_DISC")) {
+        r.values.disc_path = disc;
+        r.values.disc_sha1 = DISC_SHA1;
+    }
+    check(r.save(&err), "the real game's settings: " + err);
+    p = game_probe(real, r.path());
+    check(p.result == GameProbe::Result::Valid || p.result == GameProbe::Result::NoConfig,
+          "the real game's probe: " + p.message);
+    std::fprintf(stderr, "self-test: the real game %s\n",
+                 p.result == GameProbe::Result::Valid ? "takes --config" : "has no --config: the interim options");
+    if (r.values.disc_path.empty()) {
+        return;
+    }
+    std::vector<std::string> args =
+        p.result == GameProbe::Result::Valid ? game_args(real, r) : game_args_interim(real, r);
+    args.insert(args.end(), { "--max-frames", "300", "--fps", "0" });
+    SDL_Environment *env = SDL_GetEnvironment();
+    SDL_SetEnvironmentVariable(env, "SDL_VIDEO_DRIVER", "offscreen", true);
+    SDL_SetEnvironmentVariable(env, "SDL_AUDIO_DRIVER", "dummy", true);
+    GameRun game;
+    check(game.start(args, r.dir(), &err, false), "the real game starts: " + err);
+    for (int i = 0; i < 120000 / 10 && game.poll(); i++) {
+        SDL_Delay(10);
+    }
+    bool disc_ok = false;
+    for (const std::string &l : game.lines()) {
+        disc_ok |= l.find("(the EU disc)") != std::string::npos;
+    }
+    check(!game.running() && game.exit_code() == 0 && disc_ok,
+          "the real game runs 300 frames from the launcher's command: it " + game_exit_text(game.exit_code()) +
+              (game.lines().empty() ? std::string() : "; last line: " + game.lines().back()));
+    check(path_is_file(path_join(real_dir, "card1.mcd")), "the game made memory card 1 in the settings directory");
+}
+
 // ---- the window
 
 static void push_key(SDL_Window *w, SDL_Scancode key, SDL_Keymod mod, bool down) {
@@ -238,6 +460,103 @@ static void pump(App &app, int frames) {
         }
         app.frame();
     }
+}
+
+static void pump_until(App &app, const std::function<bool()> &done, int max_ms) {
+    for (int t = 0; t < max_ms && !done(); t += 5) {
+        pump(app, 1);
+        SDL_Delay(5);
+    }
+}
+
+// `path` must stay valid until the event has been handled (SDL_PushEvent does not copy it).
+static void drop_file(SDL_Window *w, const std::string &path) {
+    SDL_Event e;
+    SDL_zero(e);
+    e.type = SDL_EVENT_DROP_FILE;
+    e.drop.windowID = SDL_GetWindowID(w);
+    e.drop.data = path.c_str();
+    SDL_PushEvent(&e);
+}
+
+// The play path with the game's stand-in and a verified disc (a file of the BIN's size and the right disc.sha1).
+static void test_play(SDL_Window *window, const std::string &root) {
+    const std::string dir = path_join(root, "play"), shots = path_join(root, "screens");
+    path_make_dir(path_join(dir, "disc"), nullptr);
+    if (!write_sized_bin(path_join(dir, "disc/dw2003.bin"))) {
+        check(false, std::string("a file of the BIN's size: ") + SDL_GetError());
+        return;
+    }
+    write(path_join(dir, "disc/dw2003.cue"), "FILE \"dw2003.bin\" BINARY\n  TRACK 01 MODE2/2352\n    INDEX 01 00:00:00\n");
+    write(path_join(dir, SETTINGS_FILE), std::string("{\"schema\": 1, \"disc\": {\"path\": \"disc/dw2003.cue\", \"sha1\": \"") +
+                                             DISC_SHA1 + "\"}}\n");
+    SettingsDir location;
+    location.dir = dir;
+    location.source = DirSource::Argument;
+    AppOptions options;
+    options.game = self_exe();
+    options.echo_game = false;
+    App app(window, SDL_GetRenderer(window), location, options);
+    check(app.disc_status() == DiscStatus::Verified && app.screen() == Screen::Play,
+          "a verified disc: the launcher opens on Play");
+    pump(app, 2);
+
+    // The game ends with an error: the window comes back with the status and the last lines.
+    set_fake_mode("fail");
+    app.play();
+    check(app.game_run().running() || !app.play_error().empty(), "Play starts the game: " + app.play_error());
+    check((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) != 0, "the launcher hides while the game runs");
+    pump_until(app, [&] { return !app.game_run().running(); }, 10000);
+    check(app.play_error().find("fatal error (status 1)") != std::string::npos, "the exit status is shown: " +
+                                                                                   app.play_error());
+    check((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) == 0, "the launcher comes back when the game ends");
+    pump(app, 2);
+    std::string png = path_join(shots, "5-Play-error.png");
+    app.frame(png.c_str());
+
+    // A game without --config: the interim options; it ends normally, no error.
+    set_fake_mode("old");
+    app.play();
+    pump_until(app, [&] { return !app.game_run().running(); }, 10000);
+    check(app.play_error().empty() && app.game_run().exit_code() == 0, "a game without --config runs with options");
+    bool has_disc = false;
+    for (const std::string &l : app.game_run().lines()) {
+        has_disc |= l == "arg " + path_join(dir, "disc/dw2003.cue");
+    }
+    check(has_disc, "the interim options pass the disc's absolute path");
+
+    // The game rejects the file: shown, nothing started.
+    set_fake_mode("invalid");
+    app.play();
+    check(!app.game_run().running() && app.play_error().find("video.scale") != std::string::npos,
+          "a file the game rejects is reported: " + app.play_error());
+    SDL_UnsetEnvironmentVariable(SDL_GetEnvironment(), SELF_TEST_GAME_ENV);
+
+    // A wrong file dropped on the window: checked, refused, the verified disc stays.
+    write(path_join(dir, "wrong.bin"), "abc");
+    const std::string wrong = path_join(dir, "wrong.bin");
+    drop_file(window, wrong);
+    pump(app, 1);
+    check(app.screen() == Screen::Disc, "a dropped file opens the disc screen");
+    pump_until(app, [&] { return app.disc_check().state() != DiscCheck::State::Running; }, 10000);
+    check(app.disc_message().find("not the unpatched European disc") != std::string::npos,
+          "a wrong file is refused: " + app.disc_message());
+    check(app.settings().values.disc_path == "disc/dw2003.cue" && app.disc_status() == DiscStatus::Verified,
+          "the verified disc stays");
+    pump(app, 2);
+    png = path_join(shots, "6-Disc-wrong-file.png");
+    app.frame(png.c_str());
+    // "Check again" on the stored disc (here a file of zeros): it fails, the disc loses its SHA-1 and Play its go, the
+    // path (relative, as written) stays to be shown.
+    app.choose_disc(app.settings().resolve("disc/dw2003.cue"));
+    pump_until(app, [&] { return app.disc_check().state() != DiscCheck::State::Running; }, 30000);
+    check(app.disc_status() == DiscStatus::Unverified && app.settings().values.disc_sha1.empty() &&
+              app.settings().values.disc_path == "disc/dw2003.cue",
+          "a stored disc that fails a new check loses its SHA-1");
+    // A typed path that does not exist.
+    app.choose_disc("  \"" + path_join(dir, "nothing.cue") + "\"  ");
+    check(app.disc_message().find("cannot read") != std::string::npos, "a typed path that does not exist: " +
+                                                                            app.disc_message());
 }
 
 static void test_window(const std::string &root) {
@@ -330,12 +649,22 @@ static void test_window(const std::string &root) {
         check(!path_is_file(path_join(location.dir, SETTINGS_FILE)), "an unchanged first run writes no file");
         check(app.last_error().empty(), "no error in the status bar: " + app.last_error());
     }
+    test_play(window, root);
     gui_close(window, renderer);
 }
 
 bool self_test_run(const std::string &dir) {
     std::string err;
-    const std::string root = path_join(path_strip_slash(dir), "launcher-self-test");
+    // Absolute: the lookup resolves a relative --config-dir against the current directory, and the game's stand-in
+    // runs in another one.
+    std::string base = path_strip_slash(dir);
+    if (!path_is_absolute(base)) {
+        if (char *cwd = SDL_GetCurrentDirectory()) {
+            base = path_join(cwd, base);
+            SDL_free(cwd);
+        }
+    }
+    const std::string root = path_join(base, "launcher-self-test");
     remove_tree(root);
     if (!path_make_dir(root, &err)) {
         std::fprintf(stderr, "self-test: %s\n", err.c_str());
@@ -345,6 +674,8 @@ bool self_test_run(const std::string &dir) {
     test_json();
     test_lookup(path_join(root, "lookup"));
     test_settings_file(path_join(root, "files"));
+    test_disc(path_join(root, "disc"));
+    test_game(path_join(root, "game"));
     test_window(root);
     std::fprintf(stderr, "self-test: %d of %d checks passed; pictures in %s\n", checks - failures, checks,
                  path_join(root, "screens").c_str());

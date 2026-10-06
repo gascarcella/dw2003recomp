@@ -4,6 +4,8 @@
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
 
+#include <cstdio>
+
 #include "paths.h"
 
 namespace dw3 {
@@ -150,15 +152,32 @@ void gui_close(SDL_Window *window, SDL_Renderer *renderer) {
 
 // ---- the app
 
-App::App(SDL_Window *window, SDL_Renderer *renderer, const SettingsDir &location)
+App::App(SDL_Window *window, SDL_Renderer *renderer, const SettingsDir &location, const AppOptions &options)
     : window_(window), renderer_(renderer), location_(location) {
     if (!location_.dir.empty()) {
         settings_.load(location_.dir);
     }
-    // First run, or the disc went away: start on the disc screen (LAUNCHER_MODS_PLAN 1).
-    const std::string &disc = settings_.values.disc_path;
-    if (disc.empty() || !path_is_file(settings_.resolve(disc))) {
+    std::string exe_dir;
+    if (const char *base = SDL_GetBasePath()) {
+        exe_dir = path_strip_slash(base);
+    }
+    game_ = game_find(options.game, exe_dir, &game_tried_);
+    echo_game_ = options.echo_game;
+    SDL_strlcpy(disc_input_, settings_.values.disc_path.c_str(), sizeof(disc_input_));
+    // First run, or the disc went away: start on the disc screen (LAUNCHER_MODS_PLAN 1). A disc set by hand (no
+    // verified SHA-1, or its size changed) is checked right away.
+    switch (disc_status()) {
+    case DiscStatus::Unset:
+    case DiscStatus::Missing:
         screen_ = Screen::Disc;
+        break;
+    case DiscStatus::Unverified:
+        screen_ = Screen::Disc;
+        check_.start(settings_.resolve(settings_.values.disc_path));
+        break;
+    case DiscStatus::Checking:
+    case DiscStatus::Verified:
+        break;
     }
 }
 
@@ -167,6 +186,193 @@ void App::handle_event(const SDL_Event &e) {
     if (e.type == SDL_EVENT_QUIT ||
         (e.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && e.window.windowID == SDL_GetWindowID(window_))) {
         quit_ = true;
+    }
+    // A file dropped on the window: a disc image (the fallback when the file dialog is not available).
+    if (e.type == SDL_EVENT_DROP_FILE && e.drop.data != nullptr && !run_.running()) {
+        screen_ = Screen::Disc;
+        choose_disc(e.drop.data);
+    }
+}
+
+// ---- the disc
+
+DiscStatus App::disc_status() const {
+    const Settings &s = settings_.values;
+    if (check_.state() == DiscCheck::State::Running) {
+        return DiscStatus::Checking;
+    }
+    if (s.disc_path.empty()) {
+        return DiscStatus::Unset;
+    }
+    std::string bin, err;
+    if (!disc_bin_path(settings_.resolve(s.disc_path), &bin, &err) || disc_file_size(bin) < 0) {
+        return DiscStatus::Missing;
+    }
+    if (s.disc_sha1 != DISC_SHA1 || disc_file_size(bin) != (int64_t)DISC_BIN_SIZE) {
+        return DiscStatus::Unverified;
+    }
+    return DiscStatus::Verified;
+}
+
+void App::choose_disc(const std::string &typed) {
+    // A typed or pasted path may come with quotes or spaces around it; a relative one is taken from the current
+    // directory (it is stored absolute).
+    std::string path = typed;
+    while (!path.empty() && (path.back() == ' ' || path.back() == '\t' || path.back() == '\n' || path.back() == '\r')) {
+        path.pop_back();
+    }
+    size_t first = path.find_first_not_of(" \t");
+    path = first == std::string::npos ? "" : path.substr(first);
+    if (path.size() >= 2 && (path[0] == '"' || path[0] == '\'') && path.back() == path[0]) {
+        path = path.substr(1, path.size() - 2);
+    }
+    if (path.empty()) {
+        return;
+    }
+    if (!path_is_absolute(path)) {
+        if (char *cwd = SDL_GetCurrentDirectory()) {
+            path = path_join(cwd, path);
+            SDL_free(cwd);
+        }
+    }
+    SDL_strlcpy(disc_input_, path.c_str(), sizeof(disc_input_));
+    disc_message_.clear();
+    std::string bin, err;
+    if (!disc_bin_path(path, &bin, &err)) {
+        disc_message_ = err;
+        disc_message_ok_ = false;
+        return;
+    }
+    if (!path_is_file(bin)) {
+        disc_message_ = "Not found: " + bin;
+        disc_message_ok_ = false;
+        return;
+    }
+    check_.start(path);
+}
+
+void App::update_disc_check() {
+    DiscCheck::State before = check_.state();
+    DiscCheck::State now = check_.poll();
+    if (before != DiscCheck::State::Running || now == DiscCheck::State::Running) {
+        return;
+    }
+    Settings &s = settings_.values;
+    if (now == DiscCheck::State::Passed) {
+        if (settings_.resolve(s.disc_path) != check_.path()) {
+            s.disc_path = check_.path(); // a new disc: absolute (a relative one written by hand stays as it is)
+        }
+        s.disc_sha1 = check_.sha1();
+        s.last_dir = path_dir(check_.path());
+        dirty_ = true;
+        disc_message_ = "This is the European disc (SLES-03936).";
+        disc_message_ok_ = true;
+    } else if (now == DiscCheck::State::Failed) {
+        disc_message_ = check_.message();
+        disc_message_ok_ = false;
+        // The disc in the settings failed its check (changed on disk): forget its SHA-1, keep the path to show.
+        if (settings_.resolve(s.disc_path) == check_.path() && !s.disc_sha1.empty()) {
+            s.disc_sha1.clear();
+            dirty_ = true;
+        }
+    } else {
+        disc_message_ = "Check cancelled.";
+        disc_message_ok_ = false;
+    }
+}
+
+void SDLCALL App::file_dialog_done(void *self, const char *const *files, int) {
+    App *app = static_cast<App *>(self);
+    std::lock_guard<std::mutex> lock(app->dialog_mutex_);
+    app->dialog_done_ = true;
+    if (files == nullptr) {
+        app->dialog_error_ = SDL_GetError();
+    } else if (files[0] != nullptr) {
+        app->dialog_file_ = files[0];
+    }
+}
+
+void App::open_file_dialog() {
+    static const SDL_DialogFileFilter filters[] = {
+        { "Disc image (.cue, .bin)", "cue;bin" },
+        { "All files", "*" },
+    };
+    const Settings &s = settings_.values;
+    std::string where = !s.last_dir.empty() ? s.last_dir
+                        : !s.disc_path.empty() ? path_dir(settings_.resolve(s.disc_path))
+                                               : std::string();
+    {
+        std::lock_guard<std::mutex> lock(dialog_mutex_);
+        dialog_open_ = true;
+        dialog_done_ = false;
+        dialog_file_.clear();
+        dialog_error_.clear();
+    }
+    SDL_ShowOpenFileDialog(file_dialog_done, this, window_, filters, 2, where.empty() ? nullptr : where.c_str(),
+                           false);
+}
+
+// ---- the game
+
+void App::play() {
+    play_error_.clear();
+    play_log_.clear();
+    if (run_.running()) {
+        return;
+    }
+    if (game_.empty()) {
+        play_error_ = "The game was not found.";
+        return;
+    }
+    dirty_ = true;
+    flush();
+    if (!error_.empty()) {
+        play_error_ = "The settings could not be saved: " + error_;
+        return;
+    }
+    GameProbe probe = game_probe(game_, settings_.path());
+    std::vector<std::string> args;
+    switch (probe.result) {
+    case GameProbe::Result::Valid:
+        args = game_args(game_, settings_);
+        interim_ = false;
+        break;
+    case GameProbe::Result::NoConfig:
+        args = game_args_interim(game_, settings_);
+        interim_ = true;
+        break;
+    case GameProbe::Result::Invalid:
+        play_error_ = "The game does not accept the settings file:\n" + probe.message;
+        return;
+    case GameProbe::Result::Failed:
+        play_error_ = "The game could not be run: " + probe.message;
+        return;
+    }
+    std::string err;
+    if (!run_.start(args, settings_.dir(), &err, echo_game_)) {
+        play_error_ = err;
+        return;
+    }
+    std::fprintf(stderr, "launcher: started %s%s\n", run_.command().c_str(),
+                 interim_ ? " (interim options: this game build has no --config)" : "");
+    SDL_HideWindow(window_);
+}
+
+void App::update_game() {
+    if (!run_.running() || run_.poll()) {
+        return;
+    }
+    // It ended: the launcher comes back.
+    SDL_ShowWindow(window_);
+    SDL_RaiseWindow(window_);
+    int code = run_.exit_code();
+    std::fprintf(stderr, "launcher: the game %s\n", game_exit_text(code).c_str());
+    if (code != 0) {
+        play_error_ = "The game " + game_exit_text(code) + ".";
+        const auto &lines = run_.lines();
+        size_t from = lines.size() > 40 ? lines.size() - 40 : 0;
+        play_log_.assign(lines.begin() + (long)from, lines.end());
+        screen_ = Screen::Play;
     }
 }
 
@@ -189,6 +395,21 @@ void App::step_screen(int delta) {
 }
 
 void App::frame(const char *screenshot) {
+    update_disc_check();
+    update_game();
+    {
+        std::lock_guard<std::mutex> lock(dialog_mutex_);
+        if (dialog_done_) {
+            dialog_open_ = dialog_done_ = false;
+            if (!dialog_error_.empty()) {
+                disc_message_ = "The file dialog is not available (" + dialog_error_ +
+                                "). Drag the .cue or .bin onto this window, or type its path.";
+                disc_message_ok_ = false;
+            } else if (!dialog_file_.empty()) {
+                choose_disc(dialog_file_);
+            }
+        }
+    }
     ImGui_ImplSDLRenderer3_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
@@ -304,32 +525,166 @@ void App::draw_status_bar() {
     text_fit_left("Settings: ", settings_.path());
 }
 
+static const char *disc_status_text(DiscStatus d) {
+    switch (d) {
+    case DiscStatus::Unset:
+        return "not chosen yet";
+    case DiscStatus::Missing:
+        return "not found";
+    case DiscStatus::Unverified:
+        return "not checked";
+    case DiscStatus::Checking:
+        return "checking...";
+    case DiscStatus::Verified:
+        return "the European disc (SLES-03936), checked";
+    }
+    return "?";
+}
+
 void App::draw_play() {
     const Settings &s = settings_.values;
+    const DiscStatus disc = disc_status();
     ImGui::TextWrapped("Digimon World 2003 (Europe, SLES-03936) on the PC port.");
     ImGui::Spacing();
     if (fields_begin("play")) {
+        const ImVec4 red = rgb(ERROR_RED);
         field("Disc", s.disc_path.empty() ? "not chosen yet" : settings_.resolve(s.disc_path));
-        field("Memory card", settings_.resolve(s.memcard1));
+        field("", disc_status_text(disc), disc == DiscStatus::Verified ? nullptr : &red);
+        for (int i = 0; i < 2; i++) {
+            const MemoryCard &c = s.memcard[i];
+            field(i == 0 ? "Memory card 1" : "Memory card 2", c.present ? settings_.resolve(c.path) : "none");
+        }
+        field("Game", game_.empty() ? "not found" : game_, game_.empty() ? &red : nullptr);
         ImGui::EndTable();
     }
     ImGui::Spacing();
-    ImGui::BeginDisabled(true);
-    ImGui::Button("Play", ImVec2(180, 0));
+    const bool ready = disc == DiscStatus::Verified && !game_.empty() && !run_.running() && settings_.writable() &&
+                       !location_.dir.empty();
+    ImGui::BeginDisabled(!ready);
+    ImGui::PushStyleColor(ImGuiCol_Button, rgb(ACCENT, ready ? 0.85f : 0.35f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, rgb(ACCENT));
+    ImGui::PushStyleColor(ImGuiCol_Text, rgb(0x15171C));
+    if (ImGui::Button("Play", ImVec2(200 * ImGui::GetStyle().FontScaleDpi, ImGui::GetFrameHeight() * 1.6f))) {
+        play();
+    }
+    ImGui::PopStyleColor(3);
     ImGui::EndDisabled();
-    ImGui::TextDisabled("Starting the game comes in phase 2.");
+    if (!ready) {
+        if (run_.running()) {
+            ImGui::TextDisabled("The game is running.");
+        } else if (disc != DiscStatus::Verified) {
+            ImGui::TextDisabled("Choose and check the disc first (the Disc screen).");
+        } else if (game_.empty()) {
+            ImGui::TextWrapped("The game's executable (dw2003) was not found. Build it with "
+                               "cmake -S port -B build/port-sdl -G Ninja -DDW3_PORT_SDL=ON, put it beside the "
+                               "launcher, or start the launcher with --game PATH. Looked at:");
+            for (const std::string &t : game_tried_) {
+                ImGui::BulletText("%s", t.c_str());
+            }
+        } else if (location_.dir.empty()) {
+            ImGui::TextDisabled("There is no settings directory (the status bar says why).");
+        } else {
+            ImGui::TextDisabled("The settings file is from a newer launcher: this one does not start the game.");
+        }
+    }
+    if (interim_ && play_error_.empty()) {
+        ImGui::Spacing();
+        ImGui::TextDisabled("This game build has no --config: it was started with the equivalent options "
+                            "(60 Hz is not passed).");
+    }
+    draw_play_error();
+}
+
+void App::draw_play_error() {
+    if (play_error_.empty()) {
+        return;
+    }
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    ImGui::PushStyleColor(ImGuiCol_Text, rgb(ERROR_RED));
+    ImGui::TextWrapped("%s", play_error_.c_str());
+    ImGui::PopStyleColor();
+    if (play_log_.empty()) {
+        return;
+    }
+    ImGui::TextDisabled("Its last lines:");
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Copy")) {
+        std::string text = run_.command() + "\n";
+        for (const std::string &l : play_log_) {
+            text += l + "\n";
+        }
+        ImGui::SetClipboardText(text.c_str());
+    }
+    ImGui::BeginChild("log", ImVec2(0, 0), ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
+    for (const std::string &l : play_log_) {
+        ImGui::TextUnformatted(l.c_str());
+    }
+    if (ImGui::IsWindowAppearing()) {
+        ImGui::SetScrollHereY(1.0f);
+    }
+    ImGui::EndChild();
 }
 
 void App::draw_disc() {
     const Settings &s = settings_.values;
-    if (s.disc_path.empty()) {
-        ImGui::TextWrapped("No disc image chosen yet. The game needs your own copy of the European disc "
-                           "(a .cue or .bin dump of SLES-03936).");
-    } else {
-        ImGui::TextWrapped("%s", settings_.resolve(s.disc_path).c_str());
+    const DiscStatus disc = disc_status();
+    ImGui::TextWrapped("The game needs your own copy of the European disc (SLES-03936), as a .cue with its .bin "
+                       "(one MODE2/2352 track, as Redump has it). Nothing is unpacked or copied.");
+    ImGui::Spacing();
+    if (fields_begin("disc")) {
+        const ImVec4 red = rgb(ERROR_RED);
+        field("Disc", s.disc_path.empty() ? "not chosen yet" : settings_.resolve(s.disc_path));
+        field("Status", disc_status_text(disc),
+              disc == DiscStatus::Verified || disc == DiscStatus::Checking ? nullptr : &red);
+        ImGui::EndTable();
     }
     ImGui::Spacing();
-    ImGui::TextDisabled("Choosing and checking the disc comes in phase 2.");
+
+    if (check_.state() == DiscCheck::State::Running) {
+        char label[64];
+        SDL_snprintf(label, sizeof(label), "SHA-1 %.0f%%", check_.progress() * 100.0f);
+        ImGui::TextDisabled("Checking %s", check_.path().c_str());
+        ImGui::ProgressBar(check_.progress(), ImVec2(-1, 0), label);
+        if (ImGui::Button("Cancel")) {
+            check_.cancel();
+        }
+        return;
+    }
+
+    bool open_dialog;
+    {
+        std::lock_guard<std::mutex> lock(dialog_mutex_);
+        open_dialog = dialog_open_;
+    }
+    ImGui::BeginDisabled(open_dialog);
+    if (ImGui::Button("Choose a file...")) {
+        open_file_dialog();
+    }
+    ImGui::EndDisabled();
+    if (disc == DiscStatus::Unverified || (disc == DiscStatus::Verified && !s.disc_path.empty())) {
+        ImGui::SameLine();
+        if (ImGui::Button(disc == DiscStatus::Verified ? "Check again" : "Check")) {
+            choose_disc(settings_.resolve(s.disc_path));
+        }
+    }
+    ImGui::Spacing();
+    ImGui::TextDisabled("Or drag the .cue (or the .bin) onto this window, or type its path:");
+    ImGui::SetNextItemWidth(-ImGui::CalcTextSize("Use this path").x - ImGui::GetStyle().FramePadding.x * 2 -
+                            ImGui::GetStyle().ItemSpacing.x);
+    bool enter = ImGui::InputTextWithHint("##path", "/path/to/Digimon World 2003 (Europe).cue", disc_input_,
+                                          sizeof(disc_input_), ImGuiInputTextFlags_EnterReturnsTrue);
+    ImGui::SameLine();
+    if (ImGui::Button("Use this path") || enter) {
+        choose_disc(disc_input_);
+    }
+    if (!disc_message_.empty()) {
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Text, disc_message_ok_ ? rgb(0x6CC070) : rgb(ERROR_RED));
+        ImGui::TextWrapped("%s", disc_message_.c_str());
+        ImGui::PopStyleColor();
+    }
 }
 
 void App::draw_settings() {

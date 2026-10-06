@@ -148,7 +148,23 @@ Settings settings_from_json(const Json &doc, std::vector<std::string> *w) {
     if (const Json *audio = section(doc, "audio", w)) {
         read_bool(audio, "audio", "mute", &s.mute, w);
     }
-    read_string(&doc, "", "memcard1", &s.memcard1, w);
+    if (const Json *launcher = section(doc, "launcher", w)) {
+        read_string(launcher, "launcher", "last_dir", &s.last_dir, w);
+    }
+    for (int i = 0; i < 2; i++) {
+        const char *key = i == 0 ? "memcard1" : "memcard2";
+        const Json *m = doc.find(key);
+        if (m == nullptr) {
+            continue;
+        }
+        if (m->is_null()) {
+            s.memcard[i].present = false;
+        } else if (m->is_string() && !m->as_string().empty()) {
+            s.memcard[i].path = m->as_string();
+        } else {
+            warn(w, std::string(key) + ": expected a file name or null; using \"" + s.memcard[i].path + "\"");
+        }
+    }
     return s;
 }
 
@@ -165,7 +181,13 @@ void settings_to_json(const Settings &s, Json *doc) {
     video.set("fullscreen", Json::boolean(s.fullscreen));
     video.set("refresh", Json::number(s.refresh));
     doc->member("audio").set("mute", Json::boolean(s.mute));
-    doc->set("memcard1", Json::string(s.memcard1));
+    for (int i = 0; i < 2; i++) {
+        const MemoryCard &c = s.memcard[i];
+        doc->set(i == 0 ? "memcard1" : "memcard2", c.present ? Json::string(c.path) : Json());
+    }
+    if (!s.last_dir.empty() || doc->find("launcher") != nullptr) {
+        doc->member("launcher").set("last_dir", Json::string(s.last_dir));
+    }
 }
 
 // ---- the file
