@@ -532,6 +532,38 @@ int CdInit(void) {
     return 1;
 }
 
+/* The console's reset (psyq.c psyq_reset): the drive as at power-on (no command, no read, no stream, the head at
+ * sector 0, mode 0, no sector in the buffer), no handlers, no ring, StCdIntrFlag clear. The disc stays in the drive:
+ * the sector source (psyq_cd_set_reader) and the timing model (psyq_cd_set_timing) are kept. */
+void psyq_cd_reset(void) {
+    psyq_cd_sync_handler = NULL;
+    psyq_cd_ready_handler = NULL;
+    psyq_cd_pending = 0;
+    memset(psyq_cd_param, 0, sizeof(psyq_cd_param));
+    psyq_cd_reading = CD_IDLE;
+    psyq_cd_loc = 0;
+    psyq_cd_loc_new = 0;
+    psyq_cd_head = 0;
+    psyq_cd_next_lba = 0;
+    psyq_cd_seek_ticks = 0;
+    psyq_cd_rate_acc = 0;
+    psyq_cd_ack_tick = 0;
+    psyq_cd_mode = 0;
+    psyq_cd_status = 0x02;
+    memset(psyq_cd_raw, 0, sizeof(psyq_cd_raw));
+    psyq_cd_have_sector = 0;
+    psyq_cd_view_ofs = 0;
+    psyq_cd_view_len = 0;
+    psyq_cd_cursor = 0;
+    st_ring = NULL;
+    st_ring_bytes = 0;
+    memset(st_slots, 0, sizeof(st_slots));
+    st_start_frame = 0;
+    st_end_frame = 0xFFFFFFFFu;
+    st_reset();
+    D_80081454 = 0;
+}
+
 /* Returns the previous level (0). */
 int CdSetDebug(int level) {
     PSYQ_TRACE("CdSetDebug %d", level);

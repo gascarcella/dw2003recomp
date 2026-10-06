@@ -3,7 +3,9 @@
 
   tools/port_gen.py units --out build/port/gen/units.cmake          # the game's C units, as CMake variables
   tools/port_gen.py overrides --out build/port/gen/include            # include_asm.h and psyq/gtemac.h for the host
-  tools/port_gen.py ldscript --out build/port/gen/overlays.ld         # per-overlay .data/.bss sections, the arena symbols
+  tools/port_gen.py ldscript --out build/port/gen/overlays.ld         # the EXE's and each overlay's .data/.bss
+                                                                      # sections, the arena symbols
+  tools/port_gen.py sections --map build/port/dw2003.map              # after the link: no game data outside them
   tools/port_gen.py tables --nm nm --objects objs.rsp --out build/port/gen/overlay_tables.c   # address -> function
   tools/port_gen.py state --nm nm --cc cc --gen-include build/port/gen/include --objects objs.rsp \
       --out build/port/gen/port_state_tables.c     # the EXE's functions and data symbols (port/src/state.c)
@@ -211,9 +213,12 @@ def cmd_ldscript(args):
     overlay manager's snapshot (port/src/overlay.c), and defines the arena's symbols (port_slot1, port_slot2,
     port_heap_start, port_heap_end; port/src/arena.c's port_arena is the storage). The objects are matched by path:
     *src/<dir>/<unit>.c.o (CMake keeps the source path under its object directory). The statements go BEFORE the
-    default .data/.bss ones: ld gives an input section to the first statement that matches it."""
+    default .data/.bss ones: ld gives an input section to the first statement that matches it.
+    The EXE's units (src/main/) get the same pair, .dw3.data.main / .dw3.bss.main, for the console's reset
+    (port/src/reset.c, port/src/overlay.c: every game global back to its startup value); `sections` checks the link
+    map: no game object's writable data outside the .dw3.* sections."""
     data, bss = [], []
-    for name in all_overlays():
+    for name in ["MAIN"] + all_overlays():
         s = section_name(name)
         if name.startswith("WSTAG"):
             # a WSTAG file's units: wstag###.c and wstag###_<vram>.c (one directory for all of them)
@@ -236,7 +241,76 @@ def cmd_ldscript(args):
             f"port_heap_start = port_arena + 0x{SLOT1_SIZE + SLOT2_SIZE:X};",
             f"port_heap_end = port_arena + 0x{SLOT1_SIZE + SLOT2_SIZE + HEAP_SIZE:X};", ""]
     write(args.out, "\n".join(text))
-    print(f"port_gen ldscript: {len(data)} overlays -> {args.out}")
+    print(f"port_gen ldscript: the EXE and {len(data) - 1} overlays -> {args.out}")
+
+
+GAME_OBJECT_DIR = "/dw3_game.dir/"   # CMake's object directory of the game's units (port/CMakeLists.txt dw3_game)
+
+
+def map_input_sections(path):
+    """[(output section, input section, size, file)] of a GNU ld map (-Map), from "Linker script and memory map" on.
+    An input section line is ` <name> 0x<addr> 0x<size> <file>`, or ` <name>` alone with the rest on the next line
+    when the name is long; an output section starts in column 0."""
+    rows, out_sec, pending = [], None, None
+    started = False
+    for ln in Path(path).read_text(errors="replace").splitlines():
+        if not started:
+            started = ln.startswith("Linker script and memory map")
+            continue
+        if ln and not ln[0].isspace():
+            out_sec = ln.split()[0]
+            pending = None
+            continue
+        p = ln.split()
+        if pending is not None:
+            if len(p) == 3 and p[0].startswith("0x") and p[1].startswith("0x"):
+                rows.append((out_sec, pending, int(p[1], 16), p[2]))
+            pending = None
+            continue
+        if ln.startswith(" ") and not ln.startswith("  ") and p and (p[0].startswith(".") or p[0] == "COMMON"):
+            name = p[0]  # (not a ` *(...)` pattern line)
+            if len(p) == 1:
+                pending = name
+            elif len(p) == 4 and p[1].startswith("0x") and p[2].startswith("0x"):
+                rows.append((out_sec, name, int(p[2], 16), p[3]))
+    if not started:
+        sys.exit(f"port_gen sections: {path} is not a GNU ld map")
+    return rows
+
+
+WRITABLE_SECTION = re.compile(r"^(\.(data|bss|sdata|sbss|tdata|tbss)(\..*)?|COMMON)$")
+
+
+def cmd_sections(args):
+    """Checks the link map (-Wl,-Map) of the port: every writable input section of a game object (.data*, .bss*, COMMON
+    of the units under CMake's dw3_game object directory) must be in one of the ld script's .dw3.* output sections,
+    the ranges the overlay manager snapshots and the console's reset restores (port/src/overlay.c). A section left out
+    would keep its value across a reset: a game global the reset misses. Lists, for information, the other objects'
+    writable data (the runtime's and the shim's: each resets its own)."""
+    rows = map_input_sections(args.map)
+    bad, game, other = [], {}, {}
+    for out_sec, name, size, obj in rows:
+        if not WRITABLE_SECTION.match(name) or size == 0:
+            continue
+        if GAME_OBJECT_DIR in obj.replace("\\", "/"):
+            if not out_sec.startswith(".dw3."):
+                bad.append(f"{obj}: {name} (0x{size:X} bytes) in {out_sec}")
+            else:
+                game[out_sec] = game.get(out_sec, 0) + size
+        else:
+            key = Path(obj).name
+            other[key] = other.get(key, 0) + size
+    print(f"port_gen sections: {sum(game.values())} bytes of the game's writable data in {len(game)} non-empty "
+          f".dw3.* sections (.dw3.data.main {game.get('.dw3.data.main', 0)}, .dw3.bss.main "
+          f"{game.get('.dw3.bss.main', 0)}); {len(bad)} outside")
+    if args.verbose:
+        for k in sorted(other):
+            print(f"  not game: {k}: {other[k]} bytes")
+    for b in bad:
+        print(f"  OUTSIDE {b}")
+    if bad:
+        sys.exit(f"port_gen sections: {len(bad)} writable game section(s) outside the .dw3.* sections: "
+                 f"tools/port_gen.py ldscript must collect them")
 
 
 def cmd_arena_header(args):
@@ -514,6 +588,10 @@ def main():
     p = sub.add_parser("ldscript", help="per-overlay .data/.bss sections and the arena's symbols (GNU ld)")
     p.add_argument("--out", required=True)
     p.set_defaults(fn=cmd_ldscript)
+    p = sub.add_parser("sections", help="check the link map: every game object's writable data in a .dw3.* section")
+    p.add_argument("--map", required=True, help="the port's GNU ld map (-Wl,-Map)")
+    p.add_argument("-v", "--verbose", action="store_true", help="also list the other objects' writable data")
+    p.set_defaults(fn=cmd_sections)
     p = sub.add_parser("arena-header", help="the arena's sizes as a header")
     p.add_argument("--out", required=True)
     p.set_defaults(fn=cmd_arena_header)

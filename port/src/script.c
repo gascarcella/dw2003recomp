@@ -8,7 +8,9 @@
  *   step run in the same frame, at most 100 in a row; then the pad is set to the held buttons (run.lua's apply_pad);
  *   then, past the last step, the run ends with status 0, "script complete".
  * - A step that times out (or `max_frames`) ends the run with status 5 and run.lua's message, naming the step.
- * - `reset` (a hard reset of the console) ends the run with status 6: not in M1.
+ * - `reset` (a hard reset of the console: PCSX-Redux hardResetEmulator in run.lua) releases the pad, ends the frame and
+ *   resets (port_reset_request, port/src/reset.c): the game starts over from main() with its data, the arena and the
+ *   shim at power-on, the memory cards kept; the frame count, the record and the script's next step go on.
  *
  * The buttons are the physical pad's (PCSX.CONSTS.PAD.BUTTON numbers them as the PS1 pad's bits, which psyq_pad_set
  * takes, active high); the game itself rotates the face buttons for non-Japanese languages (pad_read_buttons), so they
@@ -90,6 +92,7 @@ static long script_max_frames;
 static int script_index;               /* the current step (0-based; run.lua's step_index - 1) */
 static long script_step_started = -1;  /* the frame the current step started, -1 before it runs */
 static u16 script_held;                /* the buttons held (run.lua's `held`), applied every frame */
+static int script_reset_pending;       /* a `reset` step ran this frame: the console resets at the frame's end */
 
 /* ---- Loading */
 
@@ -454,13 +457,12 @@ static int script_run_step(const ScriptStep *s, int *instant) {
         *instant = 1;
         return 1;
     case SCRIPT_RESET:
-        /* run.lua: PCSX.hardResetEmulator() (RAM cleared, the memory cards kept). The port would have to restart
-         * game_main with every global, the arena and the shim back to their startup state. */
-        {
-            char msg[64];
-            snprintf(msg, sizeof(msg), "step %d (reset): not in M1", number);
-            port_exit(6, msg);
-        }
+        /* run.lua: held = {}, PCSX.hardResetEmulator() (RAM cleared, the memory cards kept), done but not instant: the
+         * frame ends as any other (the released pad, the input trace, the end of the script), then port_script_frame
+         * resets the console (port_reset_request: back to main(), game_main again). */
+        script_held = 0;
+        script_reset_pending = 1;
+        return 1;
     case SCRIPT_PRESS: {
         long cycle = s->frames + s->release;
         long phase = elapsed % cycle, count = elapsed / cycle;
@@ -556,5 +558,10 @@ void port_script_frame(void) {
     port_framelog_input(script_held);
     if (script_index >= script_step_count) {
         port_exit(0, "script complete");
+    }
+    if (script_reset_pending) {
+        /* the script's state (the next step, the frame count, the input trace) is outside the game: it goes on */
+        script_reset_pending = 0;
+        port_reset_request();
     }
 }

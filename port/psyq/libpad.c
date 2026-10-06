@@ -54,6 +54,19 @@ void psyq_pad_set(int port, int connected, u16 buttons) {
     }
 }
 
+/* The console's reset (psyq.c psyq_reset): no buffers, not started, the default pads (port 0 connected with nothing
+ * pressed, port 1 empty). */
+void psyq_pad_reset(void) {
+    psyq_pad_buffer[0] = NULL;
+    psyq_pad_buffer[1] = NULL;
+    psyq_pad_connected[0] = 1;
+    psyq_pad_connected[1] = 0;
+    psyq_pad_buttons[0] = 0;
+    psyq_pad_buttons[1] = 0;
+    psyq_pad_started = 0;
+    psyq_pad_fresh = 0;
+}
+
 void PadInitDirect(u8 *buf0, u8 *buf1) {
     PSYQ_TRACE("PadInitDirect %u %u", PSYQ_PTR(buf0), PSYQ_PTR(buf1));
     psyq_pad_buffer[0] = buf0;

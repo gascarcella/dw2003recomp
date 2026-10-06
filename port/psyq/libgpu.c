@@ -37,6 +37,14 @@ u32 psyq_gpu_take_hash(u32 *count) {
     return h;
 }
 
+/* The console's reset (psyq.c psyq_reset): the recorder empty (what the interrupted frame had walked is dropped, as the
+ * emulator's GPU drops it), BreakDraw's empty list intact. The walk window (psyq_set_arena) is the runtime's: kept. */
+void psyq_gpu_reset(void) {
+    psyq_gpu_hash = 0x811C9DC5u;
+    psyq_gpu_count = 0;
+    psyq_gpu_terminator = 0xFFFFFF;
+}
+
 static void psyq_gpu_window(const u8 **lo, const u8 **hi) {
     if (psyq_gpu_lo == NULL) {
         *lo = port_heap_start;
