@@ -93,7 +93,9 @@ int main(int argc, char **argv) {
         }
     }
     setvbuf(stderr, NULL, _IOLBF, 0);
-    psyq_set_trace(port_trace, stderr);
+    if (port_trace) {
+        psyq_set_trace(1, stderr); /* else the shim decides by DW3_PORT_TRACE at its first call */
+    }
     port_arena_init();
     port_overlay_init();
     if (speed != NULL && !port_disc_set_speed(speed)) {
