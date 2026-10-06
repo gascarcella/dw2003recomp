@@ -240,9 +240,27 @@ void SetDrawEnv(DR_ENV *dr_env, DRAWENV *env) {
 }
 
 /* Stub: the display environment would go to the GPU; recorded only. Returns env (Psy-Q returns it). */
+/* The video output (psyq.h). M2 step-0 stub: T9 ("gpu") replaces the VRAM with the software GPU's. */
+static u16 psyq_gpu_vram_pixels[1024 * 512];
+static PsyqDisplay psyq_gpu_disp;
+
+const u16 *psyq_gpu_vram(void) {
+    return psyq_gpu_vram_pixels;
+}
+
+void psyq_gpu_display(PsyqDisplay *out) {
+    *out = psyq_gpu_disp;
+}
+
 DISPENV *PutDispEnv(DISPENV *env) {
     PSYQ_TRACE("PutDispEnv disp %d,%d %dx%d inter %d", env->disp.x, env->disp.y, env->disp.w, env->disp.h,
                env->isinter);
+    psyq_gpu_disp.x = env->disp.x;
+    psyq_gpu_disp.y = env->disp.y;
+    psyq_gpu_disp.w = env->disp.w;
+    psyq_gpu_disp.h = env->disp.h;
+    psyq_gpu_disp.rgb24 = env->isrgb24;
+    psyq_gpu_disp.interlace = env->isinter;
     return env;
 }
 
@@ -333,6 +351,7 @@ int SetGraphDebug(int level) {
 
 void SetDispMask(int mask) {
     PSYQ_TRACE("SetDispMask %d", mask);
+    psyq_gpu_disp.enabled = mask != 0;
 }
 
 int ClearImage(RECT *rect, u8 r, u8 g, u8 b) {
