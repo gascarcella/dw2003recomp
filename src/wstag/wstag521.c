@@ -28,7 +28,7 @@ void wstag521_update(WstagObject *obj, WstagEventData *data) {
 }
 
 WstagObject *wstag521_start(void *arg0) {
-    WstagObject *obj = object_new(wstag521_update, sizeof(WstagObject), 4);
+    WstagObject *obj = object_new(wstag521_update, sizeof(WstagObject), sizeof(FieldstgEvent *));
 
     obj->manager = arg0;
     wstag521_funcs.setup();

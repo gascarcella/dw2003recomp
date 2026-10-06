@@ -249,8 +249,9 @@ void cardgame_update_root(Object *obj, CardgameGame **data) {
     }
 }
 
-void cardgame_start(void) {
-    object_new(cardgame_update_root, sizeof(Object), 4);
+/* The overlay's entry point (overlay_entries): overlay_run_object keeps the object (v0; PC_PORT: FINDINGS 8). */
+OBJECT_V0(Object *) cardgame_start(void) {
+    OBJECT_V0_TAIL(object_new(cardgame_update_root, sizeof(Object), sizeof(CardgameGame *)))
 }
 
 void cardgame_icon_draw(CardgameIcon *obj) {
@@ -464,7 +465,7 @@ CardgameDeckWindow *cardgame_deck_window_create(s32 deck, s32 x, s32 y) {
     s32 i;
 
     card_init(&pic);
-    obj = object_new(cardgame_deck_window_update, sizeof(CardgameDeckWindow), 0x1C);
+    obj = object_new(cardgame_deck_window_update, sizeof(CardgameDeckWindow), sizeof(CardgameDeckWindowData));
     for (i = 0; i < 6; i++) {
         obj->counts[i] = 0;
     }

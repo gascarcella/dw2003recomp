@@ -85,7 +85,7 @@ void stgdglab_update_main(Object *obj, StgdglabMain **data) {
 
 /* The overlay's entry point (overlay_entries). */
 Object *stgdglab_start(void) {
-    return object_new(stgdglab_update_main, sizeof(Object), 4);
+    return object_new(stgdglab_update_main, sizeof(Object), sizeof(StgdglabMain *));
 }
 
 void stgdglab_fade_start(Fade *obj, s32 dir, s32 frames) {

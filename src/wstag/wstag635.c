@@ -128,7 +128,7 @@ void wstag635_update(WstagObject *obj, WstagAnimObject **data) {
 }
 
 WstagObject *wstag635_start(void *arg0) {
-    WstagObject *obj = object_new(wstag635_update, sizeof(WstagObject), 4);
+    WstagObject *obj = object_new(wstag635_update, sizeof(WstagObject), sizeof(WstagAnimObject *));
 
     obj->manager = arg0;
     wstag635_funcs.setup();

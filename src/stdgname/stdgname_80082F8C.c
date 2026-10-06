@@ -150,7 +150,7 @@ void stdgname_update_main(Object *obj, StdgnameMain **data) {
 
 /* The overlay's entry point (overlay_entries). */
 Object *stdgname_start(void) {
-    return object_new(stdgname_update_main, sizeof(Object), 4);
+    return object_new(stdgname_update_main, sizeof(Object), sizeof(StdgnameMain *));
 }
 
 void stdgname_fade_start(Fade *obj, s32 dir, s32 frames) {
@@ -982,7 +982,8 @@ void stdgname_party_update(StdgnameParty *obj, MessageWindow **data) {
 }
 
 Object *stdgname_party_create(StdgnameMain *main) {
-    StdgnameParty *obj = object_new(stdgname_party_update, sizeof(StdgnameParty), 0x28);
+    /* The data block: 10 window slots, of which party_update uses 0-5. */
+    StdgnameParty *obj = object_new(stdgname_party_update, sizeof(StdgnameParty), 10 * sizeof(MessageWindow *));
 
     obj->main = main;
     obj->layer_id = 0x1000;

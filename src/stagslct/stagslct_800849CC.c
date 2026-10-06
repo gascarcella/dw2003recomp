@@ -391,7 +391,7 @@ void stagslct_update_root(Object *obj, StageSelect **data) {
 }
 
 Object *stagslct_start(void) {
-    return object_new(stagslct_update_root, sizeof(Object), 4);
+    return object_new(stagslct_update_root, sizeof(Object), sizeof(StageSelect *));
 }
 
 /* Moves the cursor by `dir` rows, scrolling at the ends and skipping separators; stays put when it can't. */

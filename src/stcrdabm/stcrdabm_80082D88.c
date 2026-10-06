@@ -414,7 +414,7 @@ void stcrdabm_update_main(Object *obj, StcrdabmAlbum **data) {
 
 /* The overlay's entry point (overlay_entries[18], called by overlay_run_object). */
 Object *stcrdabm_start(void) {
-    return object_new(stcrdabm_update_main, sizeof(Object), 4);
+    return object_new(stcrdabm_update_main, sizeof(Object), sizeof(StcrdabmAlbum *));
 }
 
 /* Creates the album's text windows. */

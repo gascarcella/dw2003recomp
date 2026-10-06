@@ -1046,7 +1046,7 @@ void message_cursor_update(MessageCursor *obj, MessageCursorData *data) {
 }
 
 MessageCursor *message_create_cursor(s16 arg0, s32 arg1, s16 arg2, s16 arg3) {
-    MessageCursor *obj = object_new(message_cursor_update, sizeof(MessageCursor), 4);
+    MessageCursor *obj = object_new(message_cursor_update, sizeof(MessageCursor), sizeof(MessageCursorData));
 
     obj->layer_id = arg0;
     obj->ot_depth = arg1;

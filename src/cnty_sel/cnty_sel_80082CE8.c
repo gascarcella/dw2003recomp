@@ -135,7 +135,7 @@ Object *cnty_sel_start(void) {
     Object *obj;
 
     ClearImage2(&cnty_sel_vram_rect, 0, 0, 0);
-    obj = object_new(cnty_sel_update_root, sizeof(Object), 4);
+    obj = object_new(cnty_sel_update_root, sizeof(Object), sizeof(CntySelMenu *));
     sound_module.load_extra_bank(0x21);
     return obj;
 }

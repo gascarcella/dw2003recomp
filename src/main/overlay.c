@@ -9,7 +9,7 @@
 #include "psyq/libc2.h"
 
 /* The tier-1 overlays share one address (0x80082CB0), so their entry points are plain addresses (OVERLAY_ENTRY, port.h). */
-/* Per stage (gamestate_data.funcs.get_map() >> 8): the overlay's entry point. */
+/* Per stage (gamestate_data.funcs.get_map() >> 8): the overlay's entry point, which returns the stage's root object. */
 s32 (*overlay_entries[])(void) = {
     NULL,                       /*  0 */
     NULL,                       /*  1 */
@@ -63,16 +63,23 @@ s32 overlay_files[] = {
     0x165,                      /* 22 CNTY_SEL.PRO */
 };
 
-void overlay_run_object(Object *obj, s32 *result);
+void overlay_run_object(Object *obj, Object **result);
 
 /* The object that runs the current stage: loads its overlay (overlay_load_stage) and calls the
- * overlay's entry point, whose result goes to *result. */
-void overlay_run_object(Object *obj, s32 *result) {
+ * overlay's entry point, whose result (the stage's root object) goes to *result, the data block: it runs as this
+ * object's child. */
+void overlay_run_object(Object *obj, Object **result) {
     switch (obj->state) {
     case OBJECT_STATE_INIT:
     default:
         overlay_module.load_stage();
-        *result = OVERLAY_FN(1, overlay_entries[gamestate_data.funcs.get_map() >> 8])();
+#ifndef PC_PORT
+        *result = (Object *)OVERLAY_FN(1, overlay_entries[gamestate_data.funcs.get_map() >> 8])();
+#else
+        /* PC_PORT: called as returning the object, which the table's s32 would truncate (cast through void (*)(void),
+         * which -Wcast-function-type lets any function pointer pass through) */
+        *result = ((Object *(*)(void))(void (*)(void))OVERLAY_FN(1, overlay_entries[gamestate_data.funcs.get_map() >> 8]))();
+#endif
         obj->next_state(obj);
         break;
     case OBJECT_STATE_RUN:
@@ -87,7 +94,7 @@ void overlay_run_object(Object *obj, s32 *result) {
 }
 
 Object *overlay_create_object(void) {
-    return object_new(overlay_run_object, sizeof(Object), sizeof(s32));
+    return object_new(overlay_run_object, sizeof(Object), sizeof(Object *));
 }
 
 /* Loads the current stage's overlay (overlay_files) to main_overlay_base, unless it is already there. */
