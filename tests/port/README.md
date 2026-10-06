@@ -72,6 +72,14 @@ every store and DMA block at the same tick. `run.py` runs it once on the committ
 trace equal to the replay of its own calls (once `port/src/audio.c` renders), and for `new_game` the same LIBSND calls
 as the emulator's, with a report of where the two games' frames differ.
 
+## The settings file (`settings.py`; docs/LAUNCHER_MODS_PLAN.md 4.3)
+`tests/port/settings.py` checks `--config FILE`, the contract with the launcher, through `--print-settings` (the
+effective settings as a file with every key and absolute paths): the round trip (printed, loaded from another directory,
+printed again: the same text), the defaults of an empty file, relative paths from the file's directory, `null` cards,
+the command line overriding the file, the errors (exit 64 naming the key) and unknown keys (logged, ignored). With the
+disc, a headless run under `--config` must replay `new_game` with the bare binary's log and record byte for byte and
+create the two card files beside the settings. `scripts/test.sh --layer port` runs it after `run.py` (~2 s built).
+
 ## What it found (session 16)
 - **The overlay copy takes CPU time on the PS1.** The game copies FIELDSTG (0x19000 bytes) into its slot with LIBC2's
   byte-loop `memcpy`, about 1.8 frames, so the emulator samples FIELDSTG's stage with no stage file yet (`(2, -1)` in the

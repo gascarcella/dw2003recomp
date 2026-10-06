@@ -492,3 +492,67 @@ void port_json_free(PortJson *value) {
         free(value);
     }
 }
+
+/* ---- The writer (settings.c's --print-settings): strings escaped as RFC 8259 requires, numbers that are integers
+ * printed as integers, objects and arrays one item per line at `indent` spaces a level. */
+void port_json_write_string(FILE *f, const char *s) {
+    fputc('"', f);
+    for (; *s != '\0'; s++) {
+        unsigned char c = (unsigned char)*s;
+        if (c == '"' || c == '\\') {
+            fputc('\\', f);
+            fputc(c, f);
+        } else if (c == '\n') {
+            fputs("\\n", f);
+        } else if (c == '\t') {
+            fputs("\\t", f);
+        } else if (c == '\r') {
+            fputs("\\r", f);
+        } else if (c < 0x20) {
+            fprintf(f, "\\u%04x", c);
+        } else {
+            fputc(c, f);
+        }
+    }
+    fputc('"', f);
+}
+
+void port_json_write(FILE *f, const PortJson *v, int indent, int level) {
+    size_t i;
+    switch (v->type) {
+    case PORT_JSON_NULL:
+        fputs("null", f);
+        break;
+    case PORT_JSON_BOOL:
+        fputs(v->boolean ? "true" : "false", f);
+        break;
+    case PORT_JSON_NUMBER:
+        if (v->number == (double)(long long)v->number && v->number > -9007199254740992.0 &&
+            v->number < 9007199254740992.0) {
+            fprintf(f, "%lld", (long long)v->number);
+        } else {
+            fprintf(f, "%.17g", v->number);
+        }
+        break;
+    case PORT_JSON_STRING:
+        port_json_write_string(f, v->string);
+        break;
+    case PORT_JSON_ARRAY:
+    case PORT_JSON_OBJECT:
+        if (v->count == 0) {
+            fputs(v->type == PORT_JSON_ARRAY ? "[]" : "{}", f);
+            break;
+        }
+        fputc(v->type == PORT_JSON_ARRAY ? '[' : '{', f);
+        for (i = 0; i < v->count; i++) {
+            fprintf(f, "%s\n%*s", i ? "," : "", indent * (level + 1), "");
+            if (v->type == PORT_JSON_OBJECT) {
+                port_json_write_string(f, v->keys[i]);
+                fputs(": ", f);
+            }
+            port_json_write(f, &v->items[i], indent, level + 1);
+        }
+        fprintf(f, "\n%*s%c", indent * level, "", v->type == PORT_JSON_ARRAY ? ']' : '}');
+        break;
+    }
+}
