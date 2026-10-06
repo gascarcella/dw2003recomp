@@ -782,8 +782,7 @@ void App::draw_settings() {
         ImGui::Indent(label_w);
         ImGui::PushTextWrapPos(0);
         ImGui::TextDisabled("The game's own 60 Hz mode, as the NTSC patch gives it: time, walking and music keep their "
-                            "speed, other things run 20%% faster. Until the game implements it, it logs this and "
-                            "runs at 50 Hz.");
+                            "speed, other things run 20%% faster. A game built before its 60 Hz mode runs at 50 Hz.");
         ImGui::PopTextWrapPos();
         ImGui::Unindent(label_w);
     }

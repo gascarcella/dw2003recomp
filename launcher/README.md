@@ -94,8 +94,8 @@ A game build from before `--config` (its usage, exit 64, at the probe) is report
 
 ## Settings and controls
 
-**Settings:** the window's scale (1-16, with its size), fullscreen, 50 or 60 Hz (60 is the game's own 60 Hz mode; the
-game logs and ignores it until it implements it), mute, the two memory card slots (a file name relative to the
+**Settings:** the window's scale (1-16, with its size), fullscreen, 50 or 60 Hz (60 is the game's own 60 Hz mode; a game
+built before that mode logs it and runs at 50), mute, the two memory card slots (a file name relative to the
 settings directory, or no card), and the settings file's location and state.
 
 **Controls**, three tabs: **Keyboard** and **Gamepad** list the 14 PS1 buttons with their inputs as chips (x removes
