@@ -5,10 +5,16 @@
  *
  * The watchdog: a loop that no PLATFORM_WAIT reaches (cdload_load_file's `do cdload_update() while (loading)`, which
  * only a CD interrupt ends on the PS1) would spin forever once the shim cannot complete a read; SIGALRM ends it with
- * status 4 and names the last Psy-Q call, instead of hanging the acceptance run. */
+ * status 4 and names the last Psy-Q call, instead of hanging the acceptance run.
+ *
+ * The window (video.c, input.c; `--window`): each vsync also polls SDL's events (the pad, unless a script owns it),
+ * presents the display, and waits for the vsync's time: `--fps` per second (50, PAL; 0: as fast as it runs) against
+ * CLOCK_MONOTONIC. Only the wall-clock time between vsyncs depends on it; the headless run is never paced. */
+#include <errno.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "port_harness.h"
@@ -19,8 +25,10 @@ long port_max_frames = 600;
 long port_frames;
 int port_watchdog_sec = 10;
 int port_script_active;
+long port_fps = 50;
 static volatile sig_atomic_t port_watchdog_armed;
 static void port_frame(void);
+static void port_pace(void);
 
 static void port_watchdog(int sig) {
     static const char msg[] = "port: watchdog: no port_wait() for the watchdog's time: the game spins in a loop without "
@@ -71,11 +79,47 @@ static void port_frame(void) {
         port_log("tick: frame %ld%s", port_frames, cd ? " (CD handler ran)" : "");
     }
     port_framelog_frame();
+    if (port_window) {
+        port_input_frame();
+    }
     if (port_script_active) {
         port_script_frame();
     }
+    port_video_frame();
     if (port_max_frames > 0 && port_frames >= port_max_frames) {
         port_exit(0, "frame cap");
+    }
+    if (port_window) {
+        port_pace();
+    }
+}
+
+/* Real-time pacing (window mode): vsync n is due at start + n / port_fps seconds; a run more than 0.1 s late (a
+ * breakpoint, a slow host) starts over from now instead of hurrying to catch up. */
+static void port_pace(void) {
+    static struct timespec start;
+    static long long n;
+    struct timespec now, due;
+    long long t, ns;
+    if (port_fps <= 0) {
+        return;
+    }
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    if (n == 0) {
+        start = now;
+    }
+    n++;
+    ns = n * 1000000000LL / port_fps;
+    t = (long long)(now.tv_sec - start.tv_sec) * 1000000000LL + (now.tv_nsec - start.tv_nsec);
+    if (t > ns + 100000000LL) {
+        start = now;
+        n = 0;
+        return;
+    }
+    due.tv_sec = start.tv_sec + (time_t)((start.tv_nsec + ns) / 1000000000LL);
+    due.tv_nsec = (long)((start.tv_nsec + ns) % 1000000000LL);
+    while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &due, NULL) == EINTR) {
+        /* the watchdog's SIGALRM, or another signal: wait on */
     }
 }
 
@@ -98,6 +142,7 @@ void port_exit(int status, const char *reason) {
     if (!exiting) {
         exiting = 1;
         port_framelog_close(status, reason);
+        port_video_close();
     }
     port_log("exit %d after %ld frame(s): %s", status, port_frames, reason);
     fflush(NULL);

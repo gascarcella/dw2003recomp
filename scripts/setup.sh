@@ -3,7 +3,9 @@
 # Nothing here needs sudo or installs outside the repo.
 #
 # Usage: scripts/setup.sh [--disc /path/to/disc.bin] [step...]
-#   steps: binutils venv cmake mkpsxiso gcc objdiff ext redux link gamedata disc  (default: all); optional: psyq
+#   steps: binutils venv cmake mkpsxiso gcc objdiff ext redux link gamedata disc  (default: all); optional: psyq sdl3
+#   sdl3:  SDL3 built from its pinned source tarball into tools/sdl3 (static), for the PC port's window
+#          (cmake -DDW3_PORT_SDL=ON; port/README.md "The window"); its backends follow the -dev headers present
 #   cmake: CMake and Ninja (mkpsxiso and the PC port build with them) pip-installed into tools/venv, only when either is
 #          missing from PATH; later steps and tests/port/run.py find them there
 #
@@ -17,7 +19,7 @@ MAIN="$(dirname "$(git -C "$ROOT" rev-parse --path-format=absolute --git-common-
 TOOLS="$ROOT/tools"          # tracked files of this checkout
 INSTALL="$MAIN/tools"        # built/installed tools, shared across worktrees
 SRC="$INSTALL/src"
-JOBS="$(nproc)"
+JOBS="${DW3_JOBS:-$(nproc)}"   # DW3_JOBS: fewer on a shared machine (as scripts/build.sh)
 
 BINUTILS_VER=2.47
 BINUTILS_SHA256=154ab23b60070e8f27013c22977f1129425d67d1e8acd6e13010e617811e4cff
@@ -135,6 +137,62 @@ step_mkpsxiso() {
     cmake --build "$dir/build" -j"$JOBS" >/dev/null
     cmake --install "$dir/build" >/dev/null
     log "mkpsxiso: installed to $prefix"
+}
+
+# SDL3 (zlib licence) for the PC port's window (port/README.md "The window"; DECISIONS "PC port decisions (session 15)"
+# item 3): the pinned release tarball (signed by Sam Lantinga; the SHA-256 pins it), built with CMake into
+# tools/sdl3/ as a static library. Static: the port stays one binary that runs from anywhere (no rpath, no
+# LD_LIBRARY_PATH), and SDL still loads its platform libraries (X11, Wayland, ALSA, PulseAudio, PipeWire, udev, ...)
+# with dlopen at run time (SDL_DEPS_SHARED), so the binary needs none of them on a headless host. Which backends get
+# compiled in depends on the -dev headers present at build time: with none, only the offscreen/dummy video and the
+# dummy/disk audio drivers (enough for the tests); for a desktop window install e.g. libx11-dev libxext-dev
+# (libwayland-dev libxkbcommon-dev wayland-protocols) libasound2-dev libpulse-dev libudev-dev first, then rebuild with
+# `rm -rf tools/sdl3 && scripts/setup.sh sdl3`. Optional (not in the default steps): scripts/setup.sh sdl3
+SDL3_VER=3.4.18
+SDL3_SHA256=9c75cf16330322c217dedd2e0609f1124f1b54b8633e763467b4684d0f4334a3
+step_sdl3() {
+    local prefix="$INSTALL/sdl3" tarball="$SRC/SDL3-$SDL3_VER.tar.gz" dir="$SRC/SDL3-$SDL3_VER"
+    if [[ -f "$prefix/lib/libSDL3.a" && -f "$prefix/.sha256" && "$(cat "$prefix/.sha256")" == "$SDL3_SHA256" ]]; then
+        log "sdl3: $SDL3_VER already installed ($prefix)"
+        return
+    fi
+    command -v cmake >/dev/null && command -v ninja >/dev/null || step_cmake
+    mkdir -p "$SRC"
+    if [[ ! -f "$tarball" ]] || ! echo "$SDL3_SHA256  $tarball" | sha256sum -c --quiet - 2>/dev/null; then
+        log "sdl3: downloading $SDL3_VER"
+        curl -sSfL -o "$tarball.part" \
+            "https://github.com/libsdl-org/SDL/releases/download/release-$SDL3_VER/SDL3-$SDL3_VER.tar.gz"
+        mv "$tarball.part" "$tarball"
+    fi
+    echo "$SDL3_SHA256  $tarball" | sha256sum -c --quiet - || die "sdl3: checksum mismatch"
+    rm -rf "$dir" "$prefix"
+    tar -C "$SRC" -xzf "$tarball"
+    log "sdl3: configuring (static; no tests, examples or camera)"
+    # SDL stops at an optional dependency whose headers are missing (an X11 extension, ...) and names the option
+    # that turns it off; so does a host with neither X11 nor Wayland headers (SDL_UNIX_CONSOLE_BUILD: offscreen and
+    # dummy video only). Each such feature is turned off in turn and logged.
+    local opts=(-DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_INSTALL_LIBDIR=lib
+                -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_DEPS_SHARED=ON -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF
+                -DSDL_EXAMPLES=OFF -DSDL_CAMERA=OFF) off tries=0
+    until cmake -S "$dir" -B "$dir/build" -G Ninja "${opts[@]}" >"$dir/configure.log" 2>&1; do
+        off="$(grep -o -- '-DSDL_[A-Z0-9_]*=OFF' "$dir/configure.log" | head -1)" || off=
+        if [[ -z "$off" ]] && grep -q 'X11 or Wayland' "$dir/configure.log"; then
+            off=-DSDL_UNIX_CONSOLE_BUILD=ON
+        fi
+        tries=$((tries + 1))
+        [[ -n "$off" && $tries -le 30 ]] || die "sdl3: configure failed (see $dir/configure.log)"
+        log "sdl3: headers missing for an optional feature: $off"
+        opts+=("$off")
+    done
+    # SDL's own summary of what it found: the video and audio drivers this build has.
+    grep -E '^--   (Video|Audio|Joystick) drivers:' "$dir/configure.log" | sed 's/^-- */  sdl3: /' || true
+    log "sdl3: building with $JOBS jobs"
+    cmake --build "$dir/build" -j"$JOBS" >/dev/null
+    cmake --install "$dir/build" >/dev/null
+    rm -rf "$dir"
+    [[ -f "$prefix/lib/libSDL3.a" && -f "$prefix/lib/cmake/SDL3/SDL3Config.cmake" ]] || die "sdl3: install incomplete"
+    echo "$SDL3_SHA256" > "$prefix/.sha256"
+    log "sdl3: installed $SDL3_VER to $prefix"
 }
 
 # CMake and Ninja from PyPI (official wheels), pinned, into the venv: only when the system has none (no sudo).
@@ -423,7 +481,7 @@ steps=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --disc) DISC_PATH="$2"; shift 2 ;;
-        -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
         *) steps+=("$1"); shift ;;
     esac
 done

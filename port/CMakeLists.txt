@@ -12,6 +12,7 @@ project(dw2003port C)
 option(DW3_PORT_ALLOW_UNRESOLVED "Link with --unresolved-symbols=ignore-all (a private build without port/psyq/)" OFF)
 option(DW3_PORT_SANITIZE "Build with -fsanitize=address,undefined" OFF)
 option(DW3_PORT_M32 "Build a 32-bit binary (-m32, gcc-multilib): its --log must equal the 64-bit build's" OFF)
+option(DW3_PORT_SDL "The window (port/src/video.c, input.c) over SDL3 (tools/sdl3: scripts/setup.sh sdl3)" OFF)
 option(DW3_PORT_PSYQ_WERROR "-Werror for port/psyq/ too (port/src/ always has it; port/psyq/check.sh uses it)" ON)
 set(DW3_PORT_PSYQ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/psyq" CACHE PATH "The Psy-Q shim's sources (psyq.h and *.c)")
 set(DW3_PORT_UNIT_OVERRIDES "" CACHE STRING
@@ -143,3 +144,27 @@ if(DW3_PORT_ALLOW_UNRESOLVED)
     target_link_options(dw2003 PRIVATE "-Wl,--unresolved-symbols=ignore-all")
 endif()
 target_link_libraries(dw2003 PRIVATE m)
+
+# ---- The window (DW3_PORT_SDL): SDL3, found as a CMake package: SDL3_DIR or CMAKE_PREFIX_PATH when given (a system
+# SDL3, e.g. -DSDL3_DIR=/usr/lib/x86_64-linux-gnu/cmake/SDL3), else the pinned build in tools/sdl3 (this checkout's,
+# or the main checkout's when a worktree has no link to it yet). Off by default: the headless build and the tests
+# stay SDL-free (video.c and input.c then compile without it: screenshots only, no window).
+if(DW3_PORT_SDL)
+    if(DW3_PORT_M32)
+        message(FATAL_ERROR "DW3_PORT_SDL: tools/sdl3 is a 64-bit build; configure the -m32 variant without the window")
+    endif()
+    set(DW3_SDL_HINTS "${DW3_ROOT}/tools/sdl3")
+    find_package(Git QUIET)
+    if(GIT_FOUND)
+        execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${DW3_ROOT}" rev-parse --path-format=absolute --git-common-dir
+                        OUTPUT_VARIABLE DW3_GIT_COMMON OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET RESULT_VARIABLE r)
+        if(r EQUAL 0 AND DW3_GIT_COMMON)
+            get_filename_component(DW3_MAIN_ROOT "${DW3_GIT_COMMON}" DIRECTORY)
+            list(APPEND DW3_SDL_HINTS "${DW3_MAIN_ROOT}/tools/sdl3")
+        endif()
+    endif()
+    find_package(SDL3 3.2 CONFIG REQUIRED HINTS ${DW3_SDL_HINTS})
+    message(STATUS "SDL3 ${SDL3_VERSION}: ${SDL3_DIR}")
+    target_link_libraries(dw2003 PRIVATE SDL3::SDL3)
+    target_compile_definitions(dw2003 PRIVATE DW3_PORT_SDL)
+endif()
