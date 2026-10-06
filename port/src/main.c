@@ -36,6 +36,7 @@ static void usage(const char *argv0) {
             "usage: %s [--disc CUE|BIN] [--no-disc-check] [--cd-speed instant|realistic] [--memcard1|2 MCD|none]\n          [--script JSON]\n"
             "          [--log FILE] [--record FILE] [--max-frames N] [--watchdog SEC] [--trace]\n"
             "          [--window] [--scale N] [--fullscreen] [--fps N] [--input-test] [--screenshot FRAME:PATH]\n"
+            "          [--spu-trace FILE] [--wav FILE] [--mute]\n"
             "  --disc PATH      the user's disc (.cue or .bin; SHA-1 checked); without it reads find no data\n"
             "  --no-disc-check  skip the disc's SHA-1 check (experiments with another image)\n"
             "  --cd-speed S     the CD's timing: realistic (default: double speed and seeks) or instant\n"
@@ -57,7 +58,10 @@ static void usage(const char *argv0) {
             "  --fps N          the window's pace: N vsyncs per second (default 50, PAL; 0: unthrottled)\n"
             "  --input-test     the window's input self-test: injected key and gamepad events (implies --window);\n"
             "                   exit 0 = passed, 6 = failed\n"
-            "  --screenshot F:P write the display at vsync F to P (binary PPM); repeatable; any build\n",
+            "  --screenshot F:P write the display at vsync F to P (binary PPM); repeatable; any build\n"
+            "  --spu-trace FILE every SPU write and DMA block, per vsync (tests/sound's trace format)\n"
+            "  --wav FILE       the audio output as a 44.1 kHz stereo WAV (any build, headless too)\n"
+            "  --mute           no audio device in window mode\n",
             argv0);
 }
 
@@ -76,6 +80,8 @@ static long number(const char *s, const char *opt) {
 int main(int argc, char **argv) {
     const char *disc = NULL, *script = NULL, *log = NULL, *record = NULL, *speed = NULL;
     const char *memcard[2] = { NULL, NULL };
+    const char *spu_trace = NULL, *wav = NULL;
+    int mute = 0;
     int memcard_given[2] = { 0, 0 };
     int disc_check = 1, max_frames_given = 0;
     int window = 0, scale = 2, fullscreen = 0, input_test = 0;
@@ -126,6 +132,12 @@ int main(int argc, char **argv) {
         } else if (strcmp(argv[i], "--input-test") == 0) {
             input_test = 1;
             window = 1;
+        } else if (strcmp(argv[i], "--spu-trace") == 0 && i + 1 < argc) {
+            spu_trace = argv[++i];
+        } else if (strcmp(argv[i], "--wav") == 0 && i + 1 < argc) {
+            wav = argv[++i];
+        } else if (strcmp(argv[i], "--mute") == 0) {
+            mute = 1;
         } else if (strcmp(argv[i], "--screenshot") == 0 && i + 1 < argc) {
             if (!port_video_screenshot_add(argv[++i])) {
                 fprintf(stderr, "port: --screenshot: FRAME:PATH (FRAME >= 1; at most 64): %s\n", argv[i]);
@@ -164,6 +176,10 @@ int main(int argc, char **argv) {
         }
     }
     port_framelog_open(log, record);
+    if (spu_trace != NULL) {
+        port_spu_trace_open(spu_trace);
+    }
+    port_audio_open(window && !mute, wav);
     if (script != NULL) {
         port_script_load(script);
         port_script_active = 1;

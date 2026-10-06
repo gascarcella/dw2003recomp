@@ -85,6 +85,7 @@ static void port_frame(void) {
     if (port_script_active) {
         port_script_frame();
     }
+    port_audio_frame();
     port_video_frame();
     if (port_max_frames > 0 && port_frames >= port_max_frames) {
         port_exit(0, "frame cap");
@@ -143,6 +144,8 @@ void port_exit(int status, const char *reason) {
         exiting = 1;
         port_framelog_close(status, reason);
         port_video_close();
+        port_audio_close();
+        port_spu_trace_close();
     }
     port_log("exit %d after %ld frame(s): %s", status, port_frames, reason);
     fflush(NULL);
