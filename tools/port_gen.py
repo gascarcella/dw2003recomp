@@ -5,6 +5,8 @@
   tools/port_gen.py overrides --out build/port/gen/include            # include_asm.h and psyq/gtemac.h for the host
   tools/port_gen.py ldscript --out build/port/gen/overlays.ld         # per-overlay .data/.bss sections, the arena symbols
   tools/port_gen.py tables --nm nm --objects objs.rsp --out build/port/gen/overlay_tables.c   # address -> function
+  tools/port_gen.py state --nm nm --cc cc --gen-include build/port/gen/include --objects objs.rsp \
+      --out build/port/gen/port_state_tables.c     # the EXE's functions and data symbols (port/src/state.c)
 
 Everything comes from tracked sources only (no disc, no splat output), so the port configures from a fresh clone:
   - the unit list: src/<target>/*.c for the EXE and the tier-1/tier-2 overlays (the same set configure.py compiles:
@@ -18,6 +20,9 @@ Everything comes from tracked sources only (no disc, no splat output), so the po
     INCLUDE_ASM, has no global symbol and cannot be in a table: `tables` prints how many were skipped and why).
 `tables` also checks every tag site in the C (WSTAG_ENTRY, OVERLAY_ENTRY, SLOT_FUNC, LATE_FUNC) against the tables and
 fails when an address no overlay defines is used where the overlay is known.
+`state` lists the EXE's functions (`type:func` lines of config/symbol_addrs.txt) and its data symbols with a `size:`
+there, as nm finds them in the EXE's objects, for the game-state probes and the checkpoint hash (port/src/state.c);
+the stable hash's VOLATILE_RANGES come from tests/replay/replay.py.
 """
 import argparse
 import os
@@ -352,6 +357,142 @@ def cmd_tables(args):
         sys.exit(f"port_gen tables: {len(bad)} tag site(s) do not resolve")
 
 
+# ---------------------------------------------------------------------------------------------------------------- state
+
+SYMBOL_ADDRS = ROOT / "config/symbol_addrs.txt"
+REPLAY_PY = ROOT / "tests/replay/replay.py"
+
+
+def exe_symbols():
+    """-> (funcs {name: address}, data {name: (address, PS1 size)}) from config/symbol_addrs.txt: the `type:func`
+    lines, and the other lines that carry a `size:`."""
+    funcs, data = {}, {}
+    for ln in SYMBOL_ADDRS.read_text().splitlines():
+        m = re.match(r"\s*(\w+)\s*=\s*0x([0-9A-Fa-f]+)\s*;\s*//(.*)", ln)
+        if not m:
+            continue
+        name, addr, attrs = m.group(1), int(m.group(2), 16), m.group(3)
+        if "type:func" in attrs:
+            funcs.setdefault(name, addr)
+        else:
+            s = re.search(r"\bsize:(0x[0-9A-Fa-f]+|\d+)", attrs)
+            if s:
+                data.setdefault(name, (addr, int(s.group(1), 0)))
+    return funcs, data
+
+
+def volatile_ranges():
+    """VOLATILE_RANGES of tests/replay/replay.py (the bytes of gamestate_data zeroed for the stable hash), read from its
+    source: one definition for the emulator's records and the port's."""
+    import ast
+    for node in ast.parse(REPLAY_PY.read_text()).body:
+        if isinstance(node, ast.Assign) and any(getattr(t, "id", None) == "VOLATILE_RANGES" for t in node.targets):
+            ranges = ast.literal_eval(node.value)
+            if not all(len(r) == 2 and 0 <= r[0] < r[1] for r in ranges):
+                sys.exit(f"port_gen state: VOLATILE_RANGES in {REPLAY_PY.name} is not a list of (lo, hi) pairs")
+            return [tuple(r) for r in ranges]
+    sys.exit(f"port_gen state: no VOLATILE_RANGES in {REPLAY_PY}")
+
+
+def nm_defined(nm, objects):
+    """{object: {symbol: (type letter, size or None)}} of the defined global symbols (nm -S)."""
+    out = {}
+    for obj in objects:
+        r = subprocess.run([nm, "--defined-only", "-g", "-S", obj], capture_output=True, text=True, check=True)
+        syms = {}
+        for ln in r.stdout.splitlines():
+            p = ln.split()
+            if len(p) == 4:
+                syms[p[3]] = (p[2], int(p[1], 16))
+            elif len(p) == 3:
+                syms[p[2]] = (p[1], None)
+        out[obj] = syms
+    return out
+
+
+def object_source(obj):
+    """The unit an object was compiled from: .../src/<dir>/<unit>.c.o -> ROOT/src/<dir>/<unit>.c."""
+    parts = Path(obj).as_posix().split("/")
+    i = len(parts) - 1 - parts[::-1].index("src")
+    return ROOT.joinpath(*parts[i:]).with_suffix("")
+
+
+def probe_sizes_m64(cc, gen_include, by_unit):
+    """{symbol: sizeof at -m64}: compiles each unit wrapped with `char dw3_size__<sym>[sizeof(<sym>)];` lines at
+    -m64 (to assembly only) and reads the arrays' .size directives. The -m64 size is the pointer test of the
+    layout-identical rule (cmd_state); measuring it the same way in every build keeps the -m32 build's table equal to
+    the -m64 build's."""
+    from concurrent.futures import ThreadPoolExecutor
+    ver = subprocess.run([cc, "-dumpversion"], capture_output=True, text=True).stdout.strip()
+    flags = [cc, "-m64", "-S", "-o", "-", "-w", "-x", "c", "-std=gnu99", "-DPC_PORT", "-DNON_MATCHING",
+             "-fsigned-char", "-fno-builtin", "-fno-common", f"-I{gen_include}", f"-I{ROOT / 'include'}", f"-I{ROOT}"]
+    if ver.split(".")[0].isdigit() and int(ver.split(".")[0]) >= 14:
+        flags.append("-fpermissive")
+
+    def one(item):
+        src, syms = item
+        text = f'#include "{src}"\n' + "".join(f"char dw3_size__{s}[sizeof({s})];\n" for s in sorted(syms))
+        r = subprocess.run(flags + ["-"], input=text, capture_output=True, text=True)
+        if r.returncode != 0:
+            sys.exit(f"port_gen state: the -m64 size probe of {src} failed:\n{r.stderr[-2000:]}")
+        return {m.group(1): int(m.group(2)) for m in re.finditer(r"\.size\s+dw3_size__(\w+),\s*(\d+)", r.stdout)}
+
+    sizes = {}
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        for s in ex.map(one, sorted(by_unit.items())):
+            sizes.update(s)
+    return sizes
+
+
+def cmd_state(args):
+    """port_state_tables.c for port/src/state.c and framelog.c: the EXE's functions ({PS1 address, host function}:
+    gamestate_data.funcs's PS1 image), the EXE's sized data symbols ({PS1 address, PS1 size, host object, the length of
+    the layout-identical prefix by the default rule}: port_state_read), and VOLATILE_RANGES (the stable hash).
+    The default rule: a whole object is layout-identical when its -m64 sizeof equals its PS1 size (any pointer, or
+    long, makes it larger at -m64); its prefix is 0 otherwise (port/src/state.c lists the pointer-bearing objects'
+    identical prefixes, with _Static_asserts). Only symbols that nm shows as globals of the EXE's objects are listed."""
+    objects = [ln.strip() for ln in Path(args.objects).read_text().replace(";", "\n").splitlines() if ln.strip()]
+    objects = [o for o in objects if unit_overlay(o) == "MAIN"]
+    defined = nm_defined(args.nm, objects)
+    funcs, data = exe_symbols()
+    host_funcs = {s for syms in defined.values() for s, (t, _) in syms.items() if t in "TW"}
+    frows = sorted((a, s) for s, a in funcs.items() if s in host_funcs)
+    by_unit, owner = {}, {}
+    for obj, syms in defined.items():
+        for s, (t, size) in syms.items():
+            if s in data and t in "DdBbRrGgSsVv":
+                by_unit.setdefault(str(object_source(obj)), set()).add(s)
+                owner[s] = size
+    m64 = probe_sizes_m64(args.cc, args.gen_include, by_unit)
+    drows, bad = [], []
+    for s in sorted(owner, key=lambda s: data[s][0]):
+        addr, ps1 = data[s]
+        identical = m64.get(s) == ps1
+        if identical and owner[s] != ps1:
+            bad.append(f"{s}: -m64 size 0x{m64[s]:X} is the PS1 size but this build's is 0x{owner[s]:X}")
+        drows.append((addr, ps1, s, ps1 if identical else 0))
+    if bad:
+        sys.exit("port_gen state: layout differs between -m32 and -m64 for a pointer-free object:\n  " + "\n  ".join(bad))
+    vol = volatile_ranges()
+    out = ["/* Generated by tools/port_gen.py state from config/symbol_addrs.txt, nm of the EXE's objects and",
+           " * tests/replay/replay.py's VOLATILE_RANGES; do not edit. port/src/state.c uses it. */",
+           "#include <stddef.h>", "#include \"port_runtime.h\"", ""]
+    out += [f"void {s}(void);" for _, s in frows]
+    out += [f"extern char {s}[];" for _, _, s, _ in drows]
+    out += ["", "const PortExeFunc port_exe_funcs[] = {"]
+    out += [f"    {{ 0x{a:08X}u, (PortFn){s} }}," for a, s in frows]
+    out += ["};", f"const int port_exe_func_count = {len(frows)};", "", "const PortExeData port_exe_data[] = {"]
+    out += [f"    {{ 0x{a:08X}u, 0x{n:X}, \"{s}\", {s}, 0x{p:X} }}," for a, n, s, p in drows]
+    out += ["};", f"const int port_exe_data_count = {len(drows)};", "",
+            "/* tests/replay/replay.py VOLATILE_RANGES: [lo, hi) byte ranges of gamestate_data's PS1 image */",
+            "const PortRange port_gamestate_volatile[] = {"]
+    out += [f"    {{ 0x{lo:X}, 0x{hi:X} }}," for lo, hi in vol]
+    out += ["};", f"const int port_gamestate_volatile_count = {len(vol)};", ""]
+    write(args.out, "\n".join(out))
+    print(f"port_gen state: {len(frows)} EXE functions, {len(drows)} sized EXE data symbols "
+          f"({sum(1 for r in drows if r[3])} layout-identical by size), {len(vol)} volatile ranges -> {args.out}")
+
+
 # ----------------------------------------------------------------------------------------------------------------- main
 
 def write(path, text):
@@ -382,6 +523,13 @@ def main():
     p.add_argument("--out", required=True)
     p.add_argument("--report", action="store_true", help="list every skipped function")
     p.set_defaults(fn=cmd_tables)
+    p = sub.add_parser("state", help="the EXE's function and data tables for the game-state probes (needs the objects)")
+    p.add_argument("--nm", default=os.environ.get("NM", "nm"))
+    p.add_argument("--cc", default=os.environ.get("CC", "cc"), help="the C compiler (the -m64 size probe)")
+    p.add_argument("--gen-include", required=True, help="the generated override headers (overrides --out)")
+    p.add_argument("--objects", required=True, help="a file listing the game's objects (one per line or ;-separated)")
+    p.add_argument("--out", required=True)
+    p.set_defaults(fn=cmd_state)
     args = ap.parse_args()
     args.fn(args)
 
