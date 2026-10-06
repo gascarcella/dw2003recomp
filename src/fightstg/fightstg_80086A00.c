@@ -184,7 +184,7 @@ typedef struct FightstgEnemyTurnData {
     /* 0x4 */ u8 unk_4[0x4];
 } FightstgEnemyTurnData; /* size 0x8 */
 
-/* In fightstg_8008D3B4 (defined there as void, or with other parameters; their objects stay in v0). */
+/* In fightstg_8008D3B4 (defined there as void, or with other parameters; their objects stay in v0; OBJECT_V0). */
 FightstgMessage *fightstg_message_create(void);
 FightstgMessage *fightstg_attack_create();
 FightstgMessage *fightstg_tech_create(s32 side, s32 action);
@@ -601,8 +601,9 @@ void fightstg_idle_camera_update(FightstgIdleCamera *obj) {
     }
 }
 
-void fightstg_idle_camera_create(void) {
-    object_new(fightstg_idle_camera_update, sizeof(FightstgIdleCamera), 0);
+OBJECT_V0(FightstgIdleCamera *) fightstg_idle_camera_create(void) {
+    /* PC_PORT: FINDINGS 8: callers use the object (v0) */
+    OBJECT_V0_TAIL(object_new(fightstg_idle_camera_update, sizeof(FightstgIdleCamera), 0))
 }
 
 void fightstg_slots_update(FightstgSlots *obj) {
@@ -819,11 +820,12 @@ void fightstg_player_reaction_update(FightstgPlayerReaction *obj, FightstgPlayer
     }
 }
 
-void fightstg_player_reaction_create(s32 arg0, s32 arg1) {
+OBJECT_V0(FightstgPlayerReaction *) fightstg_player_reaction_create(s32 arg0, s32 arg1) {
     FightstgPlayerReaction *obj = object_new(fightstg_player_reaction_update, sizeof(FightstgPlayerReaction), sizeof(FightstgPlayerReactionData));
 
     obj->reaction = arg0;
     obj->unk_5C = arg1;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
 /* The target of action obj->action, a member of side 1: -2..-4 = member 0..2 if it is in the battle and
@@ -1071,8 +1073,9 @@ void fightstg_enemy_turn_update(FightstgEnemyTurn *obj, FightstgEnemyTurnData *d
     }
 }
 
-void fightstg_enemy_turn_create(void) {
-    object_new(fightstg_enemy_turn_update, sizeof(FightstgEnemyTurn), sizeof(FightstgEnemyTurnData));
+OBJECT_V0(FightstgEnemyTurn *) fightstg_enemy_turn_create(void) {
+    /* PC_PORT: FINDINGS 8: callers use the object (v0) */
+    OBJECT_V0_TAIL(object_new(fightstg_enemy_turn_update, sizeof(FightstgEnemyTurn), sizeof(FightstgEnemyTurnData)))
 }
 
 /* Whether condition `type` holds with `value` (an action's condition): a random chance out of 128,
@@ -1802,11 +1805,12 @@ void fightstg_digivolve_update(FightstgDigivolve *obj, FightstgDigivolveData *da
     }
 }
 
-void fightstg_digivolve_create(s32 digimon, s32 blast) {
+OBJECT_V0(Object *) fightstg_digivolve_create(s32 digimon, s32 blast) {
     Object *obj = object_new(fightstg_digivolve_update, sizeof(FightstgDigivolve), sizeof(FightstgDigivolveData));
 
     obj->key1 = digimon;
     obj->key2 = blast;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
 /* Starts a fade up (down == 0) or down over `frames` frames. */
@@ -1877,12 +1881,13 @@ void fightstg_fade_update(Fade *obj) {
     }
 }
 
-void fightstg_fade_create(void) {
+OBJECT_V0(Fade *) fightstg_fade_create(void) {
     Fade *obj = object_new(fightstg_fade_update, sizeof(Fade), 0);
 
     obj->start = fightstg_fade_start;
     obj->layer_id = 0x1006;
     obj->ot_depth = 0;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
 void fightstg_lights_update(FightstgLighting *obj) {
@@ -1993,13 +1998,14 @@ FightstgLights *fightstg_lights_get_stage(FightstgLighting *obj, s32 index) {
     return &recs[index].lights;
 }
 
-void fightstg_lights_create(s32 layer_id) {
+OBJECT_V0(FightstgLighting *) fightstg_lights_create(s32 layer_id) {
     FightstgLighting *obj = object_create(fightstg_lights_update, sizeof(FightstgLighting), 0, 0x13);
 
     obj->set = fightstg_lights_set;
     obj->fade = fightstg_lights_fade;
     obj->layer_id = layer_id;
     obj->get_stage = fightstg_lights_get_stage;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
 /* .data (address order) */

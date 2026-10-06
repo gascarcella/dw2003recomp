@@ -25,7 +25,10 @@ typedef struct Object {
     /* 0x14 */ s32 substep; /* steps inside a step */
     /* 0x18 */ s32 timer;   /* the innermost level: mostly a frame timer, sometimes a fourth step */
     /* 0x1C */ s32 paused;  /* in state 1, non-zero skips update and the children (a positive value becomes -1) */
-    /* 0x20 */ s32 child_count; /* words in children */
+    /* 0x20 */ s32 child_count; /* words in children (on the host: pointers, data_size / sizeof(void *)) */
+#ifdef PC_PORT
+    s32 data_size; /* PC_PORT: FINDINGS 9c: the block's bytes, for object_destroy's scan (in child_count's padding) */
+#endif
     /* 0x24 */ void **children; /* the data block (zeroed, object_create's data_size): update's second argument,
                                  * a struct of child object pointers that run after the object (heap_run_children) */
     /* 0x28 */ void (*set_state)();    /* object_set_state: sets state, clears step, substep and timer */
@@ -42,5 +45,24 @@ typedef struct Object {
 
 void *object_new(void (*func)(), s32 size, s32 data_size);
 void *object_create(void (*func)(), s32 size, s32 data_size, s32 kind);
+
+/* Creators the original defines `void` although their callers use the object (FINDINGS 8): GCC 2.8 leaves the object
+ * in v0 from object_new/object_create (or the creator it calls last) to the return, and the callers' own declarations
+ * return it. The host gives them their real return type:
+ *     OBJECT_V0(Fade *) fightstg_fade_create(void) { Fade *obj = object_new(...); ...; OBJECT_V0_RETURN(obj) }
+ *     OBJECT_V0(FightstgCommand *) fightstg_command_create(void) { OBJECT_V0_TAIL(object_create(...)) }
+ * OBJECT_V0(type): the return type. PS1: void. Host: `type`.
+ * OBJECT_V0_RETURN(obj): the end of the body. PS1: nothing. Host: `return (obj);`.
+ * OBJECT_V0_TAIL(call): the last statement, whose value is the object. PS1: `call;`. Host: `return call;`.
+ * The PS1 side is the matching build's tokens exactly (scripts/build.sh). */
+#ifndef PC_PORT
+#define OBJECT_V0(type) void
+#define OBJECT_V0_RETURN(obj)
+#define OBJECT_V0_TAIL(call) call;
+#else
+#define OBJECT_V0(type) type
+#define OBJECT_V0_RETURN(obj) return (obj);
+#define OBJECT_V0_TAIL(call) return call;
+#endif
 
 #endif /* OBJECT_H */

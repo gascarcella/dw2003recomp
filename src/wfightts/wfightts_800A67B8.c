@@ -447,5 +447,10 @@ s32 wfightts_display_y;
 
 /* The overlay's entry (FIGHTSTG's fightstg_main_update keeps the object it returns). */
 Object *wfightts_main_create(void) {
+#ifndef PC_PORT
     return object_create(wfightts_main_update, 0, 0, 0);
+#else
+    /* PC_PORT: FINDINGS 9a: the original's sizes 0 write the object over the next heap block and its data at 0 */
+    return object_create(wfightts_main_update, sizeof(WfighttsMain), sizeof(WfighttsMainData), 0);
+#endif
 }

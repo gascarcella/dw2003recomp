@@ -170,11 +170,12 @@ void wstag925_sprite_anim_update(WstagSpriteAnimObject *obj) {
     }
 }
 
-void wstag925_sprite_anim_create(s32 arg0) {
+OBJECT_V0(WstagSpriteAnimObject *) wstag925_sprite_anim_create(s32 arg0) {
     WstagSpriteAnimObject *obj = object_create(wstag925_sprite_anim_update, sizeof(WstagSpriteAnimObject), 0, arg0);
 
     obj->x = 0x150;
     obj->y = 0x112;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
 /* The stage's .data (tools/wstag_data.py). */

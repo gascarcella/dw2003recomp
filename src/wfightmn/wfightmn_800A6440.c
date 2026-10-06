@@ -70,7 +70,7 @@ typedef struct WfightmnMainData {
 } WfightmnMainData; /* size 0x20 */
 
 /* FIGHTSTG functions this overlay calls. FIGHTSTG's own files define several as void: they leave their object in
- * v0, which this overlay keeps. */
+ * v0, which this overlay keeps (on the host they return it: OBJECT_V0, FINDINGS 8). */
 FightstgCommand *fightstg_command_create();
 FightstgCamera *fightstg_camera_create(s32 layer);
 FightstgStage *fightstg_stage_create(s32 stage, s32 frames);
@@ -697,7 +697,16 @@ void wfightmn_battle_end(WfightmnMain *obj, WfightmnMainData *data) {
                         count++;
                     }
                 }
+#ifndef PC_PORT
                 pick = pad_random.next() % count;
+#else
+                /* PC_PORT: FINDINGS 7: count is 0 when no enemy holds an item. The R3000A's div by 0 leaves the
+                 * dividend in HI (x % 0 == x, no trap) where x86 traps; the draw is taken either way. */
+                pick = pad_random.next();
+                if (count != 0) {
+                    pick %= count;
+                }
+#endif
                 count = 0;
                 for (i = 0; i < 3; i++) {
                     if (enemies[i].digimon != 0 && enemies[i].item != 0) {

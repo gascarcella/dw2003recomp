@@ -456,8 +456,8 @@ FieldstgIcon *fieldstg_icon_create(s32 style, s32 type, s32 id) {
     return obj;
 }
 
-void fieldstg_icon_start(s32 id) {
-    fieldstg_icon_create(0, 0, id);
+OBJECT_V0(FieldstgIcon *) fieldstg_icon_start(s32 id) {
+    OBJECT_V0_TAIL(fieldstg_icon_create(0, 0, id)) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
 void fieldstg_icon_message(FieldstgIcon *obj, s32 msg, s32 actor_id) {
@@ -950,10 +950,10 @@ FieldstgSprite *fieldstg_sprites_find_next(void) {
     return NULL;
 }
 
-void fieldstg_sprites_find_first(s32 arg0) {
+OBJECT_V0(FieldstgSprite *) fieldstg_sprites_find_first(s32 arg0) {
     fieldstg_sprites_search_key = arg0;
     fieldstg_sprites_search_next = fieldstg_stage.sprites;
-    fieldstg_sprites_find_next();
+    OBJECT_V0_TAIL(fieldstg_sprites_find_next()) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
 void fieldstg_loader_load_inn_names(Object *obj) {
@@ -5047,25 +5047,26 @@ void fieldstg_attr_get_flat_step(s32 arg0, s32 speed, s32 dir, FieldstgPos *out)
 struct FieldstgLift;
 struct FieldstgStage;
 void fieldstg_effects_message(Object *obj, s32 cmd);
-void fieldstg_effects_start(void);
+OBJECT_V0(Object *) fieldstg_effects_start(void); /* PC_PORT: FINDINGS 8 */
 void fieldstg_lift_message(struct FieldstgLift *obj, s32 cmd);
 struct FieldstgLift *fieldstg_lift_create(s32 id);
-void fieldstg_choice_start_0(void);
-void fieldstg_choice_start_1(void);
-void fieldstg_choice_start_2(void);
-void fieldstg_choice_start_3(void);
-void fieldstg_choice_start_4(void);
-void fieldstg_choice_start_5(void);
-void fieldstg_choice_start_6(void);
-void fieldstg_choice_start_7(void);
-void fieldstg_choice_start_8(void);
-void fieldstg_choice_start_9(void);
-void fieldstg_choice_start_10(void);
-void fieldstg_choice_start_11(void);
-void fieldstg_choice_start_12(void);
-void fieldstg_choice_start_13(void);
-void fieldstg_choice_start_14(void);
-void fieldstg_choice_start_15(void);
+/* PC_PORT: FINDINGS 8: the creators return their object on the host (FieldstgChoice). */
+OBJECT_V0(Object *) fieldstg_choice_start_0(void);
+OBJECT_V0(Object *) fieldstg_choice_start_1(void);
+OBJECT_V0(Object *) fieldstg_choice_start_2(void);
+OBJECT_V0(Object *) fieldstg_choice_start_3(void);
+OBJECT_V0(Object *) fieldstg_choice_start_4(void);
+OBJECT_V0(Object *) fieldstg_choice_start_5(void);
+OBJECT_V0(Object *) fieldstg_choice_start_6(void);
+OBJECT_V0(Object *) fieldstg_choice_start_7(void);
+OBJECT_V0(Object *) fieldstg_choice_start_8(void);
+OBJECT_V0(Object *) fieldstg_choice_start_9(void);
+OBJECT_V0(Object *) fieldstg_choice_start_10(void);
+OBJECT_V0(Object *) fieldstg_choice_start_11(void);
+OBJECT_V0(Object *) fieldstg_choice_start_12(void);
+OBJECT_V0(Object *) fieldstg_choice_start_13(void);
+OBJECT_V0(Object *) fieldstg_choice_start_14(void);
+OBJECT_V0(Object *) fieldstg_choice_start_15(void);
 struct FieldstgStage *fieldstg_stage_entry(s32 manager);
 void fieldstg_stage_setup(void);
 void fieldstg_encounter_step(void);
