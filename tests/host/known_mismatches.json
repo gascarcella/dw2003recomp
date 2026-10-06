@@ -82,5 +82,537 @@
  {
   "where": "wfightmn_spoils/no_holder:",
   "reason": "wfightmn_battle_end: next() % count with count 0 (no enemy holds an item) traps on x86 (SIGFPE; the harness recovers); the R3000A gives the draw and no item (FINDINGS.md 7)"
+ },
+ {
+  "where": "gpu/copy_0:",
+  "reason": "hardware rule kept: VRAM copies (GP0 80h) obey the mask bits and wrap at the VRAM's edges; the emulator ignores the mask bits (gpu.c header)"
+ },
+ {
+  "where": "gpu/copy_2:",
+  "reason": "hardware rule kept: VRAM copies (GP0 80h) obey the mask bits and wrap at the VRAM's edges; the emulator ignores the mask bits (gpu.c header)"
+ },
+ {
+  "where": "gpu/copy_3:",
+  "reason": "hardware rule kept: VRAM copies (GP0 80h) obey the mask bits and wrap at the VRAM's edges; the emulator ignores the mask bits (gpu.c header)"
+ },
+ {
+  "where": "gpu/copy_5:",
+  "reason": "hardware rule kept: VRAM copies (GP0 80h) obey the mask bits and wrap at the VRAM's edges; the emulator ignores the mask bits (gpu.c header)"
+ },
+ {
+  "where": "gpu/copy_6:",
+  "reason": "hardware rule kept: VRAM copies (GP0 80h) obey the mask bits and wrap at the VRAM's edges; the emulator ignores the mask bits (gpu.c header)"
+ },
+ {
+  "where": "gpu/copy_9:",
+  "reason": "hardware rule kept: VRAM copies (GP0 80h) obey the mask bits and wrap at the VRAM's edges; the emulator ignores the mask bits (gpu.c header)"
+ },
+ {
+  "where": "gpu/copy_11:",
+  "reason": "hardware rule kept: VRAM copies (GP0 80h) obey the mask bits and wrap at the VRAM's edges; the emulator ignores the mask bits (gpu.c header)"
+ },
+ {
+  "where": "gpu/copy_15:",
+  "reason": "hardware rule kept: VRAM copies (GP0 80h) obey the mask bits and wrap at the VRAM's edges; the emulator ignores the mask bits (gpu.c header)"
+ },
+ {
+  "where": "gpu/copy_16:",
+  "reason": "hardware rule kept: VRAM copies (GP0 80h) obey the mask bits and wrap at the VRAM's edges; the emulator ignores the mask bits (gpu.c header)"
+ },
+ {
+  "where": "gpu/copy_17:",
+  "reason": "hardware rule kept: VRAM copies (GP0 80h) obey the mask bits and wrap at the VRAM's edges; the emulator ignores the mask bits (gpu.c header)"
+ },
+ {
+  "where": "gpu/copy_19:",
+  "reason": "hardware rule kept: VRAM copies (GP0 80h) obey the mask bits and wrap at the VRAM's edges; the emulator ignores the mask bits (gpu.c header)"
+ },
+ {
+  "where": "gpu/copy_edge_0:",
+  "reason": "hardware rule kept: VRAM copies (GP0 80h) obey the mask bits and wrap at the VRAM's edges; the emulator ignores the mask bits (gpu.c header)"
+ },
+ {
+  "where": "gpu/copy_edge_1:",
+  "reason": "hardware rule kept: VRAM copies (GP0 80h) obey the mask bits and wrap at the VRAM's edges; the emulator ignores the mask bits (gpu.c header)"
+ },
+ {
+  "where": "gpu/copy_edge_2:",
+  "reason": "hardware rule kept: VRAM copies (GP0 80h) obey the mask bits and wrap at the VRAM's edges; the emulator ignores the mask bits (gpu.c header)"
+ },
+ {
+  "where": "gpu/copy_edge_3:",
+  "reason": "hardware rule kept: VRAM copies (GP0 80h) obey the mask bits and wrap at the VRAM's edges; the emulator ignores the mask bits (gpu.c header)"
+ },
+ {
+  "where": "gpu/edge_area_0:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/edge_area_2:",
+  "reason": "hardware rule kept: a 1x1 draw area draws its pixel; the emulator draws nothing (gpu.c header)"
+ },
+ {
+  "where": "gpu/edge_grad_big_d0:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/edge_grad_big_d1:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/edge_uv_big_d0:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/edge_uv_big_d1:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_0:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_1:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_2:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_3:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_5:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_6:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_7:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_8:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_10:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_11:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_12:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_13:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_14:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_15:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_edge_0:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_edge_1:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_edge_2:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/fill_edge_3:",
+  "reason": "hardware rule kept: the fill (GP0 02h) rounds x down to 16 pixels and wraps at the VRAM's edges; the emulator keeps x and clips (gpu.c header)"
+ },
+ {
+  "where": "gpu/gt_colour_7:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/gt_colour_10:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft3_2:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft3_7:",
+  "reason": "semi-transparency mode 2 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft3_8:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft3_15:",
+  "reason": "semi-transparency mode 2 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft3_20:",
+  "reason": "semi-transparency mode 2 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft3_21:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft3_26:",
+  "reason": "semi-transparency mode 3 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft3_28:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft3_31:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft4_0:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft4_4:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft4_11:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft4_21:",
+  "reason": "semi-transparency mode 2 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft4_22:",
+  "reason": "semi-transparency mode 2 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft4_24:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft4_27:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_ft4_29:",
+  "reason": "semi-transparency mode 3 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_g4_13:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_gt3_16:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_gt3_18:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_gt3_25:",
+  "reason": "semi-transparency mode 3 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_gt4_0:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_gt4_1:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_gt4_2:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_gt4_7:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_gt4_10:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_gt4_14:",
+  "reason": "semi-transparency mode 2 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_gt4_18:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_gt4_22:",
+  "reason": "semi-transparency mode 3 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/poly_gt4_30:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/rect_sprtvar_4:",
+  "reason": "semi-transparency mode 2 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/rect_sprtvar_8:",
+  "reason": "semi-transparency mode 2 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/semi_probe_2_ft:",
+  "reason": "semi-transparency mode 2 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/semi_probe_2_gt:",
+  "reason": "semi-transparency mode 2 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/semi_probe_3_ft:",
+  "reason": "semi-transparency mode 3 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/semi_probe_3_gt:",
+  "reason": "semi-transparency mode 3 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/sprite_probe_2_0_0:",
+  "reason": "semi-transparency mode 2 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/sprite_probe_2_1_0:",
+  "reason": "semi-transparency mode 2 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/sprite_probe_3_0_0:",
+  "reason": "semi-transparency mode 3 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/sprite_probe_3_1_0:",
+  "reason": "semi-transparency mode 3 of a modulated texture: the emulator computes two pixels at once and lets carries/borrows cross between them (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_0:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_1:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_4:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_6:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_7:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_9:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_10:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_12:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_13:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_14:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_16:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_17:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_18:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_20:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_22:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_23:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_25:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_26:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_27:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_28:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_29:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_axis_31:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_1:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_2:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_3:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_5:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_7:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_9:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_13:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_14:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_15:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_20:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_22:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_23:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_24:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_27:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_28:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_29:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_30:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_31:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_32:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_33:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_35:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/uv_ramp_38:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/window_0:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/window_1:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/window_2:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/window_4:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/window_6:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/window_13:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/window_14:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
+ },
+ {
+  "where": "gpu/window_15:",
+  "reason": "interpolation rounding: the emulator steps attributes in fixed point and rounds values at or within a hair of .5 either way; gpu.c rounds the exact plane to nearest (not reproduced; gpu.c header)"
  }
 ]

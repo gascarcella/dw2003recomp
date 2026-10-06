@@ -80,8 +80,9 @@ HOST_SKIPPED_GLOBALS = {"heap_funcs": "heap_funcs.first/end (the oracle's scratc
 SYMBOL_FILE = ROOT / "config/symbol_addrs.txt"
 # Families replayed by a runner of their own instead of the game's C (their cases call MIPS routines of the family, not
 # game functions): family -> module in tests/host with build(out_dir) -> binary and replay(golden, binary) ->
-# (calls, [(case, what, original, host)]). gte: the port's software GTE and LIBGTE (tests/host/gte_replay.py).
-HOST_RUNNERS = {"gte": "gte_replay"}
+# (calls, [(case, what, original, host)]). gte: the port's software GTE and LIBGTE (tests/host/gte_replay.py); gpu: the
+# port's software GPU and LIBGPU (tests/host/gpu_replay.py).
+HOST_RUNNERS = {"gte": "gte_replay", "gpu": "gpu_replay"}
 SCRATCH_BASE = 0x80180000    # tests/golden/oracle.py: where the oracle placed the case's buffers, in order, 16-aligned
 CDLOAD_ENTRIES = 4           # CdloadModule.entries
 CDLOAD_ENTRY_SIZE = 0x10
