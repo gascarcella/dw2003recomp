@@ -1,5 +1,5 @@
-// dw2003-launcher: finds the settings directory, edits settings.json and starts the game (LAUNCHER_MODS_PLAN 4.1,
-// 4.6; launcher/README.md). Exit status: 0 closed (or the self-test passed), 1 the window could not be opened (or
+// dw2003-launcher: finds the settings directory, edits settings.json and starts the game (docs/LAUNCHER.md
+// "Contract", "Launcher"; launcher/README.md). Exit status: 0 closed (or the self-test passed), 1 the window could not be opened (or
 // the self-test failed), 64 a usage error.
 #include <cstdio>
 #include <cstring>

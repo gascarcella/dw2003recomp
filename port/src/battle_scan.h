@@ -1,5 +1,5 @@
 /* The battle scripts' command streams scanned without running them (battle_scan.c; the battle_animations mod,
- * docs/LAUNCHER_MODS_PLAN.md 5.3). Dependency-free: tests/port/battle.py compiles it alone and checks it against an
+ * docs/LAUNCHER.md "Disable battle animations"). Dependency-free: tests/port/battle.py compiles it alone and checks it against an
  * independent reading of every script on the disc. */
 #ifndef PORT_BATTLE_SCAN_H
 #define PORT_BATTLE_SCAN_H

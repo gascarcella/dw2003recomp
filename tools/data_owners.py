@@ -9,7 +9,7 @@ Needs a split and built tree (scripts/build.sh): symbols and sizes come from the
 (build/main/SLES_039.36.elf), references from splat's asm (asm/main/*.s for every code unit, the
 full disassembly of C units included, and the data asm under asm/main/data/).
 
-Evidence per symbol (strongest first; docs/DECISIONS.md "Plan for splitting .data/.bss per file"):
+Evidence per symbol (strongest first; DECISIONS "Data in C, split per object"):
   gp:U   unit U reaches it through $gp. ASPSX only does that for a variable defined (or COMMON) in the
          same file, so U owns it (or U declares it COMMON).
   fp:U   it holds pointers to functions of U (a module's function table lives with the module).
@@ -20,7 +20,7 @@ link order of the objects): a dynamic program picks, per region, the non-decreas
 units that agrees with the most evidence (weighted gp > fp > ref > via). Symbols without evidence
 fall to the unit before them; the boundary between two units is uncertain anywhere in that run,
 which the "range" comment shows. Proposed starts are snapped down to 4 bytes in .data and to 8 in
-.sdata/.sbss/.bss, where every object starts 8-aligned (DECISIONS "Data split per file").
+.sdata/.sbss/.bss, where every object starts 8-aligned (DECISIONS "Data in C, split per object").
 Overlay uses of EXE data are listed (ovl:N) but are no evidence: overlays link after the EXE.
 The output is a proposal; config/main.yaml holds the decisions, with comments where they differ.
 

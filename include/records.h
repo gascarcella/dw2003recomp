@@ -227,7 +227,7 @@ extern RecordsTechnique records_techniques[];
 extern RecordsDigimon *(*records_get_digimon_func)(s32 id);
 
 /* Settings in .sdata: records_language and records_60hz end this file's .sdata (main reads CCAC with %hi/%lo,
- * so it is not main's); main_screen_pos starts main's (main.c). DECISIONS "Data split per file". */
+ * so it is not main's); main_screen_pos starts main's (main.c). DECISIONS "Data in C, split per object". */
 extern s32 records_language; /* language: 0 Japanese, 1 USA, 2-6 Europe; offsets text file IDs */
 extern s32 records_60hz; /* non-zero: 60 Hz (the NTSC patch sets it) */
 extern s32 main_screen_pos; /* non-zero: NTSC screen position (the NTSC patch sets it) */

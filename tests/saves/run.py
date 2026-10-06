@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Save round trips between the PC port and the emulator (tests/README.md layer 3; docs/PC_PORT_PLAN.md M4).
+"""Save round trips between the PC port and the emulator (tests/README.md layer 3; docs/PORT.md "Disc, memory cards and movies").
 
 Usage: tests/saves/run.py [--out DIR] [--keep] [--card-port MCD] [--card-emulator MCD] [-j N]
 

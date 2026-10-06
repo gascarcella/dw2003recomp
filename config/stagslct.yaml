@@ -50,13 +50,13 @@ segments:
     # Unnamed symbols are func_STAGSLCT_<addr>, D_STAGSLCT_<addr> (overlays share addresses; DECISIONS naming).
     symbol_name_format: STAGSLCT_$VRAM
     subsegments:
-      # One file (docs/DECISIONS.md "Overlay file split"): no jump tables, .rodata in code order (first the
+      # One file (DECISIONS "File boundaries come from evidence"): no jump tables, .rodata in code order (first the
       # strings of the .data tables, then 849A4 and 849C8 of the last big function), .data referenced in code
       # order (85ED0..871A8), no duplicated helpers.
       - [0x0,    .rodata, stagslct_800849CC]
       - [0x1D1C, c, stagslct_800849CC]   # 0x800849CC .text (tools/overlay_layout.py)
       # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t stagslct;
-      # DECISIONS "Overlay .data/.bss per file"). .bss: the zero buffer at the end (the BIOS version text the
+      # DECISIONS "Data in C, split per object"). .bss: the zero buffer at the end (the BIOS version text the
       # code writes before use); it could be zero-initialised .data (weak).
       - [0x3220, .data, stagslct_800849CC]   # 0x80085ED0 (after the last function's jr ra)
       - [0x44E4, .bss, stagslct_800849CC]   # 0x80087194

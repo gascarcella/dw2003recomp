@@ -1,4 +1,4 @@
-# CI (DECISIONS "Going public", decision 8). First green run 2026-10-05 (session 13), the data steps included.
+# CI (DECISIONS "Going public: the working repo is public", decision 8). First green run 2026-10-05 (session 13), the data steps included.
 #
 # With the maintainers' secret GAMEDATA_DEPLOY_KEY (a read-only deploy key of the private data checkout
 # <owner>/dw2003-gamedata) the job has the disc and the pinned emulator: it rebuilds every game file byte-identical
@@ -7,7 +7,7 @@
 # they only get the disc-free part: the toolchain is built and smoke-tested, the scripts parse, the Python compiles, and
 # every game unit compiles for the host at -m64 (tools/port_inventory.py probe and link, the PC port's gate).
 #
-# When it runs (DECISIONS "CI only when it is needed"): on pull requests and on pushes to main, not on changes that
+# When it runs (DECISIONS "CI per area"): on pull requests and on pushes to main, not on changes that
 # touch only documentation (paths-ignore: no step reads those files), and a newer push to a pull request cancels the
 # run of the older one. A branch without a pull request: `gh workflow run CI --ref <branch>`. release.yml calls this
 # workflow (workflow_call) before it builds a release.
@@ -35,12 +35,14 @@ on:
       - "**/*.md"
       - "LICENSE"
       - ".gitignore"
+      - ".github/ISSUE_TEMPLATE/**"
   pull_request:
     paths-ignore:
       - "docs/**"
       - "**/*.md"
       - "LICENSE"
       - ".gitignore"
+      - ".github/ISSUE_TEMPLATE/**"
   workflow_dispatch:
   workflow_call:   # release.yml: the whole suite before a release is built (a tag's run: every area)
 
@@ -153,7 +155,7 @@ jobs:
         if: steps.areas.outputs.port == 'true'
         run: |
           SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=dummy build/port-sdl/dw2003 --input-test --fps 0
-          # the same with rebound keys and pads, chord hotkeys and a mod's bindings (docs/LAUNCHER_MODS_PLAN.md 4.3)
+          # the same with rebound keys and pads, chord hotkeys and a mod's bindings (docs/LAUNCHER.md "Input bindings")
           SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=dummy build/port-sdl/dw2003 --config tests/port/settings/rebound.json --input-test --fps 0
 
       # The launcher (launcher/README.md; Dear ImGui on SDL3): it builds, and its self-test passes on SDL's offscreen

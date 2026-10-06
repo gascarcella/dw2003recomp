@@ -2,7 +2,7 @@
 #define OVERLAY_COMMON_H
 
 /* Types of the helpers that nearly every tier-1 overlay has its own byte-identical copy of (separate link units:
- * DECISIONS "C patterns learned in session 6"). CARDGAME still has local copies; the EXE's inn.c
+ * docs/MATCHING.md "C patterns"). CARDGAME still has local copies; the EXE's inn.c
  * defines Fade's functions (inn_fade_create).
  * WindowAnim (window_anim_type.h) is the EXE's window_anim type: overlays that define the pair after other
  * functions (STGMCARD's and STDWTITL's start_fade/update_fade) can't use window_anim.h's static copies. */

@@ -325,7 +325,7 @@ void stgtrain_session_draw(StgtrainSession *obj) {
 
 /* A stat by its menu type: types 1-5 are unk_0C[0..4], types 8-14 are unk_18[0..6]. The original reads them with
  * the offset added to the struct base (`addu obj,k`), which only a separate function gives (inlined: its parameters are
- * fresh pseudos); every index form compiles to `addu k,obj`. Judgement call (DECISIONS "Inline stat accessors"). */
+ * fresh pseudos); every index form compiles to `addu k,obj`. Judgement call (docs/MATCHING.md "Operand order and arithmetic"). */
 static inline s16 stgtrain_stat_low(GamestateStats *stats, s32 type) {
     return stats->stats[type - 1];
 }

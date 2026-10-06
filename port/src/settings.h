@@ -1,5 +1,5 @@
 /* The settings file (`--config FILE`; settings.c): the contract between the launcher and the game
- * (docs/LAUNCHER_MODS_PLAN.md 4.1-4.3, schema 1). The game reads a settings file only when `--config` names it: the
+ * (docs/LAUNCHER.md "Contract" to "Settings file", schema 1). The game reads a settings file only when `--config` names it: the
  * bare binary (the tests, CI) never depends on the machine. Every path in the file is relative to the file's own
  * directory (or absolute); the launcher owns the lookup of that directory. main.c applies the values, then the
  * command line's options override them. */

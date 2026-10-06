@@ -384,7 +384,7 @@ void wstag805_update(WstagObject *obj, Wstag805Data *data) {
         obj->base.next_state(obj);
         data->rain = wstag805_rain_create(0x349);
         data->lamp = wstag805_lamp_create(0x348);
-        /* Evidence (class A1, sched1 barrier; DECISIONS "LOOP_BLOCK audit"): the original schedules the lamp store
+        /* Evidence (class A1, sched1 barrier; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original schedules the lamp store
          * before the block, as before a loop start. */
         LOOP_BLOCK(if (gamestate_flags.get_flag(0x4048, 0) && gamestate_flags.get_flag(0x4046, 0)) {
             data->event = fieldstg_event_start(0x370);

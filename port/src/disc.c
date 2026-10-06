@@ -1,4 +1,4 @@
-/* LIBCD's sector source over the user's BIN/CUE (port_harness.h; PC_PORT_PLAN 2.8, DECISIONS item 7).
+/* LIBCD's sector source over the user's BIN/CUE (port_harness.h; docs/PORT.md "Disc, memory cards and movies").
  *
  * port_disc_open takes the .cue (its first FILE line names the BIN, relative to the cue's directory; the disc is one
  * track, MODE2/2352, INDEX 01 00:00:00) or the .bin itself. Sector `lba` is the 2352 bytes at lba * 2352 in the BIN:

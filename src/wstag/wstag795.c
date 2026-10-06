@@ -185,7 +185,7 @@ void wstag795_countdown_update(WstagObject *obj, WstagEventData *data) {
         obj->base.next_state(obj);
         break;
     case OBJECT_STATE_RUN:
-        /* Evidence (class A1, sched1 barrier; DECISIONS "LOOP_BLOCK audit"): the original's temporaries in the digit
+        /* Evidence (class A1, sched1 barrier; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original's temporaries in the digit
          * carries come from sched1's order (without sched1 both forms are the same). */
         LOOP_BLOCK(if (gamestate_flags.get_flag(0x4043, 0) == 0 && fieldstg_stage.event_running == 0
             && fieldstg_stage.battle_starting == 0 && fieldstg_stage.title_shown == 0 && fieldstg_stage.menu_open == 0

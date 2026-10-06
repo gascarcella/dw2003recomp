@@ -1,7 +1,7 @@
-# Sound: what the game asks of LIBSND, what reaches the SPU, and the M3 plan
+# Sound: what the game asks of LIBSND, what reaches the SPU, and how the port reproduces it
 
-Groundwork for the PC port's milestone M3 (`docs/PC_PORT_PLAN.md` 2.7 and M3; DECISIONS "PC port decisions (session 15)"
-item 6: our own SPU core and LIBSND, checked against emulator SPU register-write traces). Written in session 16 (T11).
+The game's sound path and the PC port's implementation of it: our own SPU core and LIBSND, checked against the
+emulator's SPU register-write traces (DECISIONS "The port is checked against the emulator"), and the movies' XA audio.
 Every claim is marked **verified** (with how) or **assumed** (with the source). "The trace" is the SPU write trace of
 `tests/sound/spu_trace.py` (section 4); `new_game` and `first_battle_save` are the layer-2 scripts.
 
@@ -13,8 +13,8 @@ store of the `new_game` trace (with `--detail`, which records the pc) comes from
 **LIBCD**: `CdInit` → `CD_initvol` (`0x8002DB40`) at tick 523 writes main volume `0x3FFF` (L, R), CD volume `0x3FFF`
 (L, R) and SPU control `0xC001` (**verified**, pcs `0x8002DB6C`-`0x8002DB8C`). The port's `CdInit` must make the same
 five stores. Everything goes through 24 LIBSND functions at 28
-call sites, all in `sound.c` except `SsInit` (`main`) and `SsSeqCalledTbyT` (`gfx`'s vsync callback) (PC_PORT_PLAN
-section 1, **verified** with `grep -rn "Ss[A-Z]" src`).
+call sites, all in `sound.c` except `SsInit` (`main`) and `SsSeqCalledTbyT` (`gfx`'s vsync callback) (docs/PORT.md
+"Compiling the game C for the host", **verified** with `grep -rn "Ss[A-Z]" src`).
 
 `sound_module` (`include/sound.h`) is the only way in for the rest of the game; the overlays call its function table
 (**verified**, `grep -rhoE "sound_module\.\w+" src`):
@@ -115,8 +115,7 @@ All **verified** on the `new_game` trace unless marked.
   (CD audio on); `SsSetSerialVol(0, 0x7F, 0x7F)` → CD volume `0x7FFE`; `SsUtSetReverbType(3)` → the 32 reverb
   registers (`dAPF1` `0x00B1`, `dAPF2` `0x007F`, `vIIR` `0x70F0`, ..., `vLIN`/`vRIN` `0x8000`: **verified**, the trace),
   and later the base `0xF6F8` (work area `0x7B7C0`-`0x7FFFF`, `0x4840` bytes). Type 3 is Psy-Q's `SS_REV_TYPE_STUDIO_B`
-  and the values are psx-spx's "Studio Medium" example (**assumed**, from memory of both documents: psx-spx could not
-  be fetched from this machine; the LIBSPU task must check its preset table against psx-spx).
+  and the values are psx-spx's "Studio Medium" preset (**verified** against psx-spx's table, section 6).
 - **Bank bodies**: one DMA each, 16-word blocks: COMMON's 297,200-byte body as 297,216 bytes at `0x1010` (BCR
   `0x1224_0010`), CNTY_SEL's at `0x49C10`, TTLBGM's at `0x62410` (`spu=` of the DMA lines; the data's SHA-1 is in the
   trace). So SPU RAM is: `0x0000`-`0x0FFF` unused by the game (the hardware's capture buffers, psx-spx), `0x1000` the
@@ -154,7 +153,7 @@ Register writes per run: `new_game` 20,406 SPU stores (koff/kon/eon/non 15,610; 
   <value>` per store, `<tick> dma4 spu=<addr> len=<n> sha1=<..>` per DMA block, `#` comments for the calls, the
   markers (`exe_start`, checkpoints, overlay and map changes) and with `--detail` the pc of each store. `diff` compares
   two traces with the comments dropped, optionally rebased at a marker (the port's boot will not reach `exe_start` at
-  tick 511): this is the comparison the LIBSND task needs.
+  tick 511): the port's trace is compared this way (section 7).
 - **Determinism (verified)**: `new_game` twice → identical traces (2,462 ticks, 20,406 stores, 101 DMA blocks), and
   the committed `cnty_sel` case three times (two at `--record`, one `check`).
 - **Cost (measured, 4-core machine)**: `new_game` 54 s a run, 459 KB with `--calls` (812 KB with `--detail`);
@@ -175,86 +174,28 @@ differ in length (7,386,112 vs 7,284,736 bytes) by inserted gaps; aligned on the
 captures were identical for the first 169,448 samples, then a gap shifted one of them. Usable for listening and for
 segment-wise comparisons, not as a byte-exact golden. Speed 0 (unthrottled) drops most of the audio.
 
-## 5. Plan for M3
-### Scope
-**SPU core** (port side, ours, from psx-spx "SPU"): 24 voices with ADPCM decoding (5 filters, shift, the block flags:
-loop start/repeat/end, ENDX), the ADSR envelope (attack/decay/sustain/release, linear/exponential, increase/decrease,
-the rate tables), pitch (`0x1000` = 44,100 Hz) with the 4-point gaussian interpolation (psx-spx's 512-entry table),
-pitch modulation (PMON; the game writes 0 there, low priority), noise (NON; never set in the traces, low priority),
-key on/off semantics, main volume and the volume sweeps (the game writes fixed volumes), the reverb (the documented
-all-pass/comb/IIR network over the work area at 22,050 Hz, with the preset registers), CD audio input mixed in (M5:
-XA from the movies; the game turns CD audio on in `sound_init`), the capture buffers (unused by the game), DMA/FIFO
-writes into SPU RAM (512 KB), SPUCNT/SPUSTAT as far as LIBSPU polls them. Output: 44,100 Hz stereo s16 into SDL3
-(M2's window code owns the device); headless runs render into a buffer that a test can hash.
+## 5. More coverage: one trace per sound key (`tests/sound/key_trace.py`)
+The two pad scripts reach only part of LIBSND (section 2). `key_trace.py` plays every sound of the game one at a time
+in the emulator, with no pad route: the layer-1 oracle's call mechanism stops the game in CNTY_SEL's main loop and
+calls `sound_load_extra_bank` per bank and `sound_module.play(key)` per key (then `sound_fade_out`, `sound_key_off` or
+`sound_stop`, and `sound_stop_all`), letting the vsyncs run in between, so each step sounds alone. The plan covers the
+71 banks, every sequence of their SEPs (one of each SEP's identical placeholder sequences), the BGMs (some through
+their loop point, others faded with `SsSepSetDecrescendo`) and the literal keys the game passes in `src/`: 343 steps,
+one emulator boot per group of banks. The goldens are `tests/sound/expected/keys/` (the plan and one xz trace per
+bank); `check` reproduces them, `diff` compares a port trace of the same driver step by step (ticks rebased to each
+step's marker). They reach what the two scripts do not: `SsUtKeyOff`, `SsSepSetDecrescendo`, CC 7/10 and the NRPN
+loops. The driver's details are in the script's docstring. The debug sound test SOUNDTST (`src/soundtst/`) would be the
+game's own driver, but no pad route reaches it.
 
-**LIBSND** (port side, ours): only the 24 functions the game calls (section 1), and of LIBSND's internals only what
-those reach in practice (section 2): SEP opening and the score table (6 × 16, with the sequence aliasing of section 1),
-VAB header parsing and the SPU allocation (`SsVabOpenHeadSticky` at a fixed address), the body transfer (immediate on
-the host; `SsVabTransCompleted` must still poll as the PS1 does: the trace shows 104 polls for COMMON, which cost no SPU writes),
-the sequencer (resolution 480, tempo in µs/qn, the 50 Hz tick of `SsSetTickMode(0x1032)`, the per-tick delta
-arithmetic, note on/off, program change, pitch bend, volume/pan/data entry, the NRPN loop and attribute controls, tempo
-meta, end of track, `SsSepPlay`'s play mode and loop count, decrescendo), the voice manager (allocation by priority,
-key-on/off, the per-tick flush in the observed order), `SsUtKeyOn`/`SsUtKeyOff`/`SsUtAllKeyOff`, the reverb utilities
-(type presets = psx-spx's table; depth), `SsSetMVol`, `SsSetSerialAttr/Vol`. LIBSPU becomes the port's internal
-interface between LIBSND and the SPU core (no Psy-Q LIBSPU API needed: the game never calls it).
+Not traced: the 60 Hz mode (`SsSetTickMode(0x1000)`, the NTSC patch).
 
-### Verification
-- **LIBSND, exact**: the port writes the same trace format (a hook in its SPU register write function, plus the DMA
-  blocks' SHA-1), and `spu_trace.py diff` compares it with the emulator's, aligned at a marker (`checkpoint cnty_sel`,
-  or the first `SsInit` store): the same stores in the same order, tick for tick, for `new_game` and
-  `first_battle_save` (the scripts the port already replays). Ticks may need a tolerance at bank loads (CD timing:
-  the port's `--cd-speed realistic` is close but not equal); everything between two loads must be exact. Start with the
-  committed `cnty_sel` trace (in `test.sh`).
-- **More coverage for LIBSND** (done in session 16 by `tests/sound/key_trace.py`: 343 steps over the 71 banks, the BGMs
-  and the game's literal keys, in 4 emulator boots, goldens in `tests/sound/expected/keys/`; it reaches `SsUtKeyOff`,
-  `SsSepSetDecrescendo`, CC 7/10 and the NRPN loops; a port run of the same driver is still to do): a trace driver that plays every sound of a bank without the CD (SOUNDTST, stage 8: the
-  debug sound test, `src/soundtst/`, is not reachable by the pad; a Lua step that sets the next map, or the layer-1
-  oracle's call mechanism calling `sound_module.play(key)` per key and letting N vsyncs run): one golden trace per
-  key, every BGM and SFX of the 71 banks. This also covers `SsUtKeyOff`, the decrescendo and the CCs the two scripts
-  never reach.
-- **SPU core**: (1) unit goldens from psx-spx's formulas (ADPCM blocks with every filter/shift, the gaussian table,
-  ADSR rate steps, the reverb's address arithmetic) in host tests; (2) an emulator oracle for the envelope: the layer-1
-  oracle can call LIBSPU in the EXE (`SpuSetVoiceAttr`, `SpuSetKey`, `SpuGetVoiceEnvelope`) and read a voice's
-  envelope register every vsync: the ADSR timing at vsync resolution against Redux's SPU; (3) the SDL disk capture
-  (section 4) of a whole song against the port's rendering of the same register trace: by ear, and per segment between
-  the emulator's gaps (Redux's SPU is itself an emulation; bit-exactness with it is not the goal, psx-spx's documented
-  hardware behaviour is).
-
-### Tasks (2-3 agents, disjoint files)
-1. **T-spu: the SPU core.** Owns `port/src/spu.c` + `port/src/spu.h` (new): registers (16-bit write/read by offset),
-   SPU RAM with DMA/FIFO writes, `spu_render(int16_t *out, int frames)` at 44,100 Hz, ADPCM, ADSR, gaussian, reverb,
-   CD input stub; `tests/spu/` host unit goldens (new). A trace hook: `spu_set_write_hook(fn)` for the trace writer.
-   Check: the unit goldens; render the committed `cnty_sel` trace (fed as register writes per tick, DMA blocks from the
-   disc's bank files) to a WAV for listening.
-2. **T-libsnd: LIBSND over the SPU core.** Owns `port/psyq/libsnd.c` (replaces the stub), `port/psyq/libsnd_*.c` (new,
-   if split), the port's trace writer (`port/src/spu_trace.c`, new: the trace format of section 4, written with
-   `--spu-trace FILE`), `tests/port/` additions for the trace comparison. Uses only `spu.h`. Check: `spu_trace.py diff`
-   against the emulator's `new_game` and `first_battle_save` traces (aligned), and the committed `cnty_sel` trace;
-   sanitizer-clean. Needs one change outside its files (the orchestrator's): `port/psyq/libcd.c`'s `CdInit` makes
-   LIBCD's five SPU stores (`CD_initvol`, section 1) through `spu.h`.
-3. **T-audio (optional, small): the output path.** Owns the SDL3 audio device in `port/src/video.c`'s neighbour
-   (`port/src/audio.c`, new): a callback pulling `spu_render`, paced by the emulated vsyncs, muted headless; `--wav FILE`
-   for headless capture. Plus the SOUNDTST/oracle trace driver of "More coverage" if time allows (owns
-   `tests/sound/` additions).
-T-spu and T-libsnd can run in parallel once `spu.h` is fixed (the orchestrator writes it first, as `port_harness.h`
-was in M1). T-libsnd's exact check needs no audio at all; T-spu's needs no LIBSND.
-
-### Open points
-- **How close to Sony's code may LIBSND follow?** Settled by the user (session 16): the disassembly may be read for
-  constants, tables, formulas and the order of operations; the C is our own (section 7, "Provenance").
-- **Tick alignment**: measured with the LIBSND build (section 7): the game's own frames between two LIBSND calls differ
-  between the port and the emulator (not only at bank loads), so the exact check replays the emulator's calls on its
-  timeline, and the port's run is checked against the replay of its own calls.
-- The sequence aliasing (section 1): confirmed (section 7).
-- 60 Hz (`SsSetTickMode(0x1000)`, the NTSC patch) is not traced.
-
-## 6. The SPU core (`port/src/spu.c`, `spu_dsp.c`; T-spu, session 16)
+## 6. The SPU core (`port/src/spu.c`, `spu_dsp.c`)
 Our own, written from psx-spx "Sound Processing Unit (SPU)" and, for the ADPCM filter tables, its CD-ROM page
-("XA-ADPCM", which psx-spx names as the same algorithm). psx-spx's site and its mirror are blocked by this machine's
-proxy, but its source is not: `https://raw.githubusercontent.com/psx-spx/psx-spx.github.io/master/docs/ps1/spu/soundprocessingunitspu.md`
+("XA-ADPCM", which psx-spx names as the same algorithm). psx-spx's source, where its site is unreachable:
+`https://raw.githubusercontent.com/psx-spx/psx-spx.github.io/master/docs/ps1/spu/soundprocessingunitspu.md`
 (and `.../ps1/cdr/cdromformat.md`). No emulator source was read; PCSX-Redux served as an oracle only. It implements
-`port/include/spu.h` as given; the pure pieces and a read-only view of the voices are in `port/src/spu_internal.h`
-(for the tests and tools). With psx-spx in hand, section 3's assumption checks out (**verified**): the 32 registers
+`port/include/spu.h`; the pure pieces and a read-only view of the voices are in `port/src/spu_internal.h`
+(for the tests and tools). Section 3's reverb values check out against psx-spx (**verified**): the 32 registers
 `SsUtSetReverbType(3)` writes are psx-spx's "Studio Medium" preset word for word, its size `4840h` gives the base
 `F6F8h`, and `18040h`, SsInit's cleared area, is the size of the two largest presets ("Chaos Echo", "Delay").
 
@@ -352,14 +293,13 @@ proxy, but its source is not: `https://raw.githubusercontent.com/psx-spx/psx-spx
   0) the mean drops to 0.85. Not a golden (the capture is host-paced, Redux is an emulation), but the whole chain
   (samples, pitch, interpolation, envelopes, volumes, reverb) comes out as Redux's does.
 
-### Open
+### Unsettled and not modelled
 - The envelope counter's start (the release difference above): hardware would settle it.
-- Speed once the game drives it (T-audio): the port's CMake build has no `-O`; `-O2` on `spu*.c` gives 4×.
 - Not modelled: SPU interrupts (IRQA; the game never enables IRQ9), DMA reads (SPU → RAM), the external input,
-  `0x1AC`'s RAM-size modes, the hardware's write latency. Nothing calls `spu_init`/`spu_reset` yet: `port/src/main.c`
-  and `reset.c` (the console's reset) should, once LIBSND drives the SPU.
+  `0x1AC`'s RAM-size modes, the hardware's write latency.
+- Speed: `spu*.c` are built with `-O2` in every build (`port/CMakeLists.txt`; about 4× the default).
 
-## 7. LIBSND (`port/psyq/libsnd*.c`; T-libsnd, session 16)
+## 7. LIBSND (`port/psyq/libsnd*.c`)
 The 24 functions the game calls (section 1) and what they reach (section 2), over the SPU core of section 6, written so
 that the SPU sees what it sees on the PS1: the same stores in the same order at the same vsync, the same DMA blocks.
 `libsnd.c` has the public calls, start-up and the VABs; `libsnd_seq.c` the score table and the sequencer;
@@ -370,7 +310,7 @@ with the game's LIBSND calls as comments (`# <tick> call SsSepPlay(2, 2, 1, 1)`,
 VAB header, the console's reset as `reset()`).
 
 ### Provenance
-The user's decision (session 16): LIBSND is Sony's library code, in the EXE as split asm that this project never
+The project's rule (DECISIONS "Psy-Q libraries are identified, never decompiled"): LIBSND is Sony's library code, in the EXE as split asm that this project never
 decompiles; its disassembly may be read to learn constants, tables, formulas and the order of operations, and the
 port's C is our own, with no routine translated instruction by instruction or function by function and no data copied
 beyond numeric facts (a table of numbers is a fact, cited where it is used). The code is MIT like the rest of the repo;
@@ -470,12 +410,11 @@ compared tick for tick with the emulator's (2 below). The exact check takes the 
    while the game code runs early in it: the samples of frame N belong between frame N's game code and the flush of
    N + 1.
 
-### Findings for the rest of M3
-- **The audio output must render before the vsync handler** (above): `psyq_vsync_tick` runs the game's handler, then
-  the runtime's hook (`port_frame`: the CD, the frame log, the script, `port_audio_frame`, the video). The samples for a
-  frame must be rendered after that frame's game code and before the next flush, e.g. by a pre-handler hook in
-  `psyq_vsync_tick` that renders 882 samples. And every vsync, headless too (LIBSND reads the envelopes); `run.py` skips
-  2(a) while `port/src/audio.c` is the step-0 stub.
+### Rendering order and rate
+- **The audio renders before the vsync handler** (check 3 above): the samples for a frame must come after that
+  frame's game code and before the next flush, so `port/src/audio.c` renders a vsync's 882 samples in the vsync
+  pre-hook (`psyq_set_vsync_pre_hook`), before the game's handler, every vsync, headless too (LIBSND reads the
+  envelopes).
 - **882 vs 877.3 samples per vsync**: the PAL rate the port renders (`SPU_RATE` / 50) is not the emulator's pace; a note
   whose release ends within ~0.5 % of a frame of a flush may get another voice than in the emulator (seen once in
   `new_game`, at tick 1,754). Hardware: 44,100 Hz against 49.76 vsyncs a second would be 886 samples.
@@ -484,10 +423,10 @@ compared tick for tick with the emulator's (2 below). The exact check takes the 
 `SsSepSetDecrescendo` (FIGHTSTG's fade-out), `SsUtKeyOff`, CC 7 and CC 10 (in SEPs the two scripts do not play), the
 slow-tempo frame counter, `SsSetTickMode`'s other codes. Left out (on no SEP on the disc, or never called by the game):
 noise voices, RPN/VAG attributes and NRPN attributes other than 15 and 16 (a trace line when one occurs), CC
-11/64/91/100/101/121, timer tick modes, the next-SEP chaining, crescendo and tempo changes by call. Section 5's "More
-coverage" (a trace per sound key through SOUNDTST or the layer-1 oracle) would cover the first group.
+11/64/91/100/101/121, timer tick modes, the next-SEP chaining, crescendo and tempo changes by call. The first group is
+in section 5's per-key goldens; a port run of that driver, which would check them, is not written yet.
 
-## 8. CD audio: the movies' XA (`port/psyq/xa.c`, `libcd.c`; M5, T17, session 16)
+## 8. CD audio: the movies' XA (`port/psyq/xa.c`, `libcd.c`)
 **The data (verified, every sector of the 14 `AAA/STR/MOVIE*.STR`):** one audio channel per movie, file 1 channel 1,
 submode `64h` (audio, Form 2, real time), coding `01h` (stereo, 37,800 Hz, 4 bits), in every eighth sector (index 7
 mod 8; the video sectors are file 0 channel 1, submode `48h`). At double speed that is 18.75 sectors/s = 37,800

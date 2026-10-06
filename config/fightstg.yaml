@@ -50,7 +50,7 @@ segments:
     # Unnamed symbols are func_FIGHTSTG_<addr>, D_FIGHTSTG_<addr> (overlays share addresses; DECISIONS naming).
     symbol_name_format: FIGHTSTG_$VRAM
     subsegments:
-      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"): boundaries proven by jump-table
+      # .rodata and .text per file (DECISIONS "File boundaries come from evidence"): boundaries proven by jump-table
       # parity; positions strong unless marked weak.
       - [0x0,     .rodata, fightstg_model]
       - [0x1C,    .rodata, fightstg_stage]

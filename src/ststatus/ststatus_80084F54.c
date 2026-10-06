@@ -570,7 +570,7 @@ void ststatus_equip_show_current(StstatusEquipPage *obj, StstatusEquipPageData *
     s32 item;
 
     if (show) {
-        /* written as a sum for the operand order (DECISIONS "C patterns learned in session 6") */
+        /* written as a sum for the operand order (docs/MATCHING.md "C patterns") */
         item = *(gamestate_data.funcs.get_record(obj->digimon)->equipment + obj->slot);
         data->slot_title->set_text(data->slot_title, cdload_module.files.get_file(records_language + 0xB0), 0x20);
         if (item > 0) {

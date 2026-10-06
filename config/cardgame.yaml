@@ -50,7 +50,7 @@ segments:
     # Unnamed symbols are func_CARDGAME_<addr>, D_CARDGAME_<addr> (overlays share addresses; DECISIONS naming).
     symbol_name_format: CARDGAME_$VRAM
     subsegments:
-      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"). CARDGAME shares no code with the
+      # .rodata and .text per file (DECISIONS "File boundaries come from evidence"). CARDGAME shares no code with the
       # other overlays (no window_anim/fade/tween/stage-module copies; only the entry point matches), so the
       # evidence is its own:
       # - Jump-table parity: tables at 0 mod 8 up to 82FB0, at 4 mod 8 from 8326C (8642C's), at 0 from 836A0

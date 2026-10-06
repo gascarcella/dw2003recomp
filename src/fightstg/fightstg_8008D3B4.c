@@ -2586,7 +2586,7 @@ FightstgCameraSetting *fightstg_camera_get_preset(FightstgCamera *obj, s32 slot,
     FightstgModelRecordA *a;
     FightstgModelRecordB *b;
 
-    /* Evidence (class A2, sched2 barrier; DECISIONS "LOOP_BLOCK audit"): the original finishes every register save and
+    /* Evidence (class A2, sched2 barrier; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original finishes every register save and
      * argument copy before the first call's arguments. */
     LOOP_BARRIER();
     list = (FightstgSlots *)heap_objects.find(0x14, -1, -1);
@@ -2629,7 +2629,7 @@ FightstgCameraSetting *fightstg_camera_get_default(FightstgCamera *obj) {
     FightstgSlots *list;
     s32 id;
 
-    /* Evidence (class A2, sched2 barrier; DECISIONS "LOOP_BLOCK audit"): the original finishes every register save (s0
+    /* Evidence (class A2, sched2 barrier; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original finishes every register save (s0
      * after ra) before the first call's arguments. */
     LOOP_BARRIER();
     list = (FightstgSlots *)heap_objects.find(0x14, -1, -1);
@@ -3313,7 +3313,7 @@ void fightstg_command_menu_update(FightstgCommandMenu *obj, FightstgCommandMenuD
         obj->base.next_state(obj);
         break;
     case OBJECT_STATE_RUN:
-        /* Evidence (class B, register priority only; DECISIONS "LOOP_BLOCK audit"): the original keeps the state in s2
+        /* Evidence (class B, register priority only; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original keeps the state in s2
          * through case 1 (its 1 is stored to unk_54); without the block only registers differ, same layout. */
         LOOP_BLOCK(
                 if (pad_state.get_pressed(0) & 0x2000) {
@@ -3480,7 +3480,7 @@ void fightstg_digivolve_menu_show_names(FightstgDigivolveMenu *obj) {
     }
 }
 
-/* Forced match (FAKE, DECISIONS "User decisions on the review items"). Natural C reaches 99.5%: data and changed get
+/* Forced match (FAKE, DECISIONS "Match status and forced (FAKE) matches"). Natural C reaches 99.5%: data and changed get
  * s3/s2 (original s2/s3). Cause (-dl): data has 15 refs over 382 insns (3*15/382 = 0.118) and changed 7 over 94
  * (2*7/94 = 0.149), so changed is allocated first. Tried without success: a second LOOP_BLOCK (class B only), repeating
  * the sel expression, a ternary for cur, `changed` initialised at the top (wip-6/9), inline helpers for the status
@@ -3523,7 +3523,7 @@ void fightstg_digivolve_menu_update(FightstgDigivolveMenu *obj, FightstgDigivolv
         d = data;
         changed = 0;
         open = 1;
-        /* Class C (block placement; DECISIONS "LOOP_BLOCK audit"): the confirm branch goes out of line. */
+        /* Class C (block placement; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the confirm branch goes out of line. */
         LOOP_BLOCK(
         pad = pad_state.get_pressed(0);
         if (pad & 0x800) {
@@ -4000,7 +4000,7 @@ void fightstg_item_menu_update(FightstgItemMenu *obj, FightstgItemMenuData *data
         obj->base.next_state(obj);
         break;
     case OBJECT_STATE_RUN:
-        /* Evidence (class C, block placement; DECISIONS "LOOP_BLOCK audit"): the original places the cancel block out
+        /* Evidence (class C, block placement; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original places the cancel block out
          * of line, after the unk_54 store. */
         LOOP_BLOCK(
             fightstg_item_menu_draw(obj);
@@ -4326,7 +4326,7 @@ void fightstg_tech_menu_update(FightstgTechMenu *obj, FightstgTechMenuData *data
         obj->base.next_state(obj);
         break;
     case OBJECT_STATE_RUN:
-        /* Evidence (class C, block placement; DECISIONS "LOOP_BLOCK audit"): the original places the cancel block and
+        /* Evidence (class C, block placement; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original places the cancel block and
          * the confirm stub (a jump into the confirm tail) out of line before case 1. */
         LOOP_BLOCK(
             fightstg_tech_menu_draw(obj);
@@ -4481,7 +4481,7 @@ void fightstg_member_menu_show(FightstgMemberMenu *obj, FightstgMemberMenuData *
     }
 }
 
-/* Shape from the US decomp (func_800967A4; DECISIONS "The US decomp as a reference"): case 0 reads the current member
+/* Shape from the US decomp (func_800967A4; DECISIONS "Independent EU-only project on the unpatched disc"): case 0 reads the current member
  * into a local and the loop re-reads the global, case 1 keeps the cursor's sel in a local. */
 extern FightstgCursorParams fightstg_member_menu_cursor;
 
@@ -4525,7 +4525,7 @@ void fightstg_member_menu_update(FightstgMemberMenu *obj, FightstgMemberMenuData
         break;
     case OBJECT_STATE_RUN:
         fightstg_member_menu_draw(obj);
-        /* Class C (block placement; DECISIONS "LOOP_BLOCK audit"): the cancel block goes out of line. */
+        /* Class C (block placement; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the cancel block goes out of line. */
         LOOP_BLOCK(
             pad = pad_state.get_pressed(0);
             if (obj->check_items != 0 && (pad & 0x4000)) {
@@ -4744,7 +4744,7 @@ void fightstg_switch_menu_update(FightstgSwitchMenu *obj, FightstgSwitchMenuData
                 obj->base.next_substep(obj);
                 break;
             case 1:
-                /* Evidence (class C, block placement; DECISIONS "LOOP_BLOCK audit"): the original places the cancel and
+                /* Evidence (class C, block placement; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original places the cancel and
                  * confirm blocks out of line (between cases 1/1/0 and 1/1/1). */
                 LOOP_BLOCK(
                     pad = pad_state.get_pressed(0);
@@ -4800,7 +4800,7 @@ void fightstg_switch_menu_update(FightstgSwitchMenu *obj, FightstgSwitchMenuData
                 obj->base.next_substep(obj);
                 break;
             case 1:
-                /* Evidence (class C, block placement; DECISIONS "LOOP_BLOCK audit"): the original places the cancel
+                /* Evidence (class C, block placement; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original places the cancel
                  * block out of line (before this case's code). */
                 LOOP_BLOCK(
                     pad = pad_state.get_pressed(0);
@@ -5563,7 +5563,7 @@ void fightstg_cursor_copy_highlight(s32 arg) {
             if (i == 2 && obj->drawn_sel == obj->sel) {
                 break;
             }
-            /* Evidence (class B, register priority only; DECISIONS "LOOP_BLOCK audit"): the original keeps obj in s1;
+            /* Evidence (class B, register priority only; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original keeps obj in s1;
              * without the block only registers differ, also with scheduling off (one block, in either branch). */
             if (i < 2) {
                 fightstg_cursor_rect.x = obj->highlight * 12;
@@ -6630,7 +6630,7 @@ void fightstg_action_mark_critical_tech(void) {
     fightstg_action.effects[rec->kind] = rec->kind;
 }
 
-/* Forced match (FAKE, DECISIONS "User decisions on the review items"). Natural C reaches 97.4%: the original builds
+/* Forced match (FAKE, DECISIONS "Match status and forced (FAKE) matches"). Natural C reaches 97.4%: the original builds
  * &fightstg_rules in a register and loads roll_steal from it (lw 0xB8(v0)) after the branch, which is what combine
  * leaves when the load is volatile (it refuses to fold an address into a volatile MEM). A local pointer (at the top,
  * in the block, assigned in the condition), a block, a loop, a dead second use, a function-pointer local, the

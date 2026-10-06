@@ -6,7 +6,7 @@
 One line per function in address order:
   ADDR SIZE J[jump tables: addr%8] R[other .rodata] D[.data it references] P[.data tables pointing at it]
   cl[callers in the overlay] =DUP (byte-identical to an earlier function, relocations masked)
-Evidence, as in the EXE (docs/DECISIONS.md "Game code file split"): psylink packs objects at 4 bytes
+Evidence, as in the EXE (DECISIONS "File boundaries come from evidence"): psylink packs objects at 4 bytes
 and GCC aligns jump tables to 8 relative to the object's start, so a table whose address mod 8
 differs from the previous table's starts a new object; .rodata and .data are each in link order, so
 a function whose data comes before the previous function's data starts a new file; duplicated

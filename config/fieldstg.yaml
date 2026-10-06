@@ -49,7 +49,7 @@ segments:
     # Unnamed symbols are func_FIELDSTG_<addr>, D_FIELDSTG_<addr> (overlays share addresses; DECISIONS naming).
     symbol_name_format: FIELDSTG_$VRAM
     subsegments:
-      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"): boundaries proven by jump-table
+      # .rodata and .text per file (DECISIONS "File boundaries come from evidence"): boundaries proven by jump-table
       # parity (a table at a different address mod 8 than the previous one starts a new object).
       - [0x0,   .rodata, fieldstg_80083784]
       - [0x7C,  .rodata, fieldstg_80083D08]

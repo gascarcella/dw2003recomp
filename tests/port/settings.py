@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The port's settings file (`--config FILE`, docs/LAUNCHER_MODS_PLAN.md 4.3): the contract with the launcher.
+"""The port's settings file (`--config FILE`, docs/LAUNCHER.md "Settings file"): the contract with the launcher.
 
 Usage: tests/port/settings.py [--out DIR] [-j N] [--no-sdl]
 
@@ -127,7 +127,7 @@ def ff_stretches(err):
 
 
 def fast_forward_check(sdl, env, out):
-    """Fast-forward (docs/LAUNCHER_MODS_PLAN.md 5.1) in the window (offscreen): new_game with the mod on and the test
+    """Fast-forward (docs/LAUNCHER.md "Fast-forward") in the window (offscreen): new_game with the mod on and the test
     pattern; the log and the record are the bare run's; every off stretch keeps PAL's pace from its first vsync (no
     stall: the schedule starts over), the on stretches run at 4x or faster, the audio is muted, the presents capped."""
     print("settings: fast-forward (build/port-sdl, offscreen): new_game with DW3_PORT_FAST_FORWARD=%d:%d" % (FF_ON, FF_OFF))

@@ -1,4 +1,4 @@
-/* The memory arena (include/port.h; docs/PC_PORT_PLAN.md 2.4): one block that stands for the PS1 RAM from the tier-1
+/* The memory arena (include/port.h; docs/PORT.md "Memory arena"): one block that stands for the PS1 RAM from the tier-1
  * slot up: slot 1 (0x80082CB0), slot 2 (0x800A5DE0) and the heap (0x800AB800..) at the PS1's distances, so that a
  * pointer's PS1-style address is PORT_SLOT1_BASE + its offset. The heap is larger than the PS1's (PORT_HEAP_SIZE,
  * tools/port_gen.py). The block is 16 MB-aligned and smaller than 16 MB: the low 24 bits of any arena pointer are its

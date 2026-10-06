@@ -2,7 +2,7 @@
 #define PSYQ_LIBAPI_H
 
 /* Our own declarations of the Psy-Q 4.7 LIBAPI functions the game uses (BIOS file I/O), added as the game
- * needs them (no Sony headers are used; docs/WORKFLOW.md section 2). */
+ * needs them (no Sony headers are used; DECISIONS "Code only: no game data, SDK or BIOS in the repo"). */
 
 #include "common.h"
 

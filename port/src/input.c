@@ -1,4 +1,4 @@
-/* The window's input (M2; PC_PORT_PLAN "LIBPAD over SDL3"; rebindable since docs/LAUNCHER_MODS_PLAN.md 4.3/4.5): the
+/* The window's input (M2; docs/PORT.md "Input"; rebindable: docs/LAUNCHER.md "Input bindings"): the
  * keyboard and every SDL gamepad, ORed into pad 1 (a digital pad: SELECT, START, the D-pad, L1/L2/R1/R2 and the four
  * face buttons; psyq_pad_set, psyq.h's bit order), once per vsync from pump.c; and the hotkey actions (pause,
  * fullscreen, the mods' bindings). Only in a build configured with -DDW3_PORT_SDL=ON (DW3_PORT_SDL); the headless build
@@ -15,7 +15,7 @@
  * The settings (`input.keyboard`, `input.gamepad`: a PS1 button -> a name or a list of names) replace a button's
  * keyboard or gamepad entries. Hotkeys (`input.hotkeys`, and the mods' binding options through port_input_action):
  * a binding is a list of triggers, a trigger one input or a chord of up to INPUT_CHORD inputs, all held
- * (docs/LAUNCHER_MODS_PLAN.md 4.3). Defaults: pause P, fullscreen F11.
+ * (docs/LAUNCHER.md "Input bindings"). Defaults: pause P, fullscreen F11.
  *
  * Hotkeys never reach the pad: a trigger that completes (all its inputs held) latches until every one of its inputs is
  * released, and a latched trigger's inputs are masked out of the pad (so a single-key hotkey is never seen by the game,
@@ -116,7 +116,7 @@ int port_action_pause = -1, port_action_fullscreen = -1;
 static int input_test;      /* --input-test running */
 static int input_test_mute; /* the actions do nothing for their consumers (the test's steps) */
 
-/* ---- The names (the settings' grammar; docs/LAUNCHER_MODS_PLAN.md 4.3) */
+/* ---- The names (the settings' grammar; docs/LAUNCHER.md "Input bindings") */
 
 static int input_button_bits(const char *name) {
     int i;
@@ -155,7 +155,7 @@ static int input_binding_input(const char *name, const char *where) {
     if (strncmp(name, "pad:", 4) == 0) {
         id = input_pad_index(name + 4);
         if (id < 0) {
-            port_settings_fail(where, "\"%s\": not a gamepad input (docs/LAUNCHER_MODS_PLAN.md 4.3)", name);
+            port_settings_fail(where, "\"%s\": not a gamepad input (docs/LAUNCHER.md \"Input bindings\")", name);
         }
         return INPUT_PAD(id);
     }
@@ -321,7 +321,7 @@ static void input_map_section(const PortJson *obj, int pad) {
             if (pad) {
                 id = input_pad_index(name->string);
                 if (id < 0) {
-                    port_settings_fail(key, "\"%s\": not a gamepad input (docs/LAUNCHER_MODS_PLAN.md 4.3)",
+                    port_settings_fail(key, "\"%s\": not a gamepad input (docs/LAUNCHER.md \"Input bindings\")",
                                        name->string);
                 }
                 id = INPUT_PAD(id);

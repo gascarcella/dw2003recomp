@@ -6,7 +6,7 @@
 One line per game function (0x80010F4C-0x80020D8C) in address order:
   ADDR SIZE cl[game callers] pt[data tables that point at it] refs  ext:[calls outside the game code]
 Refs are shortened by region: rXXXX .rodata, dXXXXX .data, sXXXX .sdata, SXXXX .sbss, bXXXXX .bss,
-with gp: in front for $gp-relative accesses. Reading guide: docs/DECISIONS.md "Game code file split".
+with gp: in front for $gp-relative accesses. Reading guide: DECISIONS "File boundaries come from evidence".
 """
 import re
 import sys

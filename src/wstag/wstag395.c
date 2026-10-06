@@ -15,7 +15,7 @@ void wstag395_update(WstagObject *obj, WstagEventData *data) {
     switch (obj->base.state) {
     case OBJECT_STATE_INIT:
     default:
-        /* Evidence (class B, register priority only; DECISIONS "LOOP_BLOCK audit"): without the block only the
+        /* Evidence (class B, register priority only; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): without the block only the
          * obj, data and flags-base saved registers differ, also with scheduling off. */
         LOOP_BLOCK(if (gamestate_data.progress == 5 && gamestate_flags.get_flag(0x4011, 0)) {
             data->event = fieldstg_event_start(0x50);

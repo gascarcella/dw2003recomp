@@ -1,7 +1,7 @@
 # Digimon World 2003 (PS1, EU) decompilation
 
 **Goal:** C source that recompiles into a byte-identical PS1 executable (SLES-03936, built
-with the original-era toolchain). A Linux-native port is a later, separate goal.
+with the original-era toolchain). The same C also builds the native PC port (`port/`, `docs/PORT.md`).
 
 ## Session protocol
 0. **Worktrees (Orca):** sessions usually run in a git worktree, which has **only tracked files**: no
@@ -9,16 +9,19 @@ with the original-era toolchain). A Linux-native port is a later, separate goal.
    `iso/dw2003.bin` is missing, run `scripts/worktree_init.sh` first (~1 s: links the main checkout's tools,
    links the disc, extracts it). Commit on the worktree's branch, push it, and open a **pull request** to `main`
    (`gh pr create`; CI must be green; a docs-only pull request starts no run); the user reviews and merges. Commit straight to `main` only when the user says
-   so for that change (DECISIONS "Pull requests for our own work").
+   so for that change (DECISIONS "Pull requests, ours and from forks").
    **Cloud sessions** (fresh clone): the SessionStart hook (`.claude/hooks/session-start.sh`) runs `setup.sh` and
    `worktree_init.sh` before the session starts; the disc comes from the data checkout beside the repo (below).
    In a session that selects **both repositories** the project directory is their parent, so this repo's hook does
    **not** fire: if `tools/binutils` or `iso/dw2003.bin` is missing, run it yourself (~4 min cold):
    `CLAUDE_PROJECT_DIR=$PWD .claude/hooks/session-start.sh` (session 14).
-1. **Start:** read `docs/STATUS.md` (current state and next steps). Skim the latest `docs/SESSION_LOG.md` entry.
+1. **Start:** read `docs/STATUS.md` (current state). Planned work is on the GitHub Project board, problems are GitHub
+   issues (`gh issue list`; `gh project item-list` needs the token's `project` scope).
 2. Work in phases. Stop at the end of each phase to summarize, and wait for the user's go-ahead.
-3. **End:** update `docs/STATUS.md` and add a dated entry to `docs/SESSION_LOG.md`; record any new
-   decision in `docs/DECISIONS.md`; commit with a clear message.
+3. **End:** update `docs/STATUS.md` when the state changed; record a decision in `docs/DECISIONS.md` only when it
+   changes how the project works (a few lines: what and why); turn leftover work into issues (bugs) or project items
+   (plans), not into docs; commit with a clear message. There is no session log: the pull request says what was done
+   (DECISIONS "Docs are lean").
 
 ## Rules
 - **Never commit game data:** no ISO/BIN, extracted files, split asm, assets, BIOS, or Psy-Q/SDK files.
@@ -36,7 +39,7 @@ with the original-era toolchain). A Linux-native port is a later, separate goal.
   **main checkout's** `tools/` and symlinks it into the current worktree, so tools are built once and shared.
   Changing a pinned version therefore affects every worktree.
 - **EU only, independent project.** The US decomp (juandav/dw3_decomp) is a reference, not a dependency.
-  Record anything borrowed in `docs/THIRD_PARTY.md` when borrowing it. The repo is private for now.
+  Record anything borrowed in `docs/THIRD_PARTY.md` when borrowing it.
 - Base image is the **unpatched** EU disc (SHA-1 `457cb233…`). The NTSC/60fps patch is 2 data
   bytes (`0x8005CCAC`, `0x8005CCB0`), not a code change; treat it as a later build option.
 
@@ -46,8 +49,8 @@ with the original-era toolchain). A Linux-native port is a later, separate goal.
 | `iso/` | no | `dw2003.bin/.cue` (symlink to user's disc, made by `setup.sh disc`) |
 | `extracted/` | no | Disc contents from dumpsxiso, plus its rebuild XML |
 | `tools/` | scripts only | Built tools `venv/`, `binutils/`, `mkpsxiso/`, `gcc/<ver>/`, `bin/` (objdiff-cli), `ext/` (pinned clones), `redux/` (PCSX-Redux, headless), `src/` (live in the main checkout; symlinks in worktrees); our scripts (`psyq_match.py`, …); `requirements.txt`; `local.env` (machine paths, untracked; see `local.env.example`) |
-| `port/` | yes | The PC port: `CMakeLists.txt`, `src/` (arena, overlay manager, pump), `psyq/` (the Psy-Q shim), `README.md`; builds into `build/port/` (plan: `docs/PC_PORT_PLAN.md`; hooks: `include/port.h`) |
-| `launcher/` | yes | The launcher (`launcher/README.md`; LAUNCHER_MODS_PLAN 4.6): C++, Dear ImGui on SDL3; its own CMake project, builds into `build/launcher/` |
+| `port/` | yes | The PC port: `CMakeLists.txt`, `src/` (arena, overlay manager, pump), `psyq/` (the Psy-Q shim), `README.md`; builds into `build/port/` (`docs/PORT.md`; hooks: `include/port.h`) |
+| `launcher/` | yes | The launcher (`launcher/README.md`, `docs/LAUNCHER.md`): C++, Dear ImGui on SDL3; its own CMake project, builds into `build/launcher/` |
 | `config/` | yes | splat YAML per link unit (`main.yaml` = EXE, `<overlay>.yaml`), `symbol_addrs.txt` (EXE names), `<overlay>.symbols.txt` (overlay names), `*.sha1` |
 | `src/`, `include/` | yes | Decompiled C, recovered headers/structs |
 | `asm/`, `assets/` | no | splat output per target (`asm/main/`, …), regenerated by `configure.py` |
@@ -73,13 +76,13 @@ tools/venv/bin/python configure.py   # re-split + regenerate build.ninja/objdiff
 scripts/check_toolchain.sh  # smoke test: every old-gcc through maspsx/as, m2c, objdiff, asm-differ, permuter
 scripts/setup.sh redux && scripts/check_emulator.sh [--bios retail]   # PCSX-Redux (data checkout or pinned download); boots the disc headlessly to CNTY_SEL (~16 s)
 scripts/test.sh [--layer N]   # reference tests (tests/README.md): goldens regenerated in the emulator + host replay, pad-script replays, formats; ~2 min
-tests/golden/oracle.py gen|check|list [families] [--bios retail]   # layer-1 goldens: one boot calls the game's functions (DECISIONS "Layer-1 oracle")
+tests/golden/oracle.py gen|check|list [families] [--bios retail]   # layer-1 goldens: one boot calls the game's functions (DECISIONS "Layer-1 goldens: calls on the running game")
 tests/host/replay.py [families] [--findings]   # the goldens through the C compiled with gcc -m64; mismatches = tests/host/FINDINGS.md
 tests/replay/replay.py run tests/replay/scripts/<name>.json [--record] [--repeat 2]   # layer-2 script; `check` replays them all
 tools/venv/bin/python tools/coverage.py run [--oracle] [--replay NAME ...] | report [--module X]   # function coverage of the emulator tests -> build/coverage/report.md (~23 min; --oracle alone ~40 s)
 tests/holdouts/run.sh [--control] [--no-probe]   # NON_MATCHING build -> scratch disc image -> replays: validates the holdouts' WIP C (~11 min; not in test.sh)
 tools/redux/pcsx-redux -no-ui -stdout -testmode -run -iso iso/dw2003.cue -bios <bin> -dofile <lua>   # headless run with a Lua script (tools/redux_boot_check.lua is the template)
-tools/venv/bin/python tools/port_inventory.py counts [--sites KIND[:TAG]]   # PC port inventory (PC_PORT_PLAN section 1): Psy-Q calls, macros, literal sizes, PS1 addresses, port.h hooks; --sites lists file:line
+tools/venv/bin/python tools/port_inventory.py counts [--sites KIND[:TAG]]   # PC port inventory (`docs/PORT.md`): Psy-Q calls, macros, literal sizes, PS1 addresses, port.h hooks; --sites lists file:line
 tools/venv/bin/python tools/port_inventory.py probe [FILES...] [-v] [--warnings] [--m32]   # host-compile gate (-m64, -Werror on pointer/int casts, implicit declarations, incompatible pointers); exit 0 = clean (~1 s); test.sh and CI run it
 tools/venv/bin/python tools/port_inventory.py link | structs   # duplicate/undefined globals over the probe's objects; struct sizes at -m32/-m64 vs the documented PS1 sizes
 tools/venv/bin/python tests/port/run.py [--m32] [--sanitize] [--cd-speed instant]   # the port's M1 test: new_game from the disc, twice, against the emulator's record (tests/port/README.md)
@@ -125,9 +128,10 @@ source tools/venv/bin/activate; export PATH="$PWD/tools/binutils/bin:$PWD/tools/
   (excluded from progress). No Psy-Q SDK is needed or used.
 
 ## Docs
-`docs/STATUS.md` state and next steps · `docs/DECISIONS.md` decisions and rationale ·
-`docs/DISC_LAYOUT.md` disc files, memory map, overlays · `docs/FORMATS.md` file formats ·
-`docs/TOOLCHAIN.md` compiler/SDK evidence · `docs/WORKFLOW.md` tool and workflow plan · `docs/MECHANICS.md` game
-mechanics mapped to functions and tests · `tests/README.md` the reference tests (layers, rules, formats) ·
-`docs/SESSION_LOG.md` per-session log · `docs/PC_PORT_RESEARCH.md` PC port notes (exploratory, not decided) ·
-`docs/LAUNCHER_MODS_PLAN.md` the launcher and mods plan (decided, not implemented) · `docs/RELEASE.md` making a release (the AppImage, tags, drafts)
+`docs/` holds reference docs only (how things are, and why); plans go to the project board, problems to issues.
+`docs/STATUS.md` current state · `docs/DECISIONS.md` the key decisions · `docs/MATCHING.md` matching workflow, tools,
+C patterns (the agent brief) · `docs/TOOLCHAIN.md` compiler/SDK evidence · `docs/DISC_LAYOUT.md` disc files, memory
+map, overlays · `docs/FORMATS.md` file formats · `docs/MECHANICS.md` game mechanics mapped to functions and tests ·
+`docs/PORT.md` the PC port · `docs/LAUNCHER.md` the launcher/game contract, settings, mods · `docs/SOUND.md` sound ·
+`docs/RELEASE.md` making a release · `docs/THIRD_PARTY.md` borrowings · `tests/README.md` the reference tests ·
+`CONTRIBUTING.md` for contributors · `.github/ISSUE_TEMPLATE/`, `.github/PULL_REQUEST_TEMPLATE.md` (fork pull requests)

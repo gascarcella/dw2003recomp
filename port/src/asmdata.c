@@ -1,5 +1,5 @@
 /* Data the matching build keeps in split assembly (no C unit defines it) and the game's C references: zero blocks
- * (docs/PC_PORT_PLAN.md 1.5 "Asm-only data still referenced by C"). The definitions are weak so that a unit or the
+ * (docs/PORT.md "Overlays"). The definitions are weak so that a unit or the
  * shim that defines one of them wins (port/psyq/libgs.c and libcd.c own the three Psy-Q ones today).
  *  - D_800812F8, D_80081358: LIBGS's matrices (psyq/libgs/bss; gfx.c saves/restores them);
  *  - D_80081454: LIBCD's StCdIntrFlag (psyq/libcd/bss; STDWTITL's movie player polls and clears it);

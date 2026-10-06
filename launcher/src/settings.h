@@ -1,4 +1,4 @@
-// The settings directory (LAUNCHER_MODS_PLAN 4.2) and the settings file (4.3): the contract with the game, which
+// The settings directory and the settings file (docs/LAUNCHER.md "Settings directory", "Settings file"): the contract with the game, which
 // reads the same file through `dw2003 --config <dir>/settings.json`. Paths inside the file are relative to its
 // directory (or absolute).
 #pragma once
@@ -22,7 +22,7 @@ constexpr const char *SETTINGS_DIR_ENV = "DW3_CONFIG_DIR";
 constexpr const char *SETTINGS_PREF_ORG = "";
 constexpr const char *SETTINGS_PREF_APP = "dw2003";
 
-// ---- 4.2: where the settings live, in this order.
+// ---- Where the settings live, in this order.
 enum class DirSource {
     Argument,    // 1. --config-dir DIR
     Environment, // 1. $DW3_CONFIG_DIR
@@ -50,7 +50,7 @@ struct SettingsDir {
 DirLookup dir_lookup_from_system(const std::string &arg);
 SettingsDir settings_dir_choose(const DirLookup &in);
 
-// ---- 4.3 (schema 1, settled by the game's side): the values the launcher edits. The rest of the file is kept as it
+// ---- The settings file (schema 1, settled by the game's side): the values the launcher edits. The rest of the file is kept as it
 // was; the defaults are the game's (port/src/settings.c), so a missing member means the same on both sides.
 struct MemoryCard {
     bool present = true; // false: null in the file, no card in the slot
@@ -62,7 +62,7 @@ struct Settings {
     std::string disc_sha1; // the SHA-1 the launcher verified for disc_path ("" = not verified)
     int scale = 2;         // the window: 320*scale x 240*scale (1..16)
     bool fullscreen = false;
-    int refresh = 50; // 50 (PAL) or 60 (the game's own 60 Hz mode; LAUNCHER_MODS_PLAN 5.5)
+    int refresh = 50; // 50 (PAL) or 60 (the game's own 60 Hz mode; docs/LAUNCHER.md "50/60 Hz")
     bool mute = false;
     MemoryCard memcard[2] = { { true, "card1.mcd" }, { true, "card2.mcd" } };
     std::string last_dir; // launcher.last_dir: where the file dialog opens (the launcher's own state)

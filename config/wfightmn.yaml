@@ -53,7 +53,7 @@ segments:
     # Unnamed symbols are func_WFIGHTMN_<addr>, D_WFIGHTMN_<addr> (overlays share addresses; DECISIONS naming).
     symbol_name_format: WFIGHTMN_$VRAM
     subsegments:
-      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"). Proven by jump-table parity: the
+      # .rodata and .text per file (DECISIONS "File boundaries come from evidence"). Proven by jump-table parity: the
       # 7-entry table 800A5DE0 (offset 0) and 800A5DFC (offset 0x1C, mod 8 = 4) are in different objects, so a
       # file starts at or before 800A6C44 (800A5DFC's function). Position (moderate): 800A5ECC is an object
       # update and 800A6414 its create (it passes 800A5ECC to object_new), and every function from 800A6440
@@ -65,7 +65,7 @@ segments:
       - [0x1C, .rodata, wfightmn_800A6440]
       - [0xEC,  c, wfightmn_800A5ECC]  # 0x800A5ECC .text (tools/overlay_layout.py: first stack frame)
       - [0x660, c, wfightmn_800A6440]  # 0x800A6440 (position moderate: 800A6440..800A6C44)
-      # .data in C (tools/data_owners.py -t wfightmn; DECISIONS "Overlay .data/.bss per file"): every symbol is
+      # .data in C (tools/data_owners.py -t wfightmn; DECISIONS "Data in C, split per object"): every symbol is
       # 800A6440's (the screen RECT, two technique tables, the event-handler table, a script table); no .bss.
       - [0x4F28, .data, wfightmn_800A6440]  # 0x800AAD08 (after the last function's jr ra)
   - [0x50C8]

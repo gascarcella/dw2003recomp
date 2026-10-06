@@ -1,4 +1,4 @@
-/* The video output (M2; PC_PORT_PLAN 2.3, DECISIONS "PC port decisions (session 15)" items 2-3): what the PS1's video
+/* The video output (M2; docs/PORT.md "Rendering", DECISIONS "PC port architecture"): what the PS1's video
  * DAC shows, the display area of the VRAM (psyq.h "The video output": psyq_gpu_vram, psyq_gpu_display), converted once
  * per vsync into 32-bit pixels at the display's own size. Two consumers:
  *
@@ -249,7 +249,7 @@ void port_video_close(void) {
 
 /* SDL torn down before exit(), not only by the atexit(SDL_Quit) above: with NVIDIA's EGL (Wayland and offscreen
  * drivers; driver 595.104.02) an SDL_Quit inside exit() unloads libnvidia-eglcore and the process then jumps into the
- * unloaded code (SIGSEGV after the run's "exit" line; docs/PLAYTEST.md). X11 (GLX) was not affected. */
+ * unloaded code (SIGSEGV after the run's "exit" line, seen in play-testing). X11 (GLX) was not affected. */
 void port_video_quit(void) {
     if (video_texture != NULL) {
         SDL_DestroyTexture(video_texture);

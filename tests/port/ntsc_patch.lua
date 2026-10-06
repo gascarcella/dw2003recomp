@@ -1,4 +1,4 @@
--- The NTSC/60 Hz patch of the EU disc in the emulator, without a patched image (docs/LAUNCHER_MODS_PLAN.md 5.5): the
+-- The NTSC/60 Hz patch of the EU disc in the emulator, without a patched image (docs/LAUNCHER.md "50/60 Hz"): the
 -- patch is two data words of SLES_039.36 (DECISIONS session 1): records_60hz at 0x8005CCAC, 0 -> 1 (SetVideoMode(NTSC),
 -- the time step, LIBSND's tick, actor speeds), and main_screen_pos at 0x8005CCB0, 1 -> 0 (the NTSC screen offset and the
 -- card game's NTSC layout). They are written at main's first instruction (an exec breakpoint, after the EXE is loaded

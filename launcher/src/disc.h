@@ -1,4 +1,4 @@
-// The disc check (DECISIONS "The launcher's open points (session 19, path A)" item 3): the launcher's own .cue reader
+// The disc check (DECISIONS "Launcher and mods"): the launcher's own .cue reader
 // (the same rules as port/src/disc.c: the first FILE line names the BIN, relative to the cue's directory) and the
 // port's SHA-1 (port/src/sha1.c) over the whole BIN, on a worker thread. The game checks the disc again itself: the
 // launcher's check is there to tell the user early, and to keep a wrong file out of the settings.

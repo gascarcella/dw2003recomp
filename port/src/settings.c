@@ -1,4 +1,4 @@
-/* The settings file (settings.h; `--config FILE`): schema 1 of docs/LAUNCHER_MODS_PLAN.md 4.3, the contract with
+/* The settings file (settings.h; `--config FILE`): schema 1 of docs/LAUNCHER.md "Settings file", the contract with
  * the launcher. Every key but `schema` is optional; an absent key keeps its default:
  *
  *   { "schema": 1,

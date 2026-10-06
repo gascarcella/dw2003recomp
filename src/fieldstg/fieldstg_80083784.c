@@ -6,8 +6,7 @@
 #include "fieldstg.h"
 
 /* The battles' enemies (fieldstg_battles.enemies; [0]: none), then the battles (fieldstg_start_battle).
- * Only fieldstg_80087DB0.c reads them, but they start the overlay's .data (DECISIONS "Overlay .data/.bss
- * per file"), so they are defined in its first file (or a data-only file linked first). */
+ * Only fieldstg_80087DB0.c reads them, but they start the overlay's .data (DECISIONS "Data in C, split per object"), so they are defined in its first file (or a data-only file linked first). */
 RecordsEnemy fieldstg_battle_enemies[523] = {
     { 0, 0, 0, 0, 0 }, { 358, 12, 816, 9999, 16 }, { 124, 14, 912, 9999, 16 }, { 172, 9, 504, 9999, 22 },
     { 8, 11, 576, 9999, 23 }, { 207, 14, 684, 9999, 20 }, { 222, 12, 612, 9999, 27 }, { 77, 14, 684, 9999, 22 },

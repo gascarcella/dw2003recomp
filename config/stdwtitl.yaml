@@ -50,7 +50,7 @@ segments:
     # Unnamed symbols are func_STDWTITL_<addr>, D_STDWTITL_<addr> (overlays share addresses; DECISIONS naming).
     symbol_name_format: STDWTITL_$VRAM
     subsegments:
-      # .rodata and .text per file (docs/DECISIONS.md "Overlay file split"). Evidence: jump-table parity (82CFC is
+      # .rodata and .text per file (DECISIONS "File boundaries come from evidence"). Evidence: jump-table parity (82CFC is
       # at 4 mod 8 after 82CE8's 0 mod 8: a new object), the shared stage module at the end (a module struct with its
       # function table, like STGMCARD's and FIELDSTG's 91E60), and the obj->unk_28[1](obj, 1) callback: five
       # byte-identical copies (833AC, 841E0, 84BB0, 8503C, 85BE4), each shared only by the objects of one group (a
@@ -72,7 +72,7 @@ segments:
       - [0x4B2C, asm, psyq/libpress/vlc_c]     # 0x800877DC LIBPRESS.LIB/VLC_C.OBJ
       - [0x4EAC, asm, psyq/libpress/build]     # 0x80087B5C LIBPRESS.LIB/BUILD.OBJ
       # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t stdwtitl;
-      # DECISIONS "Overlay .data/.bss per file"). Units without .data: 849D8, 84E44.
+      # DECISIONS "Data in C, split per object"). Units without .data: 849D8, 84E44.
       # The game's .bss comes after LIBPRESS's .data, so it is .bss; LIBPRESS has no .bss.
       - [0x4F9C, .data, stdwtitl_80082D70]   # 0x80087C4C (after BUILD.OBJ's padding)
       - [0x5090, .data, stdwtitl_80083F80]   # 0x80087D40

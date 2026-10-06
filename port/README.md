@@ -1,7 +1,7 @@
 # port/: the PC port
 
 The game's C (`src/`, 388 units) linked with the port runtime (`port/src/`) and our Psy-Q shim (`port/psyq/`) into
-one 64-bit host binary (`docs/PC_PORT_PLAN.md`; DECISIONS "PC port decisions (session 15)"). The PS1 build
+one 64-bit host binary (`docs/PORT.md`; DECISIONS "PC port architecture"). The PS1 build
 (`configure.py`, `build.ninja`) is untouched: the hooks in `include/port.h` expand to the original code without
 `PC_PORT`, and `scripts/build.sh` proves the EXE and the overlays byte-identical.
 
@@ -51,7 +51,7 @@ non-PIE in both.
 | `src/disc.c` | The disc (`--disc`): the CUE/BIN, its SHA-1 check (with a stamp cache), LIBCD's sector source, `--cd-speed` |
 | `src/script.c` | The input script (`--script`): `tests/replay/run.lua`'s step engine in C, the pad through `psyq_pad_set` |
 | `src/json.c` | A small strict JSON reader and writer (our own), for the scripts and the settings |
-| `src/settings.c` | The settings file (`--config`, `--print-settings`; `settings.h`): schema 1 of docs/LAUNCHER_MODS_PLAN.md 4.3 |
+| `src/settings.c` | The settings file (`--config`, `--print-settings`; `settings.h`): schema 1 of docs/LAUNCHER.md "Settings file" |
 | `include/port_harness.h` | The M1 harness's interfaces (disc, frame log and probes, script) |
 | `src/pump.c` | `port_wait` (the vsync and CD ticks, the frame cap, the watchdog), `port_halt`, `port_unimplemented` |
 | `src/reset.c` | The console's reset (the script's `reset` step): `port_reset_request` (longjmp to `main()`), `port_reset_state`, `DW3_PORT_RESET_CHECK` |
@@ -67,7 +67,7 @@ non-PIE in both.
 | `../tools/port_gen.py` | The generators CMake runs (never by hand in the normal flow) |
 
 ## The settings file (`--config FILE`)
-What the launcher starts the game with (docs/LAUNCHER_MODS_PLAN.md 4.1-4.3, schema 1; `src/settings.c`): the disc, the
+What the launcher starts the game with (docs/LAUNCHER.md "Contract" to "Settings file", schema 1; `src/settings.c`): the disc, the
 window (`video.window`, `scale`, `fullscreen`, `refresh`), `audio.mute`, the memory cards (default `card1.mcd` and
 `card2.mcd` beside the file, created formatted when missing; `null` for no card), the watchdog (default off), and the
 `input` and `mods` sections. Paths in the file are relative to its directory. The options given on the command line
@@ -80,7 +80,7 @@ tests/port/settings.py                                                        # 
 ```
 
 ## The window (M2: `-DDW3_PORT_SDL=ON`)
-SDL3 (zlib licence; DECISIONS "PC port decisions (session 15)" item 3) shows the PS1's display and reads the keyboard and
+SDL3 (zlib licence; DECISIONS "PC port architecture") shows the PS1's display and reads the keyboard and
 gamepads. It is optional: the default build has no SDL and stays headless (the tests use it). SDL3 is pinned
 (`scripts/setup.sh` `SDL3_VER`/`SDL3_SHA256`) and built from its release tarball into `tools/sdl3/` as a static library,
 so the binary needs nothing beside it; SDL loads X11/Wayland/ALSA/PulseAudio/... with `dlopen` at run time.
@@ -120,7 +120,7 @@ once per vsync. Keys (by position): arrows the D-pad; X cross, C circle, Z squar
 START; Backspace (or right Shift) SELECT; Q L1, E R1, 1 L2, 3 R2; F11 fullscreen, P pause. Gamepads (SDL's positional
 buttons, the PlayStation layout): south cross, east circle, west square, north triangle, back SELECT, start START,
 shoulders L1/R1, triggers L2/R2, the D-pad and the left stick the D-pad. All of it is rebindable in the settings
-(`input.keyboard`, `input.gamepad`, `input.hotkeys`; docs/LAUNCHER_MODS_PLAN.md 4.3), and the mods add hotkeys. A
+(`input.keyboard`, `input.gamepad`, `input.hotkeys`; docs/LAUNCHER.md "Input bindings"), and the mods add hotkeys. A
 hotkey never reaches the pad: a completed trigger masks its inputs until they are all released. **The pause** stops the
 game between two vsyncs (the window keeps presenting the last image, the audio device pauses) until the key again. Every change of the pad goes to the log's `I` lines and the
 record's `inputs`, as a script's do. With `--script` the script owns the pad: the window's input never reaches it.
@@ -133,7 +133,7 @@ run without the test), then (without a script) the pause's round trip; exit 0 wh
 defaults), 6 otherwise. With `--config` it tests the settings' map. CI runs it on SDL's offscreen driver, with the
 defaults and with `tests/port/settings/rebound.json`.
 
-**The mods** (`src/mods.c`; docs/LAUNCHER_MODS_PLAN.md 4.4-4.5): the built-in mods' registry; each has a manifest
+**The mods** (`src/mods.c`; docs/LAUNCHER.md "Mod manifest", "Mod runtime"): the built-in mods' registry; each has a manifest
 `port/mods/<id>/mod.json`, copied beside the binary (`build/port*/mods/`) for the launcher. `--print-mods` prints the
 registry; the settings' `mods.<id>` enable and configure them; under `--script` they are off unless `--script-mods`.
 
@@ -141,21 +141,21 @@ registry; the settings' `mods.<id>` enable and configure them; under `--script` 
 the pace (the wall clock's vsyncs per second; `port_pace_set`, which starts the schedule over on every change, so a
 fast-forward that ends never makes the game wait for the vsyncs it ran ahead).
 
-**Fast-forward** (the `fast_forward` mod; docs/LAUNCHER_MODS_PLAN.md 5.1): enabled in the settings, hold `Tab` (or a
+**Fast-forward** (the `fast_forward` mod; docs/LAUNCHER.md "Fast-forward"): enabled in the settings, hold `Tab` (or a
 toggle binding) runs the game at the nominal rate times its speed (default `4x`), presents at most 60 images a second
 and mutes the audio device; the game, its log and its record are unchanged.
 
-**Skip dialogues** (the `skip_dialogues` mod; 5.2): toggled with `F2` (by default), the game's text appears at once
+**Skip dialogues** (the `skip_dialogues` mod; docs/LAUNCHER.md "Skip dialogues"): toggled with `F2` (by default), the game's text appears at once
 and goes on by itself (`port_mod_skip_dialogues`, read by three `#ifdef PC_PORT` blocks in `src/main/message.c` and
 the battle's `fightstg_message_step`); choices and menus still wait. `fast_forward_waits` also fast-forwards the field
 events' scripted waits.
 
-**Battle animations** (the `battle_animations` mod; 5.3): attacks', techniques' and items' animation scripts are cut
+**Battle animations** (the `battle_animations` mod; docs/LAUNCHER.md "Disable battle animations"): attacks', techniques' and items' animation scripts are cut
 at their start (`port_mod_battle_animations`, one `#ifdef PC_PORT` block in `fightstg_script_update`; the stream
 scanned by `src/battle_scan.c`): the target's short reaction plays instead (`hit_reaction`, the default), or nothing but
 a knock-out's. The battle's rules ran before; its outcome is unchanged.
 
-**60 Hz** (`--refresh 60`, or the settings' `video.refresh`; 5.5): the game's own 60 Hz mode (the NTSC patch's
+**60 Hz** (`--refresh 60`, or the settings' `video.refresh`; docs/LAUNCHER.md "50/60 Hz"): the game's own 60 Hz mode (the NTSC patch's
 `records_60hz`, set before the reset's snapshot), paced at 60, the audio at 735 samples a vsync, the CD's ticks at 60.
 `tests/port/hz60.py` compares it with the patched game in the emulator. (`--fps 60` alone is the old meaning: the PAL
 game at 60, 20% fast.)
@@ -196,7 +196,7 @@ writable input section of a game object (`.data*`, `.bss*`, `COMMON` of the unit
 runtime's and the shim's own writable data, which reset themselves).
 
 ## The runtime
-**Arena** (`PC_PORT_PLAN.md` 2.4): one 16 MB-aligned `.bss` block, smaller than 16 MB, mirroring the PS1 from
+**Arena** (docs/PORT.md "Memory arena"): one 16 MB-aligned `.bss` block, smaller than 16 MB, mirroring the PS1 from
 `0x80082CB0` up: slot 1 (`0x23130` bytes), slot 2 (`0x5A20`), then the heap (4 MB, larger than the PS1's
 1.3 MB because 64-bit structs are bigger). A pointer's PS1-style address (`PTR_TO_S32`) is `0x80082CB0 + offset`;
 the low 24 bits of any arena pointer are its offset, which is what the ordering-table tags keep (`PTR_TO_U32`), and

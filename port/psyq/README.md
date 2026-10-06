@@ -1,7 +1,7 @@
 # port/psyq: the Psy-Q shim
 
-Our own implementation of the Psy-Q library functions the game calls (`docs/PC_PORT_PLAN.md` 1.2 and 2.2;
-DECISIONS "PC port decisions (session 15)"): one C file per library, against the prototypes in `include/psyq/*.h`.
+Our own implementation of the Psy-Q library functions the game calls (docs/PORT.md "The Psy-Q shim";
+DECISIONS "PC port architecture"): one C file per library, against the prototypes in `include/psyq/*.h`.
 MIT, like the repo. Written from the game's own use of the API and public hardware documentation; no SDK file, no
 emulator code (PsyCross, MIT, was consulted for signatures only).
 
@@ -51,7 +51,7 @@ parameter bytes each takes), each read's or stream's start (sector, head, seek t
 delivered, and per movie frame its arrival, `StGetNext` and `StFreeRing`; a ring position is an offset in the ring.
 
 ## The primitive stream
-`DrawOTag`/`ContinueDraw` follow the 24-bit tags (`PC_PORT_PLAN.md` 2.4: `(ot & ~0xFFFFFF) + (tag & 0xFFFFFF)`),
+`DrawOTag`/`ContinueDraw` follow the 24-bit tags (docs/PORT.md "Ordering tables on 64-bit": `(ot & ~0xFFFFFF) + (tag & 0xFFFFFF)`),
 only inside the window `psyq_set_arena` gave (by default the heap, `port_heap_start..port_heap_end`; a link outside
 it stops the walk with a trace line). Every primitive's `len` words after its tag go into an FNV-1a hash that
 `psyq_gpu_take_hash` returns and resets: the M1 test's "hash of the primitive stream per frame", then to `gpu.c` as

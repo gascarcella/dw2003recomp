@@ -1,4 +1,4 @@
-// The controls (LAUNCHER_MODS_PLAN 4.3 `input`, as path B settled it): the PS1 pad's buttons, the game's default keys
+// The controls (docs/LAUNCHER.md "Input bindings"): the PS1 pad's buttons, the game's default keys
 // and gamepad inputs (port/src/input.c), the port's hotkey actions, and the binding grammar shared with the mods'
 // `binding` options:
 //   a binding = a string or a list; each element is one trigger, any of which fires; "" or [] = unbound

@@ -1,0 +1,72 @@
+name: Bug report
+description: Something is wrong in the PC port, the launcher, the build or the tools.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please search the [open issues](https://github.com/gascarcella/dw2003recomp/issues) first.
+        **Never attach game files, a disc image or anything extracted from the disc.**
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - The game (PC port), in play
+        - The launcher
+        - The AppImage (download, start, packaging)
+        - Building the matching game / decompilation
+        - Building the PC port or launcher from source
+        - Tests or tools
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The AppImage's file name (e.g. dw2003-0.1.0-x86_64.AppImage) or the commit you built (`git rev-parse --short HEAD`).
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      description: Distribution and version, desktop (Wayland/X11), GPU and driver, gamepad if relevant.
+      placeholder: Fedora 44, KDE Wayland, NVIDIA 580, DualSense over USB
+    validations:
+      required: true
+  - type: checkboxes
+    id: disc
+    attributes:
+      label: Disc image
+      options:
+        - label: I use the EU disc (SLES-03936) as a raw .bin/.cue, and the launcher accepted it (SHA-1 verified).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead. If the original game behaves differently (on a PS1 or an emulator), say how.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: From a new game or a save. Attach the memory card (`~/.local/share/dw2003/card1.mcd`) if it helps.
+      placeholder: |
+        1. New game, pick ...
+        2. Walk to ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Output
+      description: The game's last lines (the launcher shows them after an error and has a Copy button), or the terminal output of a build.
+      render: text
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots, video, anything else

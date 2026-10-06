@@ -1,6 +1,6 @@
 # tests/saves: save round trips between the port and the emulator
 
-Layer 3's save check (`tests/README.md`; `docs/PC_PORT_PLAN.md` M4): a save the PC port writes must load in the emulator,
+Layer 3's save check (`tests/README.md`; docs/PORT.md "Disc, memory cards and movies"): a save the PC port writes must load in the emulator,
 a save the emulator writes must load in the port, and the two cards must be the same bytes but for what timing and stale
 RAM put there.
 

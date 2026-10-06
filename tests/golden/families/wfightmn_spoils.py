@@ -1,7 +1,7 @@
 """The battle's spoils: the item drop and HP write-back at the battle's end (src/wfightmn/wfightmn_800A6440.c
 wfightmn_battle_end, substep 0) and the special enemies' prize chosen at its start (src/fieldstg/fieldstg_80087DB0.c
 fieldstg_start_battle; see prize_case). docs/MECHANICS.md section 5. Added by sweep5 (2026-10-05); a family of its own named to
-run after gamestate_flags (DECISIONS "Third sweep": cases added before it can move a vblank into its whole-struct read).
+run after gamestate_flags (DECISIONS "Replay and golden contracts": cases added before it can move a vblank into its whole-struct read).
 
 The fightstg_rules battle fixture (FIGHTSTG.PRO in the slot, SDIGIEDT.PRO as the enemy records; party {0, 3, -1}:
 member 0 Kotemon 300 HP / 100 MP, member 1 Digimon 3 350 HP / 120 MP), WFIGHTMN.PRO copied into the tier-2 slot per case.

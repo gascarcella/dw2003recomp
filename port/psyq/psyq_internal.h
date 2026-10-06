@@ -72,7 +72,7 @@ void psyq_pad_vsync(void);
 int psyq_snd_in_vsync(void);
 void psyq_snd_set_call_hook(void (*hook)(const char *line));
 
-/* A pointer's bits for a trace line (the low 32 bits: the arena offset lives there, PC_PORT_PLAN 2.4). */
+/* A pointer's bits for a trace line (the low 32 bits: the arena offset lives there, docs/PORT.md "Memory arena"). */
 #define PSYQ_PTR(p) ((unsigned)(unsigned long)(p))
 
 #endif /* PORT_PSYQ_INTERNAL_H */

@@ -1,5 +1,4 @@
-/* The memory cards (port_harness.h port_memcard_open): raw 128 KB .mcd images (PC_PORT_PLAN 2.8; DECISIONS "PC port
- * decisions (session 15)" item 7), the format PCSX-Redux reads and writes, so a card written here loads in the
+/* The memory cards (port_harness.h port_memcard_open): raw 128 KB .mcd images (docs/PORT.md "Disc, memory cards and movies"; DECISIONS "PC port architecture"), the format PCSX-Redux reads and writes, so a card written here loads in the
  * emulator and the other way round. This file owns the images and their files; the card's file system and LIBMCRD's
  * commands are the shim's (port/psyq/libmcrd.c), which calls port_memcard_written after each command that changed
  * an image. A slot without port_memcard_open has no card. */

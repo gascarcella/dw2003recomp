@@ -20,7 +20,7 @@ typedef double f64;
 
 /* A block the original wrapped in a loop construct (very likely a macro expanding to do/while(0)): its loop notes
  * are scheduling barriers and move exits out of line. Use only with a comment naming that evidence
- * (DECISIONS "Loop-scoped blocks as a named macro"). */
+ * (DECISIONS "LOOP_BLOCK: loop-scoped blocks as a named macro"). */
 #define LOOP_BLOCK(body...) do { body } while (0)
 #define LOOP_BARRIER() do { } while (0)
 

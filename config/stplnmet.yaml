@@ -50,7 +50,7 @@ segments:
     # Unnamed symbols are func_STPLNMET_<addr>, D_STPLNMET_<addr> (overlays share addresses; DECISIONS naming).
     symbol_name_format: STPLNMET_$VRAM
     subsegments:
-      # Three files (docs/DECISIONS.md "Overlay file split"). The three jump tables are all at 0 mod 8 (no parity
+      # Three files (DECISIONS "File boundaries come from evidence"). The three jump tables are all at 0 mod 8 (no parity
       # break), but the window-anim pair is in the overlay twice (83D70/83E04 = 88438/884CC, byte for byte), so
       # it holds at least two objects. 83D70..85ECC is the name entry also in STDGNAME (83378..85420): the same
       # function sizes, the same three jump tables at the same addresses, entry_set_name/get_name byte for
@@ -63,7 +63,7 @@ segments:
       - [0x321C, c, stplnmet_80085ECC]   # 0x80085ECC: the other objects, the main object and the module's
                                          # function table (89B90); finer splits not proven
       # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t stplnmet;
-      # DECISIONS "Overlay .data/.bss per file"). The name entry's .bss comes after
+      # DECISIONS "Data in C, split per object"). The name entry's .bss comes after
       # 85ECC's .data, so it is .bss.
       - [0x5934, .data, stplnmet_80082F58]   # 0x800885E4 (after the last function's jr ra)
       - [0x5A24, .data, stplnmet_80083D70]   # 0x800886D4 the name entry's character tables

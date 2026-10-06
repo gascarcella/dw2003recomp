@@ -41,7 +41,7 @@ static void usage(const char *argv0) {
             "          [--log FILE] [--record FILE] [--max-frames N] [--watchdog SEC] [--trace]\n"
             "          [--window] [--scale N] [--fullscreen] [--fps N] [--input-test] [--screenshot FRAME:PATH]\n"
             "          [--spu-trace FILE] [--wav FILE] [--mute]\n"
-            "  --config JSON    the settings file (docs/LAUNCHER_MODS_PLAN.md 4.3; what the launcher starts the game\n"
+            "  --config JSON    the settings file (docs/LAUNCHER.md; what the launcher starts the game\n"
             "                   with): the disc, the window, the memory cards (default card1.mcd and card2.mcd beside\n"
             "                   the file), the watchdog (default off); the options below override it\n"
             "  --print-settings with --config: print the effective settings (the file's, then the options) as a\n"
@@ -254,7 +254,7 @@ int main(int argc, char **argv) {
     port_arena_init();
     spu_init();
     if (refresh == 60) {
-        /* the game's own 60 Hz mode (the NTSC patch's records_60hz; docs/LAUNCHER_MODS_PLAN.md 5.5), set before the
+        /* the game's own 60 Hz mode (the NTSC patch's records_60hz; docs/LAUNCHER.md "50/60 Hz"), set before the
          * snapshot (port_overlay_init) so that the reset restores it and the reset check holds; main_screen_pos stays
          * 1 (the PAL screen offset, which the port's video ignores, and the card game's PAL layout) */
         records_60hz = 1;

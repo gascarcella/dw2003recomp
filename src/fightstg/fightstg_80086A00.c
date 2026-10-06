@@ -1412,7 +1412,7 @@ FightstgProp *fightstg_prop_create(s32 id, SVECTOR *pos, SVECTOR *rot) {
             obj->id = id;
             obj->anim_file = entry->anim_file;
             obj->model_file = entry->model_file;
-            /* Evidence (class A2, sched2 barrier; DECISIONS "LOOP_BLOCK audit"): the original stores unk_6C only after
+            /* Evidence (class A2, sched2 barrier; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original stores unk_6C only after
              * unk_54, never interleaved. */
             LOOP_BARRIER();
             obj->vram.x = 0x280;

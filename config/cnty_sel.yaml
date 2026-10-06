@@ -49,12 +49,12 @@ segments:
     # Unnamed symbols are func_CNTY_SEL_<addr>, D_CNTY_SEL_<addr> (overlays share addresses; DECISIONS naming).
     symbol_name_format: CNTY_SEL_$VRAM
     subsegments:
-      # One file (docs/DECISIONS.md "Overlay file split"): one jump table (no parity break), .data referenced
+      # One file (DECISIONS "File boundaries come from evidence"): one jump table (no parity break), .data referenced
       # in code order (843C0..84424), no duplicated helpers; nothing suggests a second object.
       - [0x0,  .rodata, cnty_sel_80082CE8]
       - [0x38, c, cnty_sel_80082CE8]   # 0x80082CE8 .text (tools/overlay_layout.py)
       # .data, then .bss (zeros in the file), each per file in link order (tools/data_owners.py -t cnty_sel;
-      # DECISIONS "Overlay .data/.bss per file").
+      # DECISIONS "Data in C, split per object").
       - [0x1710, .data, cnty_sel_80082CE8]  # 0x800843C0 (after the last function's jr ra); no .bss. It ends
                                             # with a 7-byte table, 3 bytes into a word (the file's end); splat
                                             # drops that partial word from the target asm, so unit_diff shows

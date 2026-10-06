@@ -1,7 +1,7 @@
 {
  "name": "skip_dialogues",
  "max_frames": 120000,
- "comment": "The port's skip_dialogues mod (docs/LAUNCHER_MODS_PLAN.md 5.2), run by tests/port/mods.py with the mod on from the start: first_battle_save's route with no press through the scenes, one press for each choice after 300 idle frames. Port-only (the emulator has no mods).",
+ "comment": "The port's skip_dialogues mod (docs/LAUNCHER.md \"Skip dialogues\"), run by tests/port/mods.py with the mod on from the start: first_battle_save's route with no press through the scenes, one press for each choice after 300 idle frames. Port-only (the emulator has no mods).",
  "steps": [
   {
    "type": "wait_stage",

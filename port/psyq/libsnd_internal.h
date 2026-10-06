@@ -2,7 +2,7 @@
  * libsnd.c the public calls and the VABs, libsnd_seq.c the sequencer, libsnd_voice.c the voice manager, libsnd_spu.c
  * the SPU side (what LIBSPU does on the PS1; the game never calls LIBSPU, so there is no LIBSPU API here).
  *
- * Provenance (docs/SOUND.md "LIBSND: provenance"): the behaviour is the PS1's, learnt from the EXE's LIBSND/LIBSPU
+ * Provenance (docs/SOUND.md section 7 "Provenance"): the behaviour is the PS1's, learnt from the EXE's LIBSND/LIBSPU
  * disassembly (constants, tables, formulas, the order of operations) and from the emulator's SPU write traces
  * (tests/sound); the code is ours. The trace oracle compares every SPU store, so the arithmetic (volumes, pitches,
  * tempo), the voice the allocator picks and the order of the register writes are the PS1's to the bit. */

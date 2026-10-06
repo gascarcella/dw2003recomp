@@ -100,7 +100,7 @@ void wstag305_update(WstagObject *obj, WstagEventData *data) {
     switch (obj->base.state) {
     case OBJECT_STATE_INIT:
     default:
-        /* Evidence (class C, delay slot; DECISIONS "LOOP_BLOCK audit"): the original fills the 0x26 test's delay slot
+        /* Evidence (class C, delay slot; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original fills the 0x26 test's delay slot
          * as after a loop end. */
         LOOP_BLOCK(if (gamestate_data.progress == 0xD && gamestate_flags.get_flag(0x1C0D, 0)) {
             data->event = fieldstg_event_start(0x15E);

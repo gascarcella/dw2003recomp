@@ -1042,7 +1042,7 @@ void fightstg_model_mesh_draw_edges(void *data, GfxLayer *layer, s32 arg) {
                         *(s32 *)&ctx.prim.f4->x2 = ctx.corners_xy[3];
                         *(s32 *)&ctx.prim.f4->x3 = ctx.corners_xy[2];
                     }
-                    /* Evidence (class A1, sched1 barrier; DECISIONS "LOOP_BLOCK audit"): the original's addPrim
+                    /* Evidence (class A1, sched1 barrier; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the original's addPrim
                      * registers are what sched1 gives when it can't move code across either addPrim (without sched1
                      * both forms are the same). */
                     LOOP_BLOCK(addPrim(ctx.ot_entry, ctx.prim.f4););

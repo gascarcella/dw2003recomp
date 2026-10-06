@@ -8,8 +8,8 @@
  * status 4 and names the last Psy-Q call, instead of hanging the acceptance run.
  *
  * The window (video.c, input.c; `--window`): each vsync also polls SDL's events (the pad, unless a script owns it),
- * presents the display, and waits for the vsync's time against CLOCK_MONOTONIC. Two rates (docs/LAUNCHER_MODS_PLAN.md
- * 5.1): the **nominal rate** port_rate (50, PAL; `--fps N` sets it to N): the vsyncs per second the game is made for,
+ * presents the display, and waits for the vsync's time against CLOCK_MONOTONIC. Two rates (docs/LAUNCHER.md
+ * "Fast-forward"): the **nominal rate** port_rate (50, PAL; `--fps N` sets it to N): the vsyncs per second the game is made for,
  * which the audio's samples per vsync follow; and the **pace** (port_pace_set; `--fps`, fast-forward): the vsyncs per
  * second of the wall clock (0: as fast as it runs). Every change of the pace starts the schedule over, so going back
  * from a fast pace to a slow one never waits for the vsyncs "owed". Only the wall-clock time between vsyncs depends on

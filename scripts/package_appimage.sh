@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the release AppImage (DECISIONS "Releases"; docs/RELEASE.md): the game (the SDL build) and the launcher in
+# Builds the release AppImage (DECISIONS "Releases: tagged drafts, published by hand"; docs/RELEASE.md): the game (the SDL build) and the launcher in
 # Release, an AppDir with both in usr/bin/ (the launcher finds the game beside itself) and the mods' manifests in
 # usr/bin/mods/, AppRun -> the launcher, a .desktop file, the icon and LICENSES/, then appimagetool with the pinned
 # static runtime (no libfuse2 needed to run it). Players supply their own disc in the launcher.
