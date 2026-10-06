@@ -78,7 +78,12 @@ effective settings as a file with every key and absolute paths): the round trip 
 printed again: the same text), the defaults of an empty file, relative paths from the file's directory, `null` cards,
 the command line overriding the file, the errors (exit 64 naming the key) and unknown keys (logged, ignored). With the
 disc, a headless run under `--config` must replay `new_game` with the bare binary's log and record byte for byte and
-create the two card files beside the settings. `scripts/test.sh --layer port` runs it after `run.py` (~2 s built).
+create the two card files beside the settings, and with a mod enabled under `--script` the mod stays off (the same log)
+unless `--script-mods`. The mods: each `port/mods/<id>/mod.json` must equal the game's registry (`--print-mods`: ids,
+types, defaults, ranges, enum ids; names, descriptions and labels present) and be copied beside the binary. With
+`build/port-sdl`, the window's `--input-test` (offscreen) runs with the defaults and with
+`tests/port/settings/rebound.json` (rebound keys and pads, chord hotkeys, a mod's bindings, the pause's round trip).
+`scripts/test.sh --layer port` runs it after `run.py` (~5 s built).
 
 ## What it found (session 16)
 - **The overlay copy takes CPU time on the PS1.** The game copies FIELDSTG (0x19000 bytes) into its slot with LIBC2's

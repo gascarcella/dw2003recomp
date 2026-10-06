@@ -56,7 +56,9 @@ non-PIE in both.
 | `src/pump.c` | `port_wait` (the vsync and CD ticks, the frame cap, the watchdog), `port_halt`, `port_unimplemented` |
 | `src/reset.c` | The console's reset (the script's `reset` step): `port_reset_request` (longjmp to `main()`), `port_reset_state`, `DW3_PORT_RESET_CHECK` |
 | `src/video.c` | The video output: the display area of the VRAM as 32-bit pixels, `--screenshot`, the SDL3 window (below) |
-| `src/input.c` | The window's input: keyboard and gamepads to the pad, the window's close, `--input-test` (below) |
+| `src/input.c` | The window's input: keyboard and gamepads to the pad (rebindable), the hotkeys, the window's close, `--input-test` (below) |
+| `src/mods.c` | The built-in mods' registry, their settings and hotkeys, `port_mods_frame` (manifests: `mods/<id>/mod.json`) |
+| `mods/` | The built-in mods' manifests (copied beside the binary) |
 | `src/audio.c` | The audio output: the SPU core rendered every vsync, `--wav`, the SDL3 audio device (below) |
 | `src/asmdata.c` | Zero data the PS1 build keeps in asm (FIELDSTG's `.bss` block; weak LIBGS/LIBCD data) |
 | `include/spu.h`, `src/spu.c`, `src/spu_dsp.c`, `src/spu_internal.h` | The SPU core (M3, below): registers, SPU RAM, voices, mix, reverb; the DSP pieces; the internals the tests see |
@@ -114,16 +116,29 @@ window nothing is paced.
 
 **Input** (`src/input.c`): the keyboard and every gamepad SDL sees are ORed into pad 1, a digital pad (`psyq_pad_set`),
 once per vsync. Keys (by position): arrows the D-pad; X cross, C circle, Z square, S triangle; Enter (or keypad Enter)
-START; Backspace (or right Shift) SELECT; Q L1, E R1, 1 L2, 3 R2; F11 fullscreen. Gamepads (SDL's positional buttons, the
-PlayStation layout): south cross, east circle, west square, north triangle, back SELECT, start START, shoulders L1/R1,
-triggers L2/R2, the D-pad and the left stick the D-pad. Every change of the pad goes to the log's `I` lines and the
+START; Backspace (or right Shift) SELECT; Q L1, E R1, 1 L2, 3 R2; F11 fullscreen, P pause. Gamepads (SDL's positional
+buttons, the PlayStation layout): south cross, east circle, west square, north triangle, back SELECT, start START,
+shoulders L1/R1, triggers L2/R2, the D-pad and the left stick the D-pad. All of it is rebindable in the settings
+(`input.keyboard`, `input.gamepad`, `input.hotkeys`; docs/LAUNCHER_MODS_PLAN.md 4.3), and the mods add hotkeys. A
+hotkey never reaches the pad: a completed trigger masks its inputs until they are all released. **The pause** stops the
+game between two vsyncs (the window keeps presenting the last image, the audio device pauses) until the key again. Every change of the pad goes to the log's `I` lines and the
 record's `inputs`, as a script's do. With `--script` the script owns the pad: the window's input never reaches it.
 Closing the window (or SIGINT/SIGTERM, which SDL turns into a quit) ends the run: `port_exit(0, "window closed")`, the
 log and the record written. `--input-test` checks the path: it injects every key of the map (`SDL_PushEvent`), then
 attaches a virtual SDL gamepad and presses each of its buttons, triggers and stick directions, and a chord, one per
-frame with its release in the next, and requires the buttons sent to `psyq_pad_set` to be the map's (with `--script`:
-none sent, and the script's log stays byte-identical to a run without the test); exit 0 when all 70 checks pass, 6
-otherwise. CI runs it on SDL's offscreen driver.
+frame with its release in the next, then every hotkey trigger, and requires the buttons sent to `psyq_pad_set` to be the
+map's (none for a hotkey's, which must fire; with `--script`: none sent, and the script's log stays byte-identical to a
+run without the test), then (without a script) the pause's round trip; exit 0 when all the checks pass (74 with the
+defaults), 6 otherwise. With `--config` it tests the settings' map. CI runs it on SDL's offscreen driver, with the
+defaults and with `tests/port/settings/rebound.json`.
+
+**The mods** (`src/mods.c`; docs/LAUNCHER_MODS_PLAN.md 4.4-4.5): the built-in mods' registry; each has a manifest
+`port/mods/<id>/mod.json`, copied beside the binary (`build/port*/mods/`) for the launcher. `--print-mods` prints the
+registry; the settings' `mods.<id>` enable and configure them; under `--script` they are off unless `--script-mods`.
+
+**Two rates** (`src/pump.c`): the nominal rate (`port_rate`, 50; `--fps N` sets it: the audio's samples per vsync) and
+the pace (the wall clock's vsyncs per second; `port_pace_set`, which starts the schedule over on every change, so a
+fast-forward that ends never makes the game wait for the vsyncs it ran ahead).
 
 ## What CMake generates (`build/port/gen/`, by `tools/port_gen.py`)
 At configure time:

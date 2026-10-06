@@ -96,8 +96,10 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   settings file (schema 1, settled in the plan's 4.3: paths relative to the file, the cards `card1.mcd`/`card2.mcd`
   beside it by default, the watchdog off, the command line overriding the file, exit 64 naming a bad key) and
   `--print-settings` prints the effective settings (`port/src/settings.c`; `tests/port/settings.py`, in the port layer
-  of `scripts/test.sh`). The bare binary's logs, records and WAVs are unchanged. `input` and `mods` are read but not
-  applied yet.
+  of `scripts/test.sh`). Phase 1 of the plan's section 7: the keyboard and gamepad map rebindable, hotkey actions with
+  chords masked from the pad, the pause key (`P`), the pace split from the nominal rate, `port/src/mods.c` with the
+  registry and `port/mods/fast_forward/mod.json` (its behaviour is phase 2), mods off under `--script` unless
+  `--script-mods`. The bare binary's logs, records and WAVs are unchanged.
 - **CI (session 13):** `.github/workflows/ci.yml` on every push: toolchain, script/Python checks, `check_toolchain.sh`, and
   with the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of `dw2003-gamedata`) `build.sh --check` and
   `scripts/test.sh`; first green run 2026-10-05, ~5 min. Fork pull requests get only the disc-free steps.
@@ -192,7 +194,8 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   and WSTAG's own types have their understood fields named (DECISIONS "Naming pass names-10"), and so have the EXE's
   and CARDGAME's (DECISIONS "Naming pass names-9": what is left there is unread, padding or per-effect scratch).
 - Kept as is: object list in `heap`, random module in `pad`, gamestate one file vs two, `object` vs `main`.
-- Launcher and mods: planned, not started (`docs/LAUNCHER_MODS_PLAN.md`). Found on the way (its section 3): without
+- Launcher and mods: game side phase 1 done (session 19, path B); next phase 2 (fast-forward, 50/60 Hz); fast-forward's
+  default speed is the user's to pick (provisional `4x`). Launcher: path A (`docs/LAUNCHER_MODS_PLAN.md`). Found on the way (its section 3): without
   `--memcard1` a save is lost at exit; no pause or reset key; the watchdog would kill a paused game; 60 Hz
   (`records_60hz`) has never been compared with the emulator; no Windows build (its section 6 has the staged route).
 - PC port: decided and started (`docs/PC_PORT_PLAN.md`: M0 and M1 done); `docs/PC_PORT_RESEARCH.md` stays background.

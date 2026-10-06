@@ -1968,3 +1968,20 @@ launcher (path A, built in parallel) writes. Choices made while building it, eac
   effective settings (every key, absolute paths) and is the launcher's validator; its output loads back to the same
   output (`tests/port/settings.py`).
 - `disc.sha1` is the launcher's record only: the game always checks the disc itself (`disc.c`'s stamp cache).
+
+## 2026-10-06: Phase 1 of the launcher plan, game side (session 19, path B)
+- **Hotkeys mask by latching:** a trigger that completes masks its inputs from the pad until all of them are released
+  (a release in another order leaks nothing). Not done: holding back a chord's first button until the chord is complete
+  (it would delay that button for everyone); chords should start with an input the pad map does not use.
+- **The pause stops between two vsyncs** (at the end of the one where the key is pressed), so no vsync, log line or
+  record entry happens during it; the watchdog is re-armed while paused, so a paused bare binary is never killed.
+- **`--fps N` keeps its meaning** (the nominal rate and the pace both N; 0: unthrottled at PAL's rate) so that the bare
+  binary behaves as before; fast-forward will change only the pace.
+- **The registry is compiled in, the manifests are files**, and a test requires them to agree (`--print-mods` against
+  `port/mods/<id>/mod.json`): the game never depends on finding its manifests; the user-facing text lives only in the
+  manifests. Manifests carry `requires_port` (an integer, the game's mod interface: 1).
+- **A mod is off unless the settings enable it**, and off under `--script` unless `--script-mods` (a flag, not a
+  script field, for now; a script field can come with the first mod that needs its own expected results).
+- **Only `fast_forward` has a manifest yet:** the others come with their behaviour (phases 3-4), so the launcher never
+  shows a mod that does nothing. Its `speed` is an enum of multiples (`2x 3x 4x 6x 8x unlimited`), the default `4x`
+  provisional until the user picks it.

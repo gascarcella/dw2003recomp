@@ -34,7 +34,7 @@ void port_fatal(const char *fmt, ...) {
 
 static void usage(const char *argv0) {
     fprintf(stderr,
-            "usage: %s [--config JSON] [--print-settings]\n"
+            "usage: %s [--config JSON] [--print-settings] [--print-mods] [--script-mods]\n"
             "          [--disc CUE|BIN] [--no-disc-check] [--cd-speed instant|realistic] [--memcard1|2 MCD|none]\n"
             "          [--script JSON]\n"
             "          [--log FILE] [--record FILE] [--max-frames N] [--watchdog SEC] [--trace]\n"
@@ -45,6 +45,8 @@ static void usage(const char *argv0) {
             "                   the file), the watchdog (default off); the options below override it\n"
             "  --print-settings with --config: print the effective settings (the file's, then the options) as a\n"
             "                   settings file with every key and absolute paths, and exit 0 (64: a bad file)\n"
+            "  --print-mods     print the built-in mods' registry (ids, options, defaults) as JSON and exit\n"
+            "  --script-mods    with --script: keep the settings' mods on (default: every mod off under a script)\n"
             "  --disc PATH      the user's disc (.cue or .bin; SHA-1 checked); without it reads find no data\n"
             "  --no-disc-check  skip the disc's SHA-1 check (experiments with another image)\n"
             "  --cd-speed S     the CD's timing: realistic (default: double speed and seeks) or instant\n"
@@ -59,11 +61,12 @@ static void usage(const char *argv0) {
             "  --trace          log every tick, overlay resolve and Psy-Q stub call\n"
             "  --window         show the display in a window (SDL3; a build with -DDW3_PORT_SDL=ON), real time;\n"
             "                   keys: arrows, X cross, C circle, Z square, S triangle, Enter START, Backspace SELECT,\n"
-            "                   Q/E L1/R1, 1/3 L2/R2, F11 fullscreen; gamepads too (port/src/input.c); with --script\n"
-            "                   the script owns the pad\n"
+            "                   Q/E L1/R1, 1/3 L2/R2, F11 fullscreen, P pause; gamepads too (port/src/input.c;\n"
+            "                   rebindable in the settings); with --script the script owns the pad\n"
             "  --scale N        the window's size: 320*N x 240*N (default 2; implies --window)\n"
             "  --fullscreen     a fullscreen window (implies --window)\n"
-            "  --fps N          the window's pace: N vsyncs per second (default 50, PAL; 0: unthrottled)\n"
+            "  --fps N          the window's pace and the nominal rate: N vsyncs per second (default 50, PAL;\n"
+            "                   0: unthrottled at PAL's rate)\n"
             "  --input-test     the window's input self-test: injected key and gamepad events (implies --window);\n"
             "                   exit 0 = passed, 6 = failed\n"
             "  --screenshot F:P write the display at vsync F to P (binary PPM); repeatable; any build\n"
@@ -94,7 +97,8 @@ int main(int argc, char **argv) {
     int disc_check = 1, max_frames_given = 0;
     int window = 0, scale = 2, fullscreen = 0, input_test = 0;
     const char *config = NULL;
-    int print_settings = 0;
+    int print_settings = 0, print_mods = 0, script_mods = 0;
+    long fps = -1;
     int i;
     /* --config first: its values are the defaults that the other options override */
     for (i = 1; i < argc; i++) {
@@ -120,6 +124,10 @@ int main(int argc, char **argv) {
             i++; /* read above */
         } else if (strcmp(argv[i], "--print-settings") == 0) {
             print_settings = 1;
+        } else if (strcmp(argv[i], "--print-mods") == 0) {
+            print_mods = 1;
+        } else if (strcmp(argv[i], "--script-mods") == 0) {
+            script_mods = 1;
         } else if (strcmp(argv[i], "--max-frames") == 0 && i + 1 < argc) {
             port_max_frames = number(argv[i + 1], argv[i]);
             max_frames_given = 1;
@@ -160,7 +168,7 @@ int main(int argc, char **argv) {
             fullscreen = 1;
             window = 1;
         } else if (strcmp(argv[i], "--fps") == 0 && i + 1 < argc) {
-            port_fps = number(argv[i + 1], argv[i]);
+            fps = number(argv[i + 1], argv[i]);
             i++;
         } else if (strcmp(argv[i], "--input-test") == 0) {
             input_test = 1;
@@ -183,6 +191,16 @@ int main(int argc, char **argv) {
             usage(argv[0]);
             return 64;
         }
+    }
+    if (fps >= 0) {
+        port_rate = fps > 0 ? fps : 50; /* --fps N: the nominal rate and the pace; 0: unthrottled, the rate PAL's */
+        port_pace_set(fps);
+    }
+    port_input_settings(config != NULL ? port_settings.input : NULL);
+    port_mods_settings(config != NULL ? port_settings.mods : NULL);
+    if (print_mods) {
+        port_mods_print_registry(stdout);
+        return 0;
     }
     if (print_settings) {
         PortSettings eff = port_settings;
@@ -241,6 +259,7 @@ int main(int argc, char **argv) {
             port_max_frames = 0; /* the script's own max_frames ends the run */
         }
     }
+    port_mods_start(script == NULL || script_mods); /* the mods' hotkeys: before --input-test plans its steps */
     if (window) {
         if (!max_frames_given) {
             port_max_frames = 0; /* a window runs until it is closed */

@@ -146,6 +146,10 @@ target_link_options(dw2003 PRIVATE "-Wl,-T,${DW3_GEN}/overlays.ld" "-Wl,-Map,${C
 add_custom_command(TARGET dw2003 POST_BUILD
                    COMMAND "${DW3_PYTHON}" "${DW3_PORT_GEN}" sections --map "${CMAKE_BINARY_DIR}/dw2003.map"
                    COMMENT "port_gen.py sections (the game's data is all in the reset's ranges)" VERBATIM)
+# The built-in mods' manifests (port/mods/<id>/mod.json; docs/LAUNCHER_MODS_PLAN.md 4.4) beside the binary, where the
+# launcher lists them: copied on every build (a few small files).
+add_custom_target(dw3_mods ALL COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/mods"
+                  "${CMAKE_BINARY_DIR}/mods" COMMENT "the mods' manifests -> ${CMAKE_BINARY_DIR}/mods" VERBATIM)
 if(DW3_PORT_ALLOW_UNRESOLVED)
     target_link_options(dw2003 PRIVATE "-Wl,--unresolved-symbols=ignore-all")
 endif()

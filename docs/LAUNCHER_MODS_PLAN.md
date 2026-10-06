@@ -1,7 +1,8 @@
 # Launcher and mods plan
 
 _Planned in session 18 (2026-10-06, a discovery and planning session). **Implemented so far (session 19, path B):**
-`--config FILE` and the settings file, 4.3 (settled there). The user's
+`--config FILE` and the settings file, 4.3 (settled there); phase 1 of section 7 (rebindable input, hotkeys, the pause,
+`port/src/mods.c` and the first manifest, the pace split; 4.5 says what is built). The user's
 decisions are in section 2 and in `docs/DECISIONS.md` "Launcher and mods (session 18)". The facts in section 3 come from
 five research agents: the measurements were run on the dev machine; everything about the game's code is from reading it
 (nothing in the game was changed or run with a mod); the Windows findings are small scratch experiments, not a build of
@@ -379,7 +380,7 @@ checks the round trip, the defaults, the overrides and the errors._
   `--config`) is off**. The bare binary keeps its 10 s.
 - `launcher` (**changed: added**): the launcher's own state (window geometry, last directory, ...). The game never
   reads it and prints it back unchanged.
-- **`input`** (applied from phase 1's second pull request; until then read, checked as an object and printed back):
+- **`input`** (printed back by `--print-settings` as it was given):
   - `keyboard`: PS1 button -> one key name or a list of them. `gamepad`: PS1 button -> one gamepad input name or a list.
     A button that is absent keeps its default; `""` or `[]` unbinds it. Buttons: `up down left right cross circle square
     triangle start select l1 r1 l2 r2`.
@@ -399,7 +400,8 @@ checks the round trip, the defaults, the overrides and the errors._
     should start with an input the pad map does not use (`pad:guide`, the stick clicks).
 - **`mods`**: `<id>` -> `{ "enabled": bool, "<option id>": value }`, the option ids and types from the mod's manifest
   (4.4). **A mod that is absent, or has no `enabled`, is off.** An absent option keeps the manifest's default. An
-  unknown mod id is logged and ignored (applied from phase 1's second pull request; until then read and printed back).
+  unknown mod id is logged and ignored, an unknown option too. `--print-settings` prints `mods` resolved: every mod
+  of the game with `enabled` and every option (the defaults filled in), then the unknown mods as they were given.
   Under `--script` every mod is off unless the run asks for them (4.5).
 
 ### 4.4 The mod manifest (`mod.json`)
@@ -445,6 +447,25 @@ written the same way). No `string` or `path` type for now.
      `port_overlay_init()` (the snapshot), or the reset check fails.
   5. A run with a mod on needs its own expected results: the random generator steps once a frame, so any skipping
      shifts later rolls (as a faster player would).
+
+**Built (phase 1, session 19):**
+- `port/src/input.c`: one list of (input, PS1 button) entries for the keyboard and the gamepads (the triggers and the
+  left stick are entries too, rebindable); hotkey actions (`port_input_action`) with triggers and chords; a completed
+  trigger latches until all its inputs are released and masks them out of the pad. Defaults: pause `P`, fullscreen
+  `F11`. `--input-test` tests the active map (the defaults without `--config`), every hotkey trigger (masked, fired),
+  and the pause's round trip; CI also runs it with `tests/port/settings/rebound.json`.
+- **The pause** (`pump.c`): at the end of the vsync where the key is pressed; the window keeps polling and presenting
+  the last image, the audio device is paused, the watchdog re-armed; the key again resumes with the schedule started
+  over. No vsync runs meanwhile, so nothing reaches the game, the log or the record.
+- **The pace split** (`pump.c`): `port_rate` (the nominal rate: the audio's samples per vsync) and the pace
+  (`port_pace_set`, which starts the schedule over on every change). `--fps N` sets both, as before.
+- `port/src/mods.c`: the registry (ids, option types, defaults, ranges), the values from `mods.<id>`, the enabled mods'
+  bindings registered as actions, `port_mods_frame()` from `port_frame`. `--print-mods` prints the registry;
+  `tests/port/settings.py` requires each `port/mods/<id>/mod.json` to equal it. The manifests are copied beside the
+  binary (`build/port*/mods/<id>/mod.json`). Manifests also need `requires_port` (an integer: the game's mod interface,
+  1 now). Under `--script` every mod is off unless `--script-mods` is given.
+- The first manifest: `fast_forward` (hold `Tab`, toggle unbound, speed an enum `2x 3x 4x 6x 8x unlimited` with a
+  **provisional default of `4x`** (200 fps at PAL) until the user picks it, mute on). Its behaviour is phase 2.
 
 ### 4.6 The launcher
 

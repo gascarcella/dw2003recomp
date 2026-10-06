@@ -494,7 +494,7 @@ void port_json_free(PortJson *value) {
 }
 
 /* ---- The writer (settings.c's --print-settings): strings escaped as RFC 8259 requires, numbers that are integers
- * printed as integers, objects and arrays one item per line at `indent` spaces a level. */
+ * printed as integers, objects and arrays one item per line at `indent` spaces a level (indent 0: on one line). */
 void port_json_write_string(FILE *f, const char *s) {
     fputc('"', f);
     for (; *s != '\0'; s++) {
@@ -545,14 +545,21 @@ void port_json_write(FILE *f, const PortJson *v, int indent, int level) {
         }
         fputc(v->type == PORT_JSON_ARRAY ? '[' : '{', f);
         for (i = 0; i < v->count; i++) {
-            fprintf(f, "%s\n%*s", i ? "," : "", indent * (level + 1), "");
+            if (indent == 0) {
+                fputs(i ? ", " : "", f); /* one line */
+            } else {
+                fprintf(f, "%s\n%*s", i ? "," : "", indent * (level + 1), "");
+            }
             if (v->type == PORT_JSON_OBJECT) {
                 port_json_write_string(f, v->keys[i]);
                 fputs(": ", f);
             }
             port_json_write(f, &v->items[i], indent, level + 1);
         }
-        fprintf(f, "\n%*s%c", indent * level, "", v->type == PORT_JSON_ARRAY ? ']' : '}');
+        if (indent != 0) {
+            fprintf(f, "\n%*s", indent * level, "");
+        }
+        fputc(v->type == PORT_JSON_ARRAY ? ']' : '}', f);
         break;
     }
 }

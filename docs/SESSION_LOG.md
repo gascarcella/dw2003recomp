@@ -2,6 +2,24 @@
 
 Newest first. One short entry per session: goal, result, next steps.
 
+## 2026-10-06: Session 19 (path B): the launcher plan's game side, phase 1 (local worktree, PRs #10 and the phase-1 PR)
+- **Asked:** build the game side of `docs/LAUNCHER_MODS_PLAN.md` (sections 4.1-4.5 and 5, phases 1, 2 and 4 of its
+  section 7) while a parallel session (path A) builds the launcher; land `--config` early in its own pull request.
+- **PR #10 (`gascarcella/mods-config`):** `--config FILE` and `--print-settings` (`port/src/settings.c`); the plan's 4.3
+  settled as schema 1 (changes from the sketch marked there; DECISIONS "The settings file, schema 1"). Path A was told
+  and adopted it without changes.
+- **Phase 1 (`gascarcella/mods-phase1`, stacked on #10):** rebindable keyboard and gamepad map and hotkey actions with
+  chords masked from the pad (`input.c`); the pause (`P`); the pace split from the nominal rate with a schedule reset;
+  `port/src/mods.c` (registry, `port_mods_frame`, `--print-mods`, `--script-mods`) and the first manifest
+  (`port/mods/fast_forward/mod.json`, its behaviour is phase 2); `--input-test` covers the active map, the hotkeys and
+  a pause round trip; `tests/port/settings.py` (round trip, defaults, overrides, 17 error cases, mods vs manifests, the
+  input self-tests, a `--config` replay equal to the bare run's).
+- **Verified:** the bare binary's logs, records and WAVs byte-identical to `main`'s (`new_game`, `first_battle_save`;
+  the window `--fps 0` run and the window run with `--input-test` under a script too); `scripts/test.sh` green (probe
+  and 8 layers); `tests/port/run.py --m32 new_game` (PR #10). No game C changed.
+- **Open, for the user:** fast-forward's default speed (provisional `4x`, 200 fps at PAL).
+- **Next:** phase 2 (fast-forward, the 50/60 Hz setting with an emulator comparison) on the user's go-ahead.
+
 ## 2026-10-06: Session 18: the launcher and mods planned (local worktree `gascarcella/PC-Release`, docs only, pushed to `main`)
 - **Asked:** think, discuss and plan (no implementation): a launcher executable (settings, the disc image, keybinds,
   a 50/60 toggle, mods with their own configuration screens) and mod support with four first mods (fast-forward, skip

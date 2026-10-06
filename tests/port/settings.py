@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """The port's settings file (`--config FILE`, docs/LAUNCHER_MODS_PLAN.md 4.3): the contract with the launcher.
 
-Usage: tests/port/settings.py [--out DIR] [-j N]
+Usage: tests/port/settings.py [--out DIR] [-j N] [--no-sdl]
 
 Builds the headless port if needed (tests/port/run.py's build), then checks, with `--print-settings`:
   - the round trip: a file's effective settings, printed and loaded again from another directory, print the same;
+  - the mods: every port/mods/<id>/mod.json equal to the game's registry (--print-mods) and copied beside the binary,
+    the values read and resolved (defaults filled in), unknown mods and options logged, mods off under --script
+    unless --script-mods;
   - the defaults (every key absent), relative paths resolved against the file's directory, null memory cards;
   - the command line overriding the file (--disc, --scale, --memcard1 none, --watchdog);
   - the errors: exit 64 with the key named (no schema, a newer schema, a wrong type, out of range, not JSON, a missing
     file, --print-settings without --config); an unknown key is logged and ignored;
+the input and binding errors; with build/port-sdl, --input-test (offscreen) with the defaults and with
+tests/port/settings/rebound.json (rebound keys and pads, chord hotkeys, the pause's round trip);
 and, when the disc is there, that a run under `--config` (headless, cards in a scratch directory) replays new_game
 with the bare run's log and record byte for byte, and creates the memory card files.
 Exit codes: 0 pass, 1 fail, 2 something missing.
@@ -53,10 +58,66 @@ def printed(binary, config, *extra):
     return out, json.loads(out), err
 
 
+MODS = ROOT / "port/mods"
+REBOUND = ROOT / "tests/port/settings/rebound.json"
+OPTION_KEYS = {"id", "name", "description", "type", "default", "group", "applies", "min", "max", "step", "values"}
+
+
+def mods_check(binary):
+    """port/mods/<id>/mod.json against the game's registry (--print-mods), and the copies beside the binary."""
+    rc, out, err = run(binary, "--print-mods")
+    registry = {m["id"]: m for m in json.loads(out)} if rc == 0 else {}
+    check(rc == 0 and registry, f"--print-mods: exit {rc}, {len(registry)} mod(s)")
+    manifests = {}
+    for path in sorted(MODS.glob("*/mod.json")):
+        man = json.loads(path.read_text())
+        manifests[man.get("id")] = man
+        problems = []
+        if path.parent.name != man.get("id"):
+            problems.append(f"the directory is not the id {man.get('id')!r}")
+        for key in ("schema", "id", "name", "version", "kind", "requires_port", "description", "options"):
+            if key not in man:
+                problems.append(f"no {key}")
+        if man.get("schema") != 1:
+            problems.append("schema is not 1")
+        reg = registry.get(man.get("id"))
+        if reg is None:
+            problems.append("not in the game's registry")
+        else:
+            for key in ("version", "kind", "requires_port"):
+                if man.get(key) != reg[key]:
+                    problems.append(f"{key} {man.get(key)!r}, the game's {reg[key]!r}")
+            got = [o.get("id") for o in man.get("options", [])]
+            want = [o["id"] for o in reg["options"]]
+            if got != want:
+                problems.append(f"options {got}, the game's {want}")
+            for mo, ro in zip(man.get("options", []), reg["options"]):
+                where = f"option {mo.get('id')}"
+                if set(mo) - OPTION_KEYS:
+                    problems.append(f"{where}: unknown keys {sorted(set(mo) - OPTION_KEYS)}")
+                if not mo.get("name") or not mo.get("description"):
+                    problems.append(f"{where}: no name or description")
+                for key in ("type", "default", "min", "max", "step"):
+                    if mo.get(key) != ro.get(key):
+                        problems.append(f"{where}: {key} {mo.get(key)!r}, the game's {ro.get(key)!r}")
+                if mo.get("applies", "restart") != ro["applies"]:
+                    problems.append(f"{where}: applies {mo.get('applies')!r}, the game's {ro['applies']!r}")
+                if ro["type"] == "enum":
+                    values = mo.get("values", [])
+                    if [v.get("id") for v in values] != ro["values"] or not all(v.get("label") for v in values):
+                        problems.append(f"{where}: values {values}, the game's ids {ro['values']} (each with a label)")
+        check(not problems, f"{path.relative_to(ROOT)}: {'; '.join(problems) or 'equals the registry'}")
+        copy = binary.parent / "mods" / path.parent.name / "mod.json"
+        check(copy.exists() and copy.read_bytes() == path.read_bytes(), f"its copy beside the binary ({copy.parent})")
+    missing = sorted(set(registry) - set(manifests))
+    check(not missing, f"every mod of the registry has a manifest{': missing ' + ', '.join(missing) if missing else ''}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--out", help="scratch directory (default build/port-test/settings)")
     ap.add_argument("-j", "--jobs", type=int, default=int(os.environ.get("DW3_JOBS", "0")) or None)
+    ap.add_argument("--no-sdl", action="store_true", help="skip the input self-test even when build/port-sdl exists")
     args = ap.parse_args()
     try:
         env = tool_env()
@@ -96,8 +157,9 @@ def main():
     check(s["memcard2"] is None, "memcard2 null: no card")
     check(s["video"] == full["video"] and s["audio"] == full["audio"] and s["watchdog"] == 30
           and s["disc"]["sha1"] == full["disc"]["sha1"], "every value read")
-    check(s["input"] == full["input"] and s["mods"] == full["mods"] and s["launcher"] == full["launcher"],
-          "input, mods and launcher printed back as they are")
+    check(s["input"] == full["input"] and s["launcher"] == full["launcher"], "input and launcher printed back as they are")
+    check(s["mods"]["fast_forward"] == {"enabled": True, "hold": "Tab", "toggle": "", "speed": "4x", "mute": True},
+          "mods printed resolved: the manifest's defaults filled in")
 
     print("settings: the round trip")
     b = write(out / "b/elsewhere/settings.json", text1)
@@ -111,6 +173,20 @@ def main():
           and s["memcard1"] is None and s["memcard2"] == str(ROOT / "two.mcd") and s["watchdog"] == 7,
           "--disc (from the current directory), --scale (implies the window), --memcard1 none, --memcard2, --watchdog")
 
+    print("settings: the mods and their manifests")
+    mods_check(binary)
+    _, s, err = printed(binary, write(out / "mods.json", {"schema": 1, "mods": {
+        "fast_forward": {"enabled": True, "speed": "unlimited", "mute": False, "hold": ["F3", ["pad:guide", "pad:north"]],
+                         "turbo": 1},
+        "someone_elses": {"enabled": True, "x": [1, 2]}}}))
+    check(s["mods"]["fast_forward"] == {"enabled": True, "hold": ["F3", ["pad:guide", "pad:north"]], "toggle": "",
+                                        "speed": "unlimited", "mute": False}, "a mod's values read")
+    check(s["mods"]["someone_elses"] == {"enabled": True, "x": [1, 2]} and
+          "mods.someone_elses: no such mod in this build, ignored" in err, "an unknown mod: logged, printed back")
+    check("mods.fast_forward.turbo: unknown option, ignored" in err, "an unknown option: logged and ignored")
+    _, s, _ = printed(binary, a / "settings.json")
+    check(s["mods"]["fast_forward"]["enabled"] is False, "a mod absent from the settings is off")
+
     print("settings: errors (exit 64, the key named)")
     bad = {
         "no schema": ({}, "schema: missing"),
@@ -122,6 +198,17 @@ def main():
         "mods not an object": ({"schema": 1, "mods": []}, "mods: an object, not an array"),
         "not JSON": ('{"schema": 1,}', "not JSON"),
         "not an object": ("[1]", "the settings are an object"),
+        "a bad enum": ({"schema": 1, "mods": {"fast_forward": {"speed": "5x"}}}, "mods.fast_forward.speed: one of"),
+        "enabled not a bool": ({"schema": 1, "mods": {"fast_forward": {"enabled": 1}}},
+                               "mods.fast_forward.enabled: true or false"),
+        "a binding not a binding": ({"schema": 1, "mods": {"fast_forward": {"hold": 3}}},
+                                    "mods.fast_forward.hold: a binding"),
+        "an unknown gamepad input": ({"schema": 1, "mods": {"fast_forward": {"hold": "pad:nosuch"}}},
+                                     "\"pad:nosuch\": not a gamepad input"),
+        "a chord too long": ({"schema": 1, "input": {"hotkeys": {"pause": [["A", "B", "C", "D", "E"]]}}},
+                             "input.hotkeys.pause: a trigger is an input name or a chord"),
+        "a gamepad map name": ({"schema": 1, "input": {"gamepad": {"cross": "a"}}},
+                               "input.gamepad.cross: \"a\": not a gamepad input"),
     }
     for what, (content, message) in bad.items():
         p = write(out / "bad" / (what.replace(" ", "_") + ".json"), content)
@@ -155,8 +242,29 @@ def main():
         check(all(p.exists() and p.stat().st_size == 0x20000 for p in cards),
               "card1.mcd and card2.mcd created beside the file (128 KB each)")
         check("watchdog 0 s" in err2, "the watchdog off under --config")
+        modcfg = write(c / "mods.json", {"schema": 1, "disc": {"path": os.path.relpath(DISC, c)},
+                                         "video": {"window": False}, "mods": {"fast_forward": {"enabled": True}}})
+        rc3, _, err3 = run(binary, "--config", modcfg, "--script", script, "--log", out / "mods_off.log")
+        rc4, _, err4 = run(binary, "--config", modcfg, "--script", script, "--script-mods", "--log", out / "mods_on.log")
+        check(rc3 == 0 and "mods: fast_forward on" not in err3 and
+              (out / "mods_off.log").read_bytes() == (out / "bare.log").read_bytes(),
+              "under --script the settings' mods are off (and the log is the bare run's)")
+        check(rc4 == 0 and "mods: fast_forward on" in err4, "--script-mods keeps them on")
     else:
         print("settings: no disc image: the run under --config is skipped")
+
+    sdl = ROOT / "build/port-sdl/dw2003"
+    if sdl.exists() and not args.no_sdl:
+        print("settings: the window's input self-test (build/port-sdl, offscreen): the defaults, then rebound keys")
+        env_sdl = dict(os.environ, SDL_VIDEO_DRIVER="offscreen", SDL_AUDIO_DRIVER="dummy")
+        for label, extra in (("defaults", []), ("rebound", ["--config", REBOUND])):
+            proc = subprocess.run([str(sdl), "--input-test", "--fps", "0", *extra], cwd=ROOT, env=env_sdl,
+                                  capture_output=True, text=True, timeout=120)
+            lines = [l for l in proc.stderr.splitlines() if "input test:" in l]
+            check(proc.returncode == 0 and any("the pause: passed" in l for l in lines),
+                  f"{label}: exit {proc.returncode}: {'; '.join(l.split('input test: ')[1] for l in lines)}")
+    else:
+        print("settings: no build/port-sdl (or --no-sdl): the input self-test is skipped")
 
     print(f"settings test: {'FAIL (' + str(len(FAILURES)) + ')' if FAILURES else 'pass'}")
     return 1 if FAILURES else 0
