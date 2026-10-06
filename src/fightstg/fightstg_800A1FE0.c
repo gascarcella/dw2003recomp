@@ -107,8 +107,9 @@ void fightstg_intro_camera_update(FightstgIntroCamera *obj) {
     }
 }
 
-void fightstg_intro_camera_create(void) {
-    object_new(fightstg_intro_camera_update, sizeof(FightstgIntroCamera), 0);
+OBJECT_V0(FightstgIntroCamera *) fightstg_intro_camera_create(void) {
+    /* PC_PORT: FINDINGS 8: callers use the object (v0) */
+    OBJECT_V0_TAIL(object_new(fightstg_intro_camera_update, sizeof(FightstgIntroCamera), 0))
 }
 
 /* .data (address order) */

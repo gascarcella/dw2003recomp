@@ -711,5 +711,10 @@ void stagslct_update(Object *obj, StageSelectData *data) {
 
 /* Creates the menu object with sizes 0 (a bug: the object is 0x70 bytes and its data 0x9C). */
 StageSelect *stagslct_create(void) {
+#ifndef PC_PORT
     return object_new(stagslct_update, 0, 0);
+#else
+    /* PC_PORT: FINDINGS 9b: the real sizes (the original's 0s write over the next heap block and at address 0) */
+    return object_new(stagslct_update, sizeof(StageSelect), sizeof(StageSelectData));
+#endif
 }
