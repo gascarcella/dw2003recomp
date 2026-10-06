@@ -113,6 +113,7 @@ for L in $LAYERS; do
             "$PY" "$ROOT/tests/port/hz60.py"       # the 60 Hz mode against the patched game's records
             "$PY" "$ROOT/tests/port/battle.py"     # the battle scripts on the disc, for battle_animations
             "$PY" "$ROOT/tests/port/mods.py"       # the mods that change the game, run with the mod on
+            "$PY" "$ROOT/tests/port/vram.py"       # the first battle's textures in VRAM against the emulator's
         fi ;;
     *) echo "unknown layer $L" >&2; exit 2 ;;
     esac

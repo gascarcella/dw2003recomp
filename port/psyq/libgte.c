@@ -10,7 +10,9 @@
  *    about 80 of 96 cases.
  *  - ScaleMatrix multiplies on the CPU (32-bit products) and writes m[2][2]'s whole word: the pad halfword after it
  *    gets the product's high half (the shim used to keep it).
- *  - ApplyMatrixSV is MVMVA (sf 1, lm 0): IR saturated to s16. */
+ *  - ApplyMatrixSV is MVMVA (sf 1, lm 0): IR saturated to s16.
+ * LIBGS's helpers (MulMatrix, MulMatrix2, ApplyMatrixLV, TransposeMatrix, SquareRoot0) are checked by the family
+ * tests/golden/families/libgs_view.py (tests/host/libgs_replay.py), with the GTE state each leaves. */
 #include <string.h>
 
 #include "psyq_internal.h"
@@ -21,6 +23,11 @@ s32 rcos(s32 a); /* the game declares it in src/wstag/wstag460.c; not in our lib
 void SetGeomScreen(s32 h);
 void SetFarColor(s32 rfc, s32 gfc, s32 bfc);
 void SetColorMatrix(MATRIX *m);
+MATRIX *MulMatrix(MATRIX *m0, MATRIX *m1);
+MATRIX *MulMatrix2(MATRIX *m0, MATRIX *m1);
+VECTOR *ApplyMatrixLV(MATRIX *m, VECTOR *v0, VECTOR *v1);
+MATRIX *TransposeMatrix(MATRIX *m0, MATRIX *m1);
+s32 SquareRoot0(s32 a);
 
 /* ---- the sine table ---- */
 
@@ -212,6 +219,159 @@ SVECTOR *ApplyMatrixSV(MATRIX *m, SVECTOR *v0, SVECTOR *v1) {
     v1->vy = (s16)psyq_gte_mfc2(10);
     v1->vz = (s16)psyq_gte_mfc2(11);
     return v1;
+}
+
+/* ---- what LIBGS calls (GsSetRefView2, GsGetLw, GsMulCoord2/3), not the game ---- */
+
+/* The rotation of m becomes RT (ctc2 0-4), as LIBGTE's matrix functions load it. */
+static void psyq_load_rt(const MATRIX *m) {
+    int i;
+
+    for (i = 0; i < 5; i++) {
+        psyq_gte_ctc2(i, psyq_mat_word(m, i));
+    }
+}
+
+/* MulMatrix and MulMatrix2 (mtx_03.s, mtx_04.s): RT = m0's rotation, then each column of m1 through MVMVA (sf 1, RT,
+ * V0, no translation, lm 0); IR1-3 (s16-saturated) are the product's column. Every word of m1 is read before the
+ * first store, so out may be m0 or m1. The words are written as the PS1 writes them: word 4 is IR3's whole register
+ * (swc2), so the pad halfword after m[2][2] gets IR3's sign. The translations are untouched. */
+static void psyq_mul_matrix(const MATRIX *m0, const MATRIX *m1, MATRIX *out) {
+    u32 w1 = psyq_mat_word(m1, 1), w2 = psyq_mat_word(m1, 2), w3 = psyq_mat_word(m1, 3), w4 = psyq_mat_word(m1, 4);
+    u32 col[3][2];
+    u32 ir[3][3];
+    int c;
+    int i;
+
+    col[0][0] = (u16)m1->m[0][0] | (w1 & 0xFFFF0000u);
+    col[0][1] = w3;
+    col[1][0] = (u16)m1->m[0][1] | (w2 << 16);
+    col[1][1] = (u32)(s32)m1->m[2][1];
+    col[2][0] = (u16)m1->m[0][2] | (w2 & 0xFFFF0000u);
+    col[2][1] = w4;
+    psyq_load_rt(m0);
+    for (c = 0; c < 3; c++) {
+        psyq_gte_mtc2(0, col[c][0]);
+        psyq_gte_mtc2(1, col[c][1]);
+        psyq_gte_cmd(0x00486012); /* MVMVA sf 1, mx RT, v V0, cv none, lm 0 */
+        for (i = 0; i < 3; i++) {
+            ir[c][i] = psyq_gte_mfc2(9 + i);
+        }
+    }
+    psyq_mat_set_word(out, 0, psyq_pair((s32)ir[0][0], (s32)ir[1][0]));
+    psyq_mat_set_word(out, 3, psyq_pair((s32)ir[0][2], (s32)ir[1][2]));
+    psyq_mat_set_word(out, 1, psyq_pair((s32)ir[2][0], (s32)ir[0][1]));
+    psyq_mat_set_word(out, 2, psyq_pair((s32)ir[1][1], (s32)ir[2][1]));
+    psyq_mat_set_word(out, 4, ir[2][2]);
+}
+
+/* m0 = m0 * m1 (rotations); returns m0. */
+MATRIX *MulMatrix(MATRIX *m0, MATRIX *m1) {
+    psyq_mul_matrix(m0, m1, m0);
+    return m0;
+}
+
+/* m1 = m0 * m1 (rotations); returns m1. */
+MATRIX *MulMatrix2(MATRIX *m0, MATRIX *m1) {
+    psyq_mul_matrix(m0, m1, m1);
+    return m1;
+}
+
+/* v1 = m * v0 for a 32-bit vector (mtx_004.s): each component is split by its magnitude into a high part (|v| >> 15)
+ * and a low one (|v| & 0x7FFF), both with v's sign; MVMVA (sf 0) of the high parts, times 8 (<< 15 >> 12), plus MVMVA
+ * (sf 1) of the low parts. MAC1-3 are read, not IR (no saturation). RT = m's rotation; v1 may be v0. */
+VECTOR *ApplyMatrixLV(MATRIX *m, VECTOR *v0, VECTOR *v1) {
+    const s32 in[3] = { v0->vx, v0->vy, v0->vz };
+    u32 hi[3], lo[3], mac[3];
+    int i;
+
+    psyq_load_rt(m);
+    for (i = 0; i < 3; i++) {
+        u32 v = (u32)in[i];
+
+        if (in[i] >= 0) {
+            hi[i] = (u32)((s32)v >> 15);
+            lo[i] = v & 0x7FFF;
+        } else {
+            v = 0u - v;
+            hi[i] = 0u - (u32)((s32)v >> 15);
+            lo[i] = 0u - (v & 0x7FFF);
+        }
+    }
+    for (i = 0; i < 3; i++) {
+        psyq_gte_mtc2(9 + i, hi[i]);
+    }
+    psyq_gte_cmd(0x0041E012); /* MVMVA sf 0, mx RT, v IR, cv none, lm 0 */
+    for (i = 0; i < 3; i++) {
+        mac[i] = psyq_gte_mfc2(25 + i) << 3;
+    }
+    for (i = 0; i < 3; i++) {
+        psyq_gte_mtc2(9 + i, lo[i]);
+    }
+    psyq_gte_cmd(0x0049E012); /* MVMVA sf 1, mx RT, v IR, cv none, lm 0 */
+    v1->vx = (s32)(psyq_gte_mfc2(25) + mac[0]);
+    v1->vy = (s32)(psyq_gte_mfc2(26) + mac[1]);
+    v1->vz = (s32)(psyq_gte_mfc2(27) + mac[2]);
+    return v1;
+}
+
+/* m1's rotation = m0's transposed (fgo_00.s), with the PS1's word and halfword stores in their order, so m1 may be
+ * m0. m1's translation is untouched. */
+MATRIX *TransposeMatrix(MATRIX *m0, MATRIX *m1) {
+    u8 *d = (u8 *)m1;
+    const u8 *s = (const u8 *)m0;
+    u32 t1, t2, t3;
+    s16 h;
+
+    memcpy(&t1, s + 0, 4);
+    memcpy(&t2, s + 4, 4);
+    memcpy(d + 4, &t1, 4);
+    memcpy(d + 0, &t2, 4);
+    memcpy(d + 0, &t1, 2); /* little-endian: the low halfword */
+    memcpy(&t3, s + 8, 4);
+    memcpy(&t1, s + 12, 4);
+    memcpy(d + 12, &t3, 4);
+    memcpy(d + 8, &t1, 4);
+    memcpy(d + 12, &t2, 2);
+    memcpy(d + 8, &t3, 2);
+    memcpy(&h, s + 16, 2);
+    memcpy(d + 4, &t1, 2);
+    memcpy(d + 16, &h, 2);
+    return m1;
+}
+
+/* LIBGTE's square-root table (D_800568A8): sqrt(i) * 512 rounded down, i = 64..255 (checked against the EXE's
+ * table: all 192 entries). */
+static u16 psyq_sqrt_table[192];
+
+/* sqrt(a) in integers (msc01.s): the GTE's leading-zero count (LZCS/LZCR) normalises a to 8 bits by an even shift,
+ * the table gives its square root and the half shift scales it back. 0 for a = 0. The table index is kept in range
+ * (the PS1 reads past the table for a negative a; the callers' sums of squares are not negative). */
+s32 SquareRoot0(s32 a) {
+    s32 lz, e, t, n;
+
+    if (psyq_sqrt_table[0] == 0) {
+        u32 i;
+
+        for (i = 64; i < 256; i++) {
+            u32 r = 0;
+
+            while ((r + 1) * (r + 1) <= (i << 18)) {
+                r++;
+            }
+            psyq_sqrt_table[i - 64] = (u16)r;
+        }
+    }
+    psyq_gte_mtc2(30, (u32)a);
+    lz = (s32)psyq_gte_mfc2(31);
+    if (lz == 32) {
+        return 0;
+    }
+    e = lz & ~1;
+    t = (31 - e) >> 1;
+    n = e - 24;
+    n = n >= 0 ? (s32)((u32)a << n) : a >> -n;
+    return (s32)(((u32)psyq_sqrt_table[(u32)(n - 64) % 192] << t) >> 12);
 }
 
 /* ---- the GTE's control registers: LIBGTE's setters write them as the PS1's do ---- */

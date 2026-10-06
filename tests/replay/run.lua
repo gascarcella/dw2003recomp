@@ -8,7 +8,8 @@
 --   3. advances the step list: press (hold buttons for N frames, then release for `release` frames; optionally
 --      `repeat`ed or repeated `until` a wait condition holds), wait_frames, wait_stage / wait_map / wait_mem (with a
 --      timeout), walk (hold the d-pad toward a field position), reset (reboot the console), checkpoint (dump
---      gamestate_data to a file and log the frame, stage, map and pad_random.index).
+--      gamestate_data to a file and log the frame, stage, map and pad_random.index), vram (append the whole VRAM to
+--      vram_<name>.bin on each of its `frames` frames: tests/port/vram.py).
 -- At the end it writes DW3_REPLAY_OUT/result.json and exits 0; a timeout or a Lua error writes what it has and
 -- exits 1. The driver hashes the checkpoint dumps and compares the result with tests/replay/expected/<name>.json.
 --
@@ -264,6 +265,13 @@ local function run_step(step)
         return false
     elseif t == 'wait_frames' then
         return frame - step_started >= step.frames - 1, false
+    elseif t == 'vram' then
+        -- as wait_frames, appending the whole VRAM (1024 x 512 pixels, 1 MB) to vram_<name>.bin on each of its frames
+        local f = assert(io.open(out_dir .. '/vram_' .. (step.name or 'unnamed') .. '.bin',
+            frame == step_started and 'wb' or 'ab'))
+        f:write(tostring(PCSX.GPU.getVRAM()))
+        f:close()
+        return frame - step_started >= (step.frames or 1) - 1, false
     elseif t == 'wait_stage' or t == 'wait_map' or t == 'wait_mem' then
         if condition_met(step) then return true, true end
         if frame - step_started >= (step.timeout or default_timeout) then

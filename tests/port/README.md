@@ -94,6 +94,18 @@ emulator's cross-core view; `new_game`'s SPU trace against LIBSND's replay of it
 NTSC tick) and the emulator's calls (`sound.py`'s `port` check). The fast-forward test is in `settings.py`.
 `scripts/test.sh --layer port` runs it (~20 s built).
 
+## The battle's VRAM (`vram.py`; issue #7)
+`tests/port/vram.py` runs `first_battle_save` cut at `battle_start` (FIGHTSTG loaded) with two `vram` steps 300 frames
+apart, in the emulator and in the port (~30 s), and compares the VRAM outside the battle's two display buffers (x < 320):
+every pixel either run changed during the battle (its textures and CLUTs, ~150,000 pixels) must be equal at the end.
+The displayed frames are not compared, and cannot be: the PS1 is CPU-bound in the battle (a game frame takes 2 or 3
+vsyncs, the port's one) and the game advances its animations by the ticks elapsed, so the runs pass through different
+frames (forcing the ticks per frame equal is not enough: the vsync time, the random index and the CD loads differ
+too). The camera is checked by the layer-1 family `libgs_view` (`GsSetRefView2`'s matrix to the bit). Differences left
+from before the battle are reported, not failed: the VRAM is equal at `asuka_lobby`; by `battle_start` the field picture
+kept at x 640..959 differs where the sprites stand (the runs leave the field on different frames) and a few areas drawn
+off screen differ in content (issue #23). In `scripts/test.sh --layer port`.
+
 ## The mods with the mod on (`mods.py`; docs/LAUNCHER.md "Mod runtime")
 A run with a mod on has its own expected results (the emulator has no mods; the random generator follows the frames),
 so `tests/port/mods.py` keeps the port's own record (`tests/port/mods/expected/`, `mods.py record` after a review) and

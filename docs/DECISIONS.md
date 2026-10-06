@@ -208,6 +208,11 @@ and saves move both ways between port and emulator. Where psx-spx and the emulat
 kept as a listed known mismatch. Quirks the original's results depend on (division by zero, `void` creators returning
 `v0`, the pad read a frame late) are reproduced on purpose. Two runs must be byte-identical, with no ASan/UBSan report.
 
+Rendered frames are compared only where the PS1 is not CPU-bound. In battle a game frame takes the PS1 2 or 3 vsyncs
+and the port one, and the game scales its animations by the ticks elapsed, so the two never draw the same frame
+(issue #7). There the 3D maths is checked by layer-1 families (`libgs_view`) and the VRAM by what is not a frame:
+the textures and CLUTs (`tests/port/vram.py`).
+
 # Launcher and mods
 
 ## Launcher and mods
