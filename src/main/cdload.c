@@ -257,6 +257,7 @@ void cdload_load_file(s32 id) {
     cdload_queue_file(id);
     do {
         cdload_update();
+        PLATFORM_WAIT(); /* the CD interrupt ends this loop */
     } while (cdload_is_loading(id) != 0);
 }
 
