@@ -2006,3 +2006,21 @@ launcher (path A, built in parallel) writes. Choices made while building it, eac
   be green" means: green when a run was started.
 - **Not done:** finer filters (for example skipping the byte-identical rebuild when only `port/` changed). The port's
   tests build on the game's units and the split's output, so the saving is small against the risk of a wrong filter.
+
+## 2026-10-06: The launcher's open points (session 19, path A; user decisions)
+The plan's open points about the launcher (`docs/LAUNCHER_MODS_PLAN.md` section 8), decided by the user at phase 1's
+stop. The game side (path B: `--config`, the settings reader, the mod runtime) is built in a parallel session.
+1. **Where the source lives: `launcher/`**, its own CMake project beside `port/` (`cmake -S launcher -B
+   build/launcher`). The game's build and tests never depend on Dear ImGui, and `port/CMakeLists.txt` is not touched.
+   It compiles `port/src/json.c` and `port/src/sha1.c` as they are.
+2. **The per-user directory: `dw2003`** (`SDL_GetPrefPath("", "dw2003")`: `~/.local/share/dw2003/`,
+   `%APPDATA%\dw2003\`). One constant, `SETTINGS_PREF_APP` in `launcher/src/settings.h`.
+3. **The launcher's disc check: its own `.cue` reader and `port/src/sha1.c`** on a worker thread; the verified SHA-1 is
+   stored in `settings.json` (`disc.sha1`). `port/src/disc.c` cannot be linked as it is (`port_fatal` exits,
+   `psyq_cd_set_reader`, POSIX `pread`/`realpath`), and a check mode of the game would be path B's change. The game's
+   own check stays authoritative: it hashes once more on its first run, then uses its stamp.
+4. **Delivery:** one pull request, updated per phase.
+- Also settled in phase 1 (the plan's 4.2-4.3, proposed, not objected to): the environment variable is
+  `DW3_CONFIG_DIR`; the launcher keeps every member of `settings.json` it does not know (order included), writes the
+  file only when its text changes, keeps an unreadable one as `settings.json.broken`, and never writes a file with a
+  newer `schema`.
