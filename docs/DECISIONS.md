@@ -1916,3 +1916,34 @@ inside the port).
   ratio 1.000. The queue lives in libcd.c (pushed 882 frames per CD tick into `spu_cd_input`, one tick of delay at the
   start of a run), flushed on Pause, a new read, `StUnSetRing`, `CdInit`, reset. At `--fps` other than 50 the drive's
   882 frames per tick no longer meet the render's rate (documented, not solved).
+
+## 2026-10-06: Launcher and mods (session 18, a planning session; user decisions)
+The plan, the research behind it and what is still open: `docs/LAUNCHER_MODS_PLAN.md`. Nothing is implemented. Decided
+by the user:
+1. **Launcher:** its own executable (the user's wish), kept thin: it edits one settings file and starts the game with
+   `--config FILE`. **Toolkit: Dear ImGui** on SDL3 + `SDL_Renderer` (MIT: inside the port's licence rule). C++ is
+   accepted in the launcher only; the game stays C.
+2. **Mods, v1 = built-in features with manifests** (compiled into the game, switched and configured through a
+   `mod.json` the launcher renders). Data overrides (loose files over the disc's, at the sector reader) come next. No
+   third-party code mods for now (scripting and native mods: only on demand).
+3. **JSON** for the settings file and the mod manifests (the port has its own reader).
+4. **Windows after the launcher works on Linux.** The Linux-side refactors that make a Windows build possible (the
+   arena without its 16 MB alignment, sections without the ld script) are not started in parallel.
+5. **Skip dialogues:** toggle by default, hold offered too. Fast-forwarding the cutscenes' scripted waits is off by
+   default and offered as a setting.
+6. **Disable battle animations:** the short hit reaction is kept by default; cutting it too is offered as a setting.
+- **The first mods:** fast-forward, skip dialogues, disable battle animations; skip intro is planned as an idea only
+  (the user's instruction: no look at its implementation yet). Unpacking the disc image is not required.
+- **Design rules that follow** (proposed in the session, not objected to; the plan's sections 4.1 and 4.5): the game
+  never loads a configuration on its own (the tests run the bare binary); mods are off under `--script` unless a run
+  asks for them; a mod's change in the game's C sits in an `#ifdef PC_PORT` block, never in an expression that is
+  constant on the PS1, and `build.sh --check` gates it; hotkeys never reach the pad; a run with a mod on needs its own
+  expected results (the random generator steps once a frame).
+- **Rejected with reasons:** dialogue skipping by turbo presses of confirm (it picks the default answer at every prompt
+  and talks to the NPC again); the battle's own speed mode for the animations (partial, and large steps can jump loop
+  markers); skipping rasterisation for speed (not needed: ~3,000 vsyncs a second headless, ~1,300 presented).
+- **Facts worth keeping** (details and `file:line` in the plan): the 60 Hz option is the game's own `records_60hz` mode
+  and needs the pace, the flag (set before the reset's snapshot) and the CD/XA rate changed together; without
+  `--memcard1` a save is lost at exit; the watchdog would kill a paused game; the battle's rules run before the
+  animation script starts; GNU ld links an invalid PE silently when a script puts data sections inside `.text`'s page
+  (the Wine crash of this session's experiment).

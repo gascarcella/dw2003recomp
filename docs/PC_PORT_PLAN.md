@@ -365,6 +365,8 @@ and the emulator. Left: the rest below.
 
 ### M6 (later, separate decisions)
 Hardware renderer, enhancements, 60 Hz/NTSC option (the 2-byte patch, `records_60hz`), mod VFS, Windows CI build.
+**Planned in session 18:** the launcher, the mods (enhancements, the mod VFS as data overrides), the 60 Hz toggle and the
+Windows route: `docs/LAUNCHER_MODS_PLAN.md`.
 
 ### Build-system changes
 - The PS1 build (`configure.py` → `build.ninja`) is untouched.

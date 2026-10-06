@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 2026-10-06 (session 17, local desktop, branch `playtest-desktop-2026-10-06`): **the first desktop play-test** (docs/PLAYTEST.md): boot, movies, title, new game, the first battle, a save at the inn and its load after a restart all played on Wayland/NVIDIA/PipeWire at 49.99 fps; an SDL exit crash with NVIDIA's EGL fixed in `port/`; the battle camera is wrong (`GsSetRefView2` is a stub; issue #7). Before that (session 16, cloud branch `claude/peaceful-allen-q3t9f9`, delivered as a pull request):
+_Last updated: 2026-10-06 (session 18, local, a planning session, docs only, on `main`): **the launcher and mods are planned** (`docs/LAUNCHER_MODS_PLAN.md`; DECISIONS "Launcher and mods (session 18)"): a thin launcher executable (Dear ImGui on SDL3) that edits a JSON settings file and starts the game with `--config`; mods as built-in features with manifests (fast-forward, skip dialogues, disable battle animations; skip intro as an idea), data overrides later; Windows after the launcher works on Linux. Nothing of it is implemented. Before that (session 17, local desktop, branch `playtest-desktop-2026-10-06`): **the first desktop play-test** (docs/PLAYTEST.md): boot, movies, title, new game, the first battle, a save at the inn and its load after a restart all played on Wayland/NVIDIA/PipeWire at 49.99 fps; an SDL exit crash with NVIDIA's EGL fixed in `port/`; the battle camera is wrong (`GsSetRefView2` is a stub; issue #7). Before that (session 16, cloud branch `claude/peaceful-allen-q3t9f9`, delivered as a pull request):
 **PC port M1 done, and more:** the headless port boots the user's disc (SHA-1 checked) and replays **both layer-2
 scripts**, `new_game` and `first_battle_save` (the first battle, a save to a memory card, a reset, the reload, shops,
 menus, training), with the emulator's 25 checkpoints, stage and map sequences and stable hashes; two runs identical, no
@@ -186,6 +186,9 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   and WSTAG's own types have their understood fields named (DECISIONS "Naming pass names-10"), and so have the EXE's
   and CARDGAME's (DECISIONS "Naming pass names-9": what is left there is unread, padding or per-effect scratch).
 - Kept as is: object list in `heap`, random module in `pad`, gamestate one file vs two, `object` vs `main`.
+- Launcher and mods: planned, not started (`docs/LAUNCHER_MODS_PLAN.md`). Found on the way (its section 3): without
+  `--memcard1` a save is lost at exit; no pause or reset key; the watchdog would kill a paused game; 60 Hz
+  (`records_60hz`) has never been compared with the emulator; no Windows build (its section 6 has the staged route).
 - PC port: decided and started (`docs/PC_PORT_PLAN.md`: M0 and M1 done); `docs/PC_PORT_RESEARCH.md` stays background.
   Open from session 16: `FieldstgEventDef.start` returns `s32` (an object survives as the low half of a host pointer:
   the arena is below 4 GB), `port_state_read` cannot map `memcard_state` (private type) or overlay data, the CD seek
@@ -217,4 +220,9 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
    scripts, the 8 holdouts' WIP C reached in play, the debug overlays), the port run of `key_trace.py`'s driver, LIBGS's
    GTE set-up checked like the GTE, `--fps 60` with XA, a Windows/macOS build (PE has no GNU ld script). Formerly next: **M2** (`docs/PC_PORT_PLAN.md`: the VRAM-exact software GPU, SDL3 via a `setup.sh`
    step, pixel comparison with the emulator).
-3. Holdouts/FAKEs: opportunistic retries with new techniques.
+3. **Launcher and mods** (`docs/LAUNCHER_MODS_PLAN.md`, planned in session 18, the user's decisions in DECISIONS): phase 1
+   is the game-side foundations (`--config FILE`, the settings directory, memory cards there by default, rebindable inputs
+   and hotkey actions, `port/src/mods.c` and the manifests, the pace split from the nominal rate, a pause key); then
+   fast-forward and the 50/60 toggle; the launcher; skip dialogues and battle animations (after the camera fix, issue #7);
+   Windows; skip intro and data overrides. Still to pick: fast-forward's default speed, where the launcher's source lives.
+4. Holdouts/FAKEs: opportunistic retries with new techniques.

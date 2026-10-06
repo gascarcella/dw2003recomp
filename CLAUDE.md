@@ -124,4 +124,5 @@ source tools/venv/bin/activate; export PATH="$PWD/tools/binutils/bin:$PWD/tools/
 `docs/DISC_LAYOUT.md` disc files, memory map, overlays · `docs/FORMATS.md` file formats ·
 `docs/TOOLCHAIN.md` compiler/SDK evidence · `docs/WORKFLOW.md` tool and workflow plan · `docs/MECHANICS.md` game
 mechanics mapped to functions and tests · `tests/README.md` the reference tests (layers, rules, formats) ·
-`docs/SESSION_LOG.md` per-session log · `docs/PC_PORT_RESEARCH.md` PC port notes (exploratory, not decided)
+`docs/SESSION_LOG.md` per-session log · `docs/PC_PORT_RESEARCH.md` PC port notes (exploratory, not decided) ·
+`docs/LAUNCHER_MODS_PLAN.md` the launcher and mods plan (decided, not implemented)

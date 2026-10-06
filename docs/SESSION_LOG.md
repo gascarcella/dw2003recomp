@@ -2,6 +2,25 @@
 
 Newest first. One short entry per session: goal, result, next steps.
 
+## 2026-10-06: Session 18: the launcher and mods planned (local worktree `gascarcella/PC-Release`, docs only, pushed to `main`)
+- **Asked:** think, discuss and plan (no implementation): a launcher executable (settings, the disc image, keybinds,
+  a 50/60 toggle, mods with their own configuration screens) and mod support with four first mods (fast-forward, skip
+  dialogues, skip intro as an idea only, disable battle animations).
+- **Research (5 agents, read-only):** the port runtime's hook surface with measured speeds (~3,000 vsyncs a second
+  headless, ~1,300 presented; the SPU 58% and the GPU 33% of a frame), the dialogue system, the battle's sequencer,
+  launcher/mod precedents and GUI toolkits (web), the Windows build's feasibility (scratch PE experiments under Wine;
+  one of them popped a crash dialog on the desktop: an invalid PE from a naive adaptation of the ld script).
+- **Result:** `docs/LAUNCHER_MODS_PLAN.md` (decisions, findings with `file:line`, the design, each mod, the Windows
+  track, the phases). The user's decisions (DECISIONS "Launcher and mods (session 18)"): Dear ImGui for the launcher;
+  mods v1 are built-in features with manifests, data overrides next; JSON; Windows after the launcher works on Linux;
+  skip dialogues is a toggle by default (hold offered) and does not fast-forward cutscene waits by default; the battle's
+  hit reaction is kept by default, cutting it is a setting.
+- **Found on the way:** saves are lost without `--memcard1`; the watchdog would kill a paused game; no pause or reset
+  key; 60 Hz is the game's own `records_60hz` mode and has never been compared with the emulator.
+- **Not changed:** any code. `build/port` and `build/port-sdl` were built for the timings (untracked).
+- **Next:** phase 1 of the plan (the game-side foundations: `--config`, the settings directory, rebindable inputs and
+  hotkeys, the mod registry, the pace split), on the user's go-ahead.
+
 ## 2026-10-06: Session 17: the first desktop play-test of the PC port (local, branch `playtest-desktop-2026-10-06`, PR to `main`)
 - **Asked:** set up on the user's desktop (`tools/local.env`, `setup.sh`, SDL's `-dev` headers, `setup.sh sdl3`), build
   `build/port-sdl`, `--input-test`, then the user plays (movie, title, new game, first battle, inn save, reset, load);
