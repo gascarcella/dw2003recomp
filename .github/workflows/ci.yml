@@ -71,10 +71,11 @@ jobs:
             tools/ext
             tools/redux
             tools/sdl3
+            tools/imgui
           key: tools-${{ runner.os }}-${{ hashFiles('scripts/setup.sh', 'tools/requirements.txt') }}
 
       - name: Toolchain
-        run: scripts/setup.sh binutils mkpsxiso venv gcc objdiff ext redux sdl3
+        run: scripts/setup.sh binutils mkpsxiso venv gcc objdiff ext redux sdl3 imgui
 
       - name: Scripts parse, Python compiles
         run: |
@@ -104,9 +105,26 @@ jobs:
           # the same with rebound keys and pads, chord hotkeys and a mod's bindings (docs/LAUNCHER_MODS_PLAN.md 4.3)
           SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=dummy build/port-sdl/dw2003 --config tests/port/settings/rebound.json --input-test --fps 0
 
+      # The launcher (launcher/README.md; Dear ImGui on SDL3): it builds, and its self-test passes on SDL's offscreen
+      # driver (no display, no disc: the settings directory's lookup, settings.json round trips, every screen walked
+      # with injected keys and a virtual gamepad).
+      - name: Launcher, self-test
+        run: |
+          cmake -S launcher -B build/launcher -G Ninja
+          cmake --build build/launcher -j "$DW3_JOBS"
+          SDL_VIDEO_DRIVER=offscreen build/launcher/dw2003-launcher --self-test build/launcher-test
+
       - name: Disc from the data checkout
         if: steps.data.outputs.present == 'true'
         run: scripts/worktree_init.sh
+
+      # The launcher end to end: the real disc's check, and the SDL game (built above) started from the launcher's
+      # command for 300 frames (launcher/README.md "The self-test").
+      - name: Launcher, self-test with the disc and the game
+        if: steps.data.outputs.present == 'true'
+        run: |
+          DW3_SELFTEST_DISC="$PWD/iso/dw2003.cue" DW3_SELFTEST_GAME="$PWD/build/port-sdl/dw2003" \
+            SDL_VIDEO_DRIVER=offscreen build/launcher/dw2003-launcher --self-test build/launcher-test
 
       - name: Byte-identical rebuild of every game file
         if: steps.data.outputs.present == 'true'

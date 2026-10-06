@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 2026-10-06 (session 18, local, a planning session, docs only, on `main`): **the launcher and mods are planned** (`docs/LAUNCHER_MODS_PLAN.md`; DECISIONS "Launcher and mods (session 18)"): a thin launcher executable (Dear ImGui on SDL3) that edits a JSON settings file and starts the game with `--config`; mods as built-in features with manifests (fast-forward, skip dialogues, disable battle animations; skip intro as an idea), data overrides later; Windows after the launcher works on Linux. Nothing of it is implemented. Before that (session 17, local desktop, branch `playtest-desktop-2026-10-06`): **the first desktop play-test** (docs/PLAYTEST.md): boot, movies, title, new game, the first battle, a save at the inn and its load after a restart all played on Wayland/NVIDIA/PipeWire at 49.99 fps; an SDL exit crash with NVIDIA's EGL fixed in `port/`; the battle camera is wrong (`GsSetRefView2` is a stub; issue #7). Before that (session 16, cloud branch `claude/peaceful-allen-q3t9f9`, delivered as a pull request):
+_Last updated: 2026-10-06 (session 19, path A, local worktree `gascarcella/Launcher`, pull request #9): **the launcher is built** (`launcher/README.md`; the plan's phase 3, on Linux): Dear ImGui on SDL3; the settings directory, `settings.json`, the disc (file dialog, drop, typed path, SHA-1), Play (`dw2003 --config`, the exit status and last lines on an error), settings, controls (rebinding, hotkeys, chords) and mods (pages from `mod.json`); a 217-check self-test in CI. Before that (session 18, local, a planning session, docs only, on `main`): **the launcher and mods are planned** (`docs/LAUNCHER_MODS_PLAN.md`; DECISIONS "Launcher and mods (session 18)"): a thin launcher executable (Dear ImGui on SDL3) that edits a JSON settings file and starts the game with `--config`; mods as built-in features with manifests (fast-forward, skip dialogues, disable battle animations; skip intro as an idea), data overrides later; Windows after the launcher works on Linux. Nothing of it is implemented. Before that (session 17, local desktop, branch `playtest-desktop-2026-10-06`): **the first desktop play-test** (docs/PLAYTEST.md): boot, movies, title, new game, the first battle, a save at the inn and its load after a restart all played on Wayland/NVIDIA/PipeWire at 49.99 fps; an SDL exit crash with NVIDIA's EGL fixed in `port/`; the battle camera is wrong (`GsSetRefView2` is a stub; issue #7). Before that (session 16, cloud branch `claude/peaceful-allen-q3t9f9`, delivered as a pull request):
 **PC port M1 done, and more:** the headless port boots the user's disc (SHA-1 checked) and replays **both layer-2
 scripts**, `new_game` and `first_battle_save` (the first battle, a save to a memory card, a reset, the reload, shops,
 menus, training), with the emulator's 25 checkpoints, stage and map sequences and stable hashes; two runs identical, no
@@ -100,6 +100,18 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   chords masked from the pad, the pause key (`P`), the pace split from the nominal rate, `port/src/mods.c` with the
   registry and `port/mods/fast_forward/mod.json` (its behaviour is phase 2), mods off under `--script` unless
   `--script-mods`. The bare binary's logs, records and WAVs are unchanged.
+- **Launcher (session 19, path A; `launcher/README.md`; DECISIONS "The launcher's open points (session 19, path A)"):**
+  `build/launcher/dw2003-launcher` (`scripts/setup.sh sdl3 imgui`; `cmake -S launcher -B build/launcher`), C++17 with
+  Dear ImGui 1.92.9b on SDL3 + `SDL_Renderer`, its own CMake project (it compiles `port/src/json.c` and `sha1.c`
+  unchanged). The settings directory (4.2: `--config-dir`/`$DW3_CONFIG_DIR`, `portable.txt`, a `settings.json` in the
+  current directory, `~/.local/share/dw2003/`); `settings.json` (4.3) with every unknown member kept and only changed
+  bindings and mod options written; the disc (its own `.cue` reader, SHA-1 on a thread); Play (the game's
+  `--print-settings` as the check, then `dw2003 --config FILE`, the launcher hidden, the exit status and last 40 lines
+  on an error); settings, controls (keyboard, gamepad, hotkeys with chords, an input prompt, conflict marks) and mods
+  (each manifest rendered). `--self-test DIR` (217 checks, offscreen, no disc; the launcher is the game's stand-in) in
+  CI; with `DW3_SELFTEST_DISC`/`DW3_SELFTEST_GAME` it checks the real disc and runs the real game 300 frames from the
+  launcher's command (CI's data-gated step). Checked against main's game and path B's PR #11 (its `fast_forward`
+  manifest, the input and mods it parses).
 - **CI (session 13):** `.github/workflows/ci.yml` on pull requests and pushes to `main`, skipped when only documentation changed (DECISIONS "CI only when it is needed"): toolchain, script/Python checks, `check_toolchain.sh`, and
   with the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of `dw2003-gamedata`) `build.sh --check` and
   `scripts/test.sh`; first green run 2026-10-05, ~5 min. Fork pull requests get only the disc-free steps.
@@ -234,5 +246,5 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
    and hotkey actions, `port/src/mods.c` and the manifests, the pace split from the nominal rate, a pause key); then
    fast-forward and the 50/60 toggle; the launcher; skip dialogues and battle animations (after the camera fix, issue #7);
    Windows; skip intro, Global Saves (its 5.6, an idea: a Save entry in the field menu; the save already holds the map
-   and the exact position) and data overrides. Still to pick: fast-forward's default speed, where the launcher's source lives.
+   and the exact position) and data overrides. Still to pick: fast-forward's default speed. The launcher (path A, session 19) is built: PR #9.
 4. Holdouts/FAKEs: opportunistic retries with new techniques.
