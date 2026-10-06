@@ -62,8 +62,9 @@ u32 psyq_gpu_take_hash(u32 *count);
 
 /* ---- The video output (M2: T9's software GPU in libgpu.c, read by T10's window in port/src/video.c) ----
  * psyq_gpu_vram: the 1024x512 VRAM, 16-bit pixels (row-major, 1024 per row), as the GPU leaves it after every command.
- * psyq_gpu_display: what the TV shows: the display area PutDispEnv set (VRAM x, y, width, height in VRAM pixels:
- * a 24-bit area is 1.5 VRAM pixels per screen pixel), 24-bit colour, interlace, and whether SetDispMask enabled it. */
+ * psyq_gpu_display: what the TV shows: the display area PutDispEnv set (DISPENV.disp as given: x, y in VRAM pixels,
+ * w, h in screen pixels, so a 24-bit area spans w * 3 / 2 VRAM pixels), 24-bit colour, interlace, and whether
+ * SetDispMask enabled it. */
 typedef struct PsyqDisplay {
     int x, y, w, h; /* DISPENV.disp */
     int rgb24;      /* DISPENV.isrgb24 */
