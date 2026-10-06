@@ -881,6 +881,11 @@ void message_window_update(MessageWindow *obj) {
         if (obj->visible == 0) {
             break;
         }
+#ifdef PC_PORT
+        if (port_mod_skip_dialogues != 0 && obj->speed > 0 && obj->done == 0) {
+            message_find_page_end(obj); /* skip_dialogues: the page at once, as a confirm press shows it */
+        }
+#endif
         if (obj->speed > 0 && obj->done == 0 && ++obj->speed_count > obj->speed) {
             obj->speed_count = 0;
             obj->shown_end++;
@@ -901,6 +906,14 @@ void message_window_update(MessageWindow *obj) {
             }
             break;
         case 1:
+#ifdef PC_PORT
+            /* skip_dialogues: a wait for the confirm button (every wait in the disc's text) goes on by itself */
+            if (port_mod_skip_dialogues != 0 && message_wait_buttons[obj->base.substep] == 13) {
+                obj->lines[0].text[obj->base.timer] = 5;
+                obj->speed_count = obj->speed;
+                obj->base.set_state(obj, OBJECT_STATE_RUN);
+            } else
+#endif
             if (PAD_PRESSED(message_wait_buttons[obj->base.substep])) {
                 obj->lines[0].text[obj->base.timer] = 5;
                 obj->speed_count = obj->speed;

@@ -195,6 +195,13 @@ void *port_s32_to_ptr(s32 v);
 /* The byte at the PS1 address `addr` (0x1FC00000..0x1FC80000) of the BIOS ROM. */
 void *port_bios_ptr(u32 addr);
 
+/* ---- The mods' flags (docs/LAUNCHER_MODS_PLAN.md 4.5; port/src/mods.c sets them, 0 while a mod is off or under
+ * --script): read only inside `#ifdef PC_PORT` blocks of the game's C, never in an expression the PS1 build sees.
+ * port_mod_skip_dialogues: skip_dialogues is on (5.2): a revealing message window shows its page at once
+ * (src/main/message.c), a wait for the confirm button goes on by itself, and so does the battle's message wait
+ * (src/fightstg/fightstg_8008D3B4.c). No pad press is made: choices and code-driven prompts still wait. */
+extern int port_mod_skip_dialogues;
+
 #endif /* PC_PORT */
 
 #endif /* PORT_H */
