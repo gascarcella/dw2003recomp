@@ -14,11 +14,14 @@
 #include <string.h>
 #include <time.h>
 
+#include "battle_scan.h"
 #include "fieldstg.h"
 #include "json.h"
 #include "port_harness.h"
 #include "port_runtime.h"
 #include "settings.h"
+
+#define PORT_BATTLE_SCAN_MAX 4096 /* words: the longest script on the disc has 567 */
 
 /* The game's mod interface: a manifest's `requires_port` (4.4) must not be higher. */
 #define PORT_MODS_API 1
@@ -152,11 +155,54 @@ static void sd_frame(struct Mod *mod) {
                    strcmp(field->name, "FIELDSTG") == 0 && fieldstg_stage.event_running != 0;
 }
 
+/* ---- battle_animations (5.3): while enabled, port_mod_battle_animations makes fightstg_script_update ask
+ * port_battle_cut at the INIT of every script 5 and up (the attacks', techniques' and items' animations; the rules
+ * already ran): one with a child command becomes the target's reaction (results[3] + 1: flinch, heavy hit, KO, dodge)
+ * with `hit_reaction` (the default), else ends at once; one without ends at once. A knock-out keeps its KO reaction in
+ * both cases (it ends on the KO pose, animation 10). The hit sound the script would have played is played. A script
+ * that does not scan to its end (none on the disc: tests/port/battle.py) is left to run. */
+enum { BA_HIT_REACTION };
+static const ModOption ba_options[] = {
+    { .id = "hit_reaction", .type = MOD_BOOL, .def = "true", .applies = "live" },
+};
+int port_mod_battle_animations;
+static int ba_hit_reaction;
+
+static void ba_start(struct Mod *mod) {
+    port_mod_battle_animations = 1;
+    ba_hit_reaction = mod->values[BA_HIT_REACTION].number != 0;
+}
+
+s32 port_battle_cut(const s16 *stream, s32 stage, const s32 *results, s32 hit_sound, s32 *sound_id, s32 *sound_arg) {
+    PortBattleScan scan;
+    s32 reaction = results[3] + 1;
+    *sound_id = *sound_arg = 0;
+    port_battle_scan(stream, PORT_BATTLE_SCAN_MAX, stage, &scan);
+    if (!scan.ok || reaction < 1 || reaction > 4) {
+        return -1;
+    }
+    if (scan.sound != 0) {
+        /* fightstg_script_run_sound's choice for its first hit-sound command */
+        *sound_id = (scan.sound == 0x62 ? results[0] : results[3]) == 3 ? 0x38 : hit_sound;
+        *sound_arg = scan.sound_arg;
+    }
+    if (scan.child && (ba_hit_reaction || reaction == 3)) {
+        port_log("battle animations: frame %ld: a script of %d words cut%s; the target's reaction %d%s", port_frames,
+                 scan.length, scan.multi ? " (multi-hit)" : "", reaction, *sound_id ? ", its hit sound" : "");
+        return reaction;
+    }
+    port_log("battle animations: frame %ld: a script of %d words cut%s; ended%s", port_frames, scan.length,
+             scan.child ? "" : " (no reaction in it)", *sound_id ? ", its hit sound" : "");
+    return 0;
+}
+
 static Mod mods[] = {
     { .id = "fast_forward", .version = "0.1", .options = ff_options,
       .option_count = (int)(sizeof(ff_options) / sizeof(ff_options[0])), .start = ff_start, .frame = ff_frame },
     { .id = "skip_dialogues", .version = "0.1", .options = sd_options,
       .option_count = (int)(sizeof(sd_options) / sizeof(sd_options[0])), .start = sd_start, .frame = sd_frame },
+    { .id = "battle_animations", .version = "0.1", .options = ba_options,
+      .option_count = (int)(sizeof(ba_options) / sizeof(ba_options[0])), .start = ba_start },
 };
 enum { MOD_FAST_FORWARD, MOD_SKIP_DIALOGUES };
 #define MOD_COUNT ((int)(sizeof(mods) / sizeof(mods[0])))

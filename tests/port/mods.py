@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The port's mods that change the game's behaviour, run with the mod on (docs/LAUNCHER_MODS_PLAN.md 4.5, 5.2).
+"""The port's mods that change the game's behaviour, run with the mod on (docs/LAUNCHER_MODS_PLAN.md 4.5, 5.2, 5.3).
 
 Usage: tests/port/mods.py [check] [--out DIR] [-j N]
        tests/port/mods.py record [--out DIR]     # rewrite tests/port/mods/expected/ from this build (after a review)
@@ -20,6 +20,9 @@ with no press through the scenes and one press per NPC talk and per choice, each
     message waits go on by themselves; first_battle_save's route to the battle for the mod-off run);
   - `fast_forward_waits` on: the same log and record (only the pace changes), and fast-forward is asked for during
     the scenes' events.
+battle_animations (5.3): first_battle_save itself with the mod on, `hit_reaction` on and off: the emulator's
+cross-core view (the battle's rules run before its animations), and the first battle's three actions cut, the last
+one keeping its KO reaction. tests/port/battle.py checks the scripts on the disc that the cut relies on.
 Exit codes: 0 pass, 1 fail, 2 something missing.
 """
 import argparse
@@ -146,6 +149,40 @@ def skip_dialogues(binary, out, record):
           f"fast_forward_waits: the same log and record, fast-forward asked for {asked} time(s) during the events")
 
 
+def battle_animations(binary, out):
+    """battle_animations: first_battle_save itself with the mod on (both settings of hit_reaction) must give the
+    emulator's cross-core view (the battle's rules ran before the animations: the outcome, the save, the reload, the
+    shops are the same), with the first battle's three actions cut (the last one a knock-out, which keeps its KO
+    reaction in both settings)."""
+    print("mods: battle_animations (first_battle_save, the mod on)")
+    emu = json.loads(FBS_EXPECTED.read_text())
+    for hit in (True, False):
+        cfg = out / f"ba_{hit}.settings.json"
+        cfg.write_text(json.dumps({"schema": 1, "disc": {"path": str(DISC)}, "video": {"window": False},
+                                   "memcard1": f"ba_{hit}_1.mcd", "memcard2": f"ba_{hit}_2.mcd",
+                                   "mods": {"battle_animations": {"enabled": True, "hit_reaction": hit}}}))
+        for card in (out / f"ba_{hit}_1.mcd", out / f"ba_{hit}_2.mcd"):
+            card.unlink(missing_ok=True)
+        rc, _, rec, err = run_port(binary, out, f"ba_{hit}", SCRIPTS / "first_battle_save.json", cfg, True,
+                                   {"DW3_PORT_RESET_CHECK": "1"})
+        diffs = compare(cross_core_view(emu), cross_core_view(rec)) if rec else ["no record"]
+        cuts = [l.split("cut", 1)[1] for l in err.splitlines() if "battle animations: frame" in l]
+        battle = [c for c in cuts]
+        ko = bool(battle) and "reaction 3" in battle[-1]
+        reactions = sum("the target's reaction" in c for c in battle)
+        check(rc == 0 and not diffs, f"hit_reaction {str(hit).lower()}: the emulator's cross-core view (all "
+              f"{len(emu['checkpoints'])} checkpoints, sequences){'' if not diffs else ': ' + '; '.join(diffs[:2])}")
+        want = len(battle) if hit else 1
+        check(len(battle) == 3 and ko and reactions == want,
+              f"hit_reaction {str(hit).lower()}: the first battle's {len(battle)} actions cut, {reactions} kept as the "
+              f"target's reaction, the knock-out's KO reaction kept")
+        if rec:
+            cps = {c["name"]: c for c in rec["checkpoints"]}
+            e = {c["name"]: c for c in emu["checkpoints"]}
+            print(f"    the battle took {cps['battle_won']['frame'] - cps['battle_start']['frame']} frames "
+                  f"(emulator, the mod off: {e['battle_won']['frame'] - e['battle_start']['frame']})")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("mode", nargs="?", default="check", choices=("check", "record"))
@@ -165,6 +202,7 @@ def main():
     out.mkdir(parents=True)
     binary = build("build/port", [], args.jobs, env)
     skip_dialogues(binary, out, args.mode == "record")
+    battle_animations(binary, out)
     print(f"mods test: {'FAIL (' + str(len(FAILURES)) + ')' if FAILURES else 'pass'}")
     return 1 if FAILURES else 0
 

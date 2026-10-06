@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "id": "battle_animations",
+  "name": "Disable battle animations",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "Attacks, techniques and items skip their animations: an action is its messages and the target's short reaction. The battle's rules and results are unchanged. Entrances, digivolutions and the defeat scene still play.",
+  "options": [
+    { "id": "hit_reaction", "name": "Keep the hit reaction",
+      "description": "The target still flinches, dodges or falls (about half a second). Off: no reaction at all, except a knock-out, which still shows the target falling.",
+      "type": "bool", "default": true, "applies": "live" }
+  ]
+}

@@ -3,7 +3,8 @@
 _Planned in session 18 (2026-10-06, a discovery and planning session). **Implemented so far (session 19, path B):**
 `--config FILE` and the settings file, 4.3 (settled there); phase 1 of section 7 (rebindable input, hotkeys, the pause,
 `port/src/mods.c` and the first manifest, the pace split; 4.5 says what is built); phase 2 (fast-forward, 5.1; the
-60 Hz setting compared with the patched game in the emulator, 5.5); phase 4's skip dialogues (5.2). The user's
+60 Hz setting compared with the patched game in the emulator, 5.5); phase 4's skip dialogues (5.2) and battle
+animations (5.3; the picture waits for issue #7). The user's
 decisions are in section 2 and in `docs/DECISIONS.md` "Launcher and mods (session 18)". The facts in section 3 come from
 five research agents: the measurements were run on the dev machine; everything about the game's code is from reading it
 (nothing in the game was changed or run with a mod); the Windows findings are small scratch experiments, not a build of
@@ -569,6 +570,32 @@ fast-forward (fast_forward's speed and mute) while FIELDSTG is current and `fiel
   `hit_sound`); the KO pose and the victory/defeat flow in the first story battle (`first_battle_save` with the mod
   on, new expectations); a multi-hit technique, a counter, poison ticks, an item, script 12, the type 4/5/6 final boss;
   the "has a child command" scan against all 245 script files.
+
+**Built (phase 4, session 19; the picture not judged: issue #7 is open):** `port_mod_battle_animations`
+(`include/port.h`) and one `#ifdef PC_PORT` block in `fightstg_script_update`'s INIT step 0, after the stream is found
+and before script 12's bank load: for scripts 5 and up it asks `port_battle_cut` (`mods.c`), which scans the stream
+(`port/src/battle_scan.c`: the readers' command lengths) and returns: run it (a stream that does not scan), end it, or
+the target's reaction `results[3] + 1`, which the hook starts in the same object as the child command would (side
+flipped, results, stage, effect and hit sound zeroed, step 0 again). It also plays the script's first hit sound
+(`fightstg_script_run_sound`'s choice). `hit_reaction` off ends every script, except that **a knock-out keeps its KO
+reaction** (so the model ends on its KO pose). `scripts/build.sh --check` byte-identical.
+**The "verify first" list:**
+- **The scan against all 245 script files** (`tests/port/battle.py`): 4,410 scripts (248 model records, 3 with an
+  empty file), the C scanner and an independent Python reading agree on every one (stages 0 and -1); every script
+  ends; reactions 1-4 have no child command; **every KO script ends on animation 10**. Scripts 5-17: 687 with a child
+  command (168 multi-hit), 2,498 without (2,275 are stubs of up to 6 words; the 223 others are items, stage switches
+  and support effects with no reaction), which the mod ends at once.
+- **The first story battle with the mod on** (`tests/port/mods.py`, `first_battle_save` itself): **the emulator's
+  cross-core view** with `hit_reaction` on and off (all 20 checkpoints: the battle won, the report, the save, the
+  reset and reload, the shops), the reset check on. Its three actions are cut (the player's attack, the enemy's, the
+  knock-out): reactions 2, 2 and 3 kept, or only the KO with `hit_reaction` off. The battle takes 952 or 602 frames
+  instead of the port's 1,192.
+- **Reaction scripts as top-level scripts:** they ran (the heavy hit and the KO above, the battle went on and was
+  won); their picture is not judged until the battle camera is fixed (issue #7).
+- **Not run (no layer-2 route reaches them yet):** a multi-hit technique, a counter, poison ticks, an item, script
+  12, the type 4/5/6 final boss. They create their scripts through the same `fightstg_script_create` and the same
+  INIT (the plan's 3.9), and the cut decides from the stream alone; a later script that reaches them should be run
+  with the mod on.
 
 ### 5.4 Skip intro (the idea only; nothing investigated, by the user's instruction)
 

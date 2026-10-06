@@ -568,6 +568,35 @@ void fightstg_script_update(FightstgScript *obj, FightstgScriptData *data) {
             fightstg_models.get(obj->model_id);
             obj->file = fightstg_models.record->script_file;
             obj->next = cdload_module.get_subfile(obj->script, cdload_module.get_subfile_by_id(obj->file));
+#ifdef PC_PORT
+            if (port_mod_battle_animations != 0 && obj->script >= 5) {
+                s32 sound_id;
+                s32 sound_arg;
+                s32 cut = port_battle_cut(obj->next, obj->stage, obj->results, obj->hit_sound, &sound_id, &sound_arg);
+
+                if (cut >= 0) {
+                    /* battle_animations: the animation cut before it starts (and before script 12's bank load) */
+                    if (sound_id != 0 && data->sound == NULL) {
+                        data->sound = fightstg_sound_play(sound_id, sound_arg);
+                    }
+                    if (cut == 0) {
+                        obj->base.set_state(obj, OBJECT_STATE_END);
+                    } else {
+                        /* the target's reaction, as the child command would have started it (a new object: no
+                         * results, stage, effect or hit sound); step 0 runs again for it */
+                        obj->side = obj->side == 0;
+                        obj->script = cut;
+                        for (i = 0; i < 4; i++) {
+                            obj->results[i] = 0;
+                        }
+                        obj->stage = 0;
+                        obj->effect = 0;
+                        obj->hit_sound = 0;
+                    }
+                    break;
+                }
+            }
+#endif
             if (obj->script != 12) {
                 obj->base.next_state(obj);
                 break;

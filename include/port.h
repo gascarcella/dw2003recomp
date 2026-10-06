@@ -201,6 +201,12 @@ void *port_bios_ptr(u32 addr);
  * (src/main/message.c), a wait for the confirm button goes on by itself, and so does the battle's message wait
  * (src/fightstg/fightstg_8008D3B4.c). No pad press is made: choices and code-driven prompts still wait. */
 extern int port_mod_skip_dialogues;
+/* port_mod_battle_animations: battle_animations is on (5.3): fightstg_script_update asks port_battle_cut, at a script's
+ * INIT, what script 5 or above becomes: -1 run it as it is, 0 end it at once, 1..4 the target's reaction (the script
+ * its child command would have started, results[3] + 1); *sound_id and *sound_arg: the hit sound it would have played
+ * (0: none), for fightstg_sound_play. The rules ran before the script started (the plan's 3.9). */
+extern int port_mod_battle_animations;
+s32 port_battle_cut(const s16 *stream, s32 stage, const s32 *results, s32 hit_sound, s32 *sound_id, s32 *sound_arg);
 
 #endif /* PC_PORT */
 

@@ -101,8 +101,12 @@ checks what the mod must keep from the emulator's run. `skip_dialogues`: `tests/
 (first_battle_save's route, no press through the scenes, one press per talk and per choice, each choice after 300
 idle frames) twice with the same log and record, its cross-core view as recorded, the choices still open, the six
 shared checkpoints with the emulator's stable hashes, the script stuck at the first dialogue with the mod off, the
-first battle with fewer presses with the mod on, `fast_forward_waits` with the same log. ~35 s; in
-`scripts/test.sh --layer port`.
+first battle with fewer presses with the mod on, `fast_forward_waits` with the same log. `battle_animations`:
+`first_battle_save` itself with the mod on (`hit_reaction` on and off) gives the emulator's cross-core view, its first
+battle's three actions cut and the knock-out's KO reaction kept. `tests/port/battle.py` (no emulator, no port build:
+gcc and the extracted disc) reads every battle script on the disc twice, with the port's `battle_scan.c` and with its
+own reading, and requires them to agree, every script to end, reactions without a child command and every KO script
+to end on animation 10. ~1 min together; in `scripts/test.sh --layer port`.
 
 ## What it found (session 16)
 - **The overlay copy takes CPU time on the PS1.** The game copies FIELDSTG (0x19000 bytes) into its slot with LIBC2's
