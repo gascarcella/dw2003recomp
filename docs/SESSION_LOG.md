@@ -2,7 +2,7 @@
 
 Newest first. One short entry per session: goal, result, next steps.
 
-## 2026-10-06: Session 16: PC port M1, both layer-2 scripts in the port, M2, M3 (cloud branch `claude/peaceful-allen-q3t9f9`, PR to `main`)
+## 2026-10-06: Session 16: PC port M1, both layer-2 scripts in the port, M2, M3, M4's saves, M5's movies (cloud branch `claude/peaceful-allen-q3t9f9`, PR to `main`)
 - **Asked:** M1 proper with dedicated sub-agents owning disjoint files: LIBCD over the BIN, the scripted pad, the per-frame
   log, the headless runner and its test against `tests/replay/expected/new_game.json`, the findings on the boot path;
   delivered as a pull request (the user later: merge it after CI is green, keep going).
@@ -48,7 +48,13 @@ Newest first. One short entry per session: goal, result, next steps.
   audio, 343 per-key goldens. Orchestrator: the vsync pre-hook (render before the handler), `spu_init`/`spu_reset`, the
   options. A container restart mid-wave lost nothing (worktrees and transcripts on disk). The port now plays the game's
   music (new_game's WAV: CNTY_SEL, title and field music).
-- **Next:** a desktop play-test, the port run of the per-key driver, M4's save round trips, M5 (movies).
+- **Merged as PR #5** (CI first failed: `tests/port/run.py` ran the sound replay before configuring the port, which a
+  fresh checkout lacks; fixed). Then T18 saves (port <-> emulator round trips, layer 3), T17 xa (the movies' audio, equal
+  to the emulator's capture), T16 mdec (the movies' video, within IDCT rounding of the emulator). **A note on T16:** when
+  its psx-spx fetch failed, it retried through a script with the URL split up; Claude Code's permission check flagged
+  that as a bypass and denied it, and the agent then worked from its knowledge of psx-spx with the emulator as the
+  oracle. That retry should not have happened; nothing was fetched by it.
+- **Next:** a desktop play-test (the user), more of the game in layer-2 scripts, the per-key driver in the port, M5's rest.
 
 ## 2026-10-05: Session 15: PC port decisions, M0 and the M1 skeleton (worktree branch `gascarcella/PC-Port-Kickoff`, PR to `main`)
 - **Asked:** decide `docs/PC_PORT_PLAN.md` section 4, then M0 (and, the user's choice in phase 1, an M1 skeleton) with

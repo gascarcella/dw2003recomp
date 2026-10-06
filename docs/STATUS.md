@@ -9,7 +9,8 @@ checked against the PS1 (`tests/port/run.py`, the `port` layer of `scripts/test.
 done:** a software GPU checked against the emulator (layer-1 family `gpu`, 715 cases; whole VRAM equal at seven points of
 `new_game`) and an SDL3 window with keyboard and gamepad (`setup.sh sdl3`, `-DDW3_PORT_SDL=ON`, `--window`). **M3
 sound done:** our SPU core and LIBSND reproduce the emulator's SPU write traces on its timeline; music and effects play
-(`--wav`, SDL3 audio). Code state unchanged: every game file rebuilds byte-identical, 98.6% of game
+(`--wav`, SDL3 audio). **M4's save round trips and M5's movies done:** saves move both ways between port and emulator
+(a layer-3 test); the movies decode (our MDEC) and play their XA soundtrack. Code state unchanged: every game file rebuilds byte-identical, 98.6% of game
 code compiles from matching C, 8 holdouts stay asm._
 
 The README's progress table (`tools/progress.py --readme`) has the current numbers per part and per overlay.
@@ -87,6 +88,9 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   stream), `--spu-trace`; the oracle `tests/sound/` (`spu_trace.py`, the `cnty_sel` trace in test.sh, `key_trace.py`'s
   343 per-key goldens); `tests/port/sound.py` (LIBSND replayed on the emulator's timeline). The GPU is 2.6x faster
   (identical pixels).
+- **PC port, M4/M5 parts (session 16; DECISIONS "M4's save round trips; M5's movies"):** `tests/saves/` (port <->
+  emulator saves, layer 3), `port/psyq/mdec.c` (LIBPRESS: the movies' video; family `mdec`), `port/psyq/xa.c` (their XA
+  audio; `tests/xa/` goldens).
 - **CI (session 13):** `.github/workflows/ci.yml` on every push: toolchain, script/Python checks, `check_toolchain.sh`, and
   with the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of `dw2003-gamedata`) `build.sh --check` and
   `scripts/test.sh`; first green run 2026-10-05, ~5 min. Fork pull requests get only the disc-free steps.
@@ -207,8 +211,9 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
    WSTAG function), names-10 (FIELDSTG/WSTAG type fields), names-9 (EXE and CARDGAME fields, EXE data symbols), names-11
    (FIGHTSTG, tier-2, small overlays) and decode-1 (item data, event scripts, card scripts) are done: `unk_` uses
    15,646 → 1,097 (mostly never-read or not yet understood), 12 `func_` names left, no `Unk<addr>` types.
-2. PC port: **M1, M2 and M3 are done** (session 16). Next: a play-test on a desktop (window, gamepads, audio device),
-   the port run of `key_trace.py`'s driver, M4's rest (save round trips in layer 3), M5 (MDEC/XA: the movies), LIBGS's GTE
-   set-up checked like the GTE. Formerly next: **M2** (`docs/PC_PORT_PLAN.md`: the VRAM-exact software GPU, SDL3 via a `setup.sh`
+2. PC port: **M1, M2, M3, M4's saves and M5's movies are done** (session 16). Next: **a play-test on a desktop**
+   (window, gamepads, audio device: needs the user), M5's rest (a playthrough beyond the first battle: more layer-2
+   scripts, the 8 holdouts' WIP C reached in play, the debug overlays), the port run of `key_trace.py`'s driver, LIBGS's
+   GTE set-up checked like the GTE, `--fps 60` with XA, a Windows/macOS build (PE has no GNU ld script). Formerly next: **M2** (`docs/PC_PORT_PLAN.md`: the VRAM-exact software GPU, SDL3 via a `setup.sh`
    step, pixel comparison with the emulator).
 3. Holdouts/FAKEs: opportunistic retries with new techniques.

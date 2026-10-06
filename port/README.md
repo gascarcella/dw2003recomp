@@ -286,5 +286,6 @@ at 24-85 ms (mean 57) with no refill and no drop, and the disk file holds the WA
 - The snapshot copies with plain byte loops in `no_sanitize_address` functions (ASan's redzones between globals
   are inside the ranges); so a sanitizer build's overlay-load log lines show other section sizes (ASan's redzones)
   than a normal build's: compare logs only between builds of the same kind.
-- Movies are streamed (frame headers, timing) but not decoded (LIBPRESS is a stub until M5); no drawing (M2), no
-  sound (M3), no memory card (M4: every card command reports "no card").
+- Done since this list was written (session 16): drawing (M2, `port/psyq/gpu.c`), sound (M3, `port/src/spu*.c`,
+  `port/psyq/libsnd*.c`), memory cards (`.mcd` images), the movies (M5: `port/psyq/mdec.c` decodes them, the VRAM equal
+  to the emulator's outside the movie buffers and within IDCT rounding inside; their XA audio through `port/psyq/xa.c`).
