@@ -92,6 +92,12 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   emulator saves, layer 3), `port/psyq/mdec.c` (LIBPRESS: the movies' video; family `mdec`), `port/psyq/xa.c` (their XA
   audio; `tests/xa/` goldens).
 - **PC port, desktop play-test (session 17; docs/PLAYTEST.md):** the SDL build played by the user through the first battle, a save and its load; picture, sound and timing right except the battle's 3D camera (`GsSetRefView2` a stub: the view sits at the world origin). `port_video_quit` tears SDL down before `exit()` (NVIDIA's EGL crashed an `atexit` `SDL_Quit` on Wayland/offscreen).
+- **Launcher and mods, game side (session 19, path B; docs/LAUNCHER_MODS_PLAN.md):** `dw2003 --config FILE` reads the
+  settings file (schema 1, settled in the plan's 4.3: paths relative to the file, the cards `card1.mcd`/`card2.mcd`
+  beside it by default, the watchdog off, the command line overriding the file, exit 64 naming a bad key) and
+  `--print-settings` prints the effective settings (`port/src/settings.c`; `tests/port/settings.py`, in the port layer
+  of `scripts/test.sh`). The bare binary's logs, records and WAVs are unchanged. `input` and `mods` are read but not
+  applied yet.
 - **CI (session 13):** `.github/workflows/ci.yml` on pull requests and pushes to `main`, skipped when only documentation changed (DECISIONS "CI only when it is needed"): toolchain, script/Python checks, `check_toolchain.sh`, and
   with the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of `dw2003-gamedata`) `build.sh --check` and
   `scripts/test.sh`; first green run 2026-10-05, ~5 min. Fork pull requests get only the disc-free steps.

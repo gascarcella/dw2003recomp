@@ -1948,6 +1948,27 @@ by the user:
   animation script starts; GNU ld links an invalid PE silently when a script puts data sections inside `.text`'s page
   (the Wine crash of this session's experiment).
 
+## 2026-10-06: The settings file, schema 1 (session 19, path B: the game side of the launcher plan)
+`--config FILE` is built (`port/src/settings.c`); docs/LAUNCHER_MODS_PLAN.md 4.3 now holds the settled schema, which the
+launcher (path A, built in parallel) writes. Choices made while building it, each marked **changed** in 4.3:
+- **`video.window`** (default true) added: a settings file can run headless (tests, a check run).
+- **Both card slots default to files** beside the settings (`card1.mcd`, `card2.mcd`); `null` is "no card". Today's
+  in-memory fresh card stays the bare binary's default only (the tests).
+- **`watchdog`** (seconds) added, **0 (off) by default under `--config`**: a player's game is never killed by the
+  debugging aid; the bare binary keeps its 10 s.
+- **`launcher`** added: the launcher's own state in the same file, never read by the game.
+- **A mod's bindings are its options** (`mods.<id>.toggle`), not entries of `input.hotkeys` as the sketch had: one
+  manifest renderer in the launcher serves every option. `input.hotkeys` holds the port's own actions (pause,
+  fullscreen).
+- **Bindings**: a string or a list of triggers; a trigger is an input or a chord (a list). Chords are lists, not
+  `"A+B"` strings, because SDL's key names include `+` (`"Keypad +"`). Key names are SDL3's scancode names; gamepad
+  input names are our own fixed list (SDL's positional buttons plus the axis directions), prefixed `pad:` in a binding.
+- **Errors are strict, unknown keys are not:** a wrong type or range exits 64 naming the key (as a bad option does); an
+  unknown key is logged and ignored, so an older game runs a newer launcher's file. `--print-settings` prints the
+  effective settings (every key, absolute paths) and is the launcher's validator; its output loads back to the same
+  output (`tests/port/settings.py`).
+- `disc.sha1` is the launcher's record only: the game always checks the disc itself (`disc.c`'s stamp cache).
+
 ## 2026-10-06: CI only when it is needed (user decision)
 - **Asked:** the user does not want a CI run for changes that cannot change the build (a docs update triggered one).
 - **Measured** (`gh run list`, 2026-10-06): a run takes ~11 min; every push to a branch with a pull request started two
