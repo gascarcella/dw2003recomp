@@ -2,6 +2,34 @@
 
 Newest first. One short entry per session: goal, result, next steps.
 
+## 2026-10-06: The release pipeline and CI per area (local worktree `gascarcella/release-pipeline`, a pull request)
+- **Asked (the user's decisions, DECISIONS "Releases", "CI per area"):** a Linux AppImage with the launcher, the game and
+  the mods; releases only on a tag `v*`, as drafts; built on ubuntu-24.04; CI's parts run only when their inputs change.
+- **Result:** `scripts/package_appimage.sh [--test]` and `packaging/appimage/` (the AppDir: both programs in `usr/bin/`,
+  `mods/`, AppRun, .desktop, our own SVG icon, `LICENSES/`); `scripts/setup.sh sdl3-desktop` (SDL3 with the desktop
+  backends required, its own directory) and `appimage` (appimagetool 1.9.1, the static type-2 runtime 20251108, both
+  pinned by SHA-256); `launcher/CMakeLists.txt` `DW3_LAUNCHER_STATIC_RUNTIME`; the self-test's `DW3_SELFTEST_GAME=beside`;
+  `.github/workflows/release.yml` (tag `v[0-9]+.[0-9]+.[0-9]+*` or manual: ci.yml via `workflow_call`, the Release game
+  through the port's M1 test, the AppImage and its smoke test, a draft release on a tag only); `scripts/ci_areas.sh` and
+  ci.yml's steps per area; `docs/RELEASE.md`; THIRD_PARTY rows for what the AppImage bundles. `setup.sh link` now reads
+  this checkout's `.gitignore` (a branch's new tool directory is linked into its worktree before `main` knows it).
+- **Verified locally (Fedora, glibc 2.43):** the game's Release (-O3) build replays `new_game` and `first_battle_save`
+  with logs, records, SPU traces and checkpoint dumps byte-identical to the default build's; the AppImage (5.3 MB) built
+  with `--shared-libstdcxx` (no static libstdc++ here) passes its smoke test with the disc (226 checks, the bundled game
+  300 frames), both by extract-and-run and by its FUSE mount; `ldd`: the game libc/libm/the loader only, the launcher
+  the same plus libstdc++/libgcc_s in this local mode; the runtime is a static executable (no libfuse at all); removing
+  the bundled game or its mods fails the smoke test; the dev-tree self-tests (217 checks; 224 with the disc and the game)
+  still pass; actionlint clean.
+- **Verified in CI:** the pull request's run (it changes ci.yml: every area; the areas step read the merge commit's 20
+  files) green in ~14 min. release.yml cannot be dispatched before it is on `main` (GitHub answers 404), so it ran from a
+  temporary branch with a push trigger (deleted afterwards; never a tag, never a release): ci.yml whole, then on
+  ubuntu-24.04 `sdl3-desktop` built with x11/wayland/kmsdrm video and alsa/pipewire/pulseaudio audio, the Release game
+  through the port's M1 test, the AppImage (5.5 MB; both programs need only libc, libm and the loader, newest symbol
+  GLIBC_2.38) and its smoke test (226 checks with the disc); the draft job skipped. Its first try failed: the port's
+  sound check reads the EXE from `extracted/` (fixed: release.yml uses `worktree_init.sh`). The run's artifact,
+  downloaded here, passes its SHA256SUMS and the same self-test with the disc through its FUSE mount on Fedora.
+- **Next:** the user's review; the first tag and the decision to publish its draft are the user's.
+
 ## 2026-10-06: Session 19, path A: the launcher (local worktree `gascarcella/Launcher`, pull request #9)
 - **Asked:** build the launcher of `docs/LAUNCHER_MODS_PLAN.md` (4.1-4.4, 4.6, phase 3 of section 7) in four phases,
   while path B (a parallel session) built the game side; the contract is the plan's 4.1-4.4.

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=dw2003recomp
+GenericName=Game launcher
+Comment=PC port of Digimon World 2003 (PS1, Europe) from its decompilation; plays your own disc image
+Exec=dw2003-launcher
+Icon=dw2003recomp
+Terminal=false
+Categories=Game;

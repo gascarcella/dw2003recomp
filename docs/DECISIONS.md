@@ -2062,3 +2062,63 @@ stop. The game side (path B: `--config`, the settings reader, the mod runtime) i
   `DW3_PORT_SKIP_DIALOGUES=1` (on from the start, as the fast-forward test hook).
 - **`fast_forward_waits` uses fast_forward's speed and mute**, its defaults when that mod is off, through one
   fast-forward state in `mods.c` (a request ORed with the fast-forward mod's own bindings).
+
+## 2026-10-06: Releases (user decisions; the release pipeline session, `gascarcella/release-pipeline`)
+The user decided how the game reaches players (`docs/RELEASE.md` is the how-to):
+1. **Linux only for now**; Windows is `docs/LAUNCHER_MODS_PLAN.md` section 6, later.
+2. **One AppImage** for the general public: the launcher, the game (the SDL build) and the mods' manifests in one file;
+   opening it starts the launcher. Players supply their own disc in the launcher and never compile anything.
+   `scripts/package_appimage.sh` builds it: both programs in `usr/bin/` (the launcher finds `dw2003` beside itself, the
+   mods in `usr/bin/mods/`), AppRun a link to the launcher, `packaging/appimage/` (the .desktop file, our own SVG
+   icon, the fonts' notices), `LICENSES/` (ours, SDL3, Dear ImGui and its two embedded fonts, the AppImage runtime).
+3. **Releases only on a rule, not on every merge:** a pushed tag `vX.Y.Z...` runs `.github/workflows/release.yml`
+   (the filter `v[0-9]+.[0-9]+.[0-9]+*`: the user's "v*", narrowed so the decomp's milestone tags such as
+   `v0.1-matching-closed` start nothing). It runs the whole of `ci.yml` first (`workflow_call`, every area, with the
+   disc: a release fails without the data checkout), then the game's Release build through the port's M1 test, the
+   AppImage and its smoke test, and creates a **DRAFT** GitHub Release only (the AppImage, `SHA256SUMS`, generated notes).
+   **Draft releases only for now; publishing (binaries built from the decompiled code, no disc data) is a separate
+   explicit user decision**, taken each time by pressing Publish. Until now the repository's stance was code only
+   (DECISIONS "Going public": no assets, a user-supplied disc); a published AppImage holds no game data either, but it
+   is the first binary built from the decompiled code that the project would hand out. A manual run
+   (`gh workflow run release.yml --ref <branch>`) builds and tests the AppImage and keeps it as the run's artifact,
+   never a release.
+4. **Built on CI's `ubuntu-24.04` runner** (glibc 2.39 baseline; the user chose it over an older container). The
+   programs need only the C library: SDL3 is static (`scripts/setup.sh sdl3-desktop`: X11, Wayland, PipeWire,
+   PulseAudio, ALSA required at build time, each `dlopen`ed at run time), the launcher links `libstdc++`/`libgcc`
+   statically (`-DDW3_LAUNCHER_STATIC_RUNTIME=ON`); the package script fails on any other `ldd` entry. The runtime is
+   AppImage's static type-2 runtime (`scripts/setup.sh appimage`, pinned with appimagetool 1.9.1): no `libfuse2` needed.
+- **Also settled on the way (proposed, for the user's review):** the game is built `CMAKE_BUILD_TYPE=Release` (-O3)
+  for the AppImage: its logs, records, SPU traces and checkpoint dumps of both layer-2 scripts are byte-identical to the
+  tests' default build (checked locally), and release.yml repeats the port's M1 test on a Release build each time.
+  The desktop SDL is its own setup step and directory (`tools/sdl3-desktop`, its own cache key in release.yml), so CI's
+  cached headless `tools/sdl3` never stands in for it. `setup.sh link` reads this checkout's `.gitignore`, so a branch
+  that adds a tool directory links it into its worktree before `main` knows it. The self-test's
+  `DW3_SELFTEST_GAME=beside` checks the game the launcher finds beside itself (the smoke test's proof that the AppImage's
+  launcher finds the bundled game and mods).
+- **Not done:** Windows; AppImage update information (zsync); a signed AppImage; a GUI run in CI (the smoke test is
+  offscreen); tests on other distributions than the build's and the user's (Fedora).
+
+## 2026-10-06: CI per area (user decision; reverses "CI only when it is needed"'s "Not done")
+- **Asked:** each part of CI runs only when its inputs changed. "CI only when it is needed" had listed finer filters as
+  "Not done" (the saving small against the risk of a wrong filter); the user asked for them now.
+- **Decision:** `scripts/ci_areas.sh` sorts the changed files (a pull request's merge commit against its first parent,
+  a push to `main` against the commit before it) into three areas; ci.yml's steps run on them. Each area implies the
+  next, and a path no rule names counts as `game`, so a new kind of file runs everything:
+  - **game**: `src/`, `include/`, `config/`, `configure.py`, `tools/` (but `port_gen.py`), `tests/` (but the port's),
+    `scripts/` (setup.sh pins every tool), `.claude/hooks/`, anything else -> the toolchain smoke test, `build.sh
+    --check`, all of `scripts/test.sh`, and everything below (the port compiles the game's C and replays its scripts).
+  - **port**: `port/`, `tools/port_gen.py`, `tests/port|spu|xa|saves|host/` -> the probe, the SDL build and its input
+    self-tests, `scripts/test.sh --layer 1 --layer 3 --layer port` (layer 1's host replays compile `port/psyq` gpu/gte/mdec
+    and tests/spu, tests/xa compile the SPU and XA code; layer 3's save round trips run the port; layer 2 is the
+    emulator alone and is skipped), the `-m32` M1 test, and the launcher (it compiles `port/src/json.c` and `sha1.c`,
+    lists `port/mods/`, and its disc run starts the game with `--config`).
+  - **launcher**: `launcher/` -> its build and self-test, the SDL game's build, the self-test with the disc and the game.
+  - **none**: documentation, `release.yml`, `scripts/package_appimage.sh`, `packaging/` (release.yml's manual run tests
+    those; the parse check runs always).
+  - **Everything:** `ci.yml` and `scripts/ci_areas.sh` themselves, manual runs, release tags (release.yml's call) and a
+    push whose base commit is unknown.
+- The docs-only `paths-ignore` of "CI only when it is needed" stays (no run at all). The toolchain step and its cache
+  run always: the cache is one key, and a run that installed only some tools would save an incomplete cache under it.
+- **Measured costs it saves** (run of #9 on `main`): `build.sh --check` ~1 min, layer 2 ~1.2 min (skipped for a port
+  change), and for a launcher-only change everything but ~1.5 min of builds and self-tests (the full run is ~9 min
+  after the toolchain).

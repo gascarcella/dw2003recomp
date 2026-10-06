@@ -152,7 +152,16 @@ Optional, with the data: `DW3_SELFTEST_DISC=iso/dw2003.cue` also checks the real
 launcher's command (offscreen, unthrottled), which must end with status 0 and the disc checked. The file it probes has
 rebinds, a chord, an unbound hotkey and every mod beside that game switched on with every option changed: the game's
 own parser must accept it. CI runs both in its
-data-gated part.
+data-gated part. `DW3_SELFTEST_GAME=beside` takes the game the launcher finds by itself beside its own executable
+(it must be there, with at least one mod manifest beside it): the release's smoke test runs it inside the AppImage
+(`docs/RELEASE.md`).
+
+## Releases
+
+The players' build is one AppImage with the launcher, the game and the mods (`scripts/package_appimage.sh`,
+`.github/workflows/release.yml` on a tag `vX.Y.Z`, a draft release only): `docs/RELEASE.md`. Its launcher is built with
+`-DCMAKE_BUILD_TYPE=Release -DDW3_LAUNCHER_STATIC_RUNTIME=ON` (libstdc++ and libgcc static) against an SDL3 with the
+desktop backends (`scripts/setup.sh sdl3-desktop`).
 
 ## Files
 
