@@ -5,7 +5,9 @@ _Last updated: 2026-10-06 (session 16, cloud branch `claude/peaceful-allen-q3t9f
 scripts**, `new_game` and `first_battle_save` (the first battle, a save to a memory card, a reset, the reload, shops,
 menus, training), with the emulator's 25 checkpoints, stage and map sequences and stable hashes; two runs identical, no
 ASan/UBSan report, `-m32` identical to `-m64` on `new_game` (the same checkpoints on `first_battle_save`); a software GTE
-checked against the PS1 (`tests/port/run.py`, the `port` layer of `scripts/test.sh`; layer-1 family `gte`). Code state unchanged: every game file rebuilds byte-identical, 98.6% of game
+checked against the PS1 (`tests/port/run.py`, the `port` layer of `scripts/test.sh`; layer-1 family `gte`). **M2
+done:** a software GPU checked against the emulator (layer-1 family `gpu`, 715 cases; whole VRAM equal at seven points of
+`new_game`) and an SDL3 window with keyboard and gamepad (`setup.sh sdl3`, `-DDW3_PORT_SDL=ON`, `--window`). Code state unchanged: every game file rebuilds byte-identical, 98.6% of game
 code compiles from matching C, 8 holdouts stay asm._
 
 The README's progress table (`tools/progress.py --readme`) has the current numbers per part and per overlay.
@@ -72,6 +74,12 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   `fieldstg_stage`), the software GTE (`port/psyq/gte.c`, 865 golden cases), the pad a frame late as in the emulator,
   the file cache's full-table eviction on the host, STGMCARD's two-object view split, `-m32` fixes. `DW3_PORT_PRIM_DUMP=N`
   dumps a frame's primitives.
+- **PC port, M2 (session 16; DECISIONS "M2: the software GPU and the SDL3 window"):** `port/psyq/gpu.c` executes every
+  GP0 command the game sends (and `LoadImage`/`MoveImage`/`ClearImage`) into a 1024x512 VRAM; `--screenshot FRAME:PATH`
+  writes the display area (headless too); with SDL3 (`scripts/setup.sh sdl3`; `cmake -S port -B build/port-sdl -G Ninja
+  -DDW3_PORT_SDL=ON`) `--window [--scale N] [--fullscreen]` shows it at 50 Hz with keyboard and gamepad input
+  (`--input-test` checks the mapping). Movies still show nothing (MDEC is M5); no sound (M3); the cards are files (M4 done
+  in part: `.mcd` images).
 - **CI (session 13):** `.github/workflows/ci.yml` on every push: toolchain, script/Python checks, `check_toolchain.sh`, and
   with the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of `dw2003-gamedata`) `build.sh --check` and
   `scripts/test.sh`; first green run 2026-10-05, ~5 min. Fork pull requests get only the disc-free steps.
@@ -192,6 +200,9 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
    WSTAG function), names-10 (FIELDSTG/WSTAG type fields), names-9 (EXE and CARDGAME fields, EXE data symbols), names-11
    (FIGHTSTG, tier-2, small overlays) and decode-1 (item data, event scripts, card scripts) are done: `unk_` uses
    15,646 → 1,097 (mostly never-read or not yet understood), 12 `func_` names left, no `Unk<addr>` types.
-2. PC port: **M1 is done** (session 16) and both layer-2 scripts replay in the port. Next: **M2** (`docs/PC_PORT_PLAN.md`: the VRAM-exact software GPU, SDL3 via a `setup.sh`
+2. PC port: **M1 and M2 are done** (session 16) and both layer-2 scripts replay in the port. Next: M3 (the SPU and
+   LIBSND, checked against the emulator's SPU register-write traces; SOUNDTST as the driver), a play-test of the window on
+   a desktop (real gamepads, GPU renderers), speeding up the rasteriser (span specialisation), then M5 (MDEC/XA for the
+   movies). Formerly next: **M2** (`docs/PC_PORT_PLAN.md`: the VRAM-exact software GPU, SDL3 via a `setup.sh`
    step, pixel comparison with the emulator).
 3. Holdouts/FAKEs: opportunistic retries with new techniques.

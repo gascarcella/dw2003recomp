@@ -2,7 +2,7 @@
 
 Newest first. One short entry per session: goal, result, next steps.
 
-## 2026-10-06: Session 16: PC port M1, then both layer-2 scripts in the port (cloud branch `claude/peaceful-allen-q3t9f9`, PR to `main`)
+## 2026-10-06: Session 16: PC port M1, both layer-2 scripts in the port, M2 (cloud branch `claude/peaceful-allen-q3t9f9`, PR to `main`)
 - **Asked:** M1 proper with dedicated sub-agents owning disjoint files: LIBCD over the BIN, the scripted pad, the per-frame
   log, the headless runner and its test against `tests/replay/expected/new_game.json`, the findings on the boot path;
   delivered as a pull request (the user later: merge it after CI is green, keep going).
@@ -38,7 +38,11 @@ Newest first. One short entry per session: goal, result, next steps.
     `DW3_PORT_PRIM_DUMP`.
   - Result: `tests/port/run.py --m32 --sanitize` passes both scripts (all 25 checkpoints); `scripts/test.sh` green.
     Found and documented: FIELDSTG's `free_above` makes the file cache, hence frames, depend on the heap layout.
-- **Next:** M2 (the software GPU against the emulator's VRAM, SDL3; LIBGS's GTE set-up checked like the GTE).
+- **Merged as PR #3.** Then **M2**: T9 gpu (`port/psyq/gpu.c`, family `gpu`, 715 cases; 133 known 1-pixel-class
+  mismatches with reasons; whole VRAM equal at seven `new_game` points), T10 sdl (SDL3 3.4.18 via `setup.sh sdl3`,
+  `--window`, 50 Hz pacing, keyboard/gamepad, `--screenshot`, `--input-test`, CI builds the SDL variant). The port now
+  draws the game (screenshots of CNTY_SEL, the field, the first battle, the save screen).
+- **Next:** M3 (SPU/LIBSND against SPU register traces), a desktop play-test, rasteriser speed, LIBGS's GTE set-up, M5.
 
 ## 2026-10-05: Session 15: PC port decisions, M0 and the M1 skeleton (worktree branch `gascarcella/PC-Port-Kickoff`, PR to `main`)
 - **Asked:** decide `docs/PC_PORT_PLAN.md` section 4, then M0 (and, the user's choice in phase 1, an M1 skeleton) with

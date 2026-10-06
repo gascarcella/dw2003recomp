@@ -1837,3 +1837,26 @@ The user's answers to `docs/PC_PORT_PLAN.md` section 4 (asked item by item; ever
   `-m64` reach the same 20 checkpoints. `tests/port/run.py --m32` therefore requires the same cross-core view for every
   script and byte-identical logs for `new_game` (the M1 criterion); the sanitizer build (the `-m64` layout) stays
   byte-identical everywhere.
+
+## 2026-10-06: M2: the software GPU and the SDL3 window (session 16, agents T9-T10)
+- **The GPU's oracle is the emulator's software GPU** (`port/psyq/gpu.c`; layer-1 family `gpu`: 715 cases run through the
+  game's own LIBGPU in PCSX-Redux, VRAM read back with `StoreImage`, replayed on the host by `tests/host/gpu_replay.py`).
+  Where psx-spx is silent or disagrees, the emulator's measured rules are taken (exact ceil coverage with the top-left
+  rule, a quad as triangles (1,2,3) then (0,1,2), vertex + offset wrapping at 11 bits, dithering only for Gouraud
+  primitives through an 8-bit pipeline, unclamped modulation before the blend, Gouraud-textured spans coloured per pixel
+  pair, the lines' own stepping), except three hardware rules kept (the fill's x rounded down to 16 and wrapping, copies
+  obeying the mask bits and wrapping, a 1x1 draw area drawing its pixel). 133 cases stay known mismatches, each with its
+  reason (`tests/host/known_mismatches.json`: interpolation at .5, the emulator's paired-pixel blend carries in modes 2/3
+  on modulated textures, the three kept rules). The whole VRAM equals the emulator's at seven points of `new_game`.
+- **Execution adds to recording:** `DrawOTag` hashes the primitive stream exactly as in M1, then executes it. The PS1
+  library's own packets are reproduced (`SetDrawEnv`: E3, E4, E5, E1, E2, E6 and a TILE when `isbg`, so every frame's
+  primitive hash changed once; `SetDefDrawEnv`'s `dfe = h < 289`; `ClearImage` as TILE or fill by alignment);
+  `BreakDraw` returns 0 (the GPU is idle), so FIGHTSTG's cursor copies are drawn. A headless run costs ~0.5 ms a frame
+  more (`first_battle_save`: 2 s -> 22 s); `gpu.c` builds at `-O2` inside the `-O0` port.
+- **SDL3 3.4.18, static, in `tools/sdl3`** (`scripts/setup.sh sdl3`: the signed release tarball, its SHA-256 pinned; the
+  backends load at run time; missing optional backends are turned off at configure time). `-DDW3_PORT_SDL=ON` is opt-in:
+  the headless build and every test stay SDL-free; CI builds the SDL variant and runs its `--input-test`.
+- **The window** (`port/src/video.c`, `input.c`): the display area of the VRAM (15- and 24-bit; `DISPENV.disp.w` counts
+  screen pixels, a 24-bit area spans `w * 3 / 2` VRAM pixels), 4:3, integer-scaled by lines (default 2), real-time pacing
+  at 50 Hz only with a window (a window run's log is byte-identical to a headless one's), keyboard and gamepads merged
+  into pad 0 (logged like a script's inputs; a script owns the pad when given). `--screenshot FRAME:PATH` works headless.

@@ -323,6 +323,9 @@ Only changes that leave every PS1 byte identical:
 - ASan + UBSan report nothing on this path.
 
 ### M2: Rendering
+**Done in session 16** (DECISIONS "M2: the software GPU and the SDL3 window"): the GPU is pixel-checked against the
+emulator's software renderer at the primitive level (715 golden cases) and whole-VRAM at seven `new_game` points; the
+screen-level comparison at the other checkpoints listed below waits on matching timing (frames differ) and MDEC.
 - The software GPU (2.3) with display environments (incl. 320×480 interlace) and an SDL3 window.
 
 **Test:** pixel comparison with emulator captures (software renderer) at fixed checkpoints: country select, title,
