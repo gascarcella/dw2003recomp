@@ -244,6 +244,11 @@ def main():
     out = out.resolve()
 
     failed = []
+    try:  # the sound replay below compiles against the port's generated headers (build/port/gen): build it first
+        build("build/port", [], args.jobs, env)
+    except (RuntimeError, subprocess.CalledProcessError) as e:
+        print(f"port test: FAIL: {e}")
+        return 1
     # LIBSND on the emulator's timeline, once (the committed emulator traces; tests/port/sound.py replay)
     try:
         variants = ["m64"] + (["m32"] if args.m32 else []) + (["san"] if args.sanitize else [])
