@@ -2239,7 +2239,7 @@ s32 cardgame_board_load_cards(s16 *ids, s16 *deck1, s16 *deck2) {
 }
 
 CardgameBoard *cardgame_board_create(s16 *ids) {
-    CardgameBoard *obj = object_new(cardgame_board_update, sizeof(CardgameBoard), 0x38);
+    CardgameBoard *obj = object_new(cardgame_board_update, sizeof(CardgameBoard), sizeof(CardgameBoardData));
 
     obj->set_panel_value = cardgame_board_set_panel_value;
     obj->open_turn_mark = cardgame_board_open_turn_mark;

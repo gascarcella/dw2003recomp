@@ -3,7 +3,9 @@
 # Nothing here needs sudo or installs outside the repo.
 #
 # Usage: scripts/setup.sh [--disc /path/to/disc.bin] [step...]
-#   steps: binutils mkpsxiso venv gcc objdiff ext redux link gamedata disc  (default: all); optional: psyq
+#   steps: binutils venv cmake mkpsxiso gcc objdiff ext redux link gamedata disc  (default: all); optional: psyq
+#   cmake: CMake and Ninja (mkpsxiso and the PC port build with them) pip-installed into tools/venv, only when either is
+#          missing from PATH; later steps and tests/port/run.py find them there
 #
 # Worktrees: built tools always go into the MAIN checkout's tools/ (shared by every
 # worktree), and the "link" step symlinks them into this worktree. Tracked inputs
@@ -119,6 +121,7 @@ step_mkpsxiso() {
         log "mkpsxiso: already installed"
         return
     fi
+    command -v cmake >/dev/null && command -v ninja >/dev/null || step_cmake
     mkdir -p "$SRC"
     local dir="$SRC/mkpsxiso"
     if [[ ! -d "$dir/.git" ]]; then
@@ -132,6 +135,24 @@ step_mkpsxiso() {
     cmake --build "$dir/build" -j"$JOBS" >/dev/null
     cmake --install "$dir/build" >/dev/null
     log "mkpsxiso: installed to $prefix"
+}
+
+# CMake and Ninja from PyPI (official wheels), pinned, into the venv: only when the system has none (no sudo).
+CMAKE_PIP=cmake==3.31.10
+NINJA_PIP=ninja==1.13.0
+step_cmake() {
+    local venv="$INSTALL/venv"
+    if command -v cmake >/dev/null && command -v ninja >/dev/null; then
+        log "cmake: cmake and ninja on PATH ($(command -v cmake), $(command -v ninja))"
+        return
+    fi
+    [[ -x "$venv/bin/pip" ]] || step_venv
+    if [[ ! -x "$venv/bin/cmake" || ! -x "$venv/bin/ninja" ]]; then
+        log "cmake: installing $CMAKE_PIP $NINJA_PIP into tools/venv (missing from PATH)"
+        "$venv/bin/pip" install -q "$CMAKE_PIP" "$NINJA_PIP"
+    fi
+    export PATH="$PATH:$venv/bin"   # after the system's: the venv's python stays out of the way
+    log "cmake: using $(command -v cmake), $(command -v ninja) (tools/venv)"
 }
 
 step_venv() {
@@ -402,11 +423,11 @@ steps=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --disc) DISC_PATH="$2"; shift 2 ;;
-        -h|--help) sed -n '2,11p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
         *) steps+=("$1"); shift ;;
     esac
 done
-[[ ${#steps[@]} -gt 0 ]] || steps=(binutils mkpsxiso venv gcc objdiff ext redux link gamedata disc)
+[[ ${#steps[@]} -gt 0 ]] || steps=(binutils venv cmake mkpsxiso gcc objdiff ext redux link gamedata disc)
 
 for s in "${steps[@]}"; do
     declare -F "step_$s" >/dev/null || die "unknown step: $s"

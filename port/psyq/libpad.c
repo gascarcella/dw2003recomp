@@ -38,14 +38,20 @@ static void psyq_pad_fill(int port) {
     buf[3] = (u8)(~psyq_pad_buttons[port] >> 8);
 }
 
+/* The script's buttons are latched here and reach the game's buffers at the next vsync's poll (psyq_pad_vsync), as
+ * on the console: LIBPAD reads the controllers in the vsync interrupt, so buttons set at a vsync (the emulator's
+ * replay runner applies its pad override in its vsync listener, after that read) are what the game sees one frame
+ * later. Filling the buffers at once made the port react a frame earlier than the emulator, which moved every
+ * `walk` of a layer-2 script by a few pixels. Before PadStartCom the buffers are filled at once (nothing polls). */
 void psyq_pad_set(int port, int connected, u16 buttons) {
     if (port < 0 || port > 1) {
         return;
     }
     psyq_pad_connected[port] = connected;
     psyq_pad_buttons[port] = buttons;
-    psyq_pad_fill(port);
-    psyq_pad_fresh = 1;
+    if (!psyq_pad_started) {
+        psyq_pad_fill(port);
+    }
 }
 
 void PadInitDirect(u8 *buf0, u8 *buf1) {

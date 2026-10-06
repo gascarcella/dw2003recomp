@@ -57,7 +57,7 @@ void stitshop_update_main(Object *obj, StitshopMain **data) {
 
 /* The overlay's entry point (overlay_entries). */
 Object *stitshop_start(void) {
-    return object_new(stitshop_update_main, sizeof(Object), 4);
+    return object_new(stitshop_update_main, sizeof(Object), sizeof(StitshopMain *));
 }
 
 void stitshop_fade_start(Fade *obj, s32 dir, s32 frames) {

@@ -1,11 +1,11 @@
 # Status
 
-_Last updated: 2026-10-05 (session 15, worktree branch `gascarcella/PC-Port-Kickoff`, delivered as a pull request):
-the PC port's decisions taken (DECISIONS "PC port decisions (session 15)"), **M0 done** (every PS1 byte unchanged: hook
-macros in `include/port.h`, every `INCLUDE_RODATA` and the EXE matrix block in C, literal sizes to `sizeof`, all 388 units
-host-clean under `tools/port_inventory.py probe`, which now gates `scripts/test.sh` and CI), and the **M1 skeleton**:
-`port/` builds all 388 units plus the stub shim into one 64-bit binary that runs the game's `main()` to a frame cap.
-Code state: every game file rebuilds byte-identical, 98.6% of game code compiles from matching C, 8 holdouts stay asm)._
+_Last updated: 2026-10-06 (session 16, cloud branch `claude/peaceful-allen-q3t9f9`, delivered as a pull request):
+**PC port M1 done:** the headless port boots the user's disc (SHA-1 checked) and replays the layer-2 script `new_game`
+(CNTY_SEL -> opening movie -> title -> New Game -> FIELDSTG map 0x2D7) with the emulator's checkpoints, stage and map
+sequences and stable hashes; two runs identical, `-m32` identical to `-m64`, no ASan/UBSan report (`tests/port/run.py`,
+the `port` layer of `scripts/test.sh`). Code state unchanged: every game file rebuilds byte-identical, 98.6% of game
+code compiles from matching C, 8 holdouts stay asm._
 
 The README's progress table (`tools/progress.py --readme`) has the current numbers per part and per overlay.
 
@@ -56,6 +56,15 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   rest fixed answers or recorders, `DW3_PORT_TRACE`; LIBC2/LIBAPI are the host libc). `build/port/dw2003 --max-frames 60`
   runs the game's `main()` to the frame cap (exit 0); with a 20-line sector reader over the BIN (an experiment, not
   committed) it loads the sound banks and CNTY_SEL and runs 6000 frames. No SDL, no drawing, no sound, no disc yet.
+- **PC port, M1 (session 16; DECISIONS "M1: the headless port replays new_game"):** `build/port/dw2003 --disc
+  iso/dw2003.cue --script tests/replay/scripts/new_game.json --log L --record R`. LIBCD over the BIN/CUE (whole-BIN SHA-1
+  with a stamp cache; mode 0xA0 sectors; movie streaming into the game's ring; `--cd-speed realistic|instant` in vsync
+  ticks), the layer-2 step engine in C (every step but `reset`), the per-frame log (frame, stage, file, map, primitive
+  count and hash; overlay loads, checkpoints) and a record in `replay.py`'s shape, `gamestate_data`'s PS1-image hash
+  (equal to the emulator's dumps), `-DDW3_PORT_M32`. Fixes the boot path needed, all `PC_PORT` or `sizeof`, byte-identical:
+  FINDINGS 7, 8, 9a-c, **9d** (122 object data sizes in PS1 bytes; `tools/port_inventory.py object-sizes` gates it), the
+  overlay entries' truncated `Object *`, the 8-aligned host heap, two FIELDSTG host faults, `OFFSETOF`. The test:
+  `tests/port/run.py [--m32] [--sanitize]` (~1 min built; a run is 0.04 s). In CI with the data checkout (`--m32`).
 - **CI (session 13):** `.github/workflows/ci.yml` on every push: toolchain, script/Python checks, `check_toolchain.sh`, and
   with the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of `dw2003-gamedata`) `build.sh --check` and
   `scripts/test.sh`; first green run 2026-10-05, ~5 min. Fork pull requests get only the disc-free steps.
@@ -113,6 +122,10 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
     `v0` is used.
 
 ## For review
+- **Session 16 (the user's call, none blocks anything):** (1) build the host replay's units with `-DPC_PORT` so the
+  port's fixes (FINDINGS 7: `wfightmn_spoils/no_holder` would match) show there, or keep the host replay as the
+  unmodified C; (2) `OBJECT_V0*` live in `include/object.h`, not `include/port.h`; (3) the overlay copy-time model
+  (`size * 12 / 677376` vsync ticks after a copy, DECISIONS session 16) is what makes `new_game_field` match.
 - Session 11's review points were decided by the user on 2026-10-05 (DECISIONS "User decisions on session 11"): the
   stable-hash additions stay, the whole-`gamestate_data` reads skip `playtime_frames`, no memory-poke replay step.
 - Reviewed by the user on 2026-10-04 (DECISIONS "User decisions on the review items"): every judgement call listed there
@@ -128,8 +141,9 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   the deploy-key secret, description/topics/features set (Issues on; Wiki, Projects, Discussions off). The cloud
   environment with both repositories works (session 14: section 5 step 0 done; the hook is run by hand there). **Left for
   the user:** closing pull requests by hand (GitHub cannot disable them).
-- **The port's sanitizer build:** `-DDW3_PORT_SANITIZE=ON` needs `libasan`/`libubsan` installed (sudo); the `-m32`
-  oracle needs `glibc-devel.i686` (DECISIONS "PC port decisions (session 15)", item 4). Both are the user's installs.
+- **The port's sanitizer and `-m32` builds** need `libasan`/`libubsan` and the 32-bit glibc (`gcc-multilib` on Ubuntu,
+  `glibc-devel.i686` on Fedora/Nobara): system installs, the user's. Cloud session 16 had ASan/UBSan and installed
+  `gcc-multilib` with the user's approval; CI installs `gcc-multilib` itself.
 - **Mechanics sources:** `docs/MECHANICS.md` "Sources wanted" lists the GameFAQs/StrategyWiki URLs the cloud session
   cannot reach; fetched text (or a local copy) would let the tests get names and expected behaviours from written sources.
 - **Review follow-ups (session 8, recommended, not decided):** done since: the LICENSE (MIT), CI, the public release as a
@@ -145,10 +159,14 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   and WSTAG's own types have their understood fields named (DECISIONS "Naming pass names-10"), and so have the EXE's
   and CARDGAME's (DECISIONS "Naming pass names-9": what is left there is unread, padding or per-effect scratch).
 - Kept as is: object list in `heap`, random module in `pad`, gamestate one file vs two, `object` vs `main`.
-- PC port: decided and started (`docs/PC_PORT_PLAN.md`: M0 done, M1 skeleton); `docs/PC_PORT_RESEARCH.md` stays background.
-  Open from the agents' reports: `object_destroy` scans mixed data blocks as pointers (FINDINGS 9c), `gfx.h`'s
-  `vsync_arg` could be a pointer field, `GfxLayer.add_callback` wants a public typedef, an `offsetof` macro for the
-  three partial `bzero`s, `include/psyq/` prototype nits listed in `port/psyq/README.md`.
+- PC port: decided and started (`docs/PC_PORT_PLAN.md`: M0 and M1 done); `docs/PC_PORT_RESEARCH.md` stays background.
+  Open from session 16: `FieldstgEventDef.start` returns `s32` (an object survives as the low half of a host pointer:
+  the arena is below 4 GB), `port_state_read` cannot map `memcard_state` (private type) or overlay data, the CD seek
+  constants and `StGetNext`'s 5000 polls per vsync are stand-ins, `tests/host/build.sh` builds without `PC_PORT` (so
+  FINDINGS 7's fix does not show in the host replay; listed under "For review").
+  Open from session 15's reports: `gfx.h`'s
+  `vsync_arg` could be a pointer field, `GfxLayer.add_callback` wants a public typedef (`OFFSETOF` exists since session 16; the other
+  partial `bzero`s clear pointer-free prefixes), `include/psyq/` prototype nits listed in `port/psyq/README.md`.
 
 ## Next: candidate goals (priority order)
 0. **Reference tests** (direction agreed in session 8; DECISIONS "Reference tests for the port"): (1) golden tests of the
@@ -167,8 +185,8 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
    WSTAG function), names-10 (FIELDSTG/WSTAG type fields), names-9 (EXE and CARDGAME fields, EXE data symbols), names-11
    (FIGHTSTG, tier-2, small overlays) and decode-1 (item data, event scripts, card scripts) are done: `unk_` uses
    15,646 → 1,097 (mostly never-read or not yet understood), 12 `func_` names left, no `Unk<addr>` types.
-2. PC port, **M1 proper** (`docs/PC_PORT_PLAN.md`): LIBCD over the BIN (hash-checked; `psyq_cd_set_reader` exists),
-   the scripted pad, the per-frame primitive-stream hash (`psyq_gpu_take_hash`) and overlay log, the headless boot to
-   STDWTITL's menu with two identical runs, `-m32` against `-m64` once `glibc-devel.i686` is installed, ASan/UBSan once
-   `libasan`/`libubsan` are. Then M2 (the software GPU, SDL3 via a `setup.sh` step).
+2. PC port: **M1 is done** (session 16). Next: `first_battle_save` in the port: it matches the first six checkpoints
+   (through the first battle, `back_on_field`) and stops at step 50, a `wait_mem` on `memcard_state` (not mapped: its
+   type is private to `memcard.c`); the save needs LIBMCRD over a `.mcd` image (M4) and the script's `reset`; then **M2** (`docs/PC_PORT_PLAN.md`: the VRAM-exact software GPU, SDL3 via a `setup.sh`
+   step, pixel comparison with the emulator).
 3. Holdouts/FAKEs: opportunistic retries with new techniques.

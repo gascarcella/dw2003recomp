@@ -678,6 +678,7 @@ void fieldstg_effects_message(Object *obj, s32 cmd) {
     }
 }
 
-void fieldstg_effects_start(void) {
-    object_create(fieldstg_effects_update, sizeof(Object), 0, 0x32D);
+OBJECT_V0(Object *) fieldstg_effects_start(void) {
+    /* PC_PORT: FINDINGS 8: callers use the object (v0) */
+    OBJECT_V0_TAIL(object_create(fieldstg_effects_update, sizeof(Object), 0, 0x32D))
 }

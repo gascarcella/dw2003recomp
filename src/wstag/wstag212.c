@@ -173,7 +173,7 @@ void wstag212_update(WstagObject *obj, WstagEventData *data) {
 }
 
 WstagObject *wstag212_start(void *arg0) {
-    WstagObject *obj = object_new(wstag212_update, sizeof(WstagObject), 4);
+    WstagObject *obj = object_new(wstag212_update, sizeof(WstagObject), sizeof(FieldstgEvent *));
 
     obj->manager = arg0;
     wstag212_funcs.setup();

@@ -25,7 +25,7 @@ void wstag355_update(WstagObject *obj) {
 }
 
 WstagObject *wstag355_start(void *arg0) {
-    WstagObject *obj = object_new(wstag355_update, sizeof(WstagObject), 0x50);
+    WstagObject *obj = object_new(wstag355_update, sizeof(WstagObject), 20 * sizeof(Object *)); /* unused */
 
     obj->manager = arg0;
     wstag355_funcs.setup();

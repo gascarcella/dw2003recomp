@@ -254,10 +254,10 @@ void stgmcard_root_update(Object *obj, StgmcardRootData *data) {
     }
 }
 
-/* The overlay's entry point (overlay_entries). */
-void stgmcard_create_root(void) {
-    /* PC_PORT: 0x58 = sizeof(Object) + 8 unused bytes; the update reads only the Object */
-    object_new(stgmcard_root_update, 0x58, sizeof(StgmcardRootData));
+/* The overlay's entry point (overlay_entries): overlay_run_object keeps the object (v0; PC_PORT: FINDINGS 8). */
+OBJECT_V0(Object *) stgmcard_create_root(void) {
+    /* 8 unused bytes past the header: the update reads only the Object */
+    OBJECT_V0_TAIL(object_new(stgmcard_root_update, sizeof(Object) + 8, sizeof(StgmcardRootData)))
 }
 
 /* Starts the fade. */
@@ -524,7 +524,8 @@ void stgmcard_contents_update(StgmcardContents *obj) {
 
 
 StgmcardContents *stgmcard_contents_create(struct StgmcardScreen *screen) {
-    StgmcardContents *obj = object_new(stgmcard_contents_update, sizeof(StgmcardContents), 0x4C);
+    /* The data block: a window per stgmcard_contents_windows entry. */
+    StgmcardContents *obj = object_new(stgmcard_contents_update, sizeof(StgmcardContents), 19 * sizeof(MessageWindow *));
 
     obj->open = stgmcard_contents_open;
     obj->close = stgmcard_contents_close;

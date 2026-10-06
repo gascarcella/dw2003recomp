@@ -7,9 +7,24 @@
 
 /* Runs the handler VSyncCallback registered (if any) once and advances the frame counter VSync() reports. */
 void psyq_vsync_tick(void);
-/* Completes the pending CD command: calls the CdSyncCallback / CdReadyCallback handlers as the PS1 would for a
- * command that finished (the stub has no data: a read completes with no sectors). Returns 1 if a handler ran. */
+/* The runtime's per-frame hook: called at the end of every vsync tick (from VSync() as from the pump), after the
+ * game's VSyncCallback handler. NULL: none. */
+void psyq_set_vsync_hook(void (*hook)(void));
+/* The CD "interrupt", once per vsync: completes the pending CdControlF command (CdSyncCallback's handler), delivers
+ * this tick's sectors of a read (CdReadyCallback's handler, once per sector) or of a stream (CdRead2: into the ring
+ * StSetRing gave). Returns 1 if a handler ran. */
 int psyq_cd_tick(void);
+/* LIBCD's timing model (port_disc_set_speed): PSYQ_CD_REALISTIC (the default) = the drive's speed from the Setmode
+ * byte (bit 0x80: 150 sectors/s, else 75) at 50 vsyncs/s and a seek delay before a read's first sector;
+ * PSYQ_CD_INSTANT = no seek, and a read delivers up to 75 sectors per tick, as many as the game takes. */
+#define PSYQ_CD_REALISTIC 0
+#define PSYQ_CD_INSTANT 1
+void psyq_cd_set_timing(int timing);
+/* The console's reset (port_reset_state): every library back to its power-on state (handlers, the CD, the pad, the
+ * GPU recorder, the sound stubs), the memory cards' contents kept; psyq_mcrd_reset is LIBMCRD's part (libmcrd.c),
+ * which psyq_reset calls. */
+void psyq_reset(void);
+void psyq_mcrd_reset(void);
 /* Tracing: on/off and the stream (stderr by default). */
 void psyq_set_trace(int on, FILE *stream);
 

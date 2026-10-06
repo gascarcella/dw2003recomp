@@ -784,7 +784,7 @@ s32 *fieldstg_background_get_size(FieldstgBackground *obj) {
 }
 
 FieldstgBackground *fieldstg_background_create(s32 file) {
-    FieldstgBackground *obj = object_create(fieldstg_background_update, sizeof(FieldstgBackground), 0x7C, 4);
+    FieldstgBackground *obj = object_create(fieldstg_background_update, sizeof(FieldstgBackground), sizeof(FieldstgBackgroundData), 4);
 
     obj->file = file;
     obj->get_size = fieldstg_background_get_size;
@@ -993,8 +993,9 @@ void fieldstg_update_main(Object *obj, struct FieldstgManager **data) {
     }
 }
 
-void fieldstg_start(void) {
-    object_new(fieldstg_update_main, sizeof(Object), 0xC);
+/* The overlay's entry point (overlay_entries): overlay_run_object keeps the object (v0; PC_PORT: FINDINGS 8). */
+OBJECT_V0(Object *) fieldstg_start(void) {
+    OBJECT_V0_TAIL(object_new(fieldstg_update_main, sizeof(Object), 3 * sizeof(struct FieldstgManager *))) /* only [0] is used */
 }
 
 void fieldstg_map_title_create_windows(Object *obj, FieldstgMapTitleData *data) {
@@ -1224,7 +1225,7 @@ void fieldstg_map_title_update(FieldstgMapTitle *obj, FieldstgMapTitleData *data
 }
 
 Object *fieldstg_map_title_create(s32 show) {
-    Object *obj = object_create(fieldstg_map_title_update, sizeof(FieldstgMapTitle), 8, 9);
+    Object *obj = object_create(fieldstg_map_title_update, sizeof(FieldstgMapTitle), sizeof(FieldstgMapTitleData), 9);
 
     obj->key1 = show;
     fieldstg_stage.title_shown = 1;

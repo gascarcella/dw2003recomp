@@ -24,6 +24,14 @@ typedef double f64;
 #define LOOP_BLOCK(body...) do { body } while (0)
 #define LOOP_BARRIER() do { } while (0)
 
+/* The byte offset of `field` in `type`, as a constant (the classic null-pointer form; the host uses the builtin).
+ * For a partial clear or copy of a struct whose prefix holds pointers (its size differs on the PC port). */
+#ifdef PC_PORT
+#define OFFSETOF(type, field) __builtin_offsetof(type, field)
+#else
+#define OFFSETOF(type, field) ((u32) & ((type *)0)->field)
+#endif
+
 /* The PC port's hook macros (PLATFORM_WAIT, PTR_ADD, SLOT_FUNC, ...): each is the plain PS1 code unless PC_PORT is
  * defined. */
 #include "port.h"

@@ -684,7 +684,7 @@ void soundtst_update_root(Object *obj, Object **data) {
 }
 
 Object *soundtst_start(void) {
-    return object_new(soundtst_update_root, sizeof(Object), 4);
+    return object_new(soundtst_update_root, sizeof(Object), sizeof(Object *));
 }
 
 /* Moves the cursor of a list of `count` entries by `dir`, scrolling so that 8 entries are shown. */

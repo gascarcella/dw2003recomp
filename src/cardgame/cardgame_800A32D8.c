@@ -104,7 +104,7 @@ void cardgame_fade_update(CardgameFade *obj) {
 }
 
 CardgameFade *cardgame_fade_create(u8 abr) {
-    CardgameFade *obj = object_new(cardgame_fade_update, sizeof(CardgameFade), 4);
+    CardgameFade *obj = object_new(cardgame_fade_update, sizeof(CardgameFade), sizeof(Object *));
 
     obj->set_color = cardgame_fade_set_color;
     obj->start = cardgame_fade_start;

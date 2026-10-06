@@ -167,7 +167,7 @@ void wstag261_update(WstagObject *obj, WstagLiftObject **data) {
 
 
 WstagObject *wstag261_start(void *arg0) {
-    WstagObject *obj = object_new(wstag261_update, sizeof(WstagObject), 4);
+    WstagObject *obj = object_new(wstag261_update, sizeof(WstagObject), sizeof(WstagLiftObject *));
 
     obj->manager = arg0;
     wstag261_funcs.setup();

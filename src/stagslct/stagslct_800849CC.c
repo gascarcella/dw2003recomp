@@ -391,7 +391,7 @@ void stagslct_update_root(Object *obj, StageSelect **data) {
 }
 
 Object *stagslct_start(void) {
-    return object_new(stagslct_update_root, sizeof(Object), 4);
+    return object_new(stagslct_update_root, sizeof(Object), sizeof(StageSelect *));
 }
 
 /* Moves the cursor by `dir` rows, scrolling at the ends and skipping separators; stays put when it can't. */
@@ -711,5 +711,10 @@ void stagslct_update(Object *obj, StageSelectData *data) {
 
 /* Creates the menu object with sizes 0 (a bug: the object is 0x70 bytes and its data 0x9C). */
 StageSelect *stagslct_create(void) {
+#ifndef PC_PORT
     return object_new(stagslct_update, 0, 0);
+#else
+    /* PC_PORT: FINDINGS 9b: the real sizes (the original's 0s write over the next heap block and at address 0) */
+    return object_new(stagslct_update, sizeof(StageSelect), sizeof(StageSelectData));
+#endif
 }

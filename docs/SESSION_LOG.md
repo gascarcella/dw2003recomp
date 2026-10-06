@@ -2,6 +2,33 @@
 
 Newest first. One short entry per session: goal, result, next steps.
 
+## 2026-10-06: Session 16: PC port M1, the headless port replays new_game (cloud branch `claude/peaceful-allen-q3t9f9`, PR to `main`)
+- **Asked:** M1 proper with dedicated sub-agents owning disjoint files: LIBCD over the BIN, the scripted pad, the per-frame
+  log, the headless runner and its test against `tests/replay/expected/new_game.json`, the findings on the boot path;
+  delivered as a pull request (the user later: merge it after CI is green, keep going).
+- **Phase 1:** base verified (`build.sh --check` 55 s, `test.sh` green, the skeleton builds and runs). This machine: 4 cores,
+  15 GB: 3 agents at once, `DW3_JOBS=1`. ASan/UBSan present; `gcc-multilib` installed with the user's approval.
+- **Step 0 (orchestrator):** `port/include/port_harness.h` (the tasks' interfaces), the per-vsync frame hook
+  (`psyq_set_vsync_hook`; a frame is a vsync from any source), `--disc/--cd-speed/--script/--log/--record`, our own SHA-1.
+- **Agents (each merged with `merge_checkpoint.sh`, byte-identical every time):**
+  - T1 cd: `port/src/disc.c` (CUE/BIN, whole-BIN SHA-1 with a stamp cache), `libcd.c` (realistic/instant timing in vsync
+    ticks, movie streaming into the game's ring: the opening movie plays at exactly 15 fps).
+  - T2 log: `framelog.c` (per-frame log, record), `state.c` (probes, `port_state_read`, `gamestate_data`'s PS1-image hash,
+    equal to the emulator's five dumps), `port_gen.py state`, `-DDW3_PORT_M32`; its `-m32`/`-m64` log comparison found the
+    truncated overlay root object.
+  - T4 findings: FINDINGS 7 (R3000A `% 0`), 8 (36 creators return their object, `OBJECT_V0`), 9a-c (`object_destroy` stops
+    exactly the live objects), new 9d.
+  - T5 sizes: FINDINGS 9d: 122 object data sizes in `sizeof` units, `port_inventory.py object-sizes`, overlay entries
+    return `Object *`, the 8-aligned host heap, FIELDSTG's NULL map events and `FieldstgBackgroundView`.
+  - T3 runner: `script.c` (run.lua's engine in C; `walk` too, not `reset`), `json.c`, `tests/port/run.py`, the `port` layer
+    of `test.sh`, CI (`gcc-multilib`, `run.py --m32`), `setup.sh cmake` (venv cmake/ninja when missing). Integration: the
+    overlay copy's CPU time (the checkpoint `new_game_field` sees the PS1 mid-copy), the primitive hash ignores texture
+    padding, the `-m32` heap assert.
+  - Orchestrator: `DW3_PORT_TRACE` fixed, `OFFSETOF` for `fieldstg_find_stage`'s clear, FINDINGS 10, docs.
+- **Result:** `tests/port/run.py --m32 --sanitize`: all 5 checkpoints (stage, map, stable hash), both sequences, two runs
+  identical, `-m32` == `-m64`, no sanitizer report; `scripts/test.sh`: probe + 5 layers passed.
+- **Next:** `first_battle_save` in the port (times out at step 21 after matching `asuka_lobby`), then M2 (software GPU, SDL3).
+
 ## 2026-10-05: Session 15: PC port decisions, M0 and the M1 skeleton (worktree branch `gascarcella/PC-Port-Kickoff`, PR to `main`)
 - **Asked:** decide `docs/PC_PORT_PLAN.md` section 4, then M0 (and, the user's choice in phase 1, an M1 skeleton) with
   dedicated sub-agents owning disjoint files, delivered as a pull request.

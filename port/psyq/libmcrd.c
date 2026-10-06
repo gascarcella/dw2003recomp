@@ -88,3 +88,7 @@ s32 MemCardGetDirentry(s32 chan, char *name, DIRENTRY *dir, s32 *files, s32 offs
     }
     return MCRD_NO_CARD;
 }
+
+/* LIBMCRD's part of the console's reset (psyq.h). Session 16 stub: T6 ("memcard") implements it. */
+void psyq_mcrd_reset(void) {
+}

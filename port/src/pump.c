@@ -1,7 +1,7 @@
 /* The interrupt pump (include/port.h PLATFORM_WAIT/PLATFORM_HALT): the game's busy-waits call port_wait(), which runs
- * what the PS1's interrupts would have run, deterministically: one vsync (the VSyncCallback handler, the frame
- * counter) and the pending CD command's completion (the CdSync/CdReady handlers), both in the Psy-Q shim
- * (port/psyq/psyq.h). Each call is one frame; the frame cap ends the run with status 0.
+ * what the PS1's interrupts would have run, deterministically: one vsync (psyq_vsync_tick: the VSyncCallback handler,
+ * then port_frame below, which runs the CD "interrupt" and the harness). A frame is one vsync tick, whether the game's
+ * VSync() or port_wait() ran it; the frame cap ends the run with status 0.
  *
  * The watchdog: a loop that no PLATFORM_WAIT reaches (cdload_load_file's `do cdload_update() while (loading)`, which
  * only a CD interrupt ends on the PS1) would spin forever once the shim cannot complete a read; SIGALRM ends it with
@@ -11,13 +11,16 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "port_harness.h"
 #include "port_runtime.h"
 #include "psyq.h"
 
 long port_max_frames = 600;
 long port_frames;
 int port_watchdog_sec = 10;
+int port_script_active;
 static volatile sig_atomic_t port_watchdog_armed;
+static void port_frame(void);
 
 static void port_watchdog(int sig) {
     static const char msg[] = "port: watchdog: no port_wait() for the watchdog's time: the game spins in a loop without "
@@ -30,6 +33,7 @@ static void port_watchdog(int sig) {
 }
 
 void port_pump_init(void) {
+    psyq_set_vsync_hook(port_frame);
     if (port_watchdog_sec > 0) {
         struct sigaction sa;
         memset(&sa, 0, sizeof(sa));
@@ -40,20 +44,30 @@ void port_pump_init(void) {
     }
 }
 
-void port_wait(void) {
+/* The per-frame work, run by the shim at the end of every vsync tick (psyq_set_vsync_hook), whether the tick came
+ * from the game's VSync() or from port_wait(): the CD "interrupt" (psyq_cd_tick), the frame count, the per-frame
+ * log, the input script, the frame cap. */
+static void port_frame(void) {
     int cd;
     if (port_watchdog_armed) {
         alarm((unsigned)port_watchdog_sec); /* re-arm: progress */
     }
-    psyq_vsync_tick();
     cd = psyq_cd_tick();
     port_frames++;
     if (port_trace) {
         port_log("tick: frame %ld%s", port_frames, cd ? " (CD handler ran)" : "");
     }
+    port_framelog_frame();
+    if (port_script_active) {
+        port_script_frame();
+    }
     if (port_max_frames > 0 && port_frames >= port_max_frames) {
         port_exit(0, "frame cap");
     }
+}
+
+void port_wait(void) {
+    psyq_vsync_tick();
 }
 
 void port_halt(const char *file, int line) {
@@ -67,6 +81,11 @@ void port_unimplemented(const char *fn) {
 }
 
 void port_exit(int status, const char *reason) {
+    static int exiting;
+    if (!exiting) {
+        exiting = 1;
+        port_framelog_close(status, reason);
+    }
     port_log("exit %d after %ld frame(s): %s", status, port_frames, reason);
     fflush(NULL);
     exit(status);

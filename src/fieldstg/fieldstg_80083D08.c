@@ -350,100 +350,116 @@ void fieldstg_choice_update(FieldstgChoice *obj, FieldstgChoiceData *data) {
     }
 }
 
-void fieldstg_choice_start_0(void) {
-    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), 0x14);
+OBJECT_V0(FieldstgChoice *) fieldstg_choice_start_0(void) {
+    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), sizeof(FieldstgChoiceData));
 
     obj->index = 0;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
-void fieldstg_choice_start_1(void) {
-    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), 0x14);
+OBJECT_V0(FieldstgChoice *) fieldstg_choice_start_1(void) {
+    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), sizeof(FieldstgChoiceData));
 
     obj->index = 1;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
-void fieldstg_choice_start_2(void) {
-    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), 0x14);
+OBJECT_V0(FieldstgChoice *) fieldstg_choice_start_2(void) {
+    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), sizeof(FieldstgChoiceData));
 
     obj->index = 2;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
-void fieldstg_choice_start_3(void) {
-    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), 0x14);
+OBJECT_V0(FieldstgChoice *) fieldstg_choice_start_3(void) {
+    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), sizeof(FieldstgChoiceData));
 
     obj->index = 3;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
-void fieldstg_choice_start_4(void) {
-    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), 0x14);
+OBJECT_V0(FieldstgChoice *) fieldstg_choice_start_4(void) {
+    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), sizeof(FieldstgChoiceData));
 
     obj->index = 4;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
-void fieldstg_choice_start_5(void) {
-    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), 0x14);
+OBJECT_V0(FieldstgChoice *) fieldstg_choice_start_5(void) {
+    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), sizeof(FieldstgChoiceData));
 
     obj->index = 5;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
-void fieldstg_choice_start_6(void) {
-    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), 0x14);
+OBJECT_V0(FieldstgChoice *) fieldstg_choice_start_6(void) {
+    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), sizeof(FieldstgChoiceData));
 
     obj->index = 6;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
-void fieldstg_choice_start_7(void) {
-    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), 0x14);
+OBJECT_V0(FieldstgChoice *) fieldstg_choice_start_7(void) {
+    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), sizeof(FieldstgChoiceData));
 
     obj->index = 7;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
-void fieldstg_choice_start_8(void) {
-    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), 0x14);
+OBJECT_V0(FieldstgChoice *) fieldstg_choice_start_8(void) {
+    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), sizeof(FieldstgChoiceData));
 
     obj->index = 8;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
-void fieldstg_choice_start_9(void) {
-    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), 0x14);
+OBJECT_V0(FieldstgChoice *) fieldstg_choice_start_9(void) {
+    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), sizeof(FieldstgChoiceData));
 
     obj->index = 9;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
-void fieldstg_choice_start_10(void) {
-    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), 0x14);
+OBJECT_V0(FieldstgChoice *) fieldstg_choice_start_10(void) {
+    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), sizeof(FieldstgChoiceData));
 
     obj->index = 10;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
-void fieldstg_choice_start_11(void) {
-    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), 0x14);
+OBJECT_V0(FieldstgChoice *) fieldstg_choice_start_11(void) {
+    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), sizeof(FieldstgChoiceData));
 
     obj->index = 11;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
-void fieldstg_choice_start_12(void) {
-    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), 0x14);
+OBJECT_V0(FieldstgChoice *) fieldstg_choice_start_12(void) {
+    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), sizeof(FieldstgChoiceData));
 
     obj->index = 12;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
-void fieldstg_choice_start_13(void) {
-    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), 0x14);
+OBJECT_V0(FieldstgChoice *) fieldstg_choice_start_13(void) {
+    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), sizeof(FieldstgChoiceData));
 
     obj->index = 13;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
-void fieldstg_choice_start_14(void) {
-    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), 0x14);
+OBJECT_V0(FieldstgChoice *) fieldstg_choice_start_14(void) {
+    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), sizeof(FieldstgChoiceData));
 
     obj->index = 14;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
-void fieldstg_choice_start_15(void) {
-    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), 0x14);
+OBJECT_V0(FieldstgChoice *) fieldstg_choice_start_15(void) {
+    FieldstgChoice *obj = object_new(fieldstg_choice_update, sizeof(FieldstgChoice), sizeof(FieldstgChoiceData));
 
     obj->index = 15;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
 void fieldstg_stage_update(FieldstgStage *obj, FieldstgStageData *data) {
@@ -507,7 +523,7 @@ void fieldstg_stage_update(FieldstgStage *obj, FieldstgStageData *data) {
 }
 
 FieldstgStage *fieldstg_stage_entry(s32 manager) {
-    FieldstgStage *obj = object_new(fieldstg_stage_update, sizeof(FieldstgStage), 8);
+    FieldstgStage *obj = object_new(fieldstg_stage_update, sizeof(FieldstgStage), sizeof(FieldstgStageData));
 
     obj->manager = manager;
     fieldstg_stage_funcs.setup();

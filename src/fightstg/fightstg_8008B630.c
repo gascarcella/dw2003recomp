@@ -31,7 +31,7 @@ s32 fightstg_script_run_stage(FightstgScript *obj, FightstgScriptData *data);
 void fightstg_script_run_sound(FightstgScript *obj, FightstgScriptData *data);
 void fightstg_script_run_flash(FightstgScript *obj, FightstgScriptData *data);
 
-/* In fightstg_8008D3B4 (defined there as void; the object stays in v0 and command 2 keeps it). */
+/* In fightstg_8008D3B4 (defined there as void; the object stays in v0 and command 2 keeps it; OBJECT_V0). */
 Object *fightstg_jump_create(FightstgModelParams *params, s32 kind, s32 distance);
 void *fightstg_move_create(FightstgModelParams *params, void *pos, s32 frames);
 
@@ -58,7 +58,7 @@ typedef struct FightstgMessage {
 /* In records's .sdata: records_get_digimon (gamestate.c declares it void). */
 extern RecordsDigimon *(*records_get_digimon_func)(s32 id);
 
-/* In fightstg_8008D3B4 (defined there as void; their objects stay in v0 and the callers keep them). */
+/* In fightstg_8008D3B4 (defined there as void; their objects stay in v0 and the callers keep them; OBJECT_V0). */
 FightstgMessage *fightstg_message_create(void);
 void *fightstg_counter_create(s32 side, s32 damage_taken, s32 no_knockout);
 void *fightstg_boss_turn_create(s32 arg0, s32 arg1);
@@ -702,8 +702,9 @@ void fightstg_defeat_camera_update(FightstgDefeatCamera *obj, FightstgScript **d
     }
 }
 
-void fightstg_defeat_camera_create(void) {
-    object_new(fightstg_defeat_camera_update, sizeof(FightstgDefeatCamera), sizeof(FightstgScript *));
+OBJECT_V0(FightstgDefeatCamera *) fightstg_defeat_camera_create(void) {
+    /* PC_PORT: FINDINGS 8: callers use the object (v0) */
+    OBJECT_V0_TAIL(object_new(fightstg_defeat_camera_update, sizeof(FightstgDefeatCamera), sizeof(FightstgScript *)))
 }
 
 /* Side `side`'s attack: the message (8 or 0x8D), the effect (WFIGHTMN), then per fightstg_action's
@@ -899,10 +900,11 @@ void fightstg_attack_update(FightstgAttack *obj, FightstgMessage **data) {
     }
 }
 
-void fightstg_attack_create(s32 side) {
+OBJECT_V0(FightstgAttack *) fightstg_attack_create(s32 side) {
     FightstgAttack *obj = object_new(fightstg_attack_update, sizeof(FightstgAttack), sizeof(FightstgMessage *));
 
     obj->side = side;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
 /* .bss */

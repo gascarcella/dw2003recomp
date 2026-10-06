@@ -82,7 +82,7 @@ void stplnmet_update_main(Object *obj, StplnmetMain **data) {
 
 /* The overlay's entry point (overlay_entries). */
 Object *stplnmet_start(void) {
-    return object_new(stplnmet_update_main, sizeof(Object), 4);
+    return object_new(stplnmet_update_main, sizeof(Object), sizeof(StplnmetMain *));
 }
 
 void stplnmet_bg_update(StplnmetBg *obj) {

@@ -14,6 +14,17 @@ void *heap_try_alloc(u32 size, s32 state);
 void *heap_try_alloc_top(u32 size, s32 state);
 void *heap_alloc(s32 size, s32 arg1);
 
+/* The unit block sizes are rounded to. PS1: 4. Host: 8 (PC_PORT), so that every block's data is 8-aligned like its
+ * pointers: the heap starts 8-aligned in the arena (0x800AB800's offset) and the header (two pointers and the state)
+ * is 24 bytes. In the -m32 build (DW3_PORT_M32) the header is 12 bytes and the data 4-aligned, which is what its
+ * pointers need; the sizes are rounded the same way in both builds. */
+#ifndef PC_PORT
+#define HEAP_ALIGN 4
+#else
+#define HEAP_ALIGN 8
+_Static_assert(sizeof(HeapBlock) % sizeof(void *) == 0, "PC_PORT: the heap block header keeps the data pointer-aligned");
+#endif
+
 /* Frees a block and merges it with free neighbours. */
 void heap_free(void *ptr) {
     HeapBlock *block = (HeapBlock *)ptr - 1;
@@ -104,7 +115,7 @@ void *heap_try_alloc(u32 size, s32 state) {
     u32 avail;
     u32 split_min;
 
-    size = (size + 3) / 4 * 4;
+    size = (size + HEAP_ALIGN - 1) / HEAP_ALIGN * HEAP_ALIGN;
     split_min = size + sizeof(HeapBlock) + 8; /* split only if the rest exceeds a header + 8 bytes */
     for (block = heap_funcs.first; block->state != 1; block = block->next) {
         if (block->state == 0) {
@@ -134,7 +145,7 @@ void *heap_try_alloc_top(u32 size, s32 state) {
     HeapBlock *new;
     u32 avail;
 
-    size = (size + 3) / 4 * 4 + sizeof(HeapBlock);
+    size = (size + HEAP_ALIGN - 1) / HEAP_ALIGN * HEAP_ALIGN + sizeof(HeapBlock);
     for (block = heap_funcs.end - 1; heap_funcs.first != block; block = block->prev) {
         prev = block->prev;
         if (prev->state == 0) {

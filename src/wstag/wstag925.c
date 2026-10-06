@@ -31,7 +31,7 @@ void wstag925_update(WstagObject *obj, WstagEventData *data) {
 }
 
 WstagObject *wstag925_start(void *arg0) {
-    WstagObject *obj = object_new(wstag925_update, sizeof(WstagObject), 4);
+    WstagObject *obj = object_new(wstag925_update, sizeof(WstagObject), sizeof(FieldstgEvent *));
 
     obj->manager = arg0;
     wstag925_funcs.setup();
@@ -170,11 +170,12 @@ void wstag925_sprite_anim_update(WstagSpriteAnimObject *obj) {
     }
 }
 
-void wstag925_sprite_anim_create(s32 arg0) {
+OBJECT_V0(WstagSpriteAnimObject *) wstag925_sprite_anim_create(s32 arg0) {
     WstagSpriteAnimObject *obj = object_create(wstag925_sprite_anim_update, sizeof(WstagSpriteAnimObject), 0, arg0);
 
     obj->x = 0x150;
     obj->y = 0x112;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
 /* The stage's .data (tools/wstag_data.py). */

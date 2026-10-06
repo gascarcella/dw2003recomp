@@ -1115,10 +1115,11 @@ void fightstg_item_update(FightstgItem *obj, FightstgMessage **data) {
     }
 }
 
-void fightstg_item_create(s32 item) {
+OBJECT_V0(FightstgItem *) fightstg_item_create(s32 item) {
     FightstgItem *obj = object_new(fightstg_item_update, sizeof(FightstgItem), sizeof(FightstgMessage *));
 
     obj->item = item;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
 s32 fightstg_enemy_check_condition(u8 type, s16 value);
@@ -1954,11 +1955,12 @@ void fightstg_tech_update(FightstgTech *obj, FightstgMessage **data) {
     }
 }
 
-void fightstg_tech_create(s8 side, s32 tech) {
+OBJECT_V0(FightstgTech *) fightstg_tech_create(s8 side, s32 tech) {
     FightstgTech *obj = object_new(fightstg_tech_update, sizeof(FightstgTech), sizeof(FightstgMessage *));
 
     obj->side = side;
     obj->tech = tech;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
 /* The scripted battle's enemy turn (battle type 5): the enemy uses its tech_2, which leaves the party's member at
@@ -2018,8 +2020,9 @@ void fightstg_scripted_turn_update(FightstgScriptedTurn *obj, FightstgMessage **
     }
 }
 
-void fightstg_scripted_turn_create(void) {
-    object_new(fightstg_scripted_turn_update, sizeof(FightstgScriptedTurn), sizeof(FightstgMessage *));
+OBJECT_V0(FightstgScriptedTurn *) fightstg_scripted_turn_create(void) {
+    /* PC_PORT: FINDINGS 8: callers use the object (v0) */
+    OBJECT_V0_TAIL(object_new(fightstg_scripted_turn_update, sizeof(FightstgScriptedTurn), sizeof(FightstgMessage *)))
 }
 
 void fightstg_boss_turn_update(FightstgBossTurn *obj, FightstgMessage **data) {
@@ -2640,7 +2643,7 @@ FightstgCameraSetting *fightstg_camera_get_default(FightstgCamera *obj) {
     return &fightstg_camera_setting;
 }
 
-void fightstg_camera_create(s32 layer_id) {
+OBJECT_V0(FightstgCamera *) fightstg_camera_create(s32 layer_id) {
     FightstgCamera *obj = object_create(fightstg_camera_update, sizeof(FightstgCamera), 0, 0x12);
 
     obj->set = fightstg_camera_set;
@@ -2648,6 +2651,7 @@ void fightstg_camera_create(s32 layer_id) {
     obj->get_default = fightstg_camera_get_default;
     obj->layer_id = layer_id;
     obj->get_preset = fightstg_camera_get_preset;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
 /* The party's command menu (on the object list as 0xE): base.step = phase, base.substep = the command
@@ -2679,7 +2683,7 @@ struct FightstgMemberMenu *fightstg_member_menu_create(s32 *result, s32 *cursor,
 struct FightstgSwitchMenu *fightstg_switch_menu_create(s32 *result);
 struct FightstgSwitchMenu *fightstg_switch_menu_create_team(s32 *result, s32 *tech);
 struct FightstgConfusedMenu *fightstg_confused_menu_create(s32 *result, Object *portrait, Object *idle_camera);
-/* fightstg_80086A00.c defines it as void; it leaves its object in v0, which this file keeps. */
+/* fightstg_80086A00.c defines it as void; it leaves its object in v0, which this file keeps (OBJECT_V0). */
 void *fightstg_idle_camera_create(void);
 
 void fightstg_command_update(FightstgCommand *obj, FightstgCommandData *data) {
@@ -2935,8 +2939,9 @@ void fightstg_command_update(FightstgCommand *obj, FightstgCommandData *data) {
     }
 }
 
-void fightstg_command_create(void) {
-    object_create(fightstg_command_update, sizeof(FightstgCommand), sizeof(FightstgCommandData), 0xE);
+OBJECT_V0(FightstgCommand *) fightstg_command_create(void) {
+    /* PC_PORT: FINDINGS 8: callers use the object (v0) */
+    OBJECT_V0_TAIL(object_create(fightstg_command_update, sizeof(FightstgCommand), sizeof(FightstgCommandData), 0xE))
 }
 
 void fightstg_command_set_phase(s32 phase) {
@@ -5728,7 +5733,7 @@ void fightstg_jump_update(FightstgJump *obj) {
     }
 }
 
-void fightstg_jump_create(FightstgModelParams *target, s32 kind, s32 distance) {
+OBJECT_V0(FightstgJump *) fightstg_jump_create(FightstgModelParams *target, s32 kind, s32 distance) {
     FightstgJump *obj = object_new(fightstg_jump_update, sizeof(FightstgJump), 0);
 
     obj->kind = kind;
@@ -5737,6 +5742,7 @@ void fightstg_jump_create(FightstgModelParams *target, s32 kind, s32 distance) {
     obj->start_y = target->pos.y;
     obj->height = fightstg_jump_params[kind - 1].height;
     obj->speed = fightstg_jump_params[kind - 1].speed;
+    OBJECT_V0_RETURN(obj) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
 /* fightstg_move_create's object: moves a model (its parameters' pos) from `from` to `to`. */

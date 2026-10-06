@@ -225,7 +225,17 @@ typedef struct FieldstgCamera {
 /* The object of type 4 that fieldstg_camera_apply asks for the map size. */
 typedef struct FieldstgBackgroundView {
     /* 0x000 */ Object base;
+#ifndef PC_PORT
     /* 0x050 */ u8 unk_050[0xE0];
+#else
+    /* PC_PORT: FieldstgBackground's (fieldstg_80085590.c) two pointers before get_size, so that it lies at the
+     * object's offset on the host too */
+    u8 unk_050[0x4];
+    void *header;
+    u8 unk_058[0xAC]; /* x .. slots */
+    void *tiles;
+    u8 unk_108[0x28]; /* visible .. first_y */
+#endif
     /* 0x130 */ FieldstgPos *(*get_size)(struct FieldstgBackgroundView *obj);
 } FieldstgBackgroundView;
 
@@ -456,8 +466,8 @@ FieldstgIcon *fieldstg_icon_create(s32 style, s32 type, s32 id) {
     return obj;
 }
 
-void fieldstg_icon_start(s32 id) {
-    fieldstg_icon_create(0, 0, id);
+OBJECT_V0(FieldstgIcon *) fieldstg_icon_start(s32 id) {
+    OBJECT_V0_TAIL(fieldstg_icon_create(0, 0, id)) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
 void fieldstg_icon_message(FieldstgIcon *obj, s32 msg, s32 actor_id) {
@@ -666,7 +676,7 @@ void fieldstg_map_events_update(FieldstgMapEvents *obj, FieldstgMapEventsData *d
 }
 
 FieldstgMapEvents *fieldstg_map_events_create(s32 arg0, FieldstgMapEvent *arg1) {
-    FieldstgMapEvents *obj = object_new(fieldstg_map_events_update, sizeof(FieldstgMapEvents), 8);
+    FieldstgMapEvents *obj = object_new(fieldstg_map_events_update, sizeof(FieldstgMapEvents), sizeof(FieldstgMapEventsData));
 
     obj->sprite_file = arg0;
     return obj;
@@ -724,7 +734,7 @@ void fieldstg_dialog_update(FieldstgDialog *obj, MessageDialog **data) {
 }
 
 FieldstgDialog *fieldstg_dialog_create(FieldstgActor *actor, s32 message, s32 type, s32 fixed) {
-    FieldstgDialog *obj = object_new(fieldstg_dialog_update, sizeof(FieldstgDialog), 4);
+    FieldstgDialog *obj = object_new(fieldstg_dialog_update, sizeof(FieldstgDialog), sizeof(MessageDialog *));
 
     obj->actor = actor;
     obj->message = message;
@@ -735,7 +745,7 @@ FieldstgDialog *fieldstg_dialog_create(FieldstgActor *actor, s32 message, s32 ty
 }
 
 FieldstgDialog *fieldstg_dialog_create_talk(FieldstgActor *actor, s32 message) {
-    FieldstgDialog *obj = object_new(fieldstg_dialog_update, sizeof(FieldstgDialog), 4);
+    FieldstgDialog *obj = object_new(fieldstg_dialog_update, sizeof(FieldstgDialog), sizeof(MessageDialog *));
     FieldstgPos pos;
 
     obj->actor = actor;
@@ -925,7 +935,7 @@ void fieldstg_sprites_update(FieldstgSprites *obj, FieldstgSpots **data) {
 }
 
 FieldstgSprites *fieldstg_sprites_create(s32 file, FieldstgSprite *sprites) {
-    FieldstgSprites *obj = object_new(fieldstg_sprites_update, sizeof(FieldstgSprites), 4);
+    FieldstgSprites *obj = object_new(fieldstg_sprites_update, sizeof(FieldstgSprites), sizeof(FieldstgSpots *));
 
     obj->sprites = sprites;
     obj->file = file;
@@ -950,10 +960,10 @@ FieldstgSprite *fieldstg_sprites_find_next(void) {
     return NULL;
 }
 
-void fieldstg_sprites_find_first(s32 arg0) {
+OBJECT_V0(FieldstgSprite *) fieldstg_sprites_find_first(s32 arg0) {
     fieldstg_sprites_search_key = arg0;
     fieldstg_sprites_search_next = fieldstg_stage.sprites;
-    fieldstg_sprites_find_next();
+    OBJECT_V0_TAIL(fieldstg_sprites_find_next()) /* PC_PORT: FINDINGS 8: callers use the object (v0) */
 }
 
 void fieldstg_loader_load_inn_names(Object *obj) {
@@ -978,6 +988,13 @@ void fieldstg_loader_load_action_anims(Object *obj) {
     s32 b = 0;
     s32 c = 0;
 
+#ifdef PC_PORT
+    /* PC_PORT: a stage without map events (WSTAG780, map 0x2D7: fieldstg_find_stage zeroed the field) leaves NULL
+     * here; the PS1 reads the end marker's 0 from low RAM (0x00000008, 0 there: checked in the emulator). */
+    if (entry == NULL) {
+        return;
+    }
+#endif
     for (; entry->type != 0; entry++) {
         switch (entry->type) {
         case 2:
@@ -1111,7 +1128,7 @@ void fieldstg_loader_update(Object *obj) {
 }
 
 Object *fieldstg_loader_create(s32 step) {
-    Object *obj = object_new(fieldstg_loader_update, 0x54, 0); /* PC_PORT: sizeof(Object) + 4; no field of the extra word is used */
+    Object *obj = object_new(fieldstg_loader_update, sizeof(Object) + 4, 0); /* 4 unused bytes past the header */
 
     obj->key2 = step;
     return obj;
@@ -1748,7 +1765,7 @@ INCLUDE_ASM("asm/fieldstg/nonmatchings/fieldstg_80087DB0", fieldstg_manager_upda
 #endif
 
 FieldstgManager *fieldstg_manager_create(void) {
-    return object_create(fieldstg_manager_update, sizeof(FieldstgManager), 0x7C, 7);
+    return object_create(fieldstg_manager_update, sizeof(FieldstgManager), sizeof(FieldstgManagerData), 7);
 }
 
 void fieldstg_goto_map_delayed(s32 map, s32 entry, s32 x, s32 y, s32 dir, s32 delay) {
@@ -2488,7 +2505,7 @@ void fieldstg_spots_update(FieldstgSpots *obj, FieldstgSpotsData *data) {
 }
 
 FieldstgSpots *fieldstg_spots_create(s32 count) {
-    FieldstgSpots *obj = object_create(fieldstg_spots_update, sizeof(FieldstgSpots), 8, 0xB);
+    FieldstgSpots *obj = object_create(fieldstg_spots_update, sizeof(FieldstgSpots), sizeof(FieldstgSpotsData), 0xB);
     FieldstgSprite *sprite;
     s32 i;
     s32 n;
@@ -4349,7 +4366,7 @@ void fieldstg_actor_update(FieldstgActor *obj, void **data) {
 }
 
 FieldstgActor *fieldstg_actor_create(s32 id, s32 type, s32 vram, FieldstgPlacedActor *placed) {
-    FieldstgActor *obj = object_create(fieldstg_actor_update, sizeof(FieldstgActor), 0x10, 5);
+    FieldstgActor *obj = object_create(fieldstg_actor_update, sizeof(FieldstgActor), 4 * sizeof(void *), 5);
     s32 flag;
 
     obj->walk_out = fieldstg_actor_walk_out;
@@ -4730,7 +4747,7 @@ void fieldstg_find_stage(void) {
         entry = fieldstg_stages_2d;
     }
     id = gamestate_data.funcs.get_map();
-    heap_funcs.bzero(&fieldstg_stage, 0x64); /* PC_PORT: the fields before return_pos (offsetof) */
+    heap_funcs.bzero(&fieldstg_stage, OFFSETOF(FieldstgStageState, return_pos)); /* the fields before return_pos */
     while (1) {
         if (entry->id == id) {
             fieldstg_stage.code_file = entry->file;
@@ -5047,25 +5064,26 @@ void fieldstg_attr_get_flat_step(s32 arg0, s32 speed, s32 dir, FieldstgPos *out)
 struct FieldstgLift;
 struct FieldstgStage;
 void fieldstg_effects_message(Object *obj, s32 cmd);
-void fieldstg_effects_start(void);
+OBJECT_V0(Object *) fieldstg_effects_start(void); /* PC_PORT: FINDINGS 8 */
 void fieldstg_lift_message(struct FieldstgLift *obj, s32 cmd);
 struct FieldstgLift *fieldstg_lift_create(s32 id);
-void fieldstg_choice_start_0(void);
-void fieldstg_choice_start_1(void);
-void fieldstg_choice_start_2(void);
-void fieldstg_choice_start_3(void);
-void fieldstg_choice_start_4(void);
-void fieldstg_choice_start_5(void);
-void fieldstg_choice_start_6(void);
-void fieldstg_choice_start_7(void);
-void fieldstg_choice_start_8(void);
-void fieldstg_choice_start_9(void);
-void fieldstg_choice_start_10(void);
-void fieldstg_choice_start_11(void);
-void fieldstg_choice_start_12(void);
-void fieldstg_choice_start_13(void);
-void fieldstg_choice_start_14(void);
-void fieldstg_choice_start_15(void);
+/* PC_PORT: FINDINGS 8: the creators return their object on the host (FieldstgChoice). */
+OBJECT_V0(Object *) fieldstg_choice_start_0(void);
+OBJECT_V0(Object *) fieldstg_choice_start_1(void);
+OBJECT_V0(Object *) fieldstg_choice_start_2(void);
+OBJECT_V0(Object *) fieldstg_choice_start_3(void);
+OBJECT_V0(Object *) fieldstg_choice_start_4(void);
+OBJECT_V0(Object *) fieldstg_choice_start_5(void);
+OBJECT_V0(Object *) fieldstg_choice_start_6(void);
+OBJECT_V0(Object *) fieldstg_choice_start_7(void);
+OBJECT_V0(Object *) fieldstg_choice_start_8(void);
+OBJECT_V0(Object *) fieldstg_choice_start_9(void);
+OBJECT_V0(Object *) fieldstg_choice_start_10(void);
+OBJECT_V0(Object *) fieldstg_choice_start_11(void);
+OBJECT_V0(Object *) fieldstg_choice_start_12(void);
+OBJECT_V0(Object *) fieldstg_choice_start_13(void);
+OBJECT_V0(Object *) fieldstg_choice_start_14(void);
+OBJECT_V0(Object *) fieldstg_choice_start_15(void);
 struct FieldstgStage *fieldstg_stage_entry(s32 manager);
 void fieldstg_stage_setup(void);
 void fieldstg_encounter_step(void);

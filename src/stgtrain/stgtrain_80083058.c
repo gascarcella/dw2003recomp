@@ -315,7 +315,7 @@ void stgtrain_update_main(Object *obj, StgtrainMain **data) {
 
 /* The overlay's entry point (overlay_entries). */
 Object *stgtrain_start(void) {
-    return object_new(stgtrain_update_main, sizeof(Object), 4);
+    return object_new(stgtrain_update_main, sizeof(Object), sizeof(StgtrainMain *));
 }
 
 /* The training screen's data block (0x80 bytes): its text windows and the objects it creates. */

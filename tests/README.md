@@ -261,6 +261,18 @@ one summary line with its counts and fails non-zero on a violation:
 
 Save round trips (`.mcd` files exchanged between the emulator and the port) join it once the port writes saves.
 
+## The port's M1 test (`scripts/test.sh` layer `port`)
+
+`tests/port/run.py [--m32] [--sanitize] [--cd-speed instant|realistic]` builds the PC port (`port/`), runs layer 2's
+`new_game` script in it twice (`build/port/dw2003 --disc iso/dw2003.cue --script ...`: the port's step engine,
+`port/src/script.c`, has `run.lua`'s semantics) and compares the record's **cross-core view** with
+`tests/replay/expected/new_game.json`, with `replay.py`'s own `cross_core_view` and `compare`: the checkpoints' names,
+stages, maps and stable hashes, and the overlay and map sequences without frames. The two runs' logs and records must be
+byte-identical; `--m32` adds the 32-bit build (same log and record: the layout check), `--sanitize` an ASan/UBSan build (no
+report). Frames, `random_index` and the full hash are not compared, as between the emulator's two cores (`tests/port/README.md`).
+It needs the disc, the host gcc, CMake and Ninja (on PATH, or `scripts/setup.sh cmake` puts them in the venv) and the
+venv: no emulator. `scripts/test.sh` skips it when one is missing; CI runs it, and `--m32`, with the data checkout.
+
 ## Coverage (not a test)
 
 `tools/coverage.py run` records which game functions the emulator tests execute, to choose the next tests and to

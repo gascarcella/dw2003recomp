@@ -31,7 +31,7 @@ void wstag490_update(WstagObject *obj, WstagEventData *data) {
 }
 
 WstagObject *wstag490_start(void *arg0) {
-    WstagObject *obj = object_new(wstag490_update, sizeof(WstagObject), 4);
+    WstagObject *obj = object_new(wstag490_update, sizeof(WstagObject), sizeof(FieldstgEvent *));
 
     obj->manager = arg0;
     wstag490_funcs.setup();

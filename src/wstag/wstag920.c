@@ -24,7 +24,7 @@ void wstag920_update(WstagObject *obj) {
 }
 
 WstagObject *wstag920_start(void *arg0) {
-    WstagObject *obj = object_new(wstag920_update, sizeof(WstagObject), 4);
+    WstagObject *obj = object_new(wstag920_update, sizeof(WstagObject), sizeof(Object *));
 
     obj->manager = arg0;
     wstag920_funcs.setup();

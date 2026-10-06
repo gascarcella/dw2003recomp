@@ -35,3 +35,8 @@ void psyq_trace_printf(const char *fmt, ...) {
     va_end(ap);
     fputc('\n', psyq_trace_stream);
 }
+
+/* The console's reset (psyq.h). Session 16 stub: T7 ("reset") implements it, calling each library's part. */
+void psyq_reset(void) {
+    psyq_mcrd_reset();
+}
