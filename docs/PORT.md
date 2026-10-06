@@ -231,7 +231,8 @@ mods); without `--config` the binary depends on nothing on the machine. Built-in
 | Byte-identical PS1 build | No hook or `#ifdef PC_PORT` changes a PS1 byte | `scripts/build.sh --check` (CI) |
 | Host-compile gate | Every unit compiles at `-m64` with pointer/int casts and implicit declarations as errors; no duplicate global | `tools/port_inventory.py probe`, `link` (in `scripts/test.sh`, CI) |
 | Shim coverage | Every Psy-Q function the game calls is defined, nothing twice | `port/psyq/check.sh` |
-| Layer-1 goldens on the host | GPU (715 cases), GTE (865), MDEC, XA and other families recorded in the emulator replay byte-for-byte through the shim's C; known GPU differences in `tests/host/known_mismatches.json` | `tests/golden/`, `tests/host/replay.py`, `tests/xa/` |
+| Layer-1 goldens on the host | GPU (715 cases), GTE (865), LIBGS's view (230: the battle camera), MDEC, XA and other families recorded in the emulator replay byte-for-byte through the shim's C; known GPU differences in `tests/host/known_mismatches.json` | `tests/golden/`, `tests/host/replay.py`, `tests/xa/` |
+| The battle's VRAM | The first battle's textures and CLUTs equal to the emulator's (its frames cannot be compared: the PS1 is CPU-bound in battle) | `tests/port/vram.py` |
 | The port against the emulator | `new_game` and `first_battle_save` replayed by the port: two runs byte-identical, `-m32` equal to `-m64`, no ASan/UBSan report, and the emulator's cross-core view (checkpoint stable hashes, overlay and map sequences) | `tests/port/run.py [--m32] [--sanitize]`, the `port` layer of `scripts/test.sh` |
 | Sound | LIBSND's SPU writes against the emulator's trace on its timeline; SPU unit goldens | `tests/port/sound.py`, `tests/spu/`, `docs/SOUND.md` |
 | Saves | Port and emulator load each other's saves (layer 3) | `tests/saves/run.py` |
@@ -246,10 +247,9 @@ Play-tests on a desktop (window, gamepads, audio device, real time) cover what t
 findings are filed as issues.
 
 ## Known limitations
-- **Battle camera:** `GsSetRefView2` is a stub that leaves the world-screen matrix at the identity, so battles are
-  drawn from the world origin at floor level (issue #7). The rest of LIBGS's GTE set-up is missing too: RTPS
-  projects with `InitGeom`'s H instead of `GsSetProjection`'s, and NCS lights with a zero colour matrix
-  (`GsSetFlatLight`'s colours are recorded, not loaded).
+- **Battle lighting:** LIBGS's GTE set-up is real for the camera (`GsSetRefView2`, `GsSetProjection`'s H; issue #7)
+  but not for the lights: NCS lights with a zero colour matrix (`GsSetFlatLight`'s colours are recorded, not loaded;
+  issue #19).
 - **Pads:** one digital pad on port 0; no analog mode, no rumble (`PadSetAct` is accepted and ignored), no second
   port or multitap.
 - **No reset key** in the window (the console reset exists only as a script step).

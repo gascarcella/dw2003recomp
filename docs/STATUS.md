@@ -7,8 +7,7 @@ code compiles from matching C; only 8 functions remain as assembly. The PC port,
 Linux: it boots the user's disc, plays the movies, the music and the effects, draws through a software GPU in an SDL3
 window, and saves to memory-card images that an emulator can also read. A launcher and the first built-in mods
 (fast-forward, a 60 Hz mode, skip dialogues, disable battle animations) are done. A Linux AppImage release pipeline is
-ready; the release itself is still to be published. The biggest open problem is the battle camera
-([issue #7](https://github.com/gascarcella/dw2003recomp/issues/7)).
+ready; the release itself is still to be published.
 
 ## Decompilation
 - **Byte-identical builds:** `scripts/build.sh --check` rebuilds `SLES_039.36`, the 19 tier-1 overlays, the two tier-2
@@ -26,9 +25,9 @@ ready; the release itself is still to be published. The biggest open problem is 
 
 ## Reference tests
 `scripts/test.sh` runs every layer that the machine can run (`tests/README.md` has the details):
-- **Layer 1, goldens:** the game's own functions called inside the emulator (PCSX-Redux, Lua-driven), 24 families:
+- **Layer 1, goldens:** the game's own functions called inside the emulator (PCSX-Redux, Lua-driven), 25 families:
   battle rules, the card game, game state, records, experience and digivolution, training, shops, encounters, the
-  battle's event queue, enemy AI and spoils, sprites, the GTE, the GPU and MDEC. `tests/host/replay.py` replays them
+  battle's event queue, enemy AI and spoils, sprites, the GTE, LIBGS's view (the battle camera), the GPU and MDEC. `tests/host/replay.py` replays them
   through the C compiled for the host; mismatches are in `tests/host/FINDINGS.md`.
 - **Layer 2, replays:** pad scripts run from boot with per-checkpoint hashes. `new_game` (boot to the first field map)
   and `first_battle_save` (registration, the first battle, a save and reload, shops and menus) reach 14 of the 19 tier-1
@@ -45,8 +44,9 @@ ready; the release itself is still to be published. The biggest open problem is 
 The plan's milestones (`docs/PORT.md`):
 - **M0 (groundwork) and M1 (headless build):** all 388 units compile for the host (`-m64 -Werror` gate in CI); the port
   boots the disc (SHA-1 checked) and replays both layer-2 scripts with the emulator's checkpoints.
-- **M2 (rendering):** a software GPU with the whole VRAM equal to the emulator's at the checked points; an SDL3 window
-  with keyboard and gamepad. Missing: the battle camera (`GsSetRefView2` is a stub, issue #7).
+- **M2 (rendering):** a software GPU with the whole VRAM equal to the emulator's at the checked points (new_game; the
+  first battle's textures, `tests/port/vram.py`); LIBGS's battle camera (`GsSetRefView2`, `GsSetProjection`) equal to
+  the PS1's to the bit; an SDL3 window with keyboard and gamepad. Missing: LIBGS's light colours (`GsSetFlatLight`, issue #19).
 - **M3 (sound):** our own SPU core and LIBSND reproduce the emulator's SPU write traces exactly on its timeline
   (`docs/SOUND.md`); output through SDL3 or `--wav`.
 - **M4 (saves):** memory cards as `.mcd` images; saves move both ways between the port and the emulator.
@@ -54,7 +54,8 @@ The plan's milestones (`docs/PORT.md`):
   not been checked against the emulator.
 - **Platforms:** Linux x86_64 only. Windows is planned; macOS is not.
 - **Play-tested** on a desktop (Wayland, NVIDIA, PipeWire) through the first battle, a save and its load:
-  picture, sound and timing are right except for the battle camera ([#7](https://github.com/gascarcella/dw2003recomp/issues/7)).
+  picture, sound and timing were right except for the battle camera, fixed since
+  ([#7](https://github.com/gascarcella/dw2003recomp/issues/7)); the battle has not been play-tested again.
 
 ## Launcher and mods
 - **Launcher** (`launcher/README.md`): Dear ImGui on SDL3. Handles the disc (with a SHA-1 check), Play, settings,
@@ -62,7 +63,7 @@ The plan's milestones (`docs/PORT.md`):
 - **Game side:** `dw2003 --config FILE` (the settings file, schema 1), rebindable input, hotkeys, a pause key, the mod
   registry with manifests in `port/mods/`.
 - **Mods:** fast-forward (hold `Tab`, 4x), the 60 Hz mode (checked against the patched game in the emulator), skip
-  dialogues (`F2`), disable battle animations (its picture is waiting for issue #7). With mods off, the binary's
+  dialogues (`F2`), disable battle animations. With mods off, the binary's
   logs, records and audio are unchanged.
 - **Release:** `scripts/package_appimage.sh` builds one Linux AppImage; a tag `vX.Y.Z` produces a draft release
   (`docs/RELEASE.md`). Publishing it is a maintainer decision.
@@ -76,7 +77,7 @@ The plan's milestones (`docs/PORT.md`):
   BIOS.
 
 ## Known limitations
-- The battle's 3D camera is wrong in the port ([issue #7](https://github.com/gascarcella/dw2003recomp/issues/7)).
+- The battle's lights: `GsSetFlatLight`'s colours are not loaded into the GTE ([issue #19](https://github.com/gascarcella/dw2003recomp/issues/19)).
 - No reset key in the window; a physical gamepad has not been play-tested yet.
 - The port's game timing differs from the emulator's at CD loads and boot (by a few frames), so sound is compared on
   the emulator's timeline instead of frame for frame.

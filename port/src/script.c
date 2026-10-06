@@ -42,10 +42,11 @@ typedef enum ScriptStepType {
     SCRIPT_WALK,
     SCRIPT_RESET,
     SCRIPT_CHECKPOINT,
+    SCRIPT_VRAM,
 } ScriptStepType;
 
 static const char *const script_type_names[] = {
-    "wait_stage", "wait_map", "wait_mem", "wait_frames", "press", "walk", "reset", "checkpoint",
+    "wait_stage", "wait_map", "wait_mem", "wait_frames", "press", "walk", "reset", "checkpoint", "vram",
 };
 
 /* The PS1 pad's button names by bit (PCSX.CONSTS.PAD.BUTTON; psyq.h psyq_pad_set). */
@@ -81,7 +82,7 @@ typedef struct ScriptStep {
     long repeat;   /* press */
     u16 buttons;   /* press */
     double x, y, tol; /* walk */
-    char *name;    /* checkpoint (default "unnamed") */
+    char *name;    /* checkpoint, vram (default "unnamed") */
 } ScriptStep;
 
 static char *script_name;
@@ -285,10 +286,17 @@ static void script_load_step(const PortJson *obj, ScriptStep *s, long default_ti
         break;
     case SCRIPT_RESET:
         break;
+    case SCRIPT_VRAM:
+        s->frames = script_frames(obj, "frames", 1, 0, step);
+        if (s->frames == 0) {
+            script_error(step, "vram: `frames` is 0");
+        }
+        /* and a name, as a checkpoint */
+        /* fallthrough */
     case SCRIPT_CHECKPOINT: {
         const PortJson *name = port_json_get(obj, "name");
         if (name != NULL && name->type != PORT_JSON_STRING) {
-            script_error(step, "checkpoint: `name` is a string");
+            script_error(step, "%s: `name` is a string", script_type_names[s->type]);
         }
         s->name = strdup(name != NULL ? name->string : "unnamed");
         if (s->name == NULL) {
@@ -421,6 +429,23 @@ static void script_dump_checkpoint(const char *name) {
     }
 }
 
+/* A vram step's frame: the whole VRAM (1024 x 512 pixels, 1 MB, little-endian rows) appended to
+ * <DW3_PORT_CHECKPOINT_DIR>/vram_<name>.bin, as run.lua appends PCSX.GPU.getVRAM() to its dump (tests/port/vram.py
+ * compares them). Nothing without the variable. */
+static void script_dump_vram(const char *name, int first) {
+    const char *dir = getenv("DW3_PORT_CHECKPOINT_DIR");
+    char path[4096];
+    FILE *f;
+    if (dir == NULL || dir[0] == '\0') {
+        return;
+    }
+    snprintf(path, sizeof(path), "%s/vram_%s.bin", dir, name);
+    f = fopen(path, first ? "wb" : "ab");
+    if (f == NULL || fwrite(psyq_gpu_vram(), 2, 1024 * 512, f) != 1024 * 512 || fclose(f) != 0) {
+        port_fatal("script: DW3_PORT_CHECKPOINT_DIR: cannot write %s", path);
+    }
+}
+
 /* The field player's position in pixels (run.lua player_pos): the heap_objects entry of kind 5, key2 0, a
  * FieldstgActor, its pos (24.8) / 256. 0 outside the field / before the actor exists. */
 static int script_player_pos(double *x, double *y) {
@@ -520,6 +545,10 @@ static int script_run_step(const ScriptStep *s, int *instant) {
         return 0;
     }
     case SCRIPT_WAIT_FRAMES:
+        return elapsed >= s->frames - 1;
+    case SCRIPT_VRAM:
+        /* as wait_frames, dumping the VRAM on each of its frames */
+        script_dump_vram(s->name, elapsed == 0);
         return elapsed >= s->frames - 1;
     case SCRIPT_WAIT_STAGE:
     case SCRIPT_WAIT_MAP:

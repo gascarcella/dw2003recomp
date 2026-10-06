@@ -82,8 +82,9 @@ SYMBOL_FILE = ROOT / "config/symbol_addrs.txt"
 # game functions): family -> module in tests/host with build(out_dir) -> binary and replay(golden, binary) ->
 # (calls, [(case, what, original, host)]). gte: the port's software GTE and LIBGTE (tests/host/gte_replay.py); gpu: the
 # port's software GPU and LIBGPU (tests/host/gpu_replay.py); mdec: the port's LIBPRESS and MDEC
-# (tests/host/mdec_replay.py).
-HOST_RUNNERS = {"gte": "gte_replay", "gpu": "gpu_replay", "mdec": "mdec_replay"}
+# (tests/host/mdec_replay.py); libgs_view: the port's LIBGS view (GsSetRefView2, GsGetLw) and the LIBGTE functions it
+# calls (tests/host/libgs_replay.py).
+HOST_RUNNERS = {"gte": "gte_replay", "gpu": "gpu_replay", "mdec": "mdec_replay", "libgs_view": "libgs_replay"}
 SCRATCH_BASE = 0x80180000    # tests/golden/oracle.py: where the oracle placed the case's buffers, in order, 16-aligned
 CDLOAD_ENTRIES = 4           # CdloadModule.entries
 CDLOAD_ENTRY_SIZE = 0x10
