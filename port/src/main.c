@@ -32,11 +32,13 @@ void port_fatal(const char *fmt, ...) {
 
 static void usage(const char *argv0) {
     fprintf(stderr,
-            "usage: %s [--disc CUE|BIN] [--no-disc-check] [--cd-speed instant|realistic] [--script JSON]\n"
+            "usage: %s [--disc CUE|BIN] [--no-disc-check] [--cd-speed instant|realistic] [--memcard1|2 MCD|none]\n          [--script JSON]\n"
             "          [--log FILE] [--record FILE] [--max-frames N] [--watchdog SEC] [--trace]\n"
             "  --disc PATH      the user's disc (.cue or .bin; SHA-1 checked); without it reads find no data\n"
             "  --no-disc-check  skip the disc's SHA-1 check (experiments with another image)\n"
             "  --cd-speed S     the CD's timing: realistic (default: double speed and seeks) or instant\n"
+            "  --memcard1 P     memory card 1: a .mcd image (created if missing), or none; default: a fresh card in\n"
+            "                   memory (--memcard2 likewise)\n"
             "  --script JSON    an input script (tests/replay/scripts/*.json); the run ends when it does\n"
             "  --log FILE       the per-frame log (frame, overlay, map, primitive-stream hash; events)\n"
             "  --record FILE    the run's record at exit (JSON: checkpoints, overlay and map sequences)\n"
@@ -60,6 +62,8 @@ static long number(const char *s, const char *opt) {
 
 int main(int argc, char **argv) {
     const char *disc = NULL, *script = NULL, *log = NULL, *record = NULL, *speed = NULL;
+    const char *memcard[2] = { NULL, NULL };
+    int memcard_given[2] = { 0, 0 };
     int disc_check = 1, max_frames_given = 0;
     int i;
     for (i = 1; i < argc; i++) {
@@ -73,6 +77,11 @@ int main(int argc, char **argv) {
             disc_check = 0;
         } else if (strcmp(argv[i], "--cd-speed") == 0 && i + 1 < argc) {
             speed = argv[++i];
+        } else if ((strcmp(argv[i], "--memcard1") == 0 || strcmp(argv[i], "--memcard2") == 0) && i + 1 < argc) {
+            int slot = argv[i][9] - '1';
+            memcard[slot] = strcmp(argv[i + 1], "none") == 0 ? NULL : argv[i + 1];
+            memcard_given[slot] = strcmp(argv[i + 1], "none") == 0 ? -1 : 1;
+            i++;
         } else if (strcmp(argv[i], "--script") == 0 && i + 1 < argc) {
             script = argv[++i];
         } else if (strcmp(argv[i], "--log") == 0 && i + 1 < argc) {
@@ -105,6 +114,11 @@ int main(int argc, char **argv) {
     if (disc != NULL) {
         port_disc_open(disc, disc_check);
     }
+    for (i = 0; i < 2; i++) {
+        if (memcard_given[i] >= 0) {
+            port_memcard_open(i, memcard[i]); /* default: a fresh formatted card in memory, as the replay runner */
+        }
+    }
     port_framelog_open(log, record);
     if (script != NULL) {
         port_script_load(script);
@@ -115,6 +129,9 @@ int main(int argc, char **argv) {
     }
     port_pump_init();
     port_log("start: max-frames %ld, watchdog %d s", port_max_frames, port_watchdog_sec);
+    if (setjmp(port_reset_jmp) != 0) {
+        port_reset_state(); /* the script's reset step (port_reset_request) */
+    }
     game_main();
     port_exit(0, "game_main returned");
 }

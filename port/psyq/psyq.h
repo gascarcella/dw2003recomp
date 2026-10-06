@@ -20,6 +20,11 @@ int psyq_cd_tick(void);
 #define PSYQ_CD_REALISTIC 0
 #define PSYQ_CD_INSTANT 1
 void psyq_cd_set_timing(int timing);
+/* The console's reset (port_reset_state): every library back to its power-on state (handlers, the CD, the pad, the
+ * GPU recorder, the sound stubs), the memory cards' contents kept; psyq_mcrd_reset is LIBMCRD's part (libmcrd.c),
+ * which psyq_reset calls. */
+void psyq_reset(void);
+void psyq_mcrd_reset(void);
 /* Tracing: on/off and the stream (stderr by default). */
 void psyq_set_trace(int on, FILE *stream);
 

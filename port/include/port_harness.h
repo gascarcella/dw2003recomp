@@ -7,6 +7,8 @@
 #ifndef PORT_HARNESS_H
 #define PORT_HARNESS_H
 
+#include <setjmp.h>
+
 #include "common.h"
 
 /* ---- disc.c: LIBCD's sector source over the user's BIN/CUE (PC_PORT_PLAN 2.8; DECISIONS item 7) ----
@@ -41,5 +43,20 @@ int port_state_read(u32 addr, int size, int is_signed, s32 *out);
  * times out or the script's max_frames is reached. */
 void port_script_load(const char *path);
 void port_script_frame(void);
+
+/* ---- memcard.c: the memory cards (LIBMCRD's backing store; PC_PORT_PLAN 2.8: raw 128 KB .mcd images) ----
+ * port_memcard_open: card `slot` (0 or 1) is the .mcd image at `path` (created formatted if it does not exist,
+ * written back as the game writes); NULL: a fresh formatted card in memory only, as the emulator's replay runner
+ * starts with (tests/replay/replay.py "Fresh (empty) memory cards per run"). Without a call a slot has no card. */
+void port_memcard_open(int slot, const char *path);
+
+/* ---- reset.c: the console's reset (the layer-2 script's `reset` step) ----
+ * port_reset_request: from anywhere in the game (the script's step runs inside a vsync tick): unwinds to main()
+ * (longjmp to port_reset_jmp), which calls port_reset_state() and runs game_main() again. port_reset_state: every
+ * game global, the arena (the PS1's RAM: cleared) and the shim back to their power-on state; the memory cards keep
+ * their contents (PCSX-Redux hardResetEmulator keeps them); the frame count goes on. */
+extern jmp_buf port_reset_jmp;
+void port_reset_request(void) __attribute__((noreturn));
+void port_reset_state(void);
 
 #endif /* PORT_HARNESS_H */
