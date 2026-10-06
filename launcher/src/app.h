@@ -65,6 +65,9 @@ public:
     const GameRun &game_run() const { return run_; }
     const std::string &play_error() const { return play_error_; }
     const std::string &game_path() const { return game_; }
+    // The controls' prompt (the self-test drives it with events).
+    InputCapture &capture() { return capture_; }
+    void capture_for(int section, const std::string &id); // 0 keyboard, 1 gamepad (button ids), 2 hotkeys (actions)
 
 private:
     void draw();
@@ -74,6 +77,12 @@ private:
     void draw_disc();
     void draw_settings();
     void draw_placeholder(const char *what);
+    void draw_controls();
+    void draw_names_table(bool pad);
+    void draw_hotkeys();
+    void draw_capture_popup();
+    void begin_capture(InputCapture::Kind kind, int section, const std::string &id, const std::string &label);
+    void finish_capture();
     void draw_play_error();
     void step_screen(int delta);
     void update_disc_check();
@@ -98,6 +107,13 @@ private:
     std::mutex dialog_mutex_;
     bool dialog_open_ = false, dialog_done_ = false;
     std::string dialog_file_, dialog_error_;
+
+    // The controls: the "press a key" prompt and what it is for (section 0 keyboard, 1 gamepad, 2 hotkeys).
+    InputCapture capture_;
+    int capture_section_ = 0;
+    std::string capture_id_, capture_label_;
+    bool capture_popup_ = false;  // the prompt is to be opened this frame
+    bool pad_nav_hold_ = false;   // a gamepad press just went to a capture: no gamepad navigation until released
 
     // The game.
     std::string game_;                    // its executable ("" = not found)

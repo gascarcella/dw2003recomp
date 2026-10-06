@@ -4,9 +4,11 @@
 #pragma once
 
 #include <functional>
+#include <map>
 #include <string>
 #include <vector>
 
+#include "input.h"
 #include "json_value.h"
 
 namespace dw3 {
@@ -64,6 +66,16 @@ struct Settings {
     bool mute = false;
     MemoryCard memcard[2] = { { true, "card1.mcd" }, { true, "card2.mcd" } };
     std::string last_dir; // launcher.last_dir: where the file dialog opens (the launcher's own state)
+    // input: only what the file sets; a button or action that is absent keeps the game's default (input.h), so a
+    // changed default in a later game reaches every user who never rebound it.
+    std::map<std::string, std::vector<std::string>> keyboard; // input.keyboard: button -> key names
+    std::map<std::string, std::vector<std::string>> gamepad;  // input.gamepad: button -> gamepad input names
+    std::map<std::string, Binding> hotkeys;                   // input.hotkeys: action -> binding
+
+    // The effective values (the file's, else the defaults).
+    std::vector<std::string> keys_for(const std::string &button) const;
+    std::vector<std::string> pad_for(const std::string &button) const;
+    Binding hotkey_for(const std::string &action) const;
 };
 
 // Reads the known members of `doc` into a Settings (defaults for missing ones; a warning for each invalid one).

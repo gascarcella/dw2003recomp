@@ -130,6 +130,128 @@ static const Json *section(const Json &doc, const char *key, std::vector<std::st
     return s;
 }
 
+std::vector<std::string> Settings::keys_for(const std::string &button) const {
+    auto it = keyboard.find(button);
+    return it != keyboard.end() ? it->second : default_keys(button);
+}
+
+std::vector<std::string> Settings::pad_for(const std::string &button) const {
+    auto it = gamepad.find(button);
+    return it != gamepad.end() ? it->second : default_pad_inputs(button);
+}
+
+Binding Settings::hotkey_for(const std::string &action) const {
+    auto it = hotkeys.find(action);
+    return it != hotkeys.end() ? it->second : default_hotkey(action);
+}
+
+static void read_input(const Json &doc, Settings *s, std::vector<std::string> *w) {
+    const Json *input = section(doc, "input", w);
+    if (input == nullptr) {
+        return;
+    }
+    for (int pad = 0; pad < 2; pad++) {
+        const char *key = pad ? "gamepad" : "keyboard";
+        const Json *map = input->find(key);
+        if (map == nullptr) {
+            continue;
+        }
+        if (!map->is_object()) {
+            warn(w, std::string("input.") + key + ": expected an object; using the defaults");
+            continue;
+        }
+        for (const PadButton &b : pad_buttons()) {
+            const Json *v = map->find(b.id);
+            std::vector<std::string> names;
+            std::string err;
+            if (v == nullptr) {
+                continue;
+            }
+            if (!names_from_json(*v, pad != 0, &names, &err)) {
+                warn(w, std::string("input.") + key + "." + b.id + ": " + err + "; using the default");
+                continue;
+            }
+            (pad ? s->gamepad : s->keyboard)[b.id] = names;
+        }
+    }
+    if (const Json *hotkeys = input->find("hotkeys")) {
+        if (!hotkeys->is_object()) {
+            warn(w, "input.hotkeys: expected an object; using the defaults");
+            return;
+        }
+        for (const HotkeyAction &a : hotkey_actions()) {
+            const Json *v = hotkeys->find(a.id);
+            Binding b;
+            std::string err;
+            if (v == nullptr) {
+                continue;
+            }
+            if (!binding_from_json(*v, &b, &err)) {
+                warn(w, std::string("input.hotkeys.") + a.id + ": " + err + "; using the default");
+                continue;
+            }
+            s->hotkeys[a.id] = b;
+        }
+    }
+}
+
+// The file's input: the known entries set or removed, everything else kept; an object left empty by the launcher is
+// removed (a file never rebound has no input at all).
+static void write_input(const Settings &s, Json *doc) {
+    Json *input = doc->find("input");
+    if (input == nullptr && s.keyboard.empty() && s.gamepad.empty() && s.hotkeys.empty()) {
+        return;
+    }
+    if (input == nullptr || !input->is_object()) {
+        doc->set("input", Json::object());
+        input = doc->find("input");
+    }
+    for (int pad = 0; pad < 2; pad++) {
+        const char *key = pad ? "gamepad" : "keyboard";
+        const auto &values = pad ? s.gamepad : s.keyboard;
+        Json *map = input->find(key);
+        if (map == nullptr && values.empty()) {
+            continue;
+        }
+        if (map == nullptr || !map->is_object()) {
+            input->set(key, Json::object());
+            map = input->find(key);
+        }
+        for (const PadButton &b : pad_buttons()) {
+            auto it = values.find(b.id);
+            if (it != values.end()) {
+                map->set(b.id, names_to_json(it->second));
+            } else {
+                map->erase(b.id);
+            }
+        }
+        if (map->members().empty()) {
+            input->erase(key);
+        }
+    }
+    Json *hotkeys = input->find("hotkeys");
+    if (hotkeys != nullptr || !s.hotkeys.empty()) {
+        if (hotkeys == nullptr || !hotkeys->is_object()) {
+            input->set("hotkeys", Json::object());
+            hotkeys = input->find("hotkeys");
+        }
+        for (const HotkeyAction &a : hotkey_actions()) {
+            auto it = s.hotkeys.find(a.id);
+            if (it != s.hotkeys.end()) {
+                hotkeys->set(a.id, binding_to_json(it->second));
+            } else {
+                hotkeys->erase(a.id);
+            }
+        }
+        if (hotkeys->members().empty()) {
+            input->erase("hotkeys");
+        }
+    }
+    if (input->members().empty()) {
+        doc->erase("input");
+    }
+}
+
 Settings settings_from_json(const Json &doc, std::vector<std::string> *w) {
     Settings s;
     if (const Json *disc = section(doc, "disc", w)) {
@@ -148,6 +270,7 @@ Settings settings_from_json(const Json &doc, std::vector<std::string> *w) {
     if (const Json *audio = section(doc, "audio", w)) {
         read_bool(audio, "audio", "mute", &s.mute, w);
     }
+    read_input(doc, &s, w);
     if (const Json *launcher = section(doc, "launcher", w)) {
         read_string(launcher, "launcher", "last_dir", &s.last_dir, w);
     }
@@ -185,6 +308,7 @@ void settings_to_json(const Settings &s, Json *doc) {
         const MemoryCard &c = s.memcard[i];
         doc->set(i == 0 ? "memcard1" : "memcard2", c.present ? Json::string(c.path) : Json());
     }
+    write_input(s, doc);
     if (!s.last_dir.empty() || doc->find("launcher") != nullptr) {
         doc->member("launcher").set("last_dir", Json::string(s.last_dir));
     }

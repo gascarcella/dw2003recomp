@@ -225,9 +225,27 @@ void Json::dump_to(std::string &out, int depth) const {
     case Type::String:
         dump_string(out, string_);
         break;
-    case Type::Array:
+    case Type::Array: {
         if (items_.empty()) {
             out += "[]";
+            break;
+        }
+        // A short list of plain values on one line (["X", "V"], a chord): easier to edit by hand.
+        bool flat = true;
+        for (const Json &i : items_) {
+            flat &= !i.is_array() && !i.is_object();
+        }
+        std::string line;
+        if (flat) {
+            line = "[";
+            for (size_t i = 0; i < items_.size(); i++) {
+                line += i > 0 ? ", " : "";
+                items_[i].dump_to(line, depth + 1);
+            }
+            line += "]";
+        }
+        if (flat && line.size() <= 72) {
+            out += line;
             break;
         }
         out += "[\n";
@@ -239,6 +257,7 @@ void Json::dump_to(std::string &out, int depth) const {
         out.append((size_t)depth * 2, ' ');
         out += ']';
         break;
+    }
     case Type::Object:
         if (members_.empty()) {
             out += "{}";

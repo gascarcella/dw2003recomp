@@ -4,9 +4,10 @@
 behind it are in `docs/LAUNCHER_MODS_PLAN.md` (sections 4.1-4.4 are the contract with the game; 4.6 is this program)
 and DECISIONS "Launcher and mods (session 18)". It is C++17 with Dear ImGui on SDL3 + `SDL_Renderer`; the game stays C.
 
-**Status (phase 2 of 4):** the window and its navigation, the settings directory, reading and writing
+**Status (phase 3 of 4):** the window and its navigation, the settings directory, reading and writing
 `settings.json`, the disc screen (file dialog, drag-and-drop, typed path, the SHA-1 check), the play button (the game's
-exit status and last lines on an error), the self-test. The settings and controls screens and the mods screen follow.
+exit status and last lines on an error), the settings screen (video, 50/60 Hz, audio, memory cards), the controls
+screen (keyboard, gamepad, hotkeys), the self-test. The mods screen follows.
 
 ## Build
 
@@ -53,7 +54,15 @@ Schema 1, as settled by the game's side (`docs/LAUNCHER_MODS_PLAN.md` 4.3: `port
 | `video.refresh` | 50 or 60 | 50 | PAL, or the game's own 60 Hz mode (plan 5.5) |
 | `audio.mute` | bool | false | |
 | `memcard1`, `memcard2` | string or null | `"card1.mcd"`, `"card2.mcd"` | The memory cards (created by the game when missing); null: no card |
+| `input.keyboard.<button>` | name or list | the game's | Keys (SDL3 scancode names) for a PS1 button |
+| `input.gamepad.<button>` | name or list | the game's | Gamepad inputs (the plan's names: `south`, `dpup`, `lefty-`, ...) |
+| `input.hotkeys.<action>` | binding | `pause` P, `fullscreen` F11 | A string or a list of triggers; a trigger is an input or a chord (a list); pads as `"pad:<name>"` |
 | `launcher.last_dir` | string | none | The launcher's own state: where the file dialog opens. The game never reads `launcher` |
+
+**Only the bindings the user changed are written.** A button or action absent from `input` keeps the game's default
+(`src/input.cpp` mirrors `port/src/input.c`'s defaults for display), so a default changed in a later game reaches
+everyone who never rebound it; **Default** removes the entry again, and an `input` object the launcher emptied is
+removed.
 
 **Paths in the file are relative to the file's directory** (or absolute). The file is written only when its text
 changes, through a temporary file and a rename. An unreadable file is reported, the defaults are used, and the first
@@ -85,6 +94,21 @@ started with the equivalent options instead (`--window --scale N [--fullscreen] 
 --memcard1 PATH|none --memcard2 PATH|none`; `game_args_interim` in `src/game.cpp`, to delete at integration). 60 Hz is
 not passed that way.
 
+## Settings and controls
+
+**Settings:** the window's scale (1-16, with its size), fullscreen, 50 or 60 Hz (60 is the game's own 60 Hz mode; the
+game logs and ignores it until it implements it), mute, the two memory card slots (a file name relative to the
+settings directory, or no card), and the settings file's location and state.
+
+**Controls**, three tabs: **Keyboard** and **Gamepad** list the 14 PS1 buttons with their inputs as chips (x removes
+one, + adds one, Default restores the game's); **Hotkeys** has the port's actions (pause, fullscreen) with their
+bindings. **+** opens a prompt that takes the next key (Keyboard), gamepad button, trigger or stick direction past
+half way (Gamepad), or, for a hotkey, any of them or a chord (everything held together until all are released; at
+most 4 inputs, and 8 triggers a binding: the game's limits). Escape alone, or Cancel, closes it. The prompt takes its
+events before ImGui, and gamepad navigation pauses until the gamepad is released, so the press that was bound does
+not also click a button. An input used by two buttons (or a button and a single-input hotkey) is marked, with a
+tooltip naming the other use. A mod's own bindings are its options (phase 4).
+
 ## Keys
 
 The mouse, the keyboard (arrows, Space/Enter, Escape) and a gamepad (ImGui's navigation) all work. Ctrl+PageDown /
@@ -99,11 +123,12 @@ SDL_VIDEO_DRIVER=offscreen build/launcher/dw2003-launcher --self-test DIR    # e
 
 No disc and no display needed (CI runs it). It replaces `DIR/launcher-self-test/` and checks: the path helpers (Windows
 forms too), the JSON writer, the lookup order, the settings file's round trips (the plan's example with its unknown
-members kept, invalid values, a broken file, a newer schema), the `.cue` reader and the SHA-1 check, the launch path
+members kept, invalid values, a broken file, a newer schema), the binding grammar and the input prompt (keys, gamepad buttons, stick directions, chords, Escape), the `.cue` reader
+and the SHA-1 check, the launch path
 with **the launcher itself as the game's stand-in** (`DW3_LAUNCHER_FAKE_GAME=mode`: a game with and without
 `--config`, one that rejects the file, one that crashes, one that fails after 250 lines), then opens the window, walks
 every screen with injected key events and a virtual gamepad, plays with the stand-in (a file of the BIN's size stands
-for the verified disc), drops a wrong file on the window, and saves a picture of each screen in
+for the verified disc), rebinds a key through the prompt and checks the file, drops a wrong file on the window, and saves a picture of each screen in
 `DIR/launcher-self-test/screens/`.
 
 Optional, with the data: `DW3_SELFTEST_DISC=iso/dw2003.cue` also checks the real disc;
@@ -121,5 +146,6 @@ data-gated part.
 | `src/json_value.cpp`, `json_value.h` | An editable JSON tree over the port's reader, and a writer |
 | `src/disc.cpp`, `disc.h` | The `.cue` reader and the SHA-1 check on a thread |
 | `src/game.cpp`, `game.h` | Finding the game, its `--print-settings` probe, the command (and the interim options), the running game |
+| `src/input.cpp`, `input.h` | The PS1 buttons, the game's default bindings, the binding grammar, the input prompt |
 | `src/paths.cpp`, `paths.h` | Paths and files through SDL's calls only (no POSIX: Windows comes later) |
 | `src/selftest.cpp`, `selftest.h` | The self-test |

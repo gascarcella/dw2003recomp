@@ -4,6 +4,7 @@
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
 
+#include <algorithm>
 #include <cstdio>
 
 #include "paths.h"
@@ -98,6 +99,17 @@ static void gui_style(float scale) {
     c[ImGuiCol_Separator] = rgb(0x2E333D);
     c[ImGuiCol_NavCursor] = rgb(ACCENT);
     c[ImGuiCol_TextSelectedBg] = rgb(ACCENT, 0.35f);
+    c[ImGuiCol_Tab] = rgb(0x262A33);
+    c[ImGuiCol_TabHovered] = rgb(ACCENT, 0.45f);
+    c[ImGuiCol_TabSelected] = rgb(ACCENT, 0.30f);
+    c[ImGuiCol_TabSelectedOverline] = rgb(ACCENT);
+    c[ImGuiCol_TabDimmed] = rgb(0x262A33);
+    c[ImGuiCol_TabDimmedSelected] = rgb(ACCENT, 0.22f);
+    c[ImGuiCol_TitleBg] = rgb(0x22262E);
+    c[ImGuiCol_TitleBgActive] = rgb(0x2A2F39);
+    c[ImGuiCol_ScrollbarGrab] = rgb(0x353B47);
+    c[ImGuiCol_ScrollbarBg] = rgb(0x1C1F26);
+    c[ImGuiCol_ModalWindowDimBg] = rgb(0x000000, 0.45f);
     style.ScaleAllSizes(scale);
     style.FontScaleDpi = scale;
     style.FontSizeBase = 17.0f;
@@ -150,6 +162,28 @@ void gui_close(SDL_Window *window, SDL_Renderer *renderer) {
     SDL_Quit();
 }
 
+// True while any button of an open gamepad is held or an axis is past a third of its range.
+static bool any_gamepad_input_held() {
+    int n = 0;
+    SDL_JoystickID *ids = SDL_GetGamepads(&n);
+    bool held = false;
+    for (int i = 0; i < n && !held; i++) {
+        SDL_Gamepad *g = SDL_GetGamepadFromID(ids[i]);
+        if (g == nullptr) {
+            continue;
+        }
+        for (int b = 0; b < SDL_GAMEPAD_BUTTON_COUNT && !held; b++) {
+            held = SDL_GetGamepadButton(g, (SDL_GamepadButton)b);
+        }
+        for (int a = 0; a < SDL_GAMEPAD_AXIS_COUNT && !held; a++) {
+            int v = SDL_GetGamepadAxis(g, (SDL_GamepadAxis)a);
+            held = a >= SDL_GAMEPAD_AXIS_LEFT_TRIGGER ? v > 10000 : (v > 10000 || v < -10000);
+        }
+    }
+    SDL_free(ids);
+    return held;
+}
+
 // ---- the app
 
 App::App(SDL_Window *window, SDL_Renderer *renderer, const SettingsDir &location, const AppOptions &options)
@@ -182,6 +216,13 @@ App::App(SDL_Window *window, SDL_Renderer *renderer, const SettingsDir &location
 }
 
 void App::handle_event(const SDL_Event &e) {
+    // The controls' prompt takes its keys and gamepad inputs before ImGui (no Enter or Escape reaches a widget).
+    if (capture_.active() && capture_.feed(e)) {
+        if (e.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN || e.type == SDL_EVENT_GAMEPAD_AXIS_MOTION) {
+            pad_nav_hold_ = true;
+        }
+        return;
+    }
     ImGui_ImplSDL3_ProcessEvent(&e);
     if (e.type == SDL_EVENT_QUIT ||
         (e.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && e.window.windowID == SDL_GetWindowID(window_))) {
@@ -410,6 +451,18 @@ void App::frame(const char *screenshot) {
             }
         }
     }
+    finish_capture();
+    // ImGui reads the gamepads' state itself: after a gamepad press that went to the prompt, its navigation waits
+    // until every button is released (else the same press would also activate the focused widget).
+    ImGuiIO &nav_io = ImGui::GetIO();
+    if (pad_nav_hold_ && !capture_.active() && !any_gamepad_input_held()) {
+        pad_nav_hold_ = false;
+    }
+    if (pad_nav_hold_ || capture_.active()) {
+        nav_io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
+    } else {
+        nav_io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    }
     ImGui_ImplSDLRenderer3_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
@@ -479,7 +532,7 @@ void App::draw() {
         draw_settings();
         break;
     case Screen::Controls:
-        draw_placeholder("Keyboard and gamepad bindings and the hotkeys (phase 3).");
+        draw_controls();
         break;
     case Screen::Mods:
         draw_placeholder("The mods with their switches and each mod's options (phase 4).");
@@ -687,7 +740,86 @@ void App::draw_disc() {
     }
 }
 
+static void section_title(const char *title) {
+    ImGui::Spacing();
+    ImGui::PushStyleColor(ImGuiCol_Text, rgb(ACCENT));
+    ImGui::TextUnformatted(title);
+    ImGui::PopStyleColor();
+}
+
 void App::draw_settings() {
+    Settings &s = settings_.values;
+    const float label_w = 150 * ImGui::GetStyle().FontScaleDpi;
+    ImGui::BeginDisabled(!settings_.writable());
+
+    section_title("Video");
+    ImGui::TextDisabled("Window size");
+    ImGui::SameLine(label_w);
+    ImGui::SetNextItemWidth(260 * ImGui::GetStyle().FontScaleDpi);
+    char size[64];
+    SDL_snprintf(size, sizeof(size), "x%d  (%d x %d)", s.scale, 320 * s.scale, 240 * s.scale);
+    dirty_ |= ImGui::SliderInt("##scale", &s.scale, 1, 16, size, ImGuiSliderFlags_AlwaysClamp);
+    ImGui::TextDisabled("Fullscreen");
+    ImGui::SameLine(label_w);
+    dirty_ |= ImGui::Checkbox("##fullscreen", &s.fullscreen);
+    ImGui::SameLine();
+    ImGui::TextDisabled("(F11 in the game, by default)");
+    ImGui::TextDisabled("Refresh");
+    ImGui::SameLine(label_w);
+    if (ImGui::RadioButton("50 Hz (PAL)", s.refresh == 50)) {
+        s.refresh = 50;
+        dirty_ = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("60 Hz", s.refresh == 60)) {
+        s.refresh = 60;
+        dirty_ = true;
+    }
+    if (s.refresh == 60) {
+        ImGui::Indent(label_w);
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextDisabled("The game's own 60 Hz mode, as the NTSC patch gives it: time, walking and music keep their "
+                            "speed, other things run 20%% faster. Until the game implements it, it logs this and "
+                            "runs at 50 Hz.");
+        ImGui::PopTextWrapPos();
+        ImGui::Unindent(label_w);
+    }
+
+    section_title("Audio");
+    ImGui::TextDisabled("Mute");
+    ImGui::SameLine(label_w);
+    dirty_ |= ImGui::Checkbox("##mute", &s.mute);
+
+    section_title("Memory cards");
+    for (int i = 0; i < 2; i++) {
+        MemoryCard &c = s.memcard[i];
+        ImGui::PushID(i);
+        ImGui::TextDisabled("Slot %d", i + 1);
+        ImGui::SameLine(label_w);
+        dirty_ |= ImGui::Checkbox("##in", &c.present);
+        ImGui::SameLine();
+        ImGui::BeginDisabled(!c.present);
+        char name[512];
+        SDL_strlcpy(name, c.path.c_str(), sizeof(name));
+        ImGui::SetNextItemWidth(-1);
+        if (ImGui::InputText("##file", name, sizeof(name))) {
+            if (name[0] != '\0') {
+                c.path = name;
+                dirty_ = true;
+            }
+        }
+        ImGui::EndDisabled();
+        ImGui::PopID();
+    }
+    ImGui::Indent(label_w);
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextDisabled("A .mcd card image, relative to the settings directory; the game creates a formatted card when "
+                        "the file is missing. Unticked: no card in the slot.");
+    ImGui::PopTextWrapPos();
+    ImGui::Unindent(label_w);
+    ImGui::EndDisabled();
+
+    section_title("Settings file");
     if (fields_begin("where")) {
         const ImVec4 red = rgb(ERROR_RED);
         field("Directory", location_.dir.empty() ? "(none)" : location_.dir);
@@ -712,12 +844,257 @@ void App::draw_settings() {
         ImGui::Bullet();
         ImGui::TextWrapped("%s", m.c_str());
     }
-    ImGui::Spacing();
     if (!location_.dir.empty() && ImGui::Button("Open the directory")) {
         SDL_OpenURL(path_to_url(location_.dir).c_str());
     }
-    ImGui::Spacing();
-    ImGui::TextDisabled("Video, 50/60 Hz and audio come in phase 3.");
+}
+
+// ---- the controls
+
+void App::capture_for(int section, const std::string &id) {
+    std::string label = id;
+    for (const PadButton &b : pad_buttons()) {
+        if (id == b.id) {
+            label = b.label;
+        }
+    }
+    for (const HotkeyAction &a : hotkey_actions()) {
+        if (id == a.id) {
+            label = a.label;
+        }
+    }
+    begin_capture(section == 0 ? InputCapture::Kind::Key
+                  : section == 1 ? InputCapture::Kind::Pad
+                                 : InputCapture::Kind::Binding,
+                  section, id, label);
+}
+
+void App::begin_capture(InputCapture::Kind kind, int section, const std::string &id, const std::string &label) {
+    capture_.begin(kind);
+    capture_section_ = section;
+    capture_id_ = id;
+    capture_label_ = label;
+    capture_popup_ = true;
+}
+
+void App::finish_capture() {
+    Trigger t;
+    if (!capture_.take_done(&t) || t.empty()) {
+        return;
+    }
+    Settings &s = settings_.values;
+    if (capture_section_ == 2) {
+        Binding b = s.hotkey_for(capture_id_);
+        if (std::find(b.begin(), b.end(), t) == b.end()) {
+            b.push_back(t);
+        }
+        s.hotkeys[capture_id_] = b;
+    } else {
+        std::vector<std::string> names = capture_section_ == 0 ? s.keys_for(capture_id_) : s.pad_for(capture_id_);
+        if (std::find(names.begin(), names.end(), t[0]) == names.end()) {
+            names.push_back(t[0]);
+        }
+        (capture_section_ == 0 ? s.keyboard : s.gamepad)[capture_id_] = names;
+    }
+    dirty_ = true;
+}
+
+// The other buttons (or hotkeys) using `input`, for the conflict marks.
+static std::string uses_of(const Settings &s, bool pad, const std::string &input, const std::string &except) {
+    std::string out;
+    for (const PadButton &b : pad_buttons()) {
+        std::vector<std::string> names = pad ? s.pad_for(b.id) : s.keys_for(b.id);
+        if (b.id != except && std::find(names.begin(), names.end(), input) != names.end()) {
+            out += (out.empty() ? "" : ", ") + std::string(b.label);
+        }
+    }
+    const std::string full = pad ? "pad:" + input : input;
+    for (const HotkeyAction &a : hotkey_actions()) {
+        for (const Trigger &t : s.hotkey_for(a.id)) {
+            if (a.id != except && t.size() == 1 && t[0] == full) {
+                out += (out.empty() ? "" : ", ") + std::string("the hotkey ") + a.label;
+            }
+        }
+    }
+    return out;
+}
+
+// One input as a chip; true when its remove button was pressed.
+static bool chip(const std::string &text, const std::string &conflict, const char *id) {
+    ImGui::PushID(id);
+    if (!conflict.empty()) {
+        ImGui::PushStyleColor(ImGuiCol_Button, rgb(0x7A3B2E));
+    }
+    ImGui::SmallButton(text.c_str());
+    if (!conflict.empty()) {
+        ImGui::PopStyleColor();
+        ImGui::SetItemTooltip("Also bound to %s", conflict.c_str());
+    }
+    ImGui::SameLine(0, 2);
+    bool removed = ImGui::SmallButton("x");
+    ImGui::SetItemTooltip("Remove %s", text.c_str());
+    ImGui::PopID();
+    ImGui::SameLine();
+    return removed;
+}
+
+void App::draw_controls() {
+    ImGui::BeginDisabled(!settings_.writable());
+    if (ImGui::BeginTabBar("controls")) {
+        if (ImGui::BeginTabItem("Keyboard")) {
+            draw_names_table(false);
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Gamepad")) {
+            draw_names_table(true);
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Hotkeys")) {
+            draw_hotkeys();
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+    }
+    ImGui::EndDisabled();
+    draw_capture_popup();
+}
+
+void App::draw_names_table(bool pad) {
+    Settings &s = settings_.values;
+    auto &map = pad ? s.gamepad : s.keyboard;
+    ImGui::TextDisabled(pad ? "Every gamepad drives the PS1 pad (positions: south is the PlayStation cross)."
+                            : "Keys by their place on the keyboard, whatever its layout.");
+    ImGui::SameLine();
+    ImGui::BeginDisabled(map.empty());
+    if (ImGui::SmallButton(pad ? "Reset the gamepad" : "Reset the keyboard")) {
+        map.clear();
+        dirty_ = true;
+    }
+    ImGui::EndDisabled();
+    if (!ImGui::BeginTable(pad ? "pad" : "keys", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit)) {
+        return;
+    }
+    ImGui::TableSetupColumn("Button", ImGuiTableColumnFlags_WidthFixed);
+    ImGui::TableSetupColumn("Inputs", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("Default", ImGuiTableColumnFlags_WidthFixed);
+    for (const PadButton &b : pad_buttons()) {
+        ImGui::PushID(b.id);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(b.label);
+        ImGui::TableNextColumn();
+        std::vector<std::string> names = pad ? s.pad_for(b.id) : s.keys_for(b.id);
+        for (size_t i = 0; i < names.size(); i++) {
+            const std::string label = pad ? pad_input_label(names[i]) : names[i];
+            if (chip(label, uses_of(s, pad, names[i], b.id), std::to_string(i).c_str())) {
+                names.erase(names.begin() + (long)i);
+                map[b.id] = names;
+                dirty_ = true;
+                break;
+            }
+        }
+        if (names.empty()) {
+            ImGui::TextDisabled("unbound");
+            ImGui::SameLine();
+        }
+        if (ImGui::SmallButton("+")) {
+            capture_for(pad ? 1 : 0, b.id);
+        }
+        ImGui::SetItemTooltip(pad ? "Add a gamepad input" : "Add a key");
+        ImGui::TableNextColumn();
+        if (map.count(b.id) != 0) {
+            if (ImGui::SmallButton("Default")) {
+                map.erase(b.id);
+                dirty_ = true;
+            }
+        }
+        ImGui::PopID();
+    }
+    ImGui::EndTable();
+}
+
+void App::draw_hotkeys() {
+    Settings &s = settings_.values;
+    ImGui::TextWrapped("The port's own actions. A hotkey never reaches the game's pad. A chord: hold its inputs "
+                       "together, then let go. The mods' bindings are on the Mods screen.");
+    if (!ImGui::BeginTable("hotkeys", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit)) {
+        return;
+    }
+    ImGui::TableSetupColumn("Action", ImGuiTableColumnFlags_WidthFixed);
+    ImGui::TableSetupColumn("Binding", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("Default", ImGuiTableColumnFlags_WidthFixed);
+    for (const HotkeyAction &a : hotkey_actions()) {
+        ImGui::PushID(a.id);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(a.label);
+        ImGui::SetItemTooltip("%s", a.description);
+        ImGui::TableNextColumn();
+        Binding b = s.hotkey_for(a.id);
+        for (size_t i = 0; i < b.size(); i++) {
+            std::string conflict;
+            if (b[i].size() == 1) {
+                const std::string &in = b[i][0];
+                bool pad = in.compare(0, 4, "pad:") == 0;
+                conflict = uses_of(s, pad, pad ? in.substr(4) : in, a.id);
+            }
+            if (chip(binding_label({ b[i] }), conflict, std::to_string(i).c_str())) {
+                b.erase(b.begin() + (long)i);
+                s.hotkeys[a.id] = b;
+                dirty_ = true;
+                break;
+            }
+        }
+        if (b.empty()) {
+            ImGui::TextDisabled("unbound");
+            ImGui::SameLine();
+        }
+        ImGui::BeginDisabled(b.size() >= BINDING_MAX_TRIGGERS);
+        if (ImGui::SmallButton("+")) {
+            capture_for(2, a.id);
+        }
+        ImGui::EndDisabled();
+        ImGui::SetItemTooltip("Add a key, a gamepad input or a chord (up to %d inputs held together)",
+                              (int)CHORD_MAX_INPUTS);
+        ImGui::TableNextColumn();
+        if (s.hotkeys.count(a.id) != 0) {
+            if (ImGui::SmallButton("Default")) {
+                s.hotkeys.erase(a.id);
+                dirty_ = true;
+            }
+        }
+        ImGui::PopID();
+    }
+    ImGui::EndTable();
+}
+
+void App::draw_capture_popup() {
+    if (capture_popup_) {
+        ImGui::OpenPopup("Press an input");
+        capture_popup_ = false;
+    }
+    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    if (!ImGui::BeginPopupModal("Press an input", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        return;
+    }
+    if (!capture_.active()) {
+        ImGui::CloseCurrentPopup();
+    }
+    const char *what = capture_section_ == 0   ? "a key"
+                       : capture_section_ == 1 ? "a gamepad button, trigger or stick direction"
+                                               : "a key, a gamepad input, or several together (a chord)";
+    ImGui::Text("%s: press %s.", capture_label_.c_str(), what);
+    if (!capture_.held().empty()) {
+        ImGui::TextColored(rgb(ACCENT), "%s", binding_label({ capture_.held() }).c_str());
+    }
+    ImGui::TextDisabled("Escape cancels.");
+    if (ImGui::Button("Cancel")) {
+        capture_.cancel();
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
 }
 
 void App::draw_placeholder(const char *what) {

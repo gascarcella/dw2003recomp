@@ -11,6 +11,7 @@
 #include "app.h"
 #include "disc.h"
 #include "game.h"
+#include "input.h"
 #include "json_value.h"
 #include "paths.h"
 #include "settings.h"
@@ -226,6 +227,144 @@ static void test_settings_file(const std::string &root) {
     check(!n.save(&err) && read(n.path()) == newer_text, "a newer schema is never written");
 }
 
+// ---- the controls
+
+static SDL_Event key_event(SDL_Scancode key, bool down) {
+    SDL_Event e;
+    SDL_zero(e);
+    e.type = down ? SDL_EVENT_KEY_DOWN : SDL_EVENT_KEY_UP;
+    e.key.scancode = key;
+    e.key.down = down;
+    return e;
+}
+
+static SDL_Event pad_button_event(SDL_GamepadButton b, bool down) {
+    SDL_Event e;
+    SDL_zero(e);
+    e.type = down ? SDL_EVENT_GAMEPAD_BUTTON_DOWN : SDL_EVENT_GAMEPAD_BUTTON_UP;
+    e.gbutton.button = (Uint8)b;
+    e.gbutton.down = down;
+    return e;
+}
+
+static SDL_Event pad_axis_event(SDL_GamepadAxis a, int v) {
+    SDL_Event e;
+    SDL_zero(e);
+    e.type = SDL_EVENT_GAMEPAD_AXIS_MOTION;
+    e.gaxis.axis = (Uint8)a;
+    e.gaxis.value = (Sint16)v;
+    return e;
+}
+
+static void test_input(const std::string &root) {
+    std::string err;
+    // The binding grammar, both ways (the shortest form written).
+    for (const char *text : { R"("F2")", R"("")", R"(["F2", "pad:guide"])", R"([["pad:guide", "pad:south"], "Tab"])",
+                              R"("Keypad Enter")", R"("pad:lefty-")" }) {
+        Json j = Json::parse(text, nullptr);
+        Binding b;
+        check(binding_from_json(j, &b, &err) && binding_to_json(b) == j, std::string("a binding round trip: ") + text +
+                                                                             " " + err);
+    }
+    Binding b;
+    check(binding_from_json(Json::parse("[]", nullptr), &b, &err) && b.empty() && binding_to_json(b) == Json::string(""),
+          "[] is unbound, written \"\"");
+    for (const char *bad : { "3", R"(["F2", 3])", R"("pad:nope")", R"("NotAKey")", R"([[]])", R"([["F2", 1]])",
+                             R"([["A", "B", "C", "D", "E"]])", R"(["A", "B", "C", "D", "E", "F", "G", "H", "I"])" }) {
+        check(!binding_from_json(Json::parse(bad, nullptr), &b, &err) && !err.empty(),
+              std::string("a bad binding is refused: ") + bad);
+    }
+    check(binding_label({ { "F2" }, { "pad:guide", "pad:south" } }) == "F2 or Pad Guide + Pad South", "binding_label");
+    std::vector<std::string> names;
+    check(names_from_json(Json::parse(R"(["Return", "Keypad Enter"])", nullptr), false, &names, &err) &&
+              names.size() == 2 && names_to_json(names) == Json::parse(R"(["Return", "Keypad Enter"])", nullptr),
+          "key names: a list");
+    check(!names_from_json(Json::string("south"), false, &names, &err) &&
+              names_from_json(Json::string("south"), true, &names, &err),
+          "a gamepad name is not a key name");
+    // The game's defaults (port/src/input.c) are what an empty file means.
+    Settings d;
+    check(d.keys_for("start") == std::vector<std::string>({ "Return", "Keypad Enter" }) &&
+              d.pad_for("up") == std::vector<std::string>({ "dpup", "lefty-" }) &&
+              d.hotkey_for("fullscreen") == Binding({ { "F11" } }),
+          "the defaults");
+    for (const PadButton &pb : pad_buttons()) {
+        for (const std::string &k : d.keys_for(pb.id)) {
+            check(is_key_name(k), "a default key is an SDL scancode name: " + k);
+        }
+    }
+
+    // Only changes are written; a reset removes them, and the objects the launcher emptied.
+    const std::string dir = path_join(root, "input");
+    SettingsFile f;
+    f.load(dir);
+    f.values.keyboard["cross"] = { "X", "V" };
+    f.values.hotkeys["pause"] = { { "pad:guide", "pad:start" } };
+    check(f.save(&err), err);
+    Json doc = Json::parse(read(f.path()), nullptr);
+    check(doc.find("input") != nullptr &&
+              *doc.find("input") == Json::parse(R"({"keyboard": {"cross": ["X", "V"]}, "hotkeys": {"pause": [["pad:guide", "pad:start"]]}})",
+                                                nullptr),
+          "only the changed bindings are written");
+    SettingsFile g;
+    g.load(dir);
+    check(g.values.keys_for("cross") == std::vector<std::string>({ "X", "V" }) &&
+              g.values.hotkey_for("pause") == Binding({ { "pad:guide", "pad:start" } }) && g.messages().empty(),
+          "the bindings read back");
+    g.values.keyboard.clear();
+    g.values.hotkeys.clear();
+    check(g.save(&err) && Json::parse(read(g.path()), nullptr).find("input") == nullptr,
+          "a reset removes the input object the launcher made");
+    // A bad binding in the file: a warning, the default.
+    write(g.path(), R"({"schema": 1, "input": {"keyboard": {"cross": "Nope", "circle": "V"}, "future": 1}})");
+    SettingsFile h;
+    h.load(dir);
+    check(h.messages().size() == 1 && h.values.keys_for("cross") == std::vector<std::string>({ "X" }) &&
+              h.values.keys_for("circle") == std::vector<std::string>({ "V" }),
+          "a bad key name: a warning and the default");
+    h.values.keyboard["circle"] = { "B" };
+    check(h.save(&err) && Json::parse(read(h.path()), nullptr).find("input")->find("future") != nullptr,
+          "unknown members of input are kept");
+
+    // The capture, fed events.
+    InputCapture c;
+    Trigger t;
+    c.begin(InputCapture::Kind::Key);
+    c.feed(pad_button_event(SDL_GAMEPAD_BUTTON_SOUTH, true));
+    check(c.active(), "a key capture ignores the gamepad");
+    c.feed(key_event(SDL_SCANCODE_V, true));
+    check(c.take_done(&t) && t == Trigger({ "V" }) && !c.active(), "a key capture: the first key");
+    c.begin(InputCapture::Kind::Pad);
+    c.feed(pad_axis_event(SDL_GAMEPAD_AXIS_LEFTY, -30000));
+    check(c.take_done(&t) && t == Trigger({ "lefty-" }), "a gamepad capture: a stick direction");
+    c.begin(InputCapture::Kind::Pad);
+    c.feed(pad_axis_event(SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, 20000));
+    check(c.take_done(&t) && t == Trigger({ "righttrigger" }), "a gamepad capture: a trigger");
+    c.begin(InputCapture::Kind::Binding);
+    c.feed(pad_button_event(SDL_GAMEPAD_BUTTON_GUIDE, true));
+    c.feed(pad_button_event(SDL_GAMEPAD_BUTTON_SOUTH, true));
+    check(!c.take_done(&t) && c.held() == Trigger({ "pad:guide", "pad:south" }), "a chord builds while held");
+    c.feed(pad_button_event(SDL_GAMEPAD_BUTTON_SOUTH, false));
+    c.feed(pad_button_event(SDL_GAMEPAD_BUTTON_GUIDE, false));
+    check(c.take_done(&t) && t == Trigger({ "pad:guide", "pad:south" }), "a chord: everything held, once released");
+    c.begin(InputCapture::Kind::Binding);
+    c.feed(key_event(SDL_SCANCODE_F2, true));
+    c.feed(key_event(SDL_SCANCODE_F2, false));
+    check(c.take_done(&t) && t == Trigger({ "F2" }), "a binding capture: one key");
+    c.begin(InputCapture::Kind::Binding);
+    for (SDL_Scancode k : { SDL_SCANCODE_A, SDL_SCANCODE_B, SDL_SCANCODE_C, SDL_SCANCODE_D, SDL_SCANCODE_E }) {
+        c.feed(key_event(k, true));
+    }
+    for (SDL_Scancode k : { SDL_SCANCODE_A, SDL_SCANCODE_B, SDL_SCANCODE_C, SDL_SCANCODE_D, SDL_SCANCODE_E }) {
+        c.feed(key_event(k, false));
+    }
+    check(c.take_done(&t) && t == Trigger({ "A", "B", "C", "D" }), "a chord stops at the game's 4 inputs");
+    c.begin(InputCapture::Kind::Binding);
+    c.feed(key_event(SDL_SCANCODE_ESCAPE, true));
+    c.feed(key_event(SDL_SCANCODE_ESCAPE, false));
+    check(!c.active() && !c.take_done(&t), "Escape cancels");
+}
+
 // ---- the disc check
 
 static DiscCheck::State wait_check(DiscCheck &c) {
@@ -408,6 +547,12 @@ static void test_game(const std::string &root) {
         r.values.disc_path = disc;
         r.values.disc_sha1 = DISC_SHA1;
     }
+    // What the controls screen writes, for the game's own parser: rebinds, a chord, an unbound hotkey.
+    r.values.keyboard["cross"] = { "X", "V" };
+    r.values.gamepad["circle"] = { "east", "rightx+" };
+    r.values.gamepad["select"] = {};
+    r.values.hotkeys["pause"] = { { "pad:guide", "pad:start" }, { "P" } };
+    r.values.hotkeys["fullscreen"] = {};
     check(r.save(&err), "the real game's settings: " + err);
     p = game_probe(real, r.path());
     check(p.result == GameProbe::Result::Valid || p.result == GameProbe::Result::NoConfig,
@@ -531,6 +676,40 @@ static void test_play(SDL_Window *window, const std::string &root) {
     check(!app.game_run().running() && app.play_error().find("video.scale") != std::string::npos,
           "a file the game rejects is reported: " + app.play_error());
     SDL_UnsetEnvironmentVariable(SDL_GetEnvironment(), SELF_TEST_GAME_ENV);
+
+    // The controls: Cross gets V through the prompt (injected key events), the file has it.
+    app.set_screen(Screen::Controls);
+    app.capture_for(0, "cross");
+    pump(app, 2);
+    png = path_join(shots, "7-Controls-prompt.png");
+    app.frame(png.c_str());
+    push_key(window, SDL_SCANCODE_V, SDL_KMOD_NONE, true);
+    pump(app, 1);
+    push_key(window, SDL_SCANCODE_V, SDL_KMOD_NONE, false);
+    pump(app, 3);
+    check(!app.capture().active() &&
+              app.settings().values.keys_for("cross") == std::vector<std::string>({ "X", "V" }),
+          "the prompt adds a key");
+    Json written = Json::parse(read(app.settings().path()), nullptr);
+    const Json *kb = written.find("input") != nullptr ? written.find("input")->find("keyboard") : nullptr;
+    check(kb != nullptr && kb->find("cross") != nullptr && *kb->find("cross") == Json::parse(R"(["X", "V"])", nullptr),
+          "the new binding is saved");
+    // The same key on Circle is marked as a conflict (a picture), Escape cancels the prompt.
+    app.settings().values.keyboard["circle"] = { "C", "V" };
+    pump(app, 2);
+    png = path_join(shots, "8-Controls-keyboard.png");
+    app.frame(png.c_str());
+    app.capture_for(2, "pause");
+    pump(app, 1);
+    push_key(window, SDL_SCANCODE_ESCAPE, SDL_KMOD_NONE, true);
+    pump(app, 1);
+    push_key(window, SDL_SCANCODE_ESCAPE, SDL_KMOD_NONE, false);
+    pump(app, 2);
+    check(!app.capture().active() && app.settings().values.hotkeys.count("pause") == 0, "Escape leaves the hotkey");
+    app.set_screen(Screen::Settings);
+    pump(app, 2);
+    png = path_join(shots, "9-Settings.png");
+    app.frame(png.c_str());
 
     // A wrong file dropped on the window: checked, refused, the verified disc stays.
     write(path_join(dir, "wrong.bin"), "abc");
@@ -674,6 +853,7 @@ bool self_test_run(const std::string &dir) {
     test_json();
     test_lookup(path_join(root, "lookup"));
     test_settings_file(path_join(root, "files"));
+    test_input(path_join(root, "controls"));
     test_disc(path_join(root, "disc"));
     test_game(path_join(root, "game"));
     test_window(root);
