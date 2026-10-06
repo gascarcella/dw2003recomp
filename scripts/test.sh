@@ -89,7 +89,12 @@ for L in $LAYERS; do
             "$ROOT/tests/formats/run.sh"; ran=$((ran + 1))
         else
             skip "tests/formats/run.sh does not exist yet (STATUS: Next)"
-        fi ;;
+        fi
+        echo "--- save round trips: port -> emulator, emulator -> port, the two cards (tests/saves/run.py, ~1 min)"
+        rc=0; "$PY" "$ROOT/tests/saves/run.py" || rc=$?
+        if [[ $rc -eq 2 ]]; then skip "save round trips: needs the emulator, the disc, cmake/ninja and gcc (above)"
+        elif [[ $rc -ne 0 ]]; then exit 1
+        else ran=$((ran + 1)); fi ;;
     port)
         layer port "the PC port replays the layer-2 scripts like the emulator (tests/port)"
         if ! { command -v cmake || [[ -x "$ROOT/tools/venv/bin/cmake" ]]; } >/dev/null; then

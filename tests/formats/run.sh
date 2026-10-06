@@ -13,7 +13,7 @@
 #         the game's data or code reads or sets has an index inside its array.
 #   sound banks: tests/sound/sound_formats.py --check: the 71 banks' VAB headers, VAB bodies (SPU ADPCM) and SEPs parse
 #         as docs/FORMATS.md "Sound" describes them (sizes, tone records, block flags, 16 sequences per SEP).
-# Save round trips (.mcd files exchanged with the port) are added here once the port writes saves.
+# Save round trips (.mcd files exchanged between the port and the emulator) are tests/saves/run.py, which scripts/test.sh runs after this.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PY="$ROOT/tools/venv/bin/python"
