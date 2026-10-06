@@ -20,6 +20,14 @@ Newest first. One short entry per session: goal, result, next steps.
   the same plus libstdc++/libgcc_s in this local mode; the runtime is a static executable (no libfuse at all); removing
   the bundled game or its mods fails the smoke test; the dev-tree self-tests (217 checks; 224 with the disc and the game)
   still pass; actionlint clean.
+- **Verified in CI:** the pull request's run (it changes ci.yml: every area; the areas step read the merge commit's 20
+  files) green in ~14 min. release.yml cannot be dispatched before it is on `main` (GitHub answers 404), so it ran from a
+  temporary branch with a push trigger (deleted afterwards; never a tag, never a release): ci.yml whole, then on
+  ubuntu-24.04 `sdl3-desktop` built with x11/wayland/kmsdrm video and alsa/pipewire/pulseaudio audio, the Release game
+  through the port's M1 test, the AppImage (5.5 MB; both programs need only libc, libm and the loader, newest symbol
+  GLIBC_2.38) and its smoke test (226 checks with the disc); the draft job skipped. Its first try failed: the port's
+  sound check reads the EXE from `extracted/` (fixed: release.yml uses `worktree_init.sh`). The run's artifact,
+  downloaded here, passes its SHA256SUMS and the same self-test with the disc through its FUSE mount on Fedora.
 - **Next:** the user's review; the first tag and the decision to publish its draft are the user's.
 
 ## 2026-10-06: Session 19, path A: the launcher (local worktree `gascarcella/Launcher`, pull request #9)
