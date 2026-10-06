@@ -53,7 +53,7 @@ Newest first. One short entry per session: goal, result, next steps.
 - **Next:** the user's review of #9. When path B's phase 2 lands, 60 Hz works in the game (the settings screen's note
   already says what an older game does).
 
-## 2026-10-06: Session 19 (path B): the launcher plan's game side, phase 1 (local worktree, PRs #10 and the phase-1 PR)
+## 2026-10-06: Session 19 (path B): the launcher plan's game side, phases 1-3 (local worktree, PRs #10, #11, #14, phase 3's)
 - **Asked:** build the game side of `docs/LAUNCHER_MODS_PLAN.md` (sections 4.1-4.5 and 5, phases 1, 2 and 4 of its
   section 7) while a parallel session (path A) builds the launcher; land `--config` early in its own pull request.
 - **PR #10 (`gascarcella/mods-config`):** `--config FILE` and `--print-settings` (`port/src/settings.c`); the plan's 4.3
@@ -69,7 +69,24 @@ Newest first. One short entry per session: goal, result, next steps.
   the window `--fps 0` run and the window run with `--input-test` under a script too); `scripts/test.sh` green (probe
   and 8 layers); `tests/port/run.py --m32 new_game` (PR #10). No game C changed.
 - **Decided by the user:** fast-forward's default speed `4x` (a multiple of the nominal rate: 200 fps at PAL).
-- **Next:** phase 2 (fast-forward, the 50/60 Hz setting with an emulator comparison) on the user's go-ahead.
+- **Phase 2 (`gascarcella/mods-phase2`):** fast-forward (`mods.c`: hold/toggle, the pace at the nominal rate x 4 by
+  default, presents capped at 60 a second, the audio device cleared and muted; `DW3_PORT_FAST_FORWARD=ON:OFF` as a test
+  hook); the 60 Hz mode (`--refresh 60`, `video.refresh`; `records_60hz` before the snapshot, `psyq_cd_set_vsync_hz`).
+  The emulator runs the 60 Hz game from the unpatched disc with `tests/port/ntsc_patch.lua` (`--prelude` in
+  `replay.py` and `spu_trace.py`); `tests/port/hz60.py` holds the comparison and its references.
+- **Verified (phase 2):** fast-forward's off stretches keep PAL's pace from their first vsync (2.0 s instead of 0.5 s
+  with the schedule reset removed: the test catches it), the log and the record the bare run's; at 60 Hz `new_game`
+  has the emulator's cross-core view and LIBSND calls, `first_battle_save` its 18 checkpoints; the emulator and the
+  port both time out at step 220 (a LEFT walk timed for 50 Hz).
+- **Found:** the LIBSND replay of the emulator's own 60 Hz trace differs where the PS1's CPU timing inside a frame
+  matters (the vsync inside SsInit's loop; COMMON's DMA completing within its frame): not a port difference in a run.
+- **Phase 3 (`gascarcella/mods-phase3`): skip dialogues.** The plan's reading held (and every wait in the disc's
+  text is a confirm wait); three `#ifdef PC_PORT` hooks, `build.sh --check` byte-identical. Run with the mod on,
+  `first_battle_save`'s route needs no press through its scenes; the Tamer Service and inn questions wait 300 frames
+  for a press; a talk closes cleanly (screenshots showed the greeting, then the second talk's question); the shared
+  checkpoints keep the emulator's stable hashes; the first battle needs 12 presses instead of 26
+  (`tests/port/mods.py`, the port's own expected record in `tests/port/mods/expected/`).
+- **Next:** battle animations (5.3) on the user's go-ahead; the battle camera (issue #7) is still open.
 
 ## 2026-10-06: CI only when it is needed (a short session on `ci/skip-unneeded-runs`, a pull request)
 - **Asked:** stop running CI when it is not needed (a docs update triggered a full run).

@@ -63,8 +63,10 @@
  * clears them; a movie starts from silence here); at most one tick's frames, already in the SPU's queue, still play.
  * The drive's own volume matrix (ATV0..3, LIBCD's CdMix) stays at its power-on 80h = unity, left to left and right to
  * right (the game never sets it); the SPU applies the CD volume (1B0h/1B2h) and SPUCNT bit 0, which CdInit sets.
- * --fps other than 50 (port/src/audio.c) renders another count per vsync while the drive keeps its 50 Hz pace: the
- * SPU's queue then fills (and drops, at --fps 60) or runs dry (below 50).
+ * The drive's rate is per second: psyq_cd_set_vsync_hz (the nominal rate, port/src/pump.c port_rate: 50, or 60 with
+ * the 60 Hz setting) turns it into sectors and XA frames per tick (2.5 sectors and 735 frames at 60), and the seeks keep
+ * their milliseconds. A --fps other than the nominal rate changes neither: the SPU's queue then fills (and drops) or
+ * runs dry.
  *
  * Assumptions to verify (against the emulator where it matters):
  *  - a blocking CdControl never calls the sync handler (the game registers it only around CdControlF reads);
@@ -96,14 +98,13 @@
 #define CdlDiskError 5
 
 #define CD_RAW_SECTOR 2352
-#define CD_VSYNC_HZ 50                /* PAL */
 #define PSYQ_CD_SEEK_BASE 3           /* ticks */
 #define PSYQ_CD_SEEK_SPAN 8192        /* sectors per further tick */
 #define PSYQ_CD_SEEK_MAX 40           /* ticks */
 #define PSYQ_CD_INSTANT_SECTORS 75    /* per tick */
 #define PSYQ_ST_POLLS_PER_VSYNC 5000
 #define PSYQ_XA_FIFO 16384            /* 44,100 Hz frames decoded, not yet in the SPU (7 sectors' worth) */
-#define PSYQ_XA_PER_TICK (SPU_RATE / CD_VSYNC_HZ) /* 882 frames to the SPU per tick */
+#define PSYQ_XA_PER_TICK ((u32)(SPU_RATE / psyq_cd_vsync_hz)) /* 882 frames to the SPU per tick at 50 Hz, 735 at 60 */
 
 #define ST_MAGIC 0x80010160u
 #define ST_HEADER_SIZE 32
@@ -118,6 +119,7 @@ u8 D_80081454; /* LIBCD's StCdIntrFlag: set by the CD interrupt while MDEC runs 
 enum { CD_IDLE, CD_READ, CD_STREAM };
 
 static int psyq_cd_timing = PSYQ_CD_REALISTIC;
+static int psyq_cd_vsync_hz = 50; /* the vsyncs per second (psyq_cd_set_vsync_hz): 50 (PAL) or 60 */
 static PsyqCdHandler psyq_cd_sync_handler;
 static PsyqCdHandler psyq_cd_ready_handler;
 static int (*psyq_cd_reader)(unsigned lba, u8 *sector);
@@ -130,7 +132,7 @@ static int psyq_cd_loc_new;    /* a Setloc since the last read started */
 static u32 psyq_cd_head;       /* where the head is: the sector after the last one read */
 static u32 psyq_cd_next_lba;   /* the next sector a read delivers */
 static int psyq_cd_seek_ticks; /* ticks left before a read's first sector */
-static int psyq_cd_rate_acc;   /* sectors * CD_VSYNC_HZ owed to the read (realistic) */
+static int psyq_cd_rate_acc;   /* sectors * psyq_cd_vsync_hz owed to the read (realistic) */
 static int psyq_cd_ack_tick;   /* the read was acknowledged in this tick: realistic starts on the next */
 static u8 psyq_cd_mode;        /* the Setmode byte */
 static u8 psyq_cd_status = 0x02;
@@ -174,6 +176,10 @@ void psyq_cd_set_reader(int (*read)(unsigned lba, u8 *sector)) {
 
 void psyq_cd_set_timing(int timing) {
     psyq_cd_timing = timing;
+}
+
+void psyq_cd_set_vsync_hz(int hz) {
+    psyq_cd_vsync_hz = hz;
 }
 
 static u32 psyq_le16(const u8 *p) {
@@ -309,6 +315,7 @@ static void psyq_cd_start_read(int kind) {
         if (psyq_cd_seek_ticks > PSYQ_CD_SEEK_MAX) {
             psyq_cd_seek_ticks = PSYQ_CD_SEEK_MAX;
         }
+        psyq_cd_seek_ticks = psyq_cd_seek_ticks * psyq_cd_vsync_hz / 50; /* the same time at 60 Hz */
     }
     PSYQ_TRACE("cd: %s from sector %u (head %u, seek %d tick(s)), %s speed", kind == CD_STREAM ? "stream" : "read",
                target, psyq_cd_head, psyq_cd_seek_ticks, (psyq_cd_mode & 0x80) ? "double" : "single");
@@ -610,8 +617,8 @@ static int psyq_cd_tick_drive(void) {
         n = 0;
     } else {
         psyq_cd_rate_acc += (psyq_cd_mode & 0x80) ? 150 : 75;
-        n = psyq_cd_rate_acc / CD_VSYNC_HZ;
-        psyq_cd_rate_acc %= CD_VSYNC_HZ;
+        n = psyq_cd_rate_acc / psyq_cd_vsync_hz;
+        psyq_cd_rate_acc %= psyq_cd_vsync_hz;
     }
     if (n > 0 && psyq_cd_deliver(n, result)) {
         ran = 1;

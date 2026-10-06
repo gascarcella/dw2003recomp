@@ -7,6 +7,7 @@
 
 #include "port_harness.h"
 #include "port_runtime.h"
+#include "records.h"
 #include "settings.h"
 #include "spu.h"
 #include "psyq.h"
@@ -34,7 +35,7 @@ void port_fatal(const char *fmt, ...) {
 
 static void usage(const char *argv0) {
     fprintf(stderr,
-            "usage: %s [--config JSON] [--print-settings] [--print-mods] [--script-mods]\n"
+            "usage: %s [--config JSON] [--print-settings] [--print-mods] [--script-mods] [--refresh 50|60]\n"
             "          [--disc CUE|BIN] [--no-disc-check] [--cd-speed instant|realistic] [--memcard1|2 MCD|none]\n"
             "          [--script JSON]\n"
             "          [--log FILE] [--record FILE] [--max-frames N] [--watchdog SEC] [--trace]\n"
@@ -47,6 +48,8 @@ static void usage(const char *argv0) {
             "                   settings file with every key and absolute paths, and exit 0 (64: a bad file)\n"
             "  --print-mods     print the built-in mods' registry (ids, options, defaults) as JSON and exit\n"
             "  --script-mods    with --script: keep the settings' mods on (default: every mod off under a script)\n"
+            "  --refresh HZ     50 (PAL, the default) or 60: the game's own 60 Hz mode (the NTSC patch's flag), the\n"
+            "                   pace, the audio's and the CD's rate (overrides the settings' video.refresh)\n"
             "  --disc PATH      the user's disc (.cue or .bin; SHA-1 checked); without it reads find no data\n"
             "  --no-disc-check  skip the disc's SHA-1 check (experiments with another image)\n"
             "  --cd-speed S     the CD's timing: realistic (default: double speed and seeks) or instant\n"
@@ -99,6 +102,7 @@ int main(int argc, char **argv) {
     const char *config = NULL;
     int print_settings = 0, print_mods = 0, script_mods = 0;
     long fps = -1;
+    int refresh = 0; /* --refresh, else the settings' video.refresh; 0: neither (PAL) */
     int i;
     /* --config first: its values are the defaults that the other options override */
     for (i = 1; i < argc; i++) {
@@ -126,6 +130,13 @@ int main(int argc, char **argv) {
             print_settings = 1;
         } else if (strcmp(argv[i], "--print-mods") == 0) {
             print_mods = 1;
+        } else if (strcmp(argv[i], "--refresh") == 0 && i + 1 < argc) {
+            refresh = (int)number(argv[i + 1], argv[i]);
+            i++;
+            if (refresh != 50 && refresh != 60) {
+                fprintf(stderr, "port: --refresh: 50 (PAL) or 60\n");
+                return 64;
+            }
         } else if (strcmp(argv[i], "--script-mods") == 0) {
             script_mods = 1;
         } else if (strcmp(argv[i], "--max-frames") == 0 && i + 1 < argc) {
@@ -192,8 +203,18 @@ int main(int argc, char **argv) {
             return 64;
         }
     }
+    if (refresh == 0 && config != NULL) {
+        refresh = port_settings.refresh;
+    }
+    if (refresh != 0) {
+        port_rate = refresh; /* the 60 Hz mode: the rate, the pace, the CD, records_60hz below */
+        port_pace_set(refresh);
+    }
     if (fps >= 0) {
-        port_rate = fps > 0 ? fps : 50; /* --fps N: the nominal rate and the pace; 0: unthrottled, the rate PAL's */
+        /* --fps N: the pace; without a refresh also the nominal rate (as before: 0 is unthrottled at PAL's rate) */
+        if (refresh == 0) {
+            port_rate = fps > 0 ? fps : 50;
+        }
         port_pace_set(fps);
     }
     port_input_settings(config != NULL ? port_settings.input : NULL);
@@ -214,14 +235,12 @@ int main(int argc, char **argv) {
         eff.fullscreen = fullscreen;
         eff.mute = mute;
         eff.watchdog = port_watchdog_sec;
+        eff.refresh = refresh;
         for (i = 0; i < 2; i++) {
             eff.memcard[i] = memcard_given[i] > 0 && memcard[i] != NULL ? port_settings_abspath(memcard[i]) : NULL;
         }
         port_settings_print(stdout, &eff);
         return 0;
-    }
-    if (config != NULL && port_settings.refresh == 60) {
-        port_log("settings: video.refresh 60 is not implemented yet: the game runs at 50 (PAL)");
     }
     if (window && !port_video_available()) {
         fprintf(stderr, "port: --window: this build has no window: configure with -DDW3_PORT_SDL=ON "
@@ -234,6 +253,13 @@ int main(int argc, char **argv) {
     }
     port_arena_init();
     spu_init();
+    if (refresh == 60) {
+        /* the game's own 60 Hz mode (the NTSC patch's records_60hz; docs/LAUNCHER_MODS_PLAN.md 5.5), set before the
+         * snapshot (port_overlay_init) so that the reset restores it and the reset check holds; main_screen_pos stays
+         * 1 (the PAL screen offset, which the port's video ignores, and the card game's PAL layout) */
+        records_60hz = 1;
+        psyq_cd_set_vsync_hz(60);
+    }
     port_overlay_init();
     if (speed != NULL && !port_disc_set_speed(speed)) {
         fprintf(stderr, "port: --cd-speed: unknown speed %s\n", speed);
@@ -268,7 +294,7 @@ int main(int argc, char **argv) {
         port_input_init(input_test);
     }
     port_pump_init();
-    port_log("start: max-frames %ld, watchdog %d s", port_max_frames, port_watchdog_sec);
+    port_log("start: max-frames %ld, watchdog %d s, %ld Hz", port_max_frames, port_watchdog_sec, port_rate);
     if (setjmp(port_reset_jmp) != 0) {
         port_reset_state(); /* the script's reset step (port_reset_request) */
     }

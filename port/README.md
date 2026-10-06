@@ -140,6 +140,20 @@ registry; the settings' `mods.<id>` enable and configure them; under `--script` 
 the pace (the wall clock's vsyncs per second; `port_pace_set`, which starts the schedule over on every change, so a
 fast-forward that ends never makes the game wait for the vsyncs it ran ahead).
 
+**Fast-forward** (the `fast_forward` mod; docs/LAUNCHER_MODS_PLAN.md 5.1): enabled in the settings, hold `Tab` (or a
+toggle binding) runs the game at the nominal rate times its speed (default `4x`), presents at most 60 images a second
+and mutes the audio device; the game, its log and its record are unchanged.
+
+**Skip dialogues** (the `skip_dialogues` mod; 5.2): toggled with `F2` (by default), the game's text appears at once
+and goes on by itself (`port_mod_skip_dialogues`, read by three `#ifdef PC_PORT` blocks in `src/main/message.c` and
+the battle's `fightstg_message_step`); choices and menus still wait. `fast_forward_waits` also fast-forwards the field
+events' scripted waits.
+
+**60 Hz** (`--refresh 60`, or the settings' `video.refresh`; 5.5): the game's own 60 Hz mode (the NTSC patch's
+`records_60hz`, set before the reset's snapshot), paced at 60, the audio at 735 samples a vsync, the CD's ticks at 60.
+`tests/port/hz60.py` compares it with the patched game in the emulator. (`--fps 60` alone is the old meaning: the PAL
+game at 60, 20% fast.)
+
 ## What CMake generates (`build/port/gen/`, by `tools/port_gen.py`)
 At configure time:
 - `units.cmake`: the 388 units: `src/<target>/*.c` for the EXE and the tier-1/tier-2 overlays, `src/wstag/<unit>.c`

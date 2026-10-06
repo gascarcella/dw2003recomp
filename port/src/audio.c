@@ -195,9 +195,17 @@ static void audio_put(const void *data, int frames) {
     }
 }
 
+static int audio_muted;
+static long long audio_muted_vsyncs;
+
 static void audio_device_frame(const int16_t *s, int frames) {
     static const int16_t silence[2048 * 2];
-    int q = SDL_GetAudioStreamQueued(audio_stream);
+    int q;
+    if (audio_muted) {
+        audio_muted_vsyncs++;
+        return;
+    }
+    q = SDL_GetAudioStreamQueued(audio_stream);
     int nudge = audio_nudge;
     q = q > 0 ? q / 4 : 0;
     if (audio_started) {
@@ -250,6 +258,9 @@ static void audio_device_frame(const int16_t *s, int frames) {
 static void audio_device_close(void) {
     if (audio_stream != NULL) {
         audio_report("end", audio_all.vsyncs, audio_all.min, audio_all.max, audio_all.sum);
+        if (audio_muted_vsyncs > 0) {
+            port_log("audio: %lld vsyncs muted (fast-forward)", audio_muted_vsyncs);
+        }
         SDL_DestroyAudioStream(audio_stream);
         audio_stream = NULL;
     }
@@ -297,6 +308,19 @@ void port_audio_frame(void) {
     if (audio_stream != NULL) {
         audio_device_frame(audio_buf, frames);
     }
+#endif
+}
+
+void port_audio_set_mute(int mute) {
+#ifdef DW3_PORT_SDL
+    if (audio_stream != NULL && mute != audio_muted) {
+        SDL_ClearAudioStream(audio_stream);
+        audio_started = 0; /* the first put after it is a start, not a refill */
+        audio_avg = audio_target;
+    }
+    audio_muted = mute;
+#else
+    (void)mute;
 #endif
 }
 

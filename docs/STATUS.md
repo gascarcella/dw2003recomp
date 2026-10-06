@@ -98,8 +98,16 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   `--print-settings` prints the effective settings (`port/src/settings.c`; `tests/port/settings.py`, in the port layer
   of `scripts/test.sh`). Phase 1 of the plan's section 7: the keyboard and gamepad map rebindable, hotkey actions with
   chords masked from the pad, the pause key (`P`), the pace split from the nominal rate, `port/src/mods.c` with the
-  registry and `port/mods/fast_forward/mod.json` (its behaviour is phase 2), mods off under `--script` unless
-  `--script-mods`. The bare binary's logs, records and WAVs are unchanged.
+  registry and `port/mods/fast_forward/mod.json`, mods off under `--script` unless `--script-mods` (PRs #10, #11).
+  Phase 2: **fast-forward** (hold `Tab`, `4x` by default: the pace times the speed with the schedule reset, presents
+  capped at 60 a second, the audio muted; the log and the record unchanged) and **the 60 Hz mode** (`--refresh 60` /
+  `video.refresh`: `records_60hz` before the snapshot, the pace, the audio and the CD at 60), **compared with the
+  patched game in the emulator** (`tests/port/hz60.py`, `tests/port/ntsc_patch.lua`): `new_game` the same cross-core
+  view and the same 108 LIBSND calls, `first_battle_save` the same 18 checkpoints until both runs time out at the same
+  50 Hz-timed walk (PR #14). Phase 3: **skip dialogues** (`F2` toggles; `port_mod_skip_dialogues` in three
+  `#ifdef PC_PORT` blocks of `message.c` and the battle's message step; `build.sh --check` byte-identical):
+  `first_battle_save`'s route plays with no press through the scenes, the choices wait, the six shared checkpoints keep
+  the emulator's stable hashes (`tests/port/mods.py`). The bare binary's logs, records and WAVs are unchanged.
 - **Launcher (session 19, path A; `launcher/README.md`; DECISIONS "The launcher's open points (session 19, path A)"):**
   `build/launcher/dw2003-launcher` (`scripts/setup.sh sdl3 imgui`; `cmake -S launcher -B build/launcher`), C++17 with
   Dear ImGui 1.92.9b on SDL3 + `SDL_Renderer`, its own CMake project (it compiles `port/src/json.c` and `sha1.c`
@@ -218,10 +226,10 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   and WSTAG's own types have their understood fields named (DECISIONS "Naming pass names-10"), and so have the EXE's
   and CARDGAME's (DECISIONS "Naming pass names-9": what is left there is unread, padding or per-effect scratch).
 - Kept as is: object list in `heap`, random module in `pad`, gamestate one file vs two, `object` vs `main`.
-- Launcher and mods: game side phase 1 done (session 19, path B); next phase 2 (fast-forward, 50/60 Hz); fast-forward's
-  default speed: `4x` (the user's pick). Launcher: path A (`docs/LAUNCHER_MODS_PLAN.md`). Found on the way (its section 3): without
-  `--memcard1` a save is lost at exit; no pause or reset key; the watchdog would kill a paused game; 60 Hz
-  (`records_60hz`) has never been compared with the emulator; no Windows build (its section 6 has the staged route).
+- Launcher and mods: game side phases 1-3 done (session 19, path B: settings, input, mods, fast-forward, 60 Hz, skip
+  dialogues); next battle animations (5.3; the picture waits for issue #7; skip dialogues does not cover the card
+  game's and other overlays' code-driven prompts). Open from phase 2: the NTSC patch's `main_screen_pos` value (assumed 0) is not checked against the patch
+  itself, and the port keeps 1 (the card game's PAL layout); no reset key yet; no Windows build (the plan's section 6).
 - PC port: decided and started (`docs/PC_PORT_PLAN.md`: M0 and M1 done); `docs/PC_PORT_RESEARCH.md` stays background.
   Open from session 16: `FieldstgEventDef.start` returns `s32` (an object survives as the low half of a host pointer:
   the arena is below 4 GB), `port_state_read` cannot map `memcard_state` (private type) or overlay data, the CD seek

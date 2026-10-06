@@ -1,0 +1,649 @@
+{
+ "script": "new_game",
+ "script_sha1": "8f8cc632f368494705dd848b053c50f9d9854aac",
+ "emulator": {
+  "name": "pcsx-redux",
+  "version": "bf4c9ceb",
+  "build_id": 359,
+  "changeset": "bf4c9cebdd1c649dd006736bb012fc7f1d6fd988"
+ },
+ "bios": {
+  "name": "openbios",
+  "sha1": "8f1269a22179433c8b22b4c804f11c0a076450c5"
+ },
+ "tree_commit": "3565460d1ae22d1ee8bbac9136db572e305aa568",
+ "frames": 2500,
+ "checkpoints": [
+  {
+   "name": "cnty_sel",
+   "frame": 834,
+   "stage": 22,
+   "map": 5632,
+   "random_index": 1,
+   "gamestate_sha1": "0d2b0842084e8e1bda4dcf40ff547d9ff8bc96ac",
+   "gamestate_sha1_stable": "c81c0f7124a841292d9b9b06d4a36af19c6529e2"
+  },
+  {
+   "name": "opening_movie",
+   "frame": 1016,
+   "stage": 14,
+   "map": 3586,
+   "random_index": 167,
+   "gamestate_sha1": "168ae490cea8c26e4392d336987e96a30805c558",
+   "gamestate_sha1_stable": "cbfd9064a4ba820c12f8a886e3b58f2cd72db154"
+  },
+  {
+   "name": "title_screen",
+   "frame": 1083,
+   "stage": 14,
+   "map": 3584,
+   "random_index": 172,
+   "gamestate_sha1": "0772ddd629d9f46e6ffa42fafee5d5a934862d9c",
+   "gamestate_sha1_stable": "0c10c1cd8bd1a7de66e78bf9b084d64fb423c540"
+  },
+  {
+   "name": "new_game_field",
+   "frame": 1998,
+   "stage": 2,
+   "map": 727,
+   "random_index": 1032,
+   "gamestate_sha1": "ddad2ef2ee2d40f8938322027a1ddae8df64a4a6",
+   "gamestate_sha1_stable": "729e060f5fdb93338991d74b15e803a0e5a2e811"
+  },
+  {
+   "name": "first_field_map",
+   "frame": 2500,
+   "stage": 2,
+   "map": 727,
+   "random_index": 1599,
+   "gamestate_sha1": "4b639b69f8d5d13d112cd561b70cee582f425ded",
+   "gamestate_sha1_stable": "e01ce9c5ed7f8ff834d928fec85392d6aa269809"
+  }
+ ],
+ "overlay_sequence": [
+  {
+   "file": 0,
+   "frame": 1,
+   "stage": 0
+  },
+  {
+   "file": -1,
+   "frame": 806,
+   "stage": 22
+  },
+  {
+   "file": -1,
+   "frame": 1016,
+   "stage": 14
+  },
+  {
+   "file": -1,
+   "frame": 1998,
+   "stage": 2
+  },
+  {
+   "file": 489,
+   "frame": 2000,
+   "stage": 2
+  }
+ ],
+ "map_sequence": [
+  {
+   "frame": 1,
+   "map": 0
+  },
+  {
+   "frame": 768,
+   "map": 5632
+  },
+  {
+   "frame": 1016,
+   "map": 3586
+  },
+  {
+   "frame": 1083,
+   "map": 3584
+  },
+  {
+   "frame": 1995,
+   "map": 5632
+  },
+  {
+   "frame": 1998,
+   "map": 727
+  }
+ ],
+ "inputs": [
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 834
+  },
+  {
+   "buttons": [],
+   "frame": 836
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 854
+  },
+  {
+   "buttons": [],
+   "frame": 856
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 874
+  },
+  {
+   "buttons": [],
+   "frame": 876
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 894
+  },
+  {
+   "buttons": [],
+   "frame": 896
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 914
+  },
+  {
+   "buttons": [],
+   "frame": 916
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 934
+  },
+  {
+   "buttons": [],
+   "frame": 936
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 954
+  },
+  {
+   "buttons": [],
+   "frame": 956
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 974
+  },
+  {
+   "buttons": [],
+   "frame": 976
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 994
+  },
+  {
+   "buttons": [],
+   "frame": 996
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1014
+  },
+  {
+   "buttons": [],
+   "frame": 1046
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1076
+  },
+  {
+   "buttons": [],
+   "frame": 1085
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1103
+  },
+  {
+   "buttons": [],
+   "frame": 1105
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1123
+  },
+  {
+   "buttons": [],
+   "frame": 1125
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1143
+  },
+  {
+   "buttons": [],
+   "frame": 1145
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1163
+  },
+  {
+   "buttons": [],
+   "frame": 1165
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1183
+  },
+  {
+   "buttons": [],
+   "frame": 1185
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1203
+  },
+  {
+   "buttons": [],
+   "frame": 1205
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1223
+  },
+  {
+   "buttons": [],
+   "frame": 1225
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1243
+  },
+  {
+   "buttons": [],
+   "frame": 1245
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1263
+  },
+  {
+   "buttons": [],
+   "frame": 1265
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1283
+  },
+  {
+   "buttons": [],
+   "frame": 1285
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1303
+  },
+  {
+   "buttons": [],
+   "frame": 1305
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1323
+  },
+  {
+   "buttons": [],
+   "frame": 1325
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1343
+  },
+  {
+   "buttons": [],
+   "frame": 1345
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1363
+  },
+  {
+   "buttons": [],
+   "frame": 1365
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1383
+  },
+  {
+   "buttons": [],
+   "frame": 1385
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1403
+  },
+  {
+   "buttons": [],
+   "frame": 1405
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1423
+  },
+  {
+   "buttons": [],
+   "frame": 1425
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1443
+  },
+  {
+   "buttons": [],
+   "frame": 1445
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1463
+  },
+  {
+   "buttons": [],
+   "frame": 1465
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1483
+  },
+  {
+   "buttons": [],
+   "frame": 1485
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1503
+  },
+  {
+   "buttons": [],
+   "frame": 1505
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1523
+  },
+  {
+   "buttons": [],
+   "frame": 1525
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1543
+  },
+  {
+   "buttons": [],
+   "frame": 1545
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1563
+  },
+  {
+   "buttons": [],
+   "frame": 1565
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1583
+  },
+  {
+   "buttons": [],
+   "frame": 1585
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1603
+  },
+  {
+   "buttons": [],
+   "frame": 1605
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1623
+  },
+  {
+   "buttons": [],
+   "frame": 1625
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1643
+  },
+  {
+   "buttons": [],
+   "frame": 1645
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1663
+  },
+  {
+   "buttons": [],
+   "frame": 1665
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1683
+  },
+  {
+   "buttons": [],
+   "frame": 1685
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1703
+  },
+  {
+   "buttons": [],
+   "frame": 1705
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1723
+  },
+  {
+   "buttons": [],
+   "frame": 1725
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1743
+  },
+  {
+   "buttons": [],
+   "frame": 1745
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1763
+  },
+  {
+   "buttons": [],
+   "frame": 1765
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1783
+  },
+  {
+   "buttons": [],
+   "frame": 1785
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1803
+  },
+  {
+   "buttons": [],
+   "frame": 1805
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1823
+  },
+  {
+   "buttons": [],
+   "frame": 1825
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1843
+  },
+  {
+   "buttons": [],
+   "frame": 1845
+  },
+  {
+   "buttons": [
+    "START"
+   ],
+   "frame": 1863
+  },
+  {
+   "buttons": [],
+   "frame": 1865
+  },
+  {
+   "buttons": [
+    "UP"
+   ],
+   "frame": 1943
+  },
+  {
+   "buttons": [],
+   "frame": 1947
+  },
+  {
+   "buttons": [
+    "CROSS"
+   ],
+   "frame": 1949
+  },
+  {
+   "buttons": [],
+   "frame": 1953
+  },
+  {
+   "buttons": [
+    "CROSS"
+   ],
+   "frame": 1983
+  },
+  {
+   "buttons": [],
+   "frame": 1987
+  }
+ ],
+ "prelude": "ntsc_patch.lua"
+}

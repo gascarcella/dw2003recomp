@@ -4958,6 +4958,20 @@ void fightstg_message_step(FightstgMessage *obj, FightstgMessageData *data) {
         }
         break;
     case 3:
+#ifdef PC_PORT
+        if (port_mod_skip_dialogues != 0) {
+            /* skip_dialogues: the battle's message goes on by itself (the press below, without its sound) */
+            msg = obj->queue[++obj->queue_index];
+            if (msg == 0) {
+                obj->base.state = OBJECT_STATE_END;
+            } else {
+                obj->show(obj, msg, NULL);
+                obj->base.set_step(obj, 0);
+            }
+            obj->waiting = 0;
+            break;
+        }
+#endif
         if (pad_state.get_pressed(0) & 0x2000) {
             sound_module.play(0x4001C);
             msg = obj->queue[++obj->queue_index];

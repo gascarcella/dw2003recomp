@@ -3,7 +3,7 @@
 
 Usage:
   tests/replay/replay.py run <script.json> [--record] [--repeat N] [--bios openbios|retail] [--speed S] [--interpreter]
-                             [--iso CUE] [--out DIR] [-v]
+                             [--iso CUE] [--prelude LUA] [--expected-dir DIR] [--out DIR] [-v]
   tests/replay/replay.py check [--interpreter] [--iso CUE] [script.json ...]   # every script with an expected file (the test entry point)
 
 A script (tests/replay/scripts/<name>.json) is a list of steps (see tests/README.md); the runner tests/replay/run.lua
@@ -241,6 +241,12 @@ def check_tools():
         sys.exit(2)
 
 
+def shown(path):
+    """A path for messages: relative to the repository when inside it."""
+    path = Path(path).resolve()
+    return path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
+
+
 def cmd_run(args):
     check_tools()
     script_path = Path(args.script)
@@ -248,12 +254,19 @@ def cmd_run(args):
     bios = bios_path(args.bios)
     base_out = Path(args.out) if args.out else Path(tempfile.mkdtemp(prefix="dw3_replay_"))
     records = []
+    emu_args, lua = EMU_INTERPRETER if args.interpreter else (), None
+    if args.prelude:
+        # a Lua chunk run before run.lua (tests/port/ntsc_patch.lua: the NTSC patch's bytes at main's entry); its exec
+        # breakpoints need the debugger and the interpreter core
+        emu_args = ("-debugger", "-interpreter")
+        base_out.mkdir(parents=True, exist_ok=True)
+        lua = base_out.resolve() / "prelude_wrapper.lua"
+        lua.write_text(f"dofile({json.dumps(str(Path(args.prelude).resolve()))})\ndofile({json.dumps(str(RUN_LUA))})\n")
     for i in range(args.repeat):
         print(f"replay {script['name']} (bios {args.bios}), run {i + 1}/{args.repeat}")
         try:
             records.append(run_once(script_path, script, bios, base_out / f"run{i + 1}", verbose=args.verbose,
-                                    emu_args=EMU_INTERPRETER if args.interpreter else (), speed=args.speed,
-                                    iso=args.iso))
+                                    lua=lua, emu_args=emu_args, speed=args.speed, iso=args.iso))
         except (RuntimeError, subprocess.TimeoutExpired) as e:
             print(f"  FAIL: {e}")
             return 1
@@ -265,27 +278,29 @@ def cmd_run(args):
             print(f"  run 1 vs run {i} DIFFER (non-deterministic):\n    " + "\n    ".join(diffs))
     if args.repeat > 1 and status == 0:
         print(f"  determinism: {args.repeat} runs identical")
-    expected_path = EXPECTED / f"{script['name']}.json"
-    if args.record and args.interpreter:
+    if args.prelude:
+        records[0]["prelude"] = Path(args.prelude).name
+    expected_path = (Path(args.expected_dir) if args.expected_dir else EXPECTED) / f"{script['name']}.json"
+    if args.record and args.interpreter and not args.prelude:
         print("  not recording: expected files come from the default core (dynarec)")
     elif args.record:
         if status:
             print("  not recording: runs differ")
         else:
-            EXPECTED.mkdir(exist_ok=True)
+            expected_path.parent.mkdir(exist_ok=True)
             expected_path.write_text(json.dumps(records[0], indent=1) + "\n")
-            print(f"  recorded {expected_path.relative_to(ROOT)}")
+            print(f"  recorded {shown(expected_path)}")
     elif expected_path.exists():
         expected = json.loads(expected_path.read_text())
-        diffs = (compare(cross_core_view(expected), cross_core_view(records[0])) if args.interpreter
+        diffs = (compare(cross_core_view(expected), cross_core_view(records[0])) if args.interpreter or args.prelude
                  else compare(expected, records[0]))
         if diffs:
             status = 1
-            print(f"  MISMATCH vs {expected_path.relative_to(ROOT)}:\n    " + "\n    ".join(diffs))
+            print(f"  MISMATCH vs {shown(expected_path)}:\n    " + "\n    ".join(diffs))
         else:
-            print(f"  matches {expected_path.relative_to(ROOT)}" + (" (cross-core view)" if args.interpreter else ""))
+            print(f"  matches {shown(expected_path)}" + (" (cross-core view)" if args.interpreter else ""))
     else:
-        print(f"  no expected file ({expected_path.relative_to(ROOT)}); use --record")
+        print(f"  no expected file ({shown(expected_path)}); use --record")
     print(f"  outputs: {base_out}")
     return status
 
@@ -339,6 +354,10 @@ def main():
     r.add_argument("--interpreter", action="store_true",
                    help="run on the interpreter core; compares the cross-core view with the expected file (no --record)")
     r.add_argument("--iso", help="another disc image (.cue) instead of iso/dw2003.cue (tests/holdouts/run.py)")
+    r.add_argument("--prelude", help="a Lua chunk run before run.lua (e.g. tests/port/ntsc_patch.lua); implies the "
+                                     "debugger and the interpreter core; compares the cross-core view")
+    r.add_argument("--expected-dir", help="where the expected file is read or --record writes it "
+                                          "(default tests/replay/expected; e.g. tests/port/hz60)")
     r.add_argument("-v", "--verbose", action="store_true")
     r.set_defaults(func=cmd_run)
     c = sub.add_parser("check", help="run every recorded script and compare")
