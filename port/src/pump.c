@@ -42,6 +42,7 @@ static void port_watchdog(int sig) {
 
 
 void port_pump_init(void) {
+    psyq_set_vsync_pre_hook(port_audio_frame); /* the SPU's samples of the frame, before the game's handler */
     psyq_set_vsync_hook(port_frame);
     if (port_watchdog_sec > 0) {
         struct sigaction sa;
@@ -59,6 +60,7 @@ void port_pump_init(void) {
 /* The console's reset (port/src/reset.c): the frame count goes on; the watchdog starts over (the longjmp left the
  * tick that re-armed it), the per-frame hook stays the runtime's. */
 void port_pump_reset(void) {
+    psyq_set_vsync_pre_hook(port_audio_frame);
     psyq_set_vsync_hook(port_frame);
     if (port_watchdog_armed) {
         alarm((unsigned)port_watchdog_sec);
@@ -85,7 +87,6 @@ static void port_frame(void) {
     if (port_script_active) {
         port_script_frame();
     }
-    port_audio_frame();
     port_video_frame();
     if (port_max_frames > 0 && port_frames >= port_max_frames) {
         port_exit(0, "frame cap");

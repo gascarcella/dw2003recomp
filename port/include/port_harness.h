@@ -86,8 +86,9 @@ void port_spu_trace_close(void);
 
 /* ---- audio.c: the audio output (M3; T-audio) ----
  * port_audio_open: `device` 1 opens SDL3's audio device (window mode, unless --mute), `wav_path` (any build, headless
- * too) captures the output as a 44.1 kHz stereo 16-bit WAV; either may be off. port_audio_frame (pump.c, once per vsync):
- * renders that vsync's samples with spu_render (exactly SPU_RATE / 50 = 882 per PAL vsync; deterministic) into the
+ * too) captures the output as a 44.1 kHz stereo 16-bit WAV; either may be off. port_audio_frame (pump.c's vsync pre-hook:
+ * at the start of every vsync, before the game's VSyncCallback handler; always, headless and with no device or WAV too,
+ * because LIBSND's flush reads the voices' envelopes): renders that vsync's samples with spu_render (exactly SPU_RATE / 50 = 882 per PAL vsync; deterministic) into the
  * device's queue and the WAV. port_audio_close: from port_exit (finishes the WAV header). */
 void port_audio_open(int device, const char *wav_path);
 void port_audio_frame(void);
