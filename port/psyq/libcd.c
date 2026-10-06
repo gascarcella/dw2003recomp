@@ -28,8 +28,8 @@
  * Setloc position at the drive's rate. Video sectors (Form 1 data whose first word is the StHEADER magic 0x80010160:
  * id 0x0160, type 0x8001; then secCount, nSectors, frameCount, frameSize, width, height, ...; 32 bytes of header and
  * 2016 bytes of MDEC data per sector, as psx-spx "CDROM File Video Contents" and MOVIE*.STR's sectors have them)
- * are assembled into whole frames; XA audio sectors (submode bit 0x04) and other sectors are skipped. A frame lives
- * in the game's own ring buffer (StSetRing's address and size: 32 sectors = 64 KB here) as one contiguous slot:
+ * are assembled into whole frames; XA audio sectors go to the XA decoder (below), other sectors are skipped. A frame
+ * lives in the game's own ring buffer (StSetRing's address and size: 32 sectors = 64 KB here) as one contiguous slot:
  * the first sector's 32-byte StHEADER, then the nSectors * 2016 data bytes in secCount order. StGetNext hands out
  * the oldest complete frame (*addr = its data, *header = its StHEADER), StFreeRing(addr) releases it. This layout is
  * ours (LIBCD's own placement of headers and data in the ring is not documented publicly); it keeps every pointer
@@ -44,6 +44,28 @@
  * movie plays at the drive's rate, not at the host's. The constant is an estimate (a PAL vsync is 677,376 CPU
  * cycles at 33.8688 MHz; a poll of the loop is taken as ~135 cycles), not a measurement.
  *
+ * XA audio (M5; docs/SOUND.md "CD audio"), as psx-spx "Data/ADPCM Sector Filtering/Delivery" has it: with the Setmode
+ * byte's bit 0x40 (XA-ADPCM; the movies' CdRead2(0x1E0)), a Mode 2 sector whose submode has audio and real time (0x44)
+ * goes to the drive's XA decoder instead of the CPU, in a read (no CdlDataReady for it) as in the stream; with bit
+ * 0x08 (XA-Filter) only one whose file and channel match CdlSetfilter's, the others being dropped. The game sets no
+ * filter: the movies have one audio channel (file 1, channel 1, coding 01h: stereo, 37,800 Hz, 4 bits) in every
+ * eighth sector, at double speed 18.75 sectors/s = 37,800 frames/s. port/psyq/xa.c decodes a sector and resamples it
+ * to 44,100 Hz (2016 frames -> 2352) into this file's FIFO, in the CD tick that delivers the sector. The FIFO feeds
+ * the SPU's CD input (spu_cd_input) at the end of every CD tick with PSYQ_XA_PER_TICK = 882 frames: what the next
+ * vsync's render consumes at 50 Hz (audio.c renders in the vsync pre-hook, before the tick). The sectors arrive in
+ * whole ticks (3 per tick: an audio one after 2, 3, 3 ticks), so a decoder that started playing at once would run dry
+ * 294 frames before the next audio sector, where the hardware, whose sectors arrive continuously, has no gap. A run's
+ * first sector therefore waits one tick (20 ms of latency) before its samples go out; the FIFO then never runs dry
+ * while the drive streams (its low point is 588 frames). When it does run dry (the stream ended, or the reads fell
+ * behind), the run ends and the next audio sector starts a new one with its wait. Beyond PSYQ_XA_FIFO frames (instant
+ * timing reads ahead) the newest are dropped, counted in the trace. A Pause, a new read, StUnSetRing, CdInit and the
+ * reset flush the FIFO and reset the decoder (ADPCM history, resampler ring: psx-spx does not say when the hardware
+ * clears them; a movie starts from silence here); at most one tick's frames, already in the SPU's queue, still play.
+ * The drive's own volume matrix (ATV0..3, LIBCD's CdMix) stays at its power-on 80h = unity, left to left and right to
+ * right (the game never sets it); the SPU applies the CD volume (1B0h/1B2h) and SPUCNT bit 0, which CdInit sets.
+ * --fps other than 50 (port/src/audio.c) renders another count per vsync while the drive keeps its 50 Hz pace: the
+ * SPU's queue then fills (and drops, at --fps 60) or runs dry (below 50).
+ *
  * Assumptions to verify (against the emulator where it matters):
  *  - a blocking CdControl never calls the sync handler (the game registers it only around CdControlF reads);
  *  - CdlReadN acknowledges with CdlComplete before its first sector (cdload's state machine needs that order);
@@ -57,11 +79,13 @@
 #include "psyq_internal.h"
 #include "psyq/libcd.h"
 #include "spu.h"
+#include "xa.h"
 
 /* Commands the game sends. */
 #define CdlSetloc 0x02
 #define CdlReadN 0x06
 #define CdlPause 0x09
+#define CdlSetfilter 0x0D
 #define CdlSetmode 0x0E
 #define CdlReadS 0x1B
 
@@ -78,6 +102,8 @@
 #define PSYQ_CD_SEEK_MAX 40           /* ticks */
 #define PSYQ_CD_INSTANT_SECTORS 75    /* per tick */
 #define PSYQ_ST_POLLS_PER_VSYNC 5000
+#define PSYQ_XA_FIFO 16384            /* 44,100 Hz frames decoded, not yet in the SPU (7 sectors' worth) */
+#define PSYQ_XA_PER_TICK (SPU_RATE / CD_VSYNC_HZ) /* 882 frames to the SPU per tick */
 
 #define ST_MAGIC 0x80010160u
 #define ST_HEADER_SIZE 32
@@ -108,6 +134,7 @@ static int psyq_cd_rate_acc;   /* sectors * CD_VSYNC_HZ owed to the read (realis
 static int psyq_cd_ack_tick;   /* the read was acknowledged in this tick: realistic starts on the next */
 static u8 psyq_cd_mode;        /* the Setmode byte */
 static u8 psyq_cd_status = 0x02;
+static u8 psyq_cd_filter[2];   /* CdlSetfilter's file and channel */
 
 static u8 psyq_cd_raw[CD_RAW_SECTOR]; /* the delivered sector */
 static int psyq_cd_have_sector;
@@ -131,6 +158,15 @@ static int st_first, st_count;
 static u32 st_start_frame, st_end_frame = 0xFFFFFFFFu;
 static u32 st_skip_frame;      /* realistic: the frame being dropped (no room), 0 none */
 static int st_polls;           /* consecutive empty StGetNext polls */
+
+/* The XA decoder and its FIFO of 44,100 Hz stereo frames (the header comment). */
+enum { XA_IDLE, XA_LEAD, XA_PLAYING };
+static XaDecoder psyq_xa;
+static int16_t psyq_xa_fifo[PSYQ_XA_FIFO * 2]; /* interleaved left, right */
+static u32 psyq_xa_head, psyq_xa_count;
+static int psyq_xa_state;   /* XA_IDLE; XA_LEAD: a run's first sector is in, it plays from the next tick; XA_PLAYING */
+static u32 psyq_xa_sectors; /* the run's audio sectors */
+static u32 psyq_xa_dropped; /* the run's frames dropped (the FIFO full) */
 
 void psyq_cd_set_reader(int (*read)(unsigned lba, u8 *sector)) {
     psyq_cd_reader = read;
@@ -170,6 +206,88 @@ int CdPosToInt(CdlLOC *p) {
     return psyq_cd_btoi(p->minute) * 60 * 75 + psyq_cd_btoi(p->second) * 75 + psyq_cd_btoi(p->sector) - 150;
 }
 
+/* ---- XA audio ---- */
+
+/* Stops the decoder: the FIFO emptied, the decoder's state reset. */
+static void psyq_xa_flush(const char *why) {
+    if (psyq_xa_state != XA_IDLE || psyq_xa_count > 0) {
+        PSYQ_TRACE("xa: flushed (%s) after %u sector(s): %u frame(s) unplayed, %u dropped", why, psyq_xa_sectors,
+                   psyq_xa_count, psyq_xa_dropped);
+    }
+    xa_reset(&psyq_xa);
+    psyq_xa_head = 0;
+    psyq_xa_count = 0;
+    psyq_xa_state = XA_IDLE;
+    psyq_xa_sectors = 0;
+    psyq_xa_dropped = 0;
+}
+
+/* The delivered sector, when it is XA audio the drive keeps from the CPU (the header comment): 1 = taken (decoded into
+ * the FIFO, or dropped by the filter), 0 = a data sector. */
+static int psyq_xa_take(u32 lba) {
+    static int16_t out[2 * XA_MAX_OUT];
+    const u8 *sub = psyq_cd_raw + 16;
+    int filtered = (psyq_cd_mode & 0x08) && (sub[0] != psyq_cd_filter[0] || sub[1] != psyq_cd_filter[1]);
+    int n, i;
+
+    if (psyq_cd_raw[15] != 2 || (sub[2] & 0x44) != 0x44) {
+        return 0;
+    }
+    if (!(psyq_cd_mode & 0x40) || filtered) {
+        return (psyq_cd_mode & 0x08) != 0; /* the filter keeps audio sectors from the CPU too */
+    }
+    n = xa_decode_sector(&psyq_xa, psyq_cd_raw, out);
+    if (psyq_xa_state == XA_IDLE) {
+        PSYQ_TRACE("xa: sector %u (file %u, channel %u, coding %02x) starts a run, %d frames; plays from the next tick",
+                   lba, sub[0], sub[1], sub[3], n);
+        psyq_xa_state = XA_LEAD;
+    }
+    psyq_xa_sectors++;
+    for (i = 0; i < n; i++) {
+        u32 tail;
+
+        if (psyq_xa_count == PSYQ_XA_FIFO) {
+            if (psyq_xa_dropped == 0) {
+                PSYQ_TRACE("xa: the FIFO is full at sector %u: frames dropped", lba);
+            }
+            psyq_xa_dropped += (u32)(n - i);
+            break;
+        }
+        tail = (psyq_xa_head + psyq_xa_count) % PSYQ_XA_FIFO;
+        psyq_xa_fifo[2 * tail] = out[2 * i];
+        psyq_xa_fifo[2 * tail + 1] = out[2 * i + 1];
+        psyq_xa_count++;
+    }
+    return 1;
+}
+
+/* The end of a CD tick: the next vsync's frames into the SPU's CD input (a run's first tick waits). */
+static void psyq_xa_feed(void) {
+    u32 n, chunk;
+
+    if (psyq_xa_state == XA_LEAD) {
+        psyq_xa_state = XA_PLAYING;
+        return;
+    }
+    if (psyq_xa_state != XA_PLAYING) {
+        return;
+    }
+    n = psyq_xa_count < PSYQ_XA_PER_TICK ? psyq_xa_count : PSYQ_XA_PER_TICK;
+    while (n > 0) {
+        chunk = PSYQ_XA_FIFO - psyq_xa_head < n ? PSYQ_XA_FIFO - psyq_xa_head : n;
+        spu_cd_input(psyq_xa_fifo + 2 * psyq_xa_head, (int)chunk);
+        psyq_xa_head = (psyq_xa_head + chunk) % PSYQ_XA_FIFO;
+        psyq_xa_count -= chunk;
+        n -= chunk;
+    }
+    if (psyq_xa_count == 0) {
+        PSYQ_TRACE("xa: ran dry after %u sector(s), %u frame(s) dropped", psyq_xa_sectors, psyq_xa_dropped);
+        psyq_xa_state = XA_IDLE;
+        psyq_xa_sectors = 0;
+        psyq_xa_dropped = 0;
+    }
+}
+
 /* ---- commands ---- */
 
 static void psyq_cd_set_result(u8 *result) {
@@ -200,6 +318,7 @@ static void psyq_cd_start_read(int kind) {
     psyq_cd_loc_new = 0;
     psyq_cd_rate_acc = 0;
     psyq_cd_have_sector = 0;
+    psyq_xa_flush("a new read");
 }
 
 /* The effect of a command once the drive has taken it. */
@@ -225,15 +344,23 @@ static void psyq_cd_apply(int com, const u8 *param) {
             PSYQ_TRACE("cd: paused at sector %u", psyq_cd_next_lba);
         }
         psyq_cd_reading = CD_IDLE;
+        psyq_xa_flush("Pause");
+        break;
+    case CdlSetfilter:
+        if (param != NULL) {
+            psyq_cd_filter[0] = param[0];
+            psyq_cd_filter[1] = param[1];
+        }
         break;
     default:
         break;
     }
 }
 
-/* The parameter bytes a command takes (the game's: a CdlLOC for Setloc, the mode byte for Setmode, none else). */
+/* The parameter bytes a command takes (the game's: a CdlLOC for Setloc, the mode byte for Setmode, none else; and
+ * Setfilter's file and channel). */
 static int psyq_cd_param_len(int com) {
-    return com == CdlSetloc ? 4 : com == CdlSetmode ? 1 : 0;
+    return com == CdlSetloc ? 4 : com == CdlSetmode ? 1 : com == CdlSetfilter ? 2 : 0;
 }
 
 /* One trace line for a command, with only the parameter bytes it takes (a Setmode's is one u8 on the caller's
@@ -427,6 +554,11 @@ static int psyq_cd_deliver(int n, u8 *result) {
             }
             break;
         }
+        if (psyq_xa_take(lba)) {
+            psyq_cd_next_lba++; /* XA audio: played (or filtered out), never delivered */
+            psyq_cd_head = psyq_cd_next_lba;
+            continue;
+        }
         if (psyq_cd_reading == CD_STREAM) {
             if (!st_sector(lba)) {
                 break; /* instant: the ring has no room; the drive waits */
@@ -448,7 +580,7 @@ static int psyq_cd_deliver(int n, u8 *result) {
     return ran;
 }
 
-int psyq_cd_tick(void) {
+static int psyq_cd_tick_drive(void) {
     u8 result[8];
     int ran = 0, n;
 
@@ -484,6 +616,15 @@ int psyq_cd_tick(void) {
     if (n > 0 && psyq_cd_deliver(n, result)) {
         ran = 1;
     }
+    return ran;
+}
+
+/* One vsync of the drive: the pending command, the sectors, then the XA audio for the next vsync's render. 1 = a
+ * handler ran. */
+int psyq_cd_tick(void) {
+    int ran = psyq_cd_tick_drive();
+
+    psyq_xa_feed();
     return ran;
 }
 
@@ -539,6 +680,7 @@ int CdInit(void) {
     psyq_cd_reading = CD_IDLE;
     psyq_cd_sync_handler = NULL;
     psyq_cd_ready_handler = NULL;
+    psyq_xa_flush("CdInit");
     return 1;
 }
 
@@ -572,6 +714,9 @@ void psyq_cd_reset(void) {
     st_end_frame = 0xFFFFFFFFu;
     st_reset();
     D_80081454 = 0;
+    memset(psyq_cd_filter, 0, sizeof(psyq_cd_filter));
+    memset(psyq_xa_fifo, 0, sizeof(psyq_xa_fifo));
+    psyq_xa_flush("reset");
 }
 
 /* Returns the previous level (0). */
@@ -658,6 +803,7 @@ void StUnSetRing(void) {
     if (psyq_cd_reading == CD_STREAM) {
         psyq_cd_reading = CD_IDLE;
     }
+    psyq_xa_flush("StUnSetRing");
     st_ring = NULL;
     st_ring_bytes = 0;
     st_reset();

@@ -486,3 +486,56 @@ slow-tempo frame counter, `SsSetTickMode`'s other codes. Left out (on no SEP on 
 noise voices, RPN/VAG attributes and NRPN attributes other than 15 and 16 (a trace line when one occurs), CC
 11/64/91/100/101/121, timer tick modes, the next-SEP chaining, crescendo and tempo changes by call. Section 5's "More
 coverage" (a trace per sound key through SOUNDTST or the layer-1 oracle) would cover the first group.
+
+## 8. CD audio: the movies' XA (`port/psyq/xa.c`, `libcd.c`; M5, T17, session 16)
+**The data (verified, every sector of the 14 `AAA/STR/MOVIE*.STR`):** one audio channel per movie, file 1 channel 1,
+submode `64h` (audio, Form 2, real time), coding `01h` (stereo, 37,800 Hz, 4 bits), in every eighth sector (index 7
+mod 8; the video sectors are file 0 channel 1, submode `48h`). At double speed that is 18.75 sectors/s = 37,800
+frames/s. The player (`stdwtitl_start_cd_stream`) reads with `CdRead2(0x1E0)`: Setmode `E0h` = double speed, XA-ADPCM
+on, 2340-byte sectors, **no XA filter** (no `CdlSetfilter`); the game never calls `CdMix` or Mute/Demute.
+
+**The decoder** (`xa.c`, our own from psx-spx "CDROM XA Audio ADPCM Compression"): the 18 sound groups, 8 units of 28
+samples at 4 bits (4 at 8 bits), the four filters, ranges 13..15 as 9, the history per channel carried across groups
+and sectors; then the "zigzag" resampler, 37,800 -> 44,100 Hz (seven outputs per six inputs, psx-spx's seven 29-point
+tables): 2016 stereo frames per sector -> 2352. Readings where psx-spx is ambiguous (the Python model takes the same):
+"/64" and "/8000h" are arithmetic shifts, the latter per term (where the pseudo-code puts it; psx-spx itself calls the
+tables "nearly correct": their sums are 0x73E5..0x741D, a gain of ~0.906); a reserved coding field reads as its 0 value;
+no emphasis; an 18,900 Hz sample is played twice; mono goes to both sides; the six-step counter starts at 6.
+
+**Delivery** (`libcd.c`; deterministic, in vsync ticks): psx-spx's sector filtering (Setmode bit `40h`, submode audio +
+real time, the filter with bit `08h`) sends a sector to the decoder in the CD tick that reads it; its 2352 frames go to
+a FIFO in libcd.c (16,384 frames), which hands the SPU's CD input (`spu_cd_input`) 882 frames at the end of every CD
+tick: the next vsync's render (`audio.c` renders in the vsync pre-hook, before the tick). The sectors arrive in whole
+ticks (3 per tick, an audio one every 2, 3, 3 ticks) where the hardware's arrive continuously, so a run's first sector
+waits one tick (20 ms) before it plays; the FIFO's low point is then 588 frames and it never runs dry while the drive
+streams. A run ends when the FIFO runs dry; `Pause`, a new read, `StUnSetRing`, `CdInit` and the reset flush it and the
+decoder's state (after a flush at most the tick already in the SPU's queue plays). **Assumed:** when the hardware clears
+the ADPCM history and the resampler's ring; the one-tick wait (a model of ours); at `--fps` other than 50 the render's
+count per vsync changes and the drive's does not (the SPU's queue fills and drops at 60).
+
+**The SPU side (verified in the trace):** `CdInit` sets SPUCNT `C001h` (bit 0: CD audio on) and the CD volume `3FFFh`;
+`sound_init`'s `SsSetSerialVol(0, 127, 127)` sets the CD volume to `7FFEh`; the main volume is `3FFFh`; SPUCNT keeps bit
+0 through the movie (`C081h`). The SPU mixes the CD input `× CD volume >> 15` with SPUCNT bit 0 (section 6), so the
+movie plays at unity: the decoded stream × `7FFEh` × the main volume.
+
+**How it is checked:**
+- `tests/xa/run.sh [--m32] [--sanitize] [--all]` (~1 s per variant): `tests/xa/xa_test.c` replays `tests/xa/goldens.txt`
+  through `xa.c`: 1317 checks in 32 cases, made by `tests/xa/xa_ref.py gen`, an independent Python model written in the
+  pseudo-code's shape (the C goes unit by unit, the tables by column): the tables' SHA-1s; every filter × range at 4 and
+  8 bits, mono and stereo, from random history; saturation; whole random sectors two in a row in every coding and the
+  reserved ones (decoded and resampled); the resampler on impulses at each of the six phases, a full-scale square wave,
+  a step and random frames. Mutating the C (a range, the rounding, the shift, a coefficient, the clamp, the counter,
+  the nibble order) fails the goldens.
+- `tests/xa/xa_ref.py disc [MOVIE...]` (needs the disc; ~35 s for MOVIEOPN): every audio sector of the movie through
+  both models: MOVIEOPN.STR's 2261 sectors give identical 37,800 Hz PCM (4,558,176 frames) and 44,100 Hz PCM (5,317,872
+  frames, 120.59 s).
+- The game (`--wav` of a scratch script that lets the opening movie play, no START): the soundtrack is in the WAV from
+  vsync 364 (first audio sector read in tick 362) to the game's `Pause` at vsync 6281: 2220 sectors, 118.36 s (the game
+  stops at the last video frame, 41 sectors before the file's end); the left channel equals the decoded stream ×
+  `7FFEh` × `7FFEh` (the main volume's level) sample for sample, the right one is 1 LSB lower (the reverb's residual
+  from CNTY_SEL's music, also there before the movie). RMS per second (of 32,767): ~10 for the first 2 s, then 1,241 to
+  10,329, ~4,000 in the last seconds. Against the emulator (PCSX-Redux through SDL's disk driver, as `tests/spu/
+  capture.py`, the same script cut at 1600 frames of movie): from the music's start, 289 windows of 0.1 s, correlation
+  ≥ 0.9997, level ratio 1.000..1.002, the lag exactly 4410 frames per window (same rate, no gaps).
+- `new_game` (`tests/port/run.py`) skips the movie after a few frames: the XA plays during them; checkpoints and hashes
+  do not change.
