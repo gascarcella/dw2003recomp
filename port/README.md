@@ -57,6 +57,7 @@ non-PIE in both.
 | `src/video.c` | The video output: the display area of the VRAM as 32-bit pixels, `--screenshot`, the SDL3 window (below) |
 | `src/input.c` | The window's input: keyboard and gamepads to the pad, the window's close, `--input-test` (below) |
 | `src/asmdata.c` | Zero data the PS1 build keeps in asm (FIELDSTG's `.bss` block; weak LIBGS/LIBCD data) |
+| `include/spu.h`, `src/spu.c`, `src/spu_dsp.c`, `src/spu_internal.h` | The SPU core (M3, below): registers, SPU RAM, voices, mix, reverb; the DSP pieces; the internals the tests see |
 | `psyq/` | The Psy-Q shim (its own README) |
 | `../tools/port_gen.py` | The generators CMake runs (never by hand in the normal flow) |
 
@@ -228,6 +229,18 @@ JSON written at exit, with the keys of `tests/replay`'s records (`replay.py` `cr
 (`{frame, stage, file}`), `map_sequence` (`{frame, map}`), and `inputs` (`{frame, buttons: [names]}`, the names
 sorted as run.lua sorts them) once the script has called `port_framelog_input`. The sequences follow run.lua's vsync
 listener: an entry at every change, the first frame always (`{1, 0, 0}`, map 0).
+
+## The SPU core (M3)
+`src/spu.c` and `src/spu_dsp.c` are the PS1's sound chip, our own from psx-spx (docs/SOUND.md section 6 has what is
+modelled, the readings taken where psx-spx is silent, and the checks): the register file by offset from
+`0x1F801C00` (`spu_write16`/`spu_read16`), 512 KB of SPU RAM (`spu_dma_write`, the FIFO), 24 voices (ADPCM, pitch
+with the 4-point interpolation, ADSR, volume sweeps, noise, PMON), the mix with its clamps, the reverb at 22,050 Hz,
+the CD input (`spu_cd_input`) and the capture buffers. `spu_render(out, frames)` renders 44,100 Hz stereo; time moves
+only there (a register write acts between two samples), so the output is a function of the writes and the frame
+counts. `spu_set_write_hook` sees every write and DMA block (the trace writer). Nothing drives it yet (LIBSND is a
+stub); its tests are host-only: `tests/spu/run.sh [--all]` (unit goldens from a Python model of the same psx-spx text,
+`-m64`/`-m32`/sanitizers), `tests/spu/render_trace.py` (the committed `cnty_sel` SPU trace to a WAV, with checks),
+`tests/spu/envelope_oracle.py` and `tests/spu/capture.py` (against PCSX-Redux). 53× real time at `-O2`, 13× at `-O0`.
 
 ## Known gaps (M1)
 - Fixed in session 16 (kept here as the record of what the `-m32`/`-m64` log comparison and the sanitizer found):
