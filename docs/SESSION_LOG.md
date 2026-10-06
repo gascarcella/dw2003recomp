@@ -53,7 +53,7 @@ Newest first. One short entry per session: goal, result, next steps.
 - **Next:** the user's review of #9. When path B's phase 2 lands, 60 Hz works in the game (the settings screen's note
   already says what an older game does).
 
-## 2026-10-06: Session 19 (path B): the launcher plan's game side, phases 1-3 (local worktree, PRs #10, #11, #14, phase 3's)
+## 2026-10-06: Session 19 (path B): the launcher plan's game side, phases 1-4 (local worktree, PRs #10, #11, #14, #16, phase 4's)
 - **Asked:** build the game side of `docs/LAUNCHER_MODS_PLAN.md` (sections 4.1-4.5 and 5, phases 1, 2 and 4 of its
   section 7) while a parallel session (path A) builds the launcher; land `--config` early in its own pull request.
 - **PR #10 (`gascarcella/mods-config`):** `--config FILE` and `--print-settings` (`port/src/settings.c`); the plan's 4.3
@@ -86,7 +86,15 @@ Newest first. One short entry per session: goal, result, next steps.
   for a press; a talk closes cleanly (screenshots showed the greeting, then the second talk's question); the shared
   checkpoints keep the emulator's stable hashes; the first battle needs 12 presses instead of 26
   (`tests/port/mods.py`, the port's own expected record in `tests/port/mods/expected/`).
-- **Next:** battle animations (5.3) on the user's go-ahead; the battle camera (issue #7) is still open.
+- **Phase 4 (`gascarcella/mods-phase4`): disable battle animations,** the logic and the tests that do not need the
+  picture (issue #7 open, as the user said). One `#ifdef PC_PORT` block at `fightstg_script_update`'s INIT,
+  `port_battle_cut` in `mods.c` over `port/src/battle_scan.c` (the readers' command lengths); `build.sh --check`
+  byte-identical. `tests/port/battle.py`: the C scanner and a Python reading agree on all 4,410 scripts; every script
+  ends; reactions have no child; every KO script ends on animation 10. `first_battle_save` with the mod on (both
+  settings): the emulator's cross-core view; three actions cut, the KO reaction kept; the battle 952 / 602 frames
+  instead of 1,192.
+- **Next (the user's call):** the battle camera (issue #7), then battle animations' picture; a route reaching
+  multi-hits, counters, poison and items to run with the mod on.
 
 ## 2026-10-06: CI only when it is needed (a short session on `ci/skip-unneeded-runs`, a pull request)
 - **Asked:** stop running CI when it is not needed (a docs update triggered a full run).

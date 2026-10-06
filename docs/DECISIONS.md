@@ -2063,6 +2063,18 @@ stop. The game side (path B: `--config`, the settings reader, the mod runtime) i
 - **`fast_forward_waits` uses fast_forward's speed and mute**, its defaults when that mod is off, through one
   fast-forward state in `mods.c` (a request ORed with the fast-forward mod's own bindings).
 
+## 2026-10-06: Disable battle animations (session 19, path B: the launcher plan's 5.3)
+- **The cut decides from the script's own stream**, scanned at INIT with the readers' command lengths
+  (`port/src/battle_scan.c`), not from the script number: 2,498 of the 3,185 scripts 5-17 have no child command (most
+  are stubs), and a heal must not show the target flinching. A stream that does not scan to its end is left to run
+  (none on the disc). `tests/port/battle.py` keeps the scanner equal to an independent reading on every script.
+- **The reaction runs in the cut script's own object** (side flipped, the fields a new child object would have
+  zeroed), so the parent's wait (its slot becoming NULL) is unchanged; one reaction, `results[3] + 1`, even for a
+  multi-hit (the damage messages are the parent's).
+- **`hit_reaction` off keeps a knock-out's KO reaction:** without it the model would stand after its HP reached 0
+  (every KO script ends on animation 10, the KO pose); the manifest's description says so.
+- **No hotkey:** the mod is on whenever the settings enable it (the plan named none; the launcher's switch is
+  enough). Entrances, digivolutions, the intro camera and the defeat scene are not touched (the plan's v1.1).
 ## 2026-10-06: Releases (user decisions; the release pipeline session, `gascarcella/release-pipeline`)
 The user decided how the game reaches players (`docs/RELEASE.md` is the how-to):
 1. **Linux only for now**; Windows is `docs/LAUNCHER_MODS_PLAN.md` section 6, later.

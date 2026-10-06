@@ -58,6 +58,7 @@ non-PIE in both.
 | `src/video.c` | The video output: the display area of the VRAM as 32-bit pixels, `--screenshot`, the SDL3 window (below) |
 | `src/input.c` | The window's input: keyboard and gamepads to the pad (rebindable), the hotkeys, the window's close, `--input-test` (below) |
 | `src/mods.c` | The built-in mods' registry, their settings and hotkeys, `port_mods_frame` (manifests: `mods/<id>/mod.json`) |
+| `src/battle_scan.c` | The battle scripts' command lengths (battle_animations' cut; `tests/port/battle.py` checks it on the disc) |
 | `mods/` | The built-in mods' manifests (copied beside the binary) |
 | `src/audio.c` | The audio output: the SPU core rendered every vsync, `--wav`, the SDL3 audio device (below) |
 | `src/asmdata.c` | Zero data the PS1 build keeps in asm (FIELDSTG's `.bss` block; weak LIBGS/LIBCD data) |
@@ -148,6 +149,11 @@ and mutes the audio device; the game, its log and its record are unchanged.
 and goes on by itself (`port_mod_skip_dialogues`, read by three `#ifdef PC_PORT` blocks in `src/main/message.c` and
 the battle's `fightstg_message_step`); choices and menus still wait. `fast_forward_waits` also fast-forwards the field
 events' scripted waits.
+
+**Battle animations** (the `battle_animations` mod; 5.3): attacks', techniques' and items' animation scripts are cut
+at their start (`port_mod_battle_animations`, one `#ifdef PC_PORT` block in `fightstg_script_update`; the stream
+scanned by `src/battle_scan.c`): the target's short reaction plays instead (`hit_reaction`, the default), or nothing but
+a knock-out's. The battle's rules ran before; its outcome is unchanged.
 
 **60 Hz** (`--refresh 60`, or the settings' `video.refresh`; 5.5): the game's own 60 Hz mode (the NTSC patch's
 `records_60hz`, set before the reset's snapshot), paced at 60, the audio at 735 samples a vsync, the CD's ticks at 60.
