@@ -113,6 +113,62 @@ def mods_check(binary):
     check(not missing, f"every mod of the registry has a manifest{': missing ' + ', '.join(missing) if missing else ''}")
 
 
+FF_ON, FF_OFF = 100, 25  # DW3_PORT_FAST_FORWARD's pattern (vsyncs on, off)
+
+
+def ff_stretches(err):
+    """The fast-forward log lines -> [(on, frame, seconds)]."""
+    out = []
+    for line in err.splitlines():
+        if line.startswith("port: fast-forward: on at frame ") or line.startswith("port: fast-forward: off at frame "):
+            words = line.split()
+            out.append((words[2] == "on", int(words[5].rstrip(",")), float(words[6])))
+    return out
+
+
+def fast_forward_check(sdl, env, out):
+    """Fast-forward (docs/LAUNCHER_MODS_PLAN.md 5.1) in the window (offscreen): new_game with the mod on and the test
+    pattern; the log and the record are the bare run's; every off stretch keeps PAL's pace from its first vsync (no
+    stall: the schedule starts over), the on stretches run at 4x or faster, the audio is muted, the presents capped."""
+    print("settings: fast-forward (build/port-sdl, offscreen): new_game with DW3_PORT_FAST_FORWARD=%d:%d" % (FF_ON, FF_OFF))
+    c = out / "ff"
+    script = SCRIPTS / "new_game.json"
+    for speed, mute in (("4x", True), ("unlimited", False)):
+        cfg = write(c / f"{speed}.json", {"schema": 1, "disc": {"path": str(DISC)}, "memcard1": None, "memcard2": None,
+                                          "mods": {"fast_forward": {"enabled": True, "speed": speed, "mute": mute}}})
+        cmd = [str(sdl), "--config", str(cfg), "--script", str(script), "--script-mods",
+               "--log", str(c / f"{speed}.log"), "--record", str(c / f"{speed}.json")]
+        if speed != "4x":
+            cmd += ["--max-frames", "400"]
+        proc = subprocess.run(cmd, cwd=ROOT, env=dict(env, DW3_PORT_FAST_FORWARD=f"{FF_ON}:{FF_OFF}"),
+                              capture_output=True, text=True, timeout=300)
+        st = ff_stretches(proc.stderr)
+        offs = [b[2] - a[2] for a, b in zip(st, st[1:]) if not a[0] and b[0]]
+        ons = [b[2] - a[2] for a, b in zip(st, st[1:]) if a[0] and not b[0]]
+        paced = FF_OFF / 50
+        check(proc.returncode == 0 and len(offs) >= 3, f"{speed}: exit {proc.returncode}, {len(st)} changes")
+        # each off stretch is FF_OFF vsyncs at 50: 0.5 s; a schedule that did not start over makes it 2 s
+        check(offs and all(paced * 0.8 <= t <= paced + 0.4 for t in offs),
+              f"{speed}: every off stretch {paced:.2f} s at PAL's pace, no stall "
+              f"({min(offs, default=0):.3f}..{max(offs, default=0):.3f} s)")
+        if speed == "4x":
+            fastest = (FF_ON - 1) / 200
+            check(ons and min(ons) >= fastest * 0.9, f"4x: no on stretch faster than 200 vsyncs a second "
+                  f"({min(ons, default=0):.3f}..{max(ons, default=0):.3f} s for {FF_ON - 1} vsyncs)")
+            same = (c / "4x.log").read_bytes() == (out / "bare.log").read_bytes() and \
+                (c / "4x.json").read_bytes() == (out / "bare.json").read_bytes()
+            check(same, "4x: the log and the record are the bare run's")
+            muted = [l for l in proc.stderr.splitlines() if "vsyncs muted (fast-forward)" in l]
+            presented = [l for l in proc.stderr.splitlines() if "frames presented in" in l]
+            frames = json.loads((c / "4x.json").read_text()).get("frames", 0)
+            n_presented = int(presented[0].split("window: ")[1].split()[0]) if presented else -1
+            check(bool(muted) and 0 < n_presented < frames,
+                  f"4x: audio muted ({muted[0].split('audio: ')[1] if muted else 'no report'}), presents capped "
+                  f"({n_presented} of {frames} vsyncs)")
+        else:
+            check(ons and min(ons) < (FF_ON - 1) / 200, f"unlimited: on stretches faster than 4x ({min(ons, default=0):.3f} s)")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--out", help="scratch directory (default build/port-test/settings)")
@@ -263,6 +319,8 @@ def main():
             lines = [l for l in proc.stderr.splitlines() if "input test:" in l]
             check(proc.returncode == 0 and any("the pause: passed" in l for l in lines),
                   f"{label}: exit {proc.returncode}: {'; '.join(l.split('input test: ')[1] for l in lines)}")
+        if DISC.exists():
+            fast_forward_check(sdl, env_sdl, out)
     else:
         print("settings: no build/port-sdl (or --no-sdl): the input self-test is skipped")
 

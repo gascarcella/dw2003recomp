@@ -217,10 +217,26 @@ void port_video_refresh(void) {
     }
 }
 
-void port_video_set_paused(int paused) {
+static int video_paused;
+static char video_status[64]; /* fast-forward's, or "" */
+
+static void video_title(void) {
+    char title[96];
     if (video_window != NULL) {
-        SDL_SetWindowTitle(video_window, paused ? "dw2003 (paused)" : "dw2003");
+        snprintf(title, sizeof(title), "dw2003%s%s%s%s", video_paused ? " (paused)" : "",
+                 video_status[0] ? " (" : "", video_status, video_status[0] ? ")" : "");
+        SDL_SetWindowTitle(video_window, title);
     }
+}
+
+void port_video_set_paused(int paused) {
+    video_paused = paused;
+    video_title();
+}
+
+void port_video_set_status(const char *status) {
+    snprintf(video_status, sizeof(video_status), "%s", status != NULL ? status : "");
+    video_title();
 }
 
 void port_video_close(void) {
@@ -273,6 +289,10 @@ void port_video_set_paused(int paused) {
     (void)paused;
 }
 
+void port_video_set_status(const char *status) {
+    (void)status;
+}
+
 void port_video_close(void) {
 }
 
@@ -280,12 +300,38 @@ void port_video_quit(void) {
 }
 #endif
 
+/* The present cap (fast-forward): at most `hz` presents a second (0: every vsync). Every vsync is still drawn into
+ * the VRAM by the software GPU; only the conversion and the present are skipped. */
+static int video_cap_hz;
+
+void port_video_set_present_cap(int hz) {
+    video_cap_hz = hz;
+}
+
+/* Whether this vsync is presented under the cap. */
+static int video_due(void) {
+#ifdef DW3_PORT_SDL
+    static Uint64 last;
+    Uint64 now;
+    if (video_cap_hz <= 0) {
+        return 1;
+    }
+    now = SDL_GetTicksNS();
+    if (now - last < 1000000000ull / (Uint64)video_cap_hz) {
+        return 0;
+    }
+    last = now;
+#endif
+    return 1;
+}
+
 void port_video_frame(void) {
-    int i, shot = 0;
+    int i, shot = 0, present;
     for (i = 0; i < video_shot_count; i++) {
         shot |= video_shots[i].frame == port_frames;
     }
-    if (!port_window && !shot) {
+    present = port_window && video_due();
+    if (!present && !shot) {
         return;
     }
     video_convert();
@@ -294,7 +340,7 @@ void port_video_frame(void) {
             video_write_ppm(video_shots[i].path);
         }
     }
-    if (port_window) {
+    if (present) {
         video_present();
     }
 }

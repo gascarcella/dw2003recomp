@@ -2029,3 +2029,22 @@ stop. The game side (path B: `--config`, the settings reader, the mod runtime) i
   who never touched it; **Play asks the game** (`--print-settings`) before starting it, and a game without `--config`
   is reported as too old (the interim translation into old flags existed only until PR #10 landed); the game's binding
   limits (4 inputs a chord, 8 triggers) are enforced by the launcher; the mods are read from `<game dir>/mods/`.
+
+## 2026-10-06: Phase 2 of the launcher plan, game side: fast-forward and 60 Hz (session 19, path B)
+- **Fast-forward's speed is a multiple of the nominal rate, `4x` by default** (the user's pick): the same feel at 50 and
+  60 Hz. It changes only the pace; presents are capped at 60 a second while it is on (every vsync is still drawn), the
+  audio device is cleared and muted by default (without `mute` the queue floods and drops whole vsyncs). Hold and
+  toggle are ORed.
+- **`--refresh 50|60` is the 60 Hz switch on the command line** (it overrides `video.refresh`); `--fps N` keeps its old
+  meaning without it (the PAL game paced at N). With a refresh, `--fps` sets the pace only.
+- **The emulator's 60 Hz reference is the unpatched disc with the patch's two words written at `main`'s entry**
+  (`tests/port/ntsc_patch.lua`, an exec breakpoint: the debugger and the interpreter core), not a patched image: the
+  repo carries no game data, and the patch is data only. Its references are cross-core views (the interpreter's),
+  which is what the port is compared with anyway.
+- **`first_battle_save` at 60 Hz is cut after `card_shop_left`:** its next walk is a fixed 20-frame LEFT that stops
+  short at 60 Hz in the emulator as in the port. A 60 Hz route would need a script written for it (not done).
+- **The 60 Hz sound check is the port run's** (its trace against LIBSND's replay of its own calls, and the emulator's
+  calls), not the LIBSND replay of the emulator's trace: that replay depends on where in a frame the PS1's CPU makes a
+  call, which differs at 60 Hz (SsInit's loop, COMMON's 297 KB DMA) and which the port does not model.
+- **`main_screen_pos` stays 1 in the port's 60 Hz mode;** the emulator's reference sets it to 0 as the patch is
+  assumed to (not checked against the patch itself). It changes only the card game's layout and the PAL screen offset.

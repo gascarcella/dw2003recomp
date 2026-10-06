@@ -85,6 +85,15 @@ types, defaults, ranges, enum ids; names, descriptions and labels present) and b
 `tests/port/settings/rebound.json` (rebound keys and pads, chord hotkeys, a mod's bindings, the pause's round trip).
 `scripts/test.sh --layer port` runs it after `run.py` (~5 s built).
 
+## The 60 Hz mode (`hz60.py`; docs/LAUNCHER_MODS_PLAN.md 5.5)
+`tests/port/hz60.py` runs the port with `--refresh 60` (and `DW3_PORT_RESET_CHECK=1`) and compares it with the 60 Hz
+game in the emulator, whose records are committed in `tests/port/hz60/` (`hz60.py record`: the unpatched disc with
+`tests/port/ntsc_patch.lua`, which writes the NTSC patch's two words at `main`'s entry): `new_game` (twice: the same
+log and record) and `first_battle_save` cut after `card_shop_left` (its next walk is timed for 50 Hz), each with the
+emulator's cross-core view; `new_game`'s SPU trace against LIBSND's replay of its own calls (735 samples a vsync, the
+NTSC tick) and the emulator's calls (`sound.py`'s `port` check). The fast-forward test is in `settings.py`.
+`scripts/test.sh --layer port` runs it (~20 s built).
+
 ## What it found (session 16)
 - **The overlay copy takes CPU time on the PS1.** The game copies FIELDSTG (0x19000 bytes) into its slot with LIBC2's
   byte-loop `memcpy`, about 1.8 frames, so the emulator samples FIELDSTG's stage with no stage file yet (`(2, -1)` in the

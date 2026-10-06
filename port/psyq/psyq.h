@@ -24,6 +24,9 @@ int psyq_cd_tick(void);
 #define PSYQ_CD_REALISTIC 0
 #define PSYQ_CD_INSTANT 1
 void psyq_cd_set_timing(int timing);
+/* The vsyncs per second the CD's ticks come at (50, PAL, by default; 60 with the 60 Hz setting): the drive's sectors and
+ * the XA audio per tick follow it. Kept by the reset, as the timing is. */
+void psyq_cd_set_vsync_hz(int hz);
 /* The console's reset (port_reset_state): every library back to its power-on state (handlers, the CD, the pad, the
  * GPU recorder, the sound stubs), the memory cards' contents kept; psyq_mcrd_reset is LIBMCRD's part (libmcrd.c),
  * which psyq_reset calls. */

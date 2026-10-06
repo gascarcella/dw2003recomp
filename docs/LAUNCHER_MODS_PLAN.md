@@ -2,7 +2,8 @@
 
 _Planned in session 18 (2026-10-06, a discovery and planning session). **Implemented so far (session 19, path B):**
 `--config FILE` and the settings file, 4.3 (settled there); phase 1 of section 7 (rebindable input, hotkeys, the pause,
-`port/src/mods.c` and the first manifest, the pace split; 4.5 says what is built). The user's
+`port/src/mods.c` and the first manifest, the pace split; 4.5 says what is built); phase 2 (fast-forward, 5.1; the
+60 Hz setting compared with the patched game in the emulator, 5.5). The user's
 decisions are in section 2 and in `docs/DECISIONS.md` "Launcher and mods (session 18)". The facts in section 3 come from
 five research agents: the measurements were run on the dev machine; everything about the game's code is from reading it
 (nothing in the game was changed or run with a mod); the Windows findings are small scratch experiments, not a build of
@@ -374,7 +375,7 @@ checks the round trip, the defaults, the overrides and the errors._
 - `disc.sha1`: the launcher's record of what it verified. The game does not trust it: it checks the disc itself
   (`disc.c`, with its stamp cache).
 - `video.window` (**changed: added**, default true): false runs headless (tests, a check run). `video.scale` 1-16,
-  `video.refresh` 50 or 60 (60 is phase 2: until then the game logs it and runs at 50).
+  `video.refresh` 50 or 60 (60: the game's own 60 Hz mode, 5.5; `--refresh` overrides it).
 - `memcard1`/`memcard2` (**changed:** both slots, default `card1.mcd`/`card2.mcd` beside the file, created formatted
   when missing): a string is a `.mcd` image, **`null` means no card in that slot**.
 - `watchdog` (**changed: added**): seconds without a vsync before the game exits 4; **0 (the default under
@@ -493,6 +494,14 @@ written the same way). No `string` or `path` type for now.
 - Tests: the record of a run with fast-forward held is the unthrottled run's (already byte-identical at `--fps 0`);
   pace changes up and down without a stall.
 
+**Built (phase 2, session 19):** `mods.c`'s `fast_forward`: on while the hold binding is held or after the toggle,
+the pace is the nominal rate times the speed (`4x`: 200 at PAL, 240 at 60 Hz; `unlimited`: no pace), the window
+presents at most 60 images a second (`port_video_set_present_cap`), the audio device's queue is cleared and nothing is
+queued while it is on with `mute` (the SPU renders on; the WAV is unchanged), the window's title says it. Measured
+(`tests/port/settings.py`, offscreen, `new_game` with `DW3_PORT_FAST_FORWARD=100:25`): 99 vsyncs in 0.50 s at `4x`,
+every 25-vsync off stretch 0.50 s from its first vsync (with the schedule reset removed, 2.0 s: the test catches it),
+722 of 1,834 vsyncs presented, 1,483 muted; the log and the record are the bare run's.
+
 ### 5.2 Skip dialogues
 
 - **The hook:** a port flag at the message window's wait (`message.c:904`) and in its RUN case (`:884`, calling
@@ -553,6 +562,27 @@ written the same way). No `string` or `path` type for now.
 Three things change together: the pace (60), `records_60hz = 1` set before the snapshot, and the CD/XA rate
 (`CD_VSYNC_HZ`) made a run-time value. `main_screen_pos` stays 1 until the card game is looked at in both layouts.
 Needs its own check against the emulator (the 2-byte patch applied there): 60 Hz has never been traced.
+
+**Built (phase 2, session 19):** `video.refresh: 60` or `--refresh 60`: `records_60hz = 1` before `port_overlay_init()`,
+`port_rate` and the pace 60 (735 samples a vsync), `psyq_cd_set_vsync_hz(60)` (2.5 sectors and 735 XA frames a tick;
+the seeks keep their milliseconds); `main_screen_pos` stays 1. **Compared with the patched game** in the emulator
+(`tests/port/ntsc_patch.lua` writes the two words at `main`'s entry; `replay.py`/`spu_trace.py run --prelude`;
+`tests/port/hz60.py`, its references in `tests/port/hz60/`):
+- `new_game`: the same cross-core view (5 checkpoints, stable hashes, overlay and map sequences); the port's SPU trace
+  is LIBSND's replay of its own calls at 735 samples and the NTSC tick, and the game makes the same 108 LIBSND calls
+  as on the emulator, in the same order, with the same arguments.
+- `first_battle_save`: the same 18 checkpoints (the first battle, the save, the reset and the reload, the shops, the
+  menus) with the same stable hashes. Then **both** time out at step 220: step 219 walks LEFT for 20 frames to the
+  trainer, which at 60 Hz stops short (the game's own walking compensation). The reference is the script cut after
+  `card_shop_left`.
+- Not compared: the movies' and XA's picture and sound at 60 (the drive's rate is per second by construction); the
+  LIBSND replay of the emulator's own 60 Hz trace, which depends on where in a frame the PS1's CPU makes a call (at
+  60 Hz the vsync falls inside SsInit's reverb-clearing loop, and COMMON's 297 KB DMA completes within its frame on
+  the emulator but at the next vsync in the port's model: the game then polls one frame longer, harmless in a run).
+- **Assumed, not checked against the patch itself** (no patched EXE here): its second word sets `main_screen_pos`
+  1 -> 0 (its default is 1 = PAL; it indexes the card game's PAL/NTSC layout tables and adds the PAL screen offset),
+  which `ntsc_patch.lua` writes. The port keeps 1: it moves only the card game's panels by 12 lines and sets the PAL
+  screen offset, which the port's video ignores; `new_game` and `first_battle_save` never reach the card game.
 
 ### 5.6 Global Saves (the idea only; added 2026-10-06 from a reading of the save path, nothing run or built)
 

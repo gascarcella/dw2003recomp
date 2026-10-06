@@ -83,6 +83,8 @@ void port_video_frame(void);
 void port_video_toggle_fullscreen(void);
 void port_video_refresh(void);          /* the last image presented again (the pause) */
 void port_video_set_paused(int paused); /* the window's title says so */
+void port_video_set_status(const char *status); /* "" or e.g. "fast-forward 4x": in the window's title */
+void port_video_set_present_cap(int hz); /* at most hz presents a second (0: every vsync; fast-forward: 60) */
 void port_video_close(void);
 void port_video_quit(void);
 void port_input_init(int test);
@@ -120,6 +122,9 @@ void port_audio_open(int device, const char *wav_path);
 void port_audio_frame(void);
 void port_audio_close(void);
 void port_audio_pause(int paused); /* the device paused (the pump's pause); nothing rendered meanwhile */
+/* The device muted (fast-forward): its queue cleared, then the samples rendered but not queued; unmuted, the queue
+ * starts again from its target. The WAV and the SPU never change. */
+void port_audio_set_mute(int mute);
 
 /* ---- mods.c: the built-in mods (docs/LAUNCHER_MODS_PLAN.md 4.4, 4.5) ----
  * port_mods_settings: the settings' `mods` section (NULL: every mod off) read against the registry; a bad value fails
