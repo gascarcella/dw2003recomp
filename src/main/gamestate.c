@@ -89,7 +89,13 @@ void gamestate_add_stat_bonus(s16 *stats, s32 type, s32 value);
 LATE_FUNC(1, 0x8008B770, void, func_8008B770, (s32, s32, s32, s32, s32)); /* in an overlay */
 LATE_FUNC(1, 0x8008BFA4, void, func_8008BFA4, (s32)); /* in an overlay */
 LATE_FUNC(1, 0x8008C000, void, func_8008C000, (void)); /* in an overlay (FIELDSTG: takes no arguments) */
-extern void (*D_8009B6A4)(s32);            /* in an overlay */
+#ifndef PC_PORT
+extern void (*D_8009B6A4)(s32);            /* in an overlay: FIELDSTG's fieldstg_start_listed_battle_func */
+#else
+/* The host links FIELDSTG in: the variable itself (its .data is restored by the overlay manager on each load). */
+extern void (*fieldstg_start_listed_battle_func)();
+#define D_8009B6A4 fieldstg_start_listed_battle_func
+#endif
 
 s32 gamestate_test_bit(u8 *bits, s32 index, s32 set) {
     s32 byte = index >> 3;
