@@ -117,8 +117,10 @@ state between the copy and the overlay's start-up (`new_game_field` does). `port
 per tier). `port_state_read(addr, size, signed, &v)` (the script's `wait_mem`) maps a PS1 address only inside a
 layout-identical range: a whole data symbol by the rule above, or the prefix `state.c` lists for a pointer-bearing
 object (`overlay_module` 8 bytes, `gamestate_data` 0x26FC bytes, `pad_random` 4; each checked by `_Static_assert`);
-anything else returns 0 (unmapped). Not mapped yet: `memcard_state` (its type is private to `memcard.c`, and its
-fields at 0x90 and 0x300 follow a pointer) and overlay data (e.g. `0x80099DD0`).
+anything else returns 0 (unmapped). Besides those ranges, an explicit field table maps the pointer-bearing objects'
+fields the scripts read, each checked by `_Static_assert`: `memcard_state`'s (`state`, `command`, `done`, ...; the type
+is in `include/memcard.h`) and FIELDSTG's `fieldstg_stage` non-pointer fields (`menu_open`, ...), the latter only while
+FIELDSTG is the tier-1 overlay.
 
 **The checkpoint hash**: `gamestate_data`'s PS1 image is its first 0x26FC bytes as they are (no pointer before
 `funcs`), then the 24 `funcs` entries as the PS1 addresses of the host functions they point to (the generated table;
