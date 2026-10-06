@@ -666,9 +666,30 @@ static void test_game(const std::string &root) {
     // The real game, when the environment names it (DW3_SELFTEST_GAME: an SDL build of dw2003): the probe must accept
     // the file; with DW3_SELFTEST_DISC too, the game runs 300 frames from the launcher's
     // command (offscreen video, no audio device, unthrottled) and must end normally with the disc checked.
-    const char *real = SDL_getenv("DW3_SELFTEST_GAME");
-    if (real == nullptr) {
+    // DW3_SELFTEST_GAME=beside: the game the launcher finds by itself beside its own executable, with its mods there
+    // too (the release's layout: the AppImage's usr/bin/; scripts/package_appimage.sh runs this inside the AppImage).
+    const char *real_env = SDL_getenv("DW3_SELFTEST_GAME");
+    if (real_env == nullptr) {
         return;
+    }
+    std::string real = real_env;
+    const bool beside = real == "beside";
+    if (beside) {
+        const char *base = SDL_GetBasePath();
+        const std::string exe_dir = path_strip_slash(base != nullptr ? base : "");
+#ifdef SDL_PLATFORM_WINDOWS
+        const std::string want = path_join(exe_dir, "dw2003.exe");
+#else
+        const std::string want = path_join(exe_dir, "dw2003");
+#endif
+        tried.clear();
+        real = game_find("", exe_dir, &tried);
+        check(real == want, "the game beside the launcher is found by its own lookup: " + want + " (found: " +
+                                (real.empty() ? std::string("none") : real) + ")");
+        if (real != want) {
+            return;
+        }
+        std::fprintf(stderr, "self-test: the game beside the launcher: %s\n", real.c_str());
     }
     const std::string real_dir = path_join(root, "real");
     SettingsFile r;
@@ -684,9 +705,10 @@ static void test_game(const std::string &root) {
     r.values.hotkeys["pause"] = { { "pad:guide", "pad:start" }, { "P" } };
     r.values.hotkeys["fullscreen"] = {};
     // Every mod beside the game turned on, every option off its default (the game's own checks of mods.<id>).
-    int mods_set = 0;
+    int mods_set = 0, mods_found = 0;
     ModValues mv(&r.doc);
     for (const ModManifest &m : mods_scan(path_join(path_dir(real), "mods"))) {
+        mods_found++;
         check(m.error.empty(), "the game's manifest " + m.id + ": " + m.error);
         if (!m.error.empty()) {
             continue;
@@ -713,6 +735,9 @@ static void test_game(const std::string &root) {
             mv.set(m, o, v);
             mods_set++;
         }
+    }
+    if (beside) {
+        check(mods_found > 0, "the mods' manifests beside the game: " + path_join(path_dir(real), "mods"));
     }
     check(r.save(&err), "the real game's settings: " + err);
     p = game_probe(real, r.path());

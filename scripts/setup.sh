@@ -3,10 +3,14 @@
 # Nothing here needs sudo or installs outside the repo.
 #
 # Usage: scripts/setup.sh [--disc /path/to/disc.bin] [step...]
-#   steps: binutils venv cmake mkpsxiso gcc objdiff ext redux link gamedata disc  (default: all); optional: psyq sdl3 imgui
+#   steps: binutils venv cmake mkpsxiso gcc objdiff ext redux link gamedata disc  (default: all)
+#          optional: psyq sdl3 imgui sdl3-desktop appimage
 #   imgui: Dear ImGui at its pinned tag into tools/imgui, for the launcher (launcher/README.md; needs sdl3 too)
 #   sdl3:  SDL3 built from its pinned source tarball into tools/sdl3 (static), for the PC port's window
 #          (cmake -DDW3_PORT_SDL=ON; port/README.md "The window"); its backends follow the -dev headers present
+#   sdl3-desktop: the same SDL into tools/sdl3-desktop, with the desktop backends required (the release's);
+#          `scripts/setup.sh --sdl3-desktop-apt` prints the Ubuntu -dev packages it needs
+#   appimage: appimagetool and the static AppImage runtime, pinned, into tools/appimage (scripts/package_appimage.sh)
 #   cmake: CMake and Ninja (mkpsxiso and the PC port build with them) pip-installed into tools/venv, only when either is
 #          missing from PATH; later steps and tests/port/run.py find them there
 #
@@ -149,51 +153,133 @@ step_mkpsxiso() {
 # dummy/disk audio drivers (enough for the tests); for a desktop window install e.g. libx11-dev libxext-dev
 # (libwayland-dev libxkbcommon-dev wayland-protocols) libasound2-dev libpulse-dev libudev-dev first, then rebuild with
 # `rm -rf tools/sdl3 && scripts/setup.sh sdl3`. Optional (not in the default steps): scripts/setup.sh sdl3
+#
+# sdl3-desktop: the same SDL into tools/sdl3-desktop/, for the release (scripts/package_appimage.sh; DECISIONS
+# "Releases"). It REQUIRES the desktop backends (X11, Wayland, PipeWire, PulseAudio, ALSA; SDL3_DESKTOP_APT lists
+# Ubuntu's -dev packages for them) and fails instead of turning one off, and its library is checked for each backend's
+# driver (nm). Its own directory, so a headless tools/sdl3 (CI's cache) never stands in for it. Optional:
+# scripts/setup.sh sdl3-desktop
 SDL3_VER=3.4.18
 SDL3_SHA256=9c75cf16330322c217dedd2e0609f1124f1b54b8633e763467b4684d0f4334a3
-step_sdl3() {
-    local prefix="$INSTALL/sdl3" tarball="$SRC/SDL3-$SDL3_VER.tar.gz" dir="$SRC/SDL3-$SDL3_VER"
-    if [[ -f "$prefix/lib/libSDL3.a" && -f "$prefix/.sha256" && "$(cat "$prefix/.sha256")" == "$SDL3_SHA256" ]]; then
-        log "sdl3: $SDL3_VER already installed ($prefix)"
+# The drivers a desktop SDL must have: each one's bootstrap symbol in libSDL3.a.
+SDL3_DESKTOP_DRIVERS=(X11_bootstrap Wayland_bootstrap PIPEWIRE_bootstrap PULSEAUDIO_bootstrap ALSA_bootstrap)
+# Ubuntu 24.04's -dev packages for them and SDL's other desktop features (XInput2, Xrandr, libdecor, IBus, udev, KMSDRM).
+SDL3_DESKTOP_APT="libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev
+    libxkbcommon-dev libwayland-dev wayland-protocols libdecor-0-dev libegl1-mesa-dev libgles2-mesa-dev libgl1-mesa-dev
+    libdrm-dev libgbm-dev libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libibus-1.0-dev libudev-dev"
+
+# Prints the drivers of SDL3_DESKTOP_DRIVERS that a libSDL3.a lacks (nothing: a desktop build).
+sdl3_missing_drivers() {
+    local syms d
+    syms="$(nm -g --defined-only "$1" 2>/dev/null)" || { printf '%s\n' "${SDL3_DESKTOP_DRIVERS[@]}"; return; }
+    for d in "${SDL3_DESKTOP_DRIVERS[@]}"; do
+        grep -q " $d\$" <<<"$syms" || echo "$d"
+    done
+}
+
+# sdl3_build NAME PREFIX DESKTOP(0|1)
+sdl3_build() {
+    local name="$1" prefix="$2" desktop="$3" tarball="$SRC/SDL3-$SDL3_VER.tar.gz" dir="$SRC/SDL3-$SDL3_VER-$1"
+    if [[ -f "$prefix/lib/libSDL3.a" && -f "$prefix/.sha256" && "$(cat "$prefix/.sha256")" == "$SDL3_SHA256" ]] &&
+        { [[ $desktop -eq 0 ]] || [[ -z "$(sdl3_missing_drivers "$prefix/lib/libSDL3.a")" ]]; }; then
+        log "$name: $SDL3_VER already installed ($prefix)"
         return
     fi
     command -v cmake >/dev/null && command -v ninja >/dev/null || step_cmake
     mkdir -p "$SRC"
     if [[ ! -f "$tarball" ]] || ! echo "$SDL3_SHA256  $tarball" | sha256sum -c --quiet - 2>/dev/null; then
-        log "sdl3: downloading $SDL3_VER"
+        log "$name: downloading $SDL3_VER"
         curl -sSfL -o "$tarball.part" \
             "https://github.com/libsdl-org/SDL/releases/download/release-$SDL3_VER/SDL3-$SDL3_VER.tar.gz"
         mv "$tarball.part" "$tarball"
     fi
-    echo "$SDL3_SHA256  $tarball" | sha256sum -c --quiet - || die "sdl3: checksum mismatch"
+    echo "$SDL3_SHA256  $tarball" | sha256sum -c --quiet - || die "$name: checksum mismatch"
     rm -rf "$dir" "$prefix"
-    tar -C "$SRC" -xzf "$tarball"
-    log "sdl3: configuring (static; no tests, examples or camera)"
+    mkdir -p "$dir"
+    tar -C "$dir" --strip-components=1 -xzf "$tarball"
+    log "$name: configuring (static; no tests, examples or camera)"
     # SDL stops at an optional dependency whose headers are missing (an X11 extension, ...) and names the option
     # that turns it off; so does a host with neither X11 nor Wayland headers (SDL_UNIX_CONSOLE_BUILD: offscreen and
-    # dummy video only). Each such feature is turned off in turn and logged.
+    # dummy video only). Each such feature is turned off in turn and logged; the desktop build never turns off one of
+    # its backends.
     local opts=(-DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_INSTALL_LIBDIR=lib
                 -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_DEPS_SHARED=ON -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF
                 -DSDL_EXAMPLES=OFF -DSDL_CAMERA=OFF) off tries=0
+    if [[ $desktop -eq 1 ]]; then
+        opts+=(-DSDL_X11=ON -DSDL_WAYLAND=ON -DSDL_PIPEWIRE=ON -DSDL_PULSEAUDIO=ON -DSDL_ALSA=ON)
+    fi
     until cmake -S "$dir" -B "$dir/build" -G Ninja "${opts[@]}" >"$dir/configure.log" 2>&1; do
         off="$(grep -o -- '-DSDL_[A-Z0-9_]*=OFF' "$dir/configure.log" | head -1)" || off=
         if [[ -z "$off" ]] && grep -q 'X11 or Wayland' "$dir/configure.log"; then
             off=-DSDL_UNIX_CONSOLE_BUILD=ON
         fi
+        if [[ $desktop -eq 1 && "$off" =~ ^-DSDL_(X11|WAYLAND|PIPEWIRE|PULSEAUDIO|ALSA|UNIX_CONSOLE_BUILD)= ]]; then
+            die "$name: needs ${BASH_REMATCH[1]}'s headers (Ubuntu: apt-get install $(echo $SDL3_DESKTOP_APT));" \
+                "see $dir/configure.log"
+        fi
         tries=$((tries + 1))
-        [[ -n "$off" && $tries -le 30 ]] || die "sdl3: configure failed (see $dir/configure.log)"
-        log "sdl3: headers missing for an optional feature: $off"
+        [[ -n "$off" && $tries -le 30 ]] || die "$name: configure failed (see $dir/configure.log)"
+        log "$name: headers missing for an optional feature: $off"
         opts+=("$off")
     done
     # SDL's own summary of what it found: the video and audio drivers this build has.
-    grep -E '^--   (Video|Audio|Joystick) drivers:' "$dir/configure.log" | sed 's/^-- */  sdl3: /' || true
-    log "sdl3: building with $JOBS jobs"
+    grep -E '^--   (Video|Audio|Joystick) drivers:' "$dir/configure.log" | sed "s/^-- */  $name: /" || true
+    log "$name: building with $JOBS jobs"
     cmake --build "$dir/build" -j"$JOBS" >/dev/null
     cmake --install "$dir/build" >/dev/null
     rm -rf "$dir"
-    [[ -f "$prefix/lib/libSDL3.a" && -f "$prefix/lib/cmake/SDL3/SDL3Config.cmake" ]] || die "sdl3: install incomplete"
+    [[ -f "$prefix/lib/libSDL3.a" && -f "$prefix/lib/cmake/SDL3/SDL3Config.cmake" ]] || die "$name: install incomplete"
+    if [[ $desktop -eq 1 ]]; then
+        local missing
+        missing="$(sdl3_missing_drivers "$prefix/lib/libSDL3.a" | tr '\n' ' ')"
+        [[ -z "$missing" ]] || die "$name: built without ${missing}(Ubuntu: apt-get install $(echo $SDL3_DESKTOP_APT))"
+    fi
     echo "$SDL3_SHA256" > "$prefix/.sha256"
-    log "sdl3: installed $SDL3_VER to $prefix"
+    log "$name: installed $SDL3_VER to $prefix"
+}
+step_sdl3() { sdl3_build sdl3 "$INSTALL/sdl3" 0; }
+step_sdl3-desktop() { sdl3_build sdl3-desktop "$INSTALL/sdl3-desktop" 1; }
+
+# The AppImage tools for the release (scripts/package_appimage.sh; DECISIONS "Releases"): appimagetool (MIT) and the
+# static type-2 runtime (MIT, with musl, libfuse 3 (LGPL-2.1), squashfuse, zstd and zlib linked in: the AppImage needs
+# no libfuse2 on the player's machine), each a pinned release asset checked by SHA-256, and the runtime's LICENSE at
+# its tag's commit (bundled in the AppImage's LICENSES/). appimagetool is itself an AppImage: it is unpacked once
+# (--appimage-extract needs no FUSE) and run as tools/appimage/appimagetool/AppRun. Optional: scripts/setup.sh appimage
+APPIMAGETOOL_VER=1.9.1
+APPIMAGETOOL_SHA256=ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+APPIMAGE_RUNTIME_VER=20251108
+APPIMAGE_RUNTIME_COMMIT=dd6cebedcbddde9c82f89b011e8e1d40b6e43868
+APPIMAGE_RUNTIME_SHA256=2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d
+APPIMAGE_RUNTIME_LICENSE_SHA256=aa154fc9070614bbe7921f89db11efd1dba7a1f3a41685958110e2230f9c0ca1
+appimage_get() { # URL FILE SHA256
+    log "appimage: downloading $(basename "$2")"
+    curl -sSfL -o "$2.part" "$1"
+    echo "$3  $2.part" | sha256sum -c --quiet - || die "appimage: checksum mismatch: $1"
+    mv "$2.part" "$2"
+}
+step_appimage() {
+    local dir="$INSTALL/appimage" stamp="$APPIMAGETOOL_SHA256 $APPIMAGE_RUNTIME_SHA256 $APPIMAGE_RUNTIME_LICENSE_SHA256"
+    if [[ -x "$dir/appimagetool/AppRun" && -f "$dir/runtime-x86_64" && -f "$dir/runtime-LICENSE" &&
+          -f "$dir/.sha256" && "$(cat "$dir/.sha256")" == "$stamp" ]]; then
+        log "appimage: appimagetool $APPIMAGETOOL_VER, runtime $APPIMAGE_RUNTIME_VER already installed ($dir)"
+        return
+    fi
+    [[ "$(uname -m)" == x86_64 ]] || die "appimage: the pinned tools are x86_64 builds"
+    rm -rf "$dir"
+    mkdir -p "$dir"
+    appimage_get "https://github.com/AppImage/appimagetool/releases/download/$APPIMAGETOOL_VER/appimagetool-x86_64.AppImage" \
+        "$dir/appimagetool-x86_64.AppImage" "$APPIMAGETOOL_SHA256"
+    appimage_get "https://github.com/AppImage/type2-runtime/releases/download/$APPIMAGE_RUNTIME_VER/runtime-x86_64" \
+        "$dir/runtime-x86_64" "$APPIMAGE_RUNTIME_SHA256"
+    appimage_get "https://raw.githubusercontent.com/AppImage/type2-runtime/$APPIMAGE_RUNTIME_COMMIT/LICENSE" \
+        "$dir/runtime-LICENSE" "$APPIMAGE_RUNTIME_LICENSE_SHA256"
+    chmod +x "$dir/appimagetool-x86_64.AppImage"
+    (cd "$dir" && ./appimagetool-x86_64.AppImage --appimage-extract >/dev/null) || die "appimage: unpacking appimagetool failed"
+    mv "$dir/squashfs-root" "$dir/appimagetool"
+    rm "$dir/appimagetool-x86_64.AppImage"
+    [[ -x "$dir/appimagetool/AppRun" ]] || die "appimage: appimagetool has no AppRun"
+    echo "$stamp" > "$dir/.sha256"
+    log "appimage: installed appimagetool $APPIMAGETOOL_VER and runtime $APPIMAGE_RUNTIME_VER to $dir"
 }
 
 # Dear ImGui (MIT) for the launcher (launcher/README.md; DECISIONS "Launcher and mods (session 18)"): the pinned
@@ -491,7 +577,8 @@ step_link() {
         name="$(basename "$src")"
         dst="$TOOLS/$name"
         [[ -e "$dst" || -L "$dst" ]] && continue
-        if git -C "$MAIN" check-ignore -q "tools/$name"; then
+        # this checkout's .gitignore: a branch that adds a tool knows its directory before main does
+        if git -C "$ROOT" check-ignore -q "tools/$name"; then
             ln -s "$src" "$dst"
             log "link: tools/$name -> $src"
         fi
@@ -503,7 +590,8 @@ steps=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --disc) DISC_PATH="$2"; shift 2 ;;
-        -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
+        --sdl3-desktop-apt) echo $SDL3_DESKTOP_APT; exit 0 ;;   # what release.yml installs before sdl3-desktop
+        -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
         *) steps+=("$1"); shift ;;
     esac
 done

@@ -64,3 +64,10 @@ set_target_properties(dw2003-launcher PROPERTIES CXX_STANDARD 17 CXX_STANDARD_RE
 target_include_directories(dw2003-launcher PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src" "${DW3_ROOT}/port/src")
 target_link_libraries(dw2003-launcher PRIVATE dw3_imgui SDL3::SDL3)
 set_source_files_properties(${DW3_LAUNCHER_SRCS} PROPERTIES COMPILE_OPTIONS "-Wall;-Wextra;-Werror")
+# The release (scripts/package_appimage.sh) links the C++ runtime statically, so the AppImage needs only the C library
+# of the player's system (libstdc++ and libgcc_s are newer on the build machine than on older desktops). The GCC
+# runtime library exception covers it: no notice is owed.
+option(DW3_LAUNCHER_STATIC_RUNTIME "Link libstdc++ and libgcc statically (the release)" OFF)
+if(DW3_LAUNCHER_STATIC_RUNTIME)
+    target_link_options(dw2003-launcher PRIVATE -static-libstdc++ -static-libgcc)
+endif()

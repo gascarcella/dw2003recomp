@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- dw2003recomp's icon (drawn for this project; nothing from the game): a disc on a rounded tile, with a play mark. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b4a8b"/>
+      <stop offset="1" stop-color="#15254a"/>
+    </linearGradient>
+    <linearGradient id="disc" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e9eef7"/>
+      <stop offset="0.45" stop-color="#b8c4dc"/>
+      <stop offset="1" stop-color="#8fa0c2"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="44" fill="url(#tile)"/>
+  <circle cx="128" cy="128" r="92" fill="url(#disc)"/>
+  <circle cx="128" cy="128" r="70" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="3"/>
+  <circle cx="128" cy="128" r="52" fill="none" stroke="#5d6f95" stroke-opacity="0.25" stroke-width="2"/>
+  <circle cx="128" cy="128" r="30" fill="#2b4a8b"/>
+  <circle cx="128" cy="128" r="11" fill="#15254a"/>
+  <path d="M168 146 L220 176 L168 206 Z" fill="#f29a2e" stroke="#15254a" stroke-width="6" stroke-linejoin="round"/>
+</svg>

@@ -123,6 +123,16 @@ picture waits for issue #7. The bare binary's logs, records and WAVs are unchang
   CI; with `DW3_SELFTEST_DISC`/`DW3_SELFTEST_GAME` it checks the real disc and runs the real game 300 frames from the
   launcher's command (CI's data-gated step). Checked against main's game and path B's PR #11 (its `fast_forward`
   manifest, the input and mods it parses).
+- **Release pipeline (the release session, local worktree `gascarcella/release-pipeline`; DECISIONS "Releases",
+  "CI per area"; `docs/RELEASE.md`):** `scripts/package_appimage.sh [--test]` builds one Linux x86_64 AppImage (the
+  launcher, the game's Release SDL build, the mods' manifests, `LICENSES/`; `packaging/appimage/`): both programs need
+  only the C library (SDL3 static from `scripts/setup.sh sdl3-desktop` with X11/Wayland/PipeWire/PulseAudio/ALSA, the
+  launcher's C++ runtime static), the static type-2 runtime (`scripts/setup.sh appimage`, no libfuse2). `--test` runs the
+  launcher's self-test inside the AppImage (`DW3_SELFTEST_GAME=beside`: it finds the bundled game and mods by itself, and
+  the game runs 300 frames on the disc). `.github/workflows/release.yml`: a tag `vX.Y.Z` runs ci.yml whole
+  (`workflow_call`), the Release game through the port's M1 test, the AppImage and its smoke test, then a **draft**
+  release; a manual run keeps the AppImage as an artifact. ci.yml runs per area (`scripts/ci_areas.sh`: game, port,
+  launcher). The game's -O3 build replays both layer-2 scripts byte-identically to the default build.
 - **CI (session 13):** `.github/workflows/ci.yml` on pull requests and pushes to `main`, skipped when only documentation changed (DECISIONS "CI only when it is needed"): toolchain, script/Python checks, `check_toolchain.sh`, and
   with the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of `dw2003-gamedata`) `build.sh --check` and
   `scripts/test.sh`; first green run 2026-10-05, ~5 min. Fork pull requests get only the disc-free steps.
@@ -199,6 +209,8 @@ picture waits for issue #7. The bare binary's logs, records and WAVs are unchang
   the deploy-key secret, description/topics/features set (Issues on; Wiki, Projects, Discussions off). The cloud
   environment with both repositories works (session 14: section 5 step 0 done; the hook is run by hand there). **Left for
   the user:** closing pull requests by hand (GitHub cannot disable them).
+- **The first release:** pushing a tag `vX.Y.Z` (the maintainer) makes a draft release; publishing it (binaries built
+  from the decompiled code, no disc data) is the user's explicit decision each time (DECISIONS "Releases").
 - **The port's sanitizer and `-m32` builds** need `libasan`/`libubsan` and the 32-bit glibc (`gcc-multilib` on Ubuntu,
   `glibc-devel.i686` on Fedora/Nobara): system installs, the user's. Cloud session 16 had ASan/UBSan and installed
   `gcc-multilib` with the user's approval; CI installs `gcc-multilib` itself.

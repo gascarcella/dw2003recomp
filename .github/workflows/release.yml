@@ -1,0 +1,130 @@
+# The release (DECISIONS "Releases"; docs/RELEASE.md): one Linux x86_64 AppImage with the launcher, the game and the
+# mods' manifests (scripts/package_appimage.sh). Players bring their own disc; they never compile anything.
+#
+# On a pushed tag vX.Y.Z (e.g. v0.1.0; also v0.2.0-rc1, not the decomp's milestone tags such as v0.1-matching-closed):
+#   1. tests     the whole of ci.yml (workflow_call: every area, with the data checkout's disc)
+#   2. appimage  the game's Release build passes the port's M1 test; the AppImage is built with an SDL3 that has the
+#                desktop backends (setup.sh sdl3-desktop, its own cache), then smoke-tested: the launcher's --self-test
+#                inside the AppImage finds the bundled game and mods by itself and runs the game 300 frames on the
+#                disc; the AppImage and SHA256SUMS are kept as the run's artifact
+#   3. release   a DRAFT GitHub Release for the tag with both files and generated notes. Nothing is published: the
+#                maintainer downloads it, tests it and presses Publish (publishing is their decision each time).
+# A manual run (`gh workflow run release.yml --ref <branch>`) does 1 and 2 only: the artifact is how a branch's
+# AppImage is tried. Built on ubuntu-24.04: the binaries need glibc 2.39 or newer.
+name: Release
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    name: Tests (ci.yml)
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  appimage:
+    name: AppImage
+    needs: tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      DW3_GAMEDATA: ${{ github.workspace }}/dw2003-gamedata
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # git describe: a manual run's version
+
+      # A release is built only after the tests with the disc, and its smoke test needs the disc too.
+      - name: The data checkout is required
+        run: |
+          if [[ "${{ secrets.GAMEDATA_DEPLOY_KEY != '' }}" != true ]]; then
+            echo "::error::no GAMEDATA_DEPLOY_KEY: a release needs the data checkout (the disc for the tests)"; exit 1
+          fi
+
+      - name: Data checkout
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/dw2003-gamedata
+          ssh-key: ${{ secrets.GAMEDATA_DEPLOY_KEY }}
+          path: dw2003-gamedata
+
+      # The desktop SDL's -dev packages (X11, Wayland, PipeWire, PulseAudio, ALSA, ...): setup.sh lists them.
+      - name: System packages
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ninja-build cmake xz-utils $(scripts/setup.sh --sdl3-desktop-apt)
+
+      # Its own cache: CI's tools/sdl3 is headless (no desktop -dev packages there), tools/sdl3-desktop never is.
+      - name: Cached release tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            tools/venv
+            tools/mkpsxiso
+            tools/imgui
+            tools/sdl3-desktop
+            tools/appimage
+          key: release-tools-${{ runner.os }}-${{ hashFiles('scripts/setup.sh', 'tools/requirements.txt') }}
+
+      # mkpsxiso: worktree_init.sh extracts the disc (the port's sound check reads the EXE from extracted/).
+      - name: Release tools
+        run: scripts/setup.sh venv mkpsxiso imgui sdl3-desktop appimage
+
+      - name: Disc from the data checkout
+        run: |
+          scripts/worktree_init.sh
+          test -f iso/dw2003.cue
+
+      # The release's game is built with -O3 (CMAKE_BUILD_TYPE=Release), the tests' with the default flags: its
+      # headless build must replay the layer-2 scripts the same way (the emulator's checkpoints, two identical runs).
+      - name: The game's Release build passes the port's M1 test
+        run: |
+          cmake -S port -B build/port -G Ninja -DCMAKE_BUILD_TYPE=Release
+          tools/venv/bin/python tests/port/run.py
+
+      - name: Build the AppImage and smoke-test it
+        run: scripts/package_appimage.sh --test
+
+      - name: Keep the AppImage (the run's artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dw2003-appimage
+          path: |
+            build/release/*.AppImage
+            build/release/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    name: Draft release
+    needs: appimage
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write   # gh release create
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dw2003-appimage
+          path: dist
+
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cd dist
+          sha256sum -c SHA256SUMS
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title "dw2003recomp $TAG" \
+            --generate-notes --notes "Linux x86_64 AppImage: the launcher, the PC port and its mods in one file.
+          Bring your own disc image of Digimon World 2003 (PS1, Europe; the launcher checks its SHA-1).
+          \`chmod +x dw2003-*.AppImage\`, then run it. Needs glibc 2.39 or newer (Ubuntu 24.04, Fedora 40, Debian 13 or later)." \
+            ./*.AppImage SHA256SUMS

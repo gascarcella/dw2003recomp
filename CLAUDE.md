@@ -54,6 +54,7 @@ with the original-era toolchain). A Linux-native port is a later, separate goal.
 | `build/` | no | Build outputs; `build/<target>/` has splat's linker script, ELF, map |
 | `configure.py`, `diff_settings.py` | yes | Ninja/objdiff generator; asm-differ settings. `build.ninja`, `objdiff.json`, `include/asm_generated/` are generated (untracked) |
 | `scripts/` | yes | `setup.sh`, `extract.sh`, `build.sh`, … |
+| `packaging/` | yes | The release AppImage's own files: `appimage/` (.desktop, icon, font notices); `scripts/package_appimage.sh` uses them (`docs/RELEASE.md`) |
 | `tests/` | yes | Reference tests for the port (`tests/README.md`): `golden/` (layer 1: the oracle `oracle.lua`/`oracle.py`, families, goldens JSON), `host/` (the goldens replayed on the host, findings), `replay/` (layer 2: pad scripts, expected hashes). Tests never touch `src/`, `include/`, `config/` |
 | `docs/` | yes | See below |
 
@@ -83,6 +84,8 @@ tools/venv/bin/python tools/port_inventory.py probe [FILES...] [-v] [--warnings]
 tools/venv/bin/python tools/port_inventory.py link | structs   # duplicate/undefined globals over the probe's objects; struct sizes at -m32/-m64 vs the documented PS1 sizes
 tools/venv/bin/python tests/port/run.py [--m32] [--sanitize] [--cd-speed instant]   # the port's M1 test: new_game from the disc, twice, against the emulator's record (tests/port/README.md)
 scripts/setup.sh sdl3 && cmake -S port -B build/port-sdl -G Ninja -DDW3_PORT_SDL=ON && cmake --build build/port-sdl && build/port-sdl/dw2003 --disc iso/dw2003.cue --window   # play it (M2: software GPU, SDL3 window, keyboard/gamepad)
+scripts/setup.sh imgui sdl3-desktop appimage && scripts/package_appimage.sh --test   # the release AppImage (docs/RELEASE.md; Fedora without libstdc++-static: --shared-libstdcxx); a tag vX.Y.Z runs release.yml: a DRAFT release
+scripts/ci_areas.sh --diff origin/main   # which CI areas (game, port, launcher) a change runs (DECISIONS "CI per area")
 tools/venv/bin/python tests/sound/spu_trace.py run|check|diff ...   # the emulator's SPU write trace (M3's oracle; docs/SOUND.md); tests/sound/key_trace.py gen|check: per-key goldens (~22 min)
 build/port/dw2003 --disc iso/dw2003.cue --script tests/replay/scripts/new_game.json --wav out.wav [--spu-trace out.trace]   # the port's audio (M3) headless
 scripts/setup.sh sdl3 imgui && cmake -S launcher -B build/launcher -G Ninja && cmake --build build/launcher && build/launcher/dw2003-launcher   # the launcher; SDL_VIDEO_DRIVER=offscreen ... --self-test DIR: its headless self-test
@@ -127,4 +130,4 @@ source tools/venv/bin/activate; export PATH="$PWD/tools/binutils/bin:$PWD/tools/
 `docs/TOOLCHAIN.md` compiler/SDK evidence · `docs/WORKFLOW.md` tool and workflow plan · `docs/MECHANICS.md` game
 mechanics mapped to functions and tests · `tests/README.md` the reference tests (layers, rules, formats) ·
 `docs/SESSION_LOG.md` per-session log · `docs/PC_PORT_RESEARCH.md` PC port notes (exploratory, not decided) ·
-`docs/LAUNCHER_MODS_PLAN.md` the launcher and mods plan (decided, not implemented)
+`docs/LAUNCHER_MODS_PLAN.md` the launcher and mods plan (decided, not implemented) · `docs/RELEASE.md` making a release (the AppImage, tags, drafts)

@@ -43,7 +43,9 @@ tools/ext
 tools/bin
 tools/redux
 tools/sdl3
+tools/sdl3-desktop
 tools/imgui
+tools/appimage
 tools/local.env
 
 # --- Copyrighted SDK files (Psy-Q etc.): user-supplied only ---
