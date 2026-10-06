@@ -68,17 +68,19 @@ jobs:
         with:
           path: |
             tools/venv
+            tools/mkpsxiso
             tools/imgui
             tools/sdl3-desktop
             tools/appimage
           key: release-tools-${{ runner.os }}-${{ hashFiles('scripts/setup.sh', 'tools/requirements.txt') }}
 
+      # mkpsxiso: worktree_init.sh extracts the disc (the port's sound check reads the EXE from extracted/).
       - name: Release tools
-        run: scripts/setup.sh venv imgui sdl3-desktop appimage
+        run: scripts/setup.sh venv mkpsxiso imgui sdl3-desktop appimage
 
       - name: Disc from the data checkout
         run: |
-          scripts/setup.sh gamedata
+          scripts/worktree_init.sh
           test -f iso/dw2003.cue
 
       # The release's game is built with -O3 (CMAKE_BUILD_TYPE=Release), the tests' with the default flags: its
