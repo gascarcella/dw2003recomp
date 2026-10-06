@@ -50,7 +50,8 @@ non-PIE in both.
 | `src/sha1.c` | SHA-1 (our own): the disc check, the checkpoint hashes |
 | `src/disc.c` | The disc (`--disc`): the CUE/BIN, its SHA-1 check (with a stamp cache), LIBCD's sector source, `--cd-speed` |
 | `src/script.c` | The input script (`--script`): `tests/replay/run.lua`'s step engine in C, the pad through `psyq_pad_set` |
-| `src/json.c` | A small strict JSON reader (our own), for the scripts |
+| `src/json.c` | A small strict JSON reader and writer (our own), for the scripts and the settings |
+| `src/settings.c` | The settings file (`--config`, `--print-settings`; `settings.h`): schema 1 of docs/LAUNCHER_MODS_PLAN.md 4.3 |
 | `include/port_harness.h` | The M1 harness's interfaces (disc, frame log and probes, script) |
 | `src/pump.c` | `port_wait` (the vsync and CD ticks, the frame cap, the watchdog), `port_halt`, `port_unimplemented` |
 | `src/reset.c` | The console's reset (the script's `reset` step): `port_reset_request` (longjmp to `main()`), `port_reset_state`, `DW3_PORT_RESET_CHECK` |
@@ -61,6 +62,19 @@ non-PIE in both.
 | `include/spu.h`, `src/spu.c`, `src/spu_dsp.c`, `src/spu_internal.h` | The SPU core (M3, below): registers, SPU RAM, voices, mix, reverb; the DSP pieces; the internals the tests see |
 | `psyq/` | The Psy-Q shim (its own README) |
 | `../tools/port_gen.py` | The generators CMake runs (never by hand in the normal flow) |
+
+## The settings file (`--config FILE`)
+What the launcher starts the game with (docs/LAUNCHER_MODS_PLAN.md 4.1-4.3, schema 1; `src/settings.c`): the disc, the
+window (`video.window`, `scale`, `fullscreen`, `refresh`), `audio.mute`, the memory cards (default `card1.mcd` and
+`card2.mcd` beside the file, created formatted when missing; `null` for no card), the watchdog (default off), and the
+`input` and `mods` sections. Paths in the file are relative to its directory. The options given on the command line
+override the file. The game reads a settings file only when `--config` names it: the bare binary, which the tests run,
+never depends on the machine. A bad value exits 64 naming the key; an unknown key is logged and ignored.
+```sh
+build/port-sdl/dw2003 --config <settings dir>/settings.json                   # as the launcher starts it
+build/port/dw2003 --config settings.json --print-settings                     # the effective settings, every key
+tests/port/settings.py                                                        # the round trip, overrides, errors
+```
 
 ## The window (M2: `-DDW3_PORT_SDL=ON`)
 SDL3 (zlib licence; DECISIONS "PC port decisions (session 15)" item 3) shows the PS1's display and reads the keyboard and

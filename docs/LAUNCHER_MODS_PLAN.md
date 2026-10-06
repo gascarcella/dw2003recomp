@@ -1,6 +1,7 @@
 # Launcher and mods plan
 
-_Planned in session 18 (2026-10-06, a discovery and planning session). **Nothing here is implemented.** The user's
+_Planned in session 18 (2026-10-06, a discovery and planning session). **Implemented so far (session 19, path B):**
+`--config FILE` and the settings file, 4.3 (settled there). The user's
 decisions are in section 2 and in `docs/DECISIONS.md` "Launcher and mods (session 18)". The facts in section 3 come from
 five research agents: the measurements were run on the dev machine; everything about the game's code is from reading it
 (nothing in the game was changed or run with a mod); the Windows findings are small scratch experiments, not a build of
@@ -330,34 +331,84 @@ was not built for Windows**.
 One directory holds `settings.json`, the memory cards and (later) `mods/`. The launcher shows which directory it chose.
 The disc path is stored with its verified SHA-1.
 
-### 4.3 The settings file (a sketch, to settle when built)
+### 4.3 The settings file (schema 1: settled by path B, session 19; the contract path A builds against)
+
+_Settled when `--config` was built (`port/src/settings.c`; the sketch of session 18 changed in four places, marked
+**changed**). `dw2003 --config FILE --print-settings` prints the effective settings with every key and absolute paths
+and exits 0, or exits 64 naming the bad key: the launcher can use it to validate a file. `tests/port/settings.py`
+checks the round trip, the defaults, the overrides and the errors._
 
 ```json
 {
   "schema": 1,
-  "disc": { "path": "/games/dw2003.cue", "sha1": "457cb233..." },
-  "video": { "scale": 3, "fullscreen": false, "refresh": 50 },
+  "disc": { "path": "dw2003.cue", "sha1": "457cb233..." },
+  "video": { "window": true, "scale": 2, "fullscreen": false, "refresh": 50 },
   "audio": { "mute": false },
   "memcard1": "card1.mcd",
+  "memcard2": "card2.mcd",
+  "watchdog": 0,
   "input": {
-    "keyboard": { "cross": "X", "circle": "C", "start": "Return" },
-    "gamepad":  { "cross": "south", "circle": "east" },
-    "hotkeys":  { "fast_forward.hold": "Tab", "fast_forward.toggle": "F1", "skip_dialogues.toggle": "F2" }
+    "keyboard": { "cross": "X", "start": ["Return", "Keypad Enter"] },
+    "gamepad":  { "cross": "south", "up": ["dpup", "lefty-"] },
+    "hotkeys":  { "pause": "P", "fullscreen": "F11" }
   },
   "mods": {
-    "fast_forward":      { "enabled": true,  "speed": 4, "mute": true },
-    "skip_dialogues":    { "enabled": false, "fast_forward_waits": false },
-    "battle_animations": { "enabled": false, "hit_reaction": true }
-  }
+    "fast_forward":   { "enabled": true, "hold": "Tab" },
+    "skip_dialogues": { "enabled": false, "toggle": "F2", "fast_forward_waits": false }
+  },
+  "launcher": { }
 }
 ```
+
+- **Every key but `schema` is optional;** an absent key keeps its default (the values above, except `disc.path`: none,
+  and `input`/`mods`, below). `schema` must be 1; a higher one is refused (exit 64, "a newer launcher's").
+- **Paths** (`disc.path`, `memcard1`, `memcard2`) are relative to the settings file's directory, or absolute. The
+  launcher owns the lookup of that directory (4.2); the game never looks for a settings file.
+- **Errors:** a value of the wrong type or out of range ends the game with status 64 and a message naming the key
+  (`port: settings FILE: video.scale: an integer from 1 to 16, not 17`), as a bad option does. **An unknown key is
+  logged and ignored**, so an older game runs a newer launcher's file.
+- **The command line overrides the file** (`--disc`, `--scale`, `--fullscreen`, `--window`, `--mute`, `--memcard1|2
+  PATH|none`, `--watchdog`, `--fps`).
+- `disc.sha1`: the launcher's record of what it verified. The game does not trust it: it checks the disc itself
+  (`disc.c`, with its stamp cache).
+- `video.window` (**changed: added**, default true): false runs headless (tests, a check run). `video.scale` 1-16,
+  `video.refresh` 50 or 60 (60 is phase 2: until then the game logs it and runs at 50).
+- `memcard1`/`memcard2` (**changed:** both slots, default `card1.mcd`/`card2.mcd` beside the file, created formatted
+  when missing): a string is a `.mcd` image, **`null` means no card in that slot**.
+- `watchdog` (**changed: added**): seconds without a vsync before the game exits 4; **0 (the default under
+  `--config`) is off**. The bare binary keeps its 10 s.
+- `launcher` (**changed: added**): the launcher's own state (window geometry, last directory, ...). The game never
+  reads it and prints it back unchanged.
+- **`input`** (applied from phase 1's second pull request; until then read, checked as an object and printed back):
+  - `keyboard`: PS1 button -> one key name or a list of them. `gamepad`: PS1 button -> one gamepad input name or a list.
+    A button that is absent keeps its default; `""` or `[]` unbinds it. Buttons: `up down left right cross circle square
+    triangle start select l1 r1 l2 r2`.
+  - **Key names are SDL3's scancode names** (`SDL_GetScancodeName`/`SDL_GetScancodeFromName`: `"X"`, `"Return"`,
+    `"Keypad Enter"`, `"Right Shift"`, `"F11"`, `"Tab"`); scancodes are the key's place, whatever the layout.
+  - **Gamepad input names are ours** (SDL's positional buttons): `south east west north back guide start leftstick
+    rightstick leftshoulder rightshoulder dpup dpdown dpleft dpright misc1 paddle1 paddle2 paddle3 paddle4 touchpad`,
+    and the axes past half way: `lefttrigger righttrigger leftx- leftx+ lefty- lefty+ rightx- rightx+ righty- righty+`
+    (`lefty-` is the left stick up).
+  - `hotkeys`: the port's own actions -> a **binding**. Actions: `pause` (default `"P"`), `fullscreen` (default
+    `"F11"`). A mod's bindings are its options, under `mods.<id>` (below), not here.
+  - **A binding** is a string or a list; each element is one trigger, any of which fires the action. A trigger is one
+    input (a string) or a chord (a list of inputs, all held). An input is a key name, or `"pad:"` + a gamepad input
+    name. `""` or `[]`: unbound. Examples: `"F2"`; `["F2", "pad:guide"]`; `[["pad:guide", "pad:south"], "Tab"]`.
+    The inputs of a chord that fired are masked out of the pad while held; a single-key hotkey never reaches the pad.
+    The first input of a chord made only of game buttons does reach the pad until the chord is complete: chords
+    should start with an input the pad map does not use (`pad:guide`, the stick clicks).
+- **`mods`**: `<id>` -> `{ "enabled": bool, "<option id>": value }`, the option ids and types from the mod's manifest
+  (4.4). **A mod that is absent, or has no `enabled`, is off.** An absent option keeps the manifest's default. An
+  unknown mod id is logged and ignored (applied from phase 1's second pull request; until then read and printed back).
+  Under `--script` every mod is off unless the run asks for them (4.5).
 
 ### 4.4 The mod manifest (`mod.json`)
 
 Top level: `schema`, `id`, `name`, `version`, `description`, `kind` (`builtin` now; `data` at stage 1),
 `requires_port`, `options[]`. An option: `id`, `name`, `description`, `type`, `default`, and optionally `group` and
 `applies` (`live` or `restart`). Types: `bool`; `int` and `float` with `min`/`max`/`step`; `enum` with
-`values[{id, label}]`; `binding` (a key, a pad button or a chord). No `string` or `path` type for now.
+`values[{id, label}]`; `binding` (4.3's grammar: a key, a pad input or a chord, or a list of them; the default
+written the same way). No `string` or `path` type for now.
 
 ```json
 {

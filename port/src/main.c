@@ -7,6 +7,7 @@
 
 #include "port_harness.h"
 #include "port_runtime.h"
+#include "settings.h"
 #include "spu.h"
 #include "psyq.h"
 
@@ -33,10 +34,17 @@ void port_fatal(const char *fmt, ...) {
 
 static void usage(const char *argv0) {
     fprintf(stderr,
-            "usage: %s [--disc CUE|BIN] [--no-disc-check] [--cd-speed instant|realistic] [--memcard1|2 MCD|none]\n          [--script JSON]\n"
+            "usage: %s [--config JSON] [--print-settings]\n"
+            "          [--disc CUE|BIN] [--no-disc-check] [--cd-speed instant|realistic] [--memcard1|2 MCD|none]\n"
+            "          [--script JSON]\n"
             "          [--log FILE] [--record FILE] [--max-frames N] [--watchdog SEC] [--trace]\n"
             "          [--window] [--scale N] [--fullscreen] [--fps N] [--input-test] [--screenshot FRAME:PATH]\n"
             "          [--spu-trace FILE] [--wav FILE] [--mute]\n"
+            "  --config JSON    the settings file (docs/LAUNCHER_MODS_PLAN.md 4.3; what the launcher starts the game\n"
+            "                   with): the disc, the window, the memory cards (default card1.mcd and card2.mcd beside\n"
+            "                   the file), the watchdog (default off); the options below override it\n"
+            "  --print-settings with --config: print the effective settings (the file's, then the options) as a\n"
+            "                   settings file with every key and absolute paths, and exit 0 (64: a bad file)\n"
             "  --disc PATH      the user's disc (.cue or .bin; SHA-1 checked); without it reads find no data\n"
             "  --no-disc-check  skip the disc's SHA-1 check (experiments with another image)\n"
             "  --cd-speed S     the CD's timing: realistic (default: double speed and seeks) or instant\n"
@@ -85,9 +93,34 @@ int main(int argc, char **argv) {
     int memcard_given[2] = { 0, 0 };
     int disc_check = 1, max_frames_given = 0;
     int window = 0, scale = 2, fullscreen = 0, input_test = 0;
+    const char *config = NULL;
+    int print_settings = 0;
     int i;
+    /* --config first: its values are the defaults that the other options override */
     for (i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--max-frames") == 0 && i + 1 < argc) {
+        if (strcmp(argv[i], "--config") == 0 && i + 1 < argc) {
+            config = argv[++i];
+        }
+    }
+    if (config != NULL) {
+        port_settings_load(config);
+        disc = port_settings.disc;
+        window = port_settings.window;
+        scale = port_settings.scale;
+        fullscreen = port_settings.fullscreen;
+        mute = port_settings.mute;
+        port_watchdog_sec = port_settings.watchdog;
+        for (i = 0; i < 2; i++) {
+            memcard[i] = port_settings.memcard[i];
+            memcard_given[i] = memcard[i] != NULL ? 1 : -1;
+        }
+    }
+    for (i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--config") == 0 && i + 1 < argc) {
+            i++; /* read above */
+        } else if (strcmp(argv[i], "--print-settings") == 0) {
+            print_settings = 1;
+        } else if (strcmp(argv[i], "--max-frames") == 0 && i + 1 < argc) {
             port_max_frames = number(argv[i + 1], argv[i]);
             max_frames_given = 1;
             i++;
@@ -150,6 +183,27 @@ int main(int argc, char **argv) {
             usage(argv[0]);
             return 64;
         }
+    }
+    if (print_settings) {
+        PortSettings eff = port_settings;
+        if (config == NULL) {
+            fprintf(stderr, "port: --print-settings: needs --config FILE\n");
+            return 64;
+        }
+        eff.disc = disc != NULL ? port_settings_abspath(disc) : NULL;
+        eff.window = window;
+        eff.scale = scale;
+        eff.fullscreen = fullscreen;
+        eff.mute = mute;
+        eff.watchdog = port_watchdog_sec;
+        for (i = 0; i < 2; i++) {
+            eff.memcard[i] = memcard_given[i] > 0 && memcard[i] != NULL ? port_settings_abspath(memcard[i]) : NULL;
+        }
+        port_settings_print(stdout, &eff);
+        return 0;
+    }
+    if (config != NULL && port_settings.refresh == 60) {
+        port_log("settings: video.refresh 60 is not implemented yet: the game runs at 50 (PAL)");
     }
     if (window && !port_video_available()) {
         fprintf(stderr, "port: --window: this build has no window: configure with -DDW3_PORT_SDL=ON "

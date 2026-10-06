@@ -109,6 +109,7 @@ for L in $LAYERS; do
             skip "no disc image (iso/dw2003.cue; scripts/setup.sh disc or gamedata)"
         else
             "$PY" "$ROOT/tests/port/run.py"; ran=$((ran + 1))
+            "$PY" "$ROOT/tests/port/settings.py"   # --config, the launcher's contract (docs/LAUNCHER_MODS_PLAN.md 4.3)
         fi ;;
     *) echo "unknown layer $L" >&2; exit 2 ;;
     esac
