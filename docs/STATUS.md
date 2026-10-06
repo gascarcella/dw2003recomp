@@ -185,8 +185,8 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
    WSTAG function), names-10 (FIELDSTG/WSTAG type fields), names-9 (EXE and CARDGAME fields, EXE data symbols), names-11
    (FIGHTSTG, tier-2, small overlays) and decode-1 (item data, event scripts, card scripts) are done: `unk_` uses
    15,646 → 1,097 (mostly never-read or not yet understood), 12 `func_` names left, no `Unk<addr>` types.
-2. PC port: **M1 is done** (session 16). Next: `first_battle_save` in the port (it matches through `asuka_lobby`, then
-   step 21, CROSS at Tamer Service until map 0x204, times out: not investigated; it also needs `reset` and
-   `memcard_state` reads), then **M2** (`docs/PC_PORT_PLAN.md`: the VRAM-exact software GPU, SDL3 via a `setup.sh`
+2. PC port: **M1 is done** (session 16). Next: `first_battle_save` in the port: it matches the first six checkpoints
+   (through the first battle, `back_on_field`) and stops at step 50, a `wait_mem` on `memcard_state` (not mapped: its
+   type is private to `memcard.c`); the save needs LIBMCRD over a `.mcd` image (M4) and the script's `reset`; then **M2** (`docs/PC_PORT_PLAN.md`: the VRAM-exact software GPU, SDL3 via a `setup.sh`
    step, pixel comparison with the emulator).
 3. Holdouts/FAKEs: opportunistic retries with new techniques.

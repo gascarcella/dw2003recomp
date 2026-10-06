@@ -1786,6 +1786,11 @@ The user's answers to `docs/PC_PORT_PLAN.md` section 4 (asked item by item; ever
   pointers (`fieldstg_find_stage`).
 - **The primitive-stream hash ignores bits the GPU ignores** (the padding halves of textured polygons' texture words),
   or heap leftovers make `-m32` and `-m64` differ.
+- **The pad is a frame late, as in the emulator:** LIBPAD reads the controllers in the vsync interrupt, before the
+  replay runner's vsync listener sets its override, so the game sees the buttons one frame after the runner chose them.
+  `psyq_pad_set` therefore latches, and the buffers are filled at the next vsync. Without it every `walk` ended a few
+  pixels off (the emulator's trajectory, frame by frame, showed the extra frame) and `first_battle_save` missed the
+  Tamer Service counter; with it the port matches that script's first six checkpoints, the scripted battle included.
 - **The script engine** (`port/src/script.c`) is run.lua's in C: every step but `reset` (exit 6; it would need the whole
   runtime restarted). `walk` reads FIELDSTG's player actor from `heap_objects`. `wait_mem` reads only layout-identical
   ranges (`port_state_read`); `memcard_state` and overlay data are not mapped yet.
