@@ -88,6 +88,11 @@ Each file's header comment lists its own; the ones a later milestone must check 
   interpolation ties (the emulator's fixed-point rounding), semi-transparency modes 2/3 of modulated textures (the
   emulator's two-pixels-at-once arithmetic), and three hardware rules kept over the emulator's (fill rounding/wrap,
   copies obey the mask, a 1x1 draw area). Not covered: GP1, interlaced `dfe`, timing.
+- **GPU speed (session 16):** `gpu.c` (built at `-O3`) draws `first_battle_save` (41,779 frames, ~180,000 pixels a
+  frame) in ~7 s, the whole run ~8.5 s against ~1.6 s without drawing (22 s before): span loops per primitive kind,
+  edge walking, sprite rows from decoded texture segments kept by VRAM write stamps, vectorisable select loops
+  (`gpu.c`, "Speed"). Every step byte-identical: the 715 `gpu` cases' raw output, both scripts' logs, screenshots and
+  the whole VRAM every 250 frames, and a randomized comparison with the unoptimised rasteriser.
 - **LIBGS (M2):** `GsSetRefView2`'s matrix (not computed here); whether `GsSetFlatLight` normalises the direction;
   what `GsInit3D` resets.
 - **LIBCD:** verified with the BIN (session 16): mode `0xA0` (cdload) gets the 2340-byte window from the 12-byte
