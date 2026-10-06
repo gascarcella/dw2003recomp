@@ -56,6 +56,7 @@
 #include <string.h>
 #include "psyq_internal.h"
 #include "psyq/libcd.h"
+#include "spu.h"
 
 /* Commands the game sends. */
 #define CdlSetloc 0x02
@@ -522,9 +523,18 @@ void *CdSyncCallback(void (*func)()) {
     return (void *)prev;
 }
 
-/* 1 = ok. */
+/* 1 = ok. LIBCD's CdInit also sets the SPU up for CD audio (its CD_initvol; docs/SOUND.md section 1): the main volume
+ * to 3FFFh when the current main volume reads 0, the CD volume to 3FFFh, SPUCNT C001h (on, CD audio in). The emulator
+ * reads the current main volume as 0 there, so all five stores happen in its trace; the port's SPU core reads its
+ * level (3FFFh x 2 after SsInit), so the port makes them unconditionally: the oracle's stores, and the same main
+ * volume either way. */
 int CdInit(void) {
     PSYQ_TRACE("CdInit");
+    spu_write16(0x180, 0x3FFF);
+    spu_write16(0x182, 0x3FFF);
+    spu_write16(0x1B0, 0x3FFF);
+    spu_write16(0x1B2, 0x3FFF);
+    spu_write16(0x1AA, 0xC001);
     psyq_cd_pending = 0;
     psyq_cd_reading = CD_IDLE;
     psyq_cd_sync_handler = NULL;
