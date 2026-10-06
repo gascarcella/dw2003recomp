@@ -229,6 +229,99 @@ Verified: all 71 banks. Each VAB header's size field equals `0x20 + 0x800 + prog
 sizes × 8`, each body file holds that many sample bytes (padded to the sector), and every SEP sub-file has the
 `pQES` magic. The 71 banks are exactly the 71 `SOUND/` directories.
 
+The inside of the three formats below is Sony's (LIBSND reads it; the game's C only passes pointers), so the layouts
+come from public descriptions of the VAB/SEQ/SEP formats and psx-spx "SPU", checked field by field against the disc
+by `tests/sound/sound_formats.py --check` (every claim marked verified holds for all 71 banks, 946 VAGs and 1,152
+sequences; "assumed" marks a meaning the check cannot see). How the game uses them, and what LIBSND does with them on
+the SPU, is in `docs/SOUND.md`.
+
+### VAB header (VH, `pBAV`)
+All little-endian. Total size `0x20 + 0x800 + programs × 0x200 + 0x200`; the body's size is in it too (above).
+
+| Offset | Size | Field | On this disc |
+|---|---|---|---|
+| `0x00` | 4 | magic `pBAV` (bytes `70 42 41 56`) | verified, all |
+| `0x04` | u32 | version | 7, all (verified) |
+| `0x08` | u32 | VAB id | 0, all (LIBSND assigns the id: `SsVabOpenHeadSticky`'s argument) |
+| `0x0C` | u32 | total size, VH + VB | verified (the formula above) |
+| `0x10` | u16 | reserved | `0xEEEE` |
+| `0x12` | u16 | `programs`: programs with tones | verified: equals the number of program records with a tone count > 0 |
+| `0x14` | u16 | `tones`: tone records in use | verified: the sum of the program records' tone counts |
+| `0x16` | u16 | `vags`: samples | verified: the size table has exactly this many non-zero entries after entry 0 |
+| `0x18` | u8, u8 | master volume, master pan | 95..125, pan 64 (centre) |
+| `0x1A` | u8, u8 | bank attributes 1, 2 | 0, 0 |
+| `0x1C` | u32 | reserved | |
+| `0x20` | 128 × 16 | **program records** (`ProgAtr`), indexed by program number | |
+| `0x820` | `programs` × 16 × 32 | **tone records** (`VagAtr`): one block of 16 per *non-empty* program, in program order | verified: tone `t` of the `k`-th non-empty program sits in block `k` and names that program |
+| after them | 256 × u16 | VAG size table: size of VAG `n` in bytes / 8; entry 0 unused (0) | verified |
+
+Program record (16 bytes): `tones` (u8: tone records used, ≤ 16), `mvol` (u8), `prior` (u8), `mode` (u8), `mpan` (u8),
+reserved u8, `attr` (u16), two reserved u32. On this disc `prior` and `mode` are `0xFF` and `mpan` 64 throughout.
+
+Tone record (32 bytes), the unit LIBSND keys on (`SsUtKeyOn(vab, prog, tone, note, ...)`):
+
+| Offset | Field | Meaning (assumed from the public descriptions unless noted) |
+|---|---|---|
+| `0x00` | `prior` (u8) | voice-allocation priority (0 or 1 here) |
+| `0x01` | `mode` (u8) | 4 = reverb on for this tone (1,085 tones), 0 = off (190), one tone has 1 |
+| `0x02`, `0x03` | `vol`, `pan` (u8) | tone volume (0..127), pan (64 = centre) |
+| `0x04`, `0x05` | `center`, `shift` (u8) | the note at which the sample plays at its recorded rate, and a fine tune |
+| `0x06`, `0x07` | `min`, `max` (u8) | the key range this tone answers (verified: min ≤ max) |
+| `0x08`..`0x0D` | `vibW`, `vibT`, `porW`, `porT`, `pbmin`, `pbmax` (u8) | vibrato, portamento, pitch-bend range |
+| `0x0E`, `0x0F` | reserved (`0xB1`, `0xB2` here) | |
+| `0x10` | `adsr1` (u16) | SPU ADSR word, low half (psx-spx: attack, decay, sustain level) |
+| `0x12` | `adsr2` (u16) | SPU ADSR word, high half (sustain, release) |
+| `0x14` | `prog` (s16) | the program this tone belongs to (verified) |
+| `0x16` | `vag` (s16) | the sample, 1..`vags` (verified) |
+| `0x18` | 4 × s16 reserved | |
+
+### VAB body (VB): SPU ADPCM samples
+The VAGs back to back, sizes from the VH table, no header. `SsVabTransBody` sends the whole body to SPU RAM in one
+DMA (`docs/SOUND.md`), so a VAG's SPU address is the bank's base (`sound_spu_addrs`) plus the sizes before it. Each VAG
+is a sequence of 16-byte blocks (psx-spx "SPU ADPCM Samples"): byte 0 = shift (bits 0-3, 0..12) | filter (bits 4-6,
+0..4), byte 1 = flags (bit 0 loop end, bit 1 loop repeat, bit 2 loop start), 14 bytes = 28 4-bit samples, low nibble
+first. Verified on all 946 VAGs: shift ≤ 12 and filter ≤ 4 in every one of the 298,675 blocks; every VAG starts with
+an all-zero block and ends with a block that has the loop-end bit. Flag bytes seen: 0 (155,217 blocks), 2 (141,441),
+7 (553), 1 (552), 6 (393), 3 (393), 4 (126): 393 VAGs loop (a start block 6 ... an end block 3), the others end on a
+block 1 followed by a silent self-looping block 7 (the usual Sony encoder output; the pairing is inferred from the counts).
+
+### SEP (`pQES`): several sequences in one block
+Big-endian, unlike everything else. `SsSepOpen(addr, vab, 16)`: every SEP on this disc holds exactly 16 sequences
+(verified; 72 SEPs, 1,152 sequences).
+
+| Offset | Size | Field |
+|---|---|---|
+| `0x00` | 4 | magic `pQES` (bytes `70 51 45 53`) |
+| `0x04` | u16 | version: 0, all (verified; a single-sequence SEQ file has a 32-bit version 1 here, assumed: the game has none) |
+| `0x06` | | sequence 0, then each next one directly after the previous one's data |
+
+Sequence header (13 bytes), then its data:
+
+| Offset | Size | Field | On this disc |
+|---|---|---|---|
+| `+0x0` | u16 | sequence number | 0, 1, 2, ... in order (verified) |
+| `+0x2` | u16 | resolution: ticks per quarter note | 480, all |
+| `+0x4` | u24 | initial tempo, µs per quarter note | 120,000..600,000 |
+| `+0x7` | u8, u8 | rhythm: numerator, denominator (a power of 2) | `04 02` (4/4) in 1,147, `03 02` in 4, `01 04` in 1 |
+| `+0x9` | u32 | data size in bytes | verified: the data ends exactly after its end-of-track event |
+| `+0xD` | | the event stream | |
+
+The event stream is MIDI-like: each event is a delta time (variable-length, 7 bits per byte, high bit = more) then a
+status byte or, with running status, the data bytes of the previous channel status. Verified by parsing all 1,152
+sequences with these rules:
+- **Meta events have no length byte**: `FF 51 tt tt tt` (tempo, µs per quarter note) and `FF 2F 00` (end of track,
+  the last event of every sequence). A meta event does not cancel running status: data bytes after a tempo change
+  continue the previous channel status (the SEPs rely on this).
+- Events present on the disc: note on `9n kk vv` (82,987), note off as note on with velocity 0 (82,987; no `8n` at
+  all), program change `Cn pp` (1,721), pitch bend `En ll hh` (4,798), tempo (91), end of track (1,152), and control
+  changes `Bn cc vv`: 6 (data entry, 236), 7 (volume, 14), 10 (pan, 260), 98/99 (NRPN LSB/MSB, 156/315).
+- The NRPN pairs are LIBSND's sequence controls (meanings from Sony's LIBSND documentation, assumed, except where the
+  trace shows them): CC 99 = 20 / CC 99 = 30 bracket a loop, its count in the data entry (CC 6 = 127: endless; 78
+  sequences, the BGMs); CC 99 = 16 with CC 98 = 15 or 16 then CC 6 sets a VAB attribute through LIBSND's NRPN attribute
+  table: attribute 15 = reverb type, 16 = reverb depth (**verified** on the emulator: those entries call
+  `SsUtSetReverbType(3)` and `SsUtSetReverbDepth(0x38, 0x38)` from inside `_SsSetNrpnVabAttr15`/`16` when CNTY_SEL's
+  music starts, `docs/SOUND.md`).
+
 ## Game records in the EXE (`records.c`, `gamestate.c`)
 The Digimon, item and technique tables are EXE `.data`, not disc files, and are in C in `src/main/records.c`.
 Their names are in the text files above.
@@ -511,7 +604,9 @@ further: no game code that reads them has been read for this document.
   `subfile()` helpers for scripts.
 - `tools/dump_text.py`: prints any text file in any language (`--check` decodes all of them).
 - `tests/formats/run.sh` (layer 3 of `scripts/test.sh`) runs the repeatable checks: `disc_files.py --check`,
-  `dump_text.py --check`, `overlay_layout.py --wstag-table` (WSTAG stage table) and `flag_census.py --check`.
+  `dump_text.py --check`, `overlay_layout.py --wstag-table` (WSTAG stage table), `flag_census.py --check` and
+  `tests/sound/sound_formats.py --check` (the sound banks: VAB headers and bodies, SEPs; `--events` prints the SEPs'
+  event census).
 - The other checks in this document were one-off scripts (kept out of the repo). Each parses every file of one
   kind the way the cited C does: sound banks, `Z_STAGE` backgrounds, attribute maps, actor sprites, sprite banks,
   battle models, card files.

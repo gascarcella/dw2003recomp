@@ -248,6 +248,15 @@ does not see it: new_game's and first_battle_save's earlier records are unchange
 first battle, so a match needs grinding levels (random battles, RNG- and core-dependent), far past ~40,000 frames. The player does start with
 cards (40, three saved decks), and the first card shop (arena 0x211) sells nothing under 1,000 BIT (MECHANICS section 10).
 
+### SPU write traces (`tests/sound/`, part of layer 2)
+
+`tests/sound/spu_trace.py` runs a layer-2 script under `-debugger -interpreter` with `tests/sound/spu_trace.lua` loaded
+before `run.lua`: write breakpoints over the SPU's and DMA4's registers record every store with its vsync tick (DMA
+blocks as SPU address, length, SHA-1), from the EXE's entry point on. `check` reproduces the committed
+`tests/sound/expected/cnty_sel.trace` (the boot to CNTY_SEL + 300 frames, ~25 s; `scripts/test.sh` layer 2 runs it);
+`run <script> [--until CHECKPOINT]` traces any script; `diff` compares two traces (the port's against the emulator's).
+Format, costs and findings: `docs/SOUND.md`.
+
 ## Layer 3: formats
 
 `tests/formats/run.sh` (what `scripts/test.sh` calls, ~5 s) checks format facts the port's loaders depend on, with the
@@ -260,6 +269,7 @@ one summary line with its counts and fails non-zero on a violation:
 | text | `tools/dump_text.py --check` | all 91,059 entries of the 3,005 string tables (350 files, 7 languages) decode with no unknown byte; every file is a table or a container of tables; entry 0 of every table is the empty string |
 | WSTAG stage table | `tools/overlay_layout.py --wstag-table` | each of the 293 code `WSTAG###` overlays has a record in FIELDSTG's stage tables (stage, file ID, entry) whose entry is a function start inside its `.text`; the result equals `config/wstag.txt` |
 | flag ranges | `tools/flag_census.py --check` (reads `src/`) | every one of the 7,061 bit-array flag uses (types 0x00–0x40, part of the save data) has an index inside its `include/gamestate.h` array; the tightest are type 0x04 (index 15 of 16 bits) and 0x06 (7 of 8) |
+| sound banks | `tests/sound/sound_formats.py --check` | the 71 banks: VAB header sizes and tone records, every ADPCM block's shift/filter and each VAG's end flag, the 72 SEPs' 16 sequences each ending exactly at their end-of-track (FORMATS "Sound") |
 
 Save round trips (`.mcd` files exchanged between the emulator and the port) join it once the port writes saves.
 
