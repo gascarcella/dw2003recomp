@@ -20,6 +20,15 @@ Newest first. One short entry per session: goal, result, next steps.
 - **Decided by the user:** fast-forward's default speed `4x` (a multiple of the nominal rate: 200 fps at PAL).
 - **Next:** phase 2 (fast-forward, the 50/60 Hz setting with an emulator comparison) on the user's go-ahead.
 
+## 2026-10-06: CI only when it is needed (a short session on `ci/skip-unneeded-runs`, a pull request)
+- **Asked:** stop running CI when it is not needed (a docs update triggered a full run).
+- **Done:** `.github/workflows/ci.yml`: `paths-ignore` for documentation (`docs/**`, `**/*.md`, `LICENSE`,
+  `.gitignore`), `push` only on `main` (a branch's pull request is its one run; before, each push started two),
+  `workflow_dispatch` for a branch without a pull request, and `concurrency` so a newer push cancels the older run.
+  DECISIONS "CI only when it is needed"; STATUS and CLAUDE.md say it.
+- **Tested:** the workflow parses; the pull request's own run (it changes `ci.yml`, so it is not skipped).
+  The skip itself is seen on the next docs-only push.
+
 ## 2026-10-06: Session 18: the launcher and mods planned (local worktree `gascarcella/PC-Release`, docs only, pushed to `main`)
 - **Asked:** think, discuss and plan (no implementation): a launcher executable (settings, the disc image, keybinds,
   a 50/60 toggle, mods with their own configuration screens) and mod support with four first mods (fast-forward, skip
@@ -35,6 +44,11 @@ Newest first. One short entry per session: goal, result, next steps.
   hit reaction is kept by default, cutting it is a setting.
 - **Found on the way:** saves are lost without `--memcard1`; the watchdog would kill a paused game; no pause or reset
   key; 60 Hz is the game's own `records_60hz` mode and has never been compared with the emulator.
+- **Added the same day (branch `docs/global-saves-idea`, PR to `main`; from a question about how a save places the player):** the plan's 5.6, **Global Saves**,
+  an idea only: a Save entry in the field menu. From reading the code: a slot holds the map (`field_map`), the exact
+  position (`player_pos`, 24.8) and the direction, with no spawn table; FIELDSTG takes that snapshot when the field
+  menu opens; STGMCARD saves on a negative map entry and returns through FIELDSTG's `map_entry = -1` path. The open
+  point is the state past `0x26C4` that a load resets (attribute layer, depth, height, countdown, map flags).
 - **Not changed:** any code. `build/port` and `build/port-sdl` were built for the timings (untracked).
 - **Next:** phase 1 of the plan (the game-side foundations: `--config`, the settings directory, rebindable inputs and
   hotkeys, the mod registry, the pace split), on the user's go-ahead.

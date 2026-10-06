@@ -100,7 +100,7 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   chords masked from the pad, the pause key (`P`), the pace split from the nominal rate, `port/src/mods.c` with the
   registry and `port/mods/fast_forward/mod.json` (its behaviour is phase 2), mods off under `--script` unless
   `--script-mods`. The bare binary's logs, records and WAVs are unchanged.
-- **CI (session 13):** `.github/workflows/ci.yml` on every push: toolchain, script/Python checks, `check_toolchain.sh`, and
+- **CI (session 13):** `.github/workflows/ci.yml` on pull requests and pushes to `main`, skipped when only documentation changed (DECISIONS "CI only when it is needed"): toolchain, script/Python checks, `check_toolchain.sh`, and
   with the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of `dw2003-gamedata`) `build.sh --check` and
   `scripts/test.sh`; first green run 2026-10-05, ~5 min. Fork pull requests get only the disc-free steps.
 - **Emulator (session 8):** `scripts/setup.sh redux` installs the pinned PCSX-Redux build from `tools/prebuilt/` into
@@ -233,5 +233,6 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
    is the game-side foundations (`--config FILE`, the settings directory, memory cards there by default, rebindable inputs
    and hotkey actions, `port/src/mods.c` and the manifests, the pace split from the nominal rate, a pause key); then
    fast-forward and the 50/60 toggle; the launcher; skip dialogues and battle animations (after the camera fix, issue #7);
-   Windows; skip intro and data overrides. Still to pick: where the launcher's source lives.
+   Windows; skip intro, Global Saves (its 5.6, an idea: a Save entry in the field menu; the save already holds the map
+   and the exact position) and data overrides. Still to pick: fast-forward's default speed, where the launcher's source lives.
 4. Holdouts/FAKEs: opportunistic retries with new techniques.

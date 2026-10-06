@@ -16,6 +16,7 @@ the port. Each fact says which it is._
   later; a 50/60 Hz toggle), enables and disables mods, shows each mod's configuration screen, and starts the game.
 - **Mods:** basic support plus four first mods: **fast-forward**, **skip dialogues**, **skip intro** (the idea only for
   now), **disable battle animations**.
+  Added later as an idea: **Global Saves** (5.6: a Save entry in the field menu).
 - **Out of scope here:** the battle camera bug (issue #7), a hardware renderer, third-party code mods.
 
 ## 2. Decisions (the user, 2026-10-06)
@@ -583,6 +584,62 @@ the seeks keep their milliseconds); `main_screen_pos` stays 1. **Compared with t
   which `ntsc_patch.lua` writes. The port keeps 1: it moves only the card game's panels by 12 lines and sets the PAL
   screen offset, which the port's video ignores; `new_game` and `first_battle_save` never reach the card game.
 
+### 5.6 Global Saves (the idea only; added 2026-10-06 from a reading of the save path, nothing run or built)
+
+- **What the player gets:** a **Save** entry in the field menu (`src/main/fieldmenu.c`) that opens the game's own save
+  screen from any field map. Today the save screen is reached only from the inns' events (18
+  `FIELDSTG_EVENT_GOTO_MAP(0xC0x, …)` sites in `src/wstag/`) and the load only from the title's Continue.
+- **Why it looks cheap: a save already holds the map and the exact position.** What the reading found:
+  - **The slot** is the first 0x26C4 bytes of `gamestate_data`, copied whole (`include/gamestate.h`, FORMATS "Save
+    data"). In it: `field_map` (`0x34`, the map ID), `player_pos` (`0x38`, x and y as 24.8 fixed point), `player_dir`
+    (`0x40`), `route`/`room` (`0x44`, the maze position). There is no spawn table and no saved entry index.
+  - **Not in the slot** (they start at `0x26C4`): `map`, `next_map`, `prev_map`, `map_entry`, `countdown`,
+    `map_is_new`, `field_last_map`, `attr_layer`, `unk_26E4`, `player_depth`, `spot_target`, `player_height`,
+    `meter_random_count`. Also outside
+    it: `gamestate_flags.map_flags` (the type-0 flags) and everything FIELDSTG and the stage overlay keep themselves
+    (actors, a running event).
+  - **Who writes the position:** FIELDSTG copies `get_map()` and the player actor's `pos`/`dir` into those fields when
+    the field menu opens (`src/fieldstg/fieldstg_80087DB0.c:1681`), when a battle starts (`:1253`) and when the
+    window-close transition to another map ends (`:1449`, the inn's path to the save screen). **Opening the menu
+    already takes the snapshot a save needs.**
+  - **The save screen** is STGMCARD, map `0xC00 + i`. It saves when the map entry is negative and loads otherwise
+    (`stgmcard_main_create`: `loading = entry >= 0`; the inn's event passes -1, the title 0; STAGSLCT lists
+    `0xC00`/`0x80000000` as save and `0xC00`/`0` as load). `i` picks the place name stored in the slot summary
+    (`stgmcard_map_names[26]`, `?SHPNAM` entries); the area name comes from the previous map
+    (`stgmcard_map_areas`: 239 maps in `0x200`-`0x2FF`, plus `0x1500`; a map that is not listed leaves the area 0).
+  - **The way back** is the same after a save, a cancelled save and a load: `set_next_map(field_map, 0)` (or the
+    previous map on a cancel), then FIELDSTG's loader sees a previous map that is not a field map (`0x2xx`/`0x3xx`) nor
+    `0xE00`/`0x1500`/`0x500`, forces `map_entry = -1` and copies `player_pos`/`player_dir` to
+    `fieldstg_stage.return_pos`/`return_dir` (`:1532`), where the player actor is created (`:4421`). With any other
+    entry the actor starts at the stage's single `start_pos` (`src/wstag/wstag230.c:39`); exits and warps carry their
+    own destination x, y and direction (`FieldstgMapEvent`, `fieldstg_goto_map(map, -1, x, y, dir)`).
+  - **Tested already** (MECHANICS section 12, replay `first_battle_save`): a save at the Asuka Inn (`0xC01`) and a load
+    after a reboot (`0xC00`) give back bytes 4..0x26C3 exactly (the playtime aside) and return to `field_map`
+    (`0x20A`). The position after the load is not among that test's stated facts.
+- **The sketch:** a port mod (4.5's rules: an `#ifdef PC_PORT` block testing a `port_mod_*` flag, the PS1 build
+  byte-identical, off under `--script`). The menu gets one more option; choosing it leaves the field as the other
+  options do but with `set_next_map(0xC00 + i, -1)`. The saves stay the game's own format: a card saved this way loads
+  in the original game.
+- **The first things to find out:**
+  1. **What a load loses on a map that is not an inn.** After a boot `field_last_map` is 0, so the map counts as new:
+     the map flags are cleared, `player_depth` is 4, `player_height` is `0x3000`, `meter_random_count` is 16, and
+     `attr_layer` and `countdown` are whatever the title left. A save taken on a second attribute layer (WSTAG810),
+     during the countdown (WSTAG795/800), at a height or mid-maze may load into a wrong or stuck state. Either refuse
+     the option where it is unsafe, or carry those fields in the bytes the slot does not use (`0x26C4`-`0x26FF` of each
+     0x2700-byte part are stale RAM today), which the original game would ignore.
+  2. **Where the menu can be opened:** it already needs `progress >= 4` and no running event or busy actor (`:1676`);
+     whether that is enough to keep a save out of every scripted state.
+  3. **The menu itself:** five options, six with the card case (item `0x192`), drawn 14 pixels apart from
+     `fieldmenu_option_messages` (messages of file `records_language + 0xB0`); the room for a seventh, and where the
+     word "Save" comes from in the five languages (an existing string of the game's text, or the port's own).
+  4. **The slot summary's names:** which `i` to pass (a neutral `?SHPNAM` entry, or none), and the area shown for the
+     `0x3xx` maps.
+  5. **The menu on map `0x1000`** (STSTATUS shows the same menu): the option must work or be hidden there, since
+     `prev_map` is then `0x1000`, not the field map.
+- **Tests when built:** a layer-3 round trip (`tests/saves/run.py`) from a map that is not an inn, with the position
+  and direction compared before the save and after the load; the same card loaded in the emulator; the replays
+  unchanged with the mod off.
+
 ## 6. The Windows track (decided: after the launcher works on Linux)
 
 | # | Step | Effort |
@@ -611,7 +668,7 @@ Each phase ends with a summary and waits for the user's go-ahead (CLAUDE.md).
 | 3 | The launcher | 4.6 | Its screens on Linux; a first run from an empty directory to the game; a missing disc; the file dialog's fallbacks |
 | 4 | Skip dialogues, then battle animations | 5.2, 5.3 (after the camera fix, issue #7) | `build.sh --check`; the "verify first" lists; replays with the mod on and their own expectations |
 | 5 | Windows | Section 6 | Section 6, steps 6-7 |
-| 6 | Skip intro; data-override mods | 5.4; 3.7's sector-reader layer, `kind: data` manifests | To plan then |
+| 6 | Skip intro; Global Saves; data-override mods | 5.4; 5.6; 3.7's sector-reader layer, `kind: data` manifests | To plan then |
 
 ## 8. Risks and open points
 
