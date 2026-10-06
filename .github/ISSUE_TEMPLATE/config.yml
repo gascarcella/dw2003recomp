@@ -1,7 +1,7 @@
 blank_issues_enabled: true
 contact_links:
   - name: Planned work (project board)
-    url: https://github.com/users/gascarcella/projects
+    url: https://github.com/users/gascarcella/projects/1
     about: What is already planned; check here before requesting a feature.
   - name: Contributing guide
     url: https://github.com/gascarcella/dw2003recomp/blob/main/CONTRIBUTING.md

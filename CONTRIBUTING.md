@@ -36,7 +36,7 @@ is in the [README](README.md) and [`docs/STATUS.md`](docs/STATUS.md).
 
 - **Open issues** labelled [`good first issue`](https://github.com/gascarcella/dw2003recomp/labels/good%20first%20issue)
   or [`help wanted`](https://github.com/gascarcella/dw2003recomp/labels/help%20wanted).
-- **Planned work** on the [project board](https://github.com/users/gascarcella/projects).
+- **Planned work** on the [project board](https://github.com/users/gascarcella/projects/1).
 - **The remaining non-matching functions** (the README's progress table; `#ifdef NON_MATCHING` in `src/`).
 - **Names and types:** many overlay functions and fields are still `func_…`/`unk_…`.
 - **Play-testing the PC port** against the original and reporting differences.

@@ -54,7 +54,7 @@ The plan's milestones (`docs/PORT.md`):
   not been checked against the emulator.
 - **Platforms:** Linux x86_64 only. Windows is planned; macOS is not.
 - **Play-tested** on a desktop (Wayland, NVIDIA, PipeWire) through the first battle, a save and its load:
-  picture, sound and timing are right except for the battle camera (an issue).
+  picture, sound and timing are right except for the battle camera ([#7](https://github.com/gascarcella/dw2003recomp/issues/7)).
 
 ## Launcher and mods
 - **Launcher** (`launcher/README.md`): Dear ImGui on SDL3. Handles the disc (with a SHA-1 check), Play, settings,
@@ -85,6 +85,6 @@ The plan's milestones (`docs/PORT.md`):
   `libubsan`); CI installs its own.
 
 ## Where work is tracked
-- **Planned work:** the GitHub Project. Project board: (link added once created)
+- **Planned work:** the [project board](https://github.com/users/gascarcella/projects/1) (draft items by area: game, port, launcher, tests, sound, infra).
 - **Bugs and problems:** [GitHub Issues](https://github.com/gascarcella/dw2003recomp/issues).
 - **Why things are the way they are:** `docs/DECISIONS.md`.
