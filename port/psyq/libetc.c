@@ -33,6 +33,13 @@ void psyq_set_vsync_hook(void (*hook)(void)) {
     psyq_vsync_hook = hook;
 }
 
+/* The console's reset (psyq.c psyq_reset): no handler, the vsync count from 0, PAL. The runtime's hook stays. */
+void psyq_etc_reset(void) {
+    psyq_vsync_handler = NULL;
+    psyq_vsync_count = 0;
+    psyq_video_mode = MODE_PAL;
+}
+
 /* Stub that keeps time moving: the PS1's VSync(0) waits for the next vsync and VSync(n > 1) for n of them, with the
  * vsync interrupt (and so the game's handler) firing each time; here the wait is instant and the ticks are run
  * inline, so that frame-counted state advances as it would. Returns the vsync count since boot. VSync(1) and

@@ -7,6 +7,12 @@
 static s16 psyq_snd_sep_next; /* the next SEP access number SsSepOpen hands out (the PS1 reuses closed ones) */
 static s16 psyq_snd_voice_next;
 
+/* The console's reset (psyq.c psyq_reset): the identifiers start over (no SEP open, no voice used). */
+void psyq_snd_reset(void) {
+    psyq_snd_sep_next = 0;
+    psyq_snd_voice_next = 0;
+}
+
 void SsInit(void) {
     PSYQ_TRACE("SsInit");
 }

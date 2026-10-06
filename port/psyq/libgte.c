@@ -186,6 +186,17 @@ static struct {
     int inited;
 } psyq_gte;
 
+/* The console's reset (psyq.c psyq_reset): the recorded registers zero, not initialised. The sine table is a cache of
+ * a constant: kept. */
+void psyq_gte_reset(void) {
+    psyq_gte.ofx = 0;
+    psyq_gte.ofy = 0;
+    psyq_gte.rbk = 0;
+    psyq_gte.gbk = 0;
+    psyq_gte.bbk = 0;
+    psyq_gte.inited = 0;
+}
+
 void InitGeom(void) {
     PSYQ_TRACE("InitGeom");
     psyq_gte.ofx = 0;

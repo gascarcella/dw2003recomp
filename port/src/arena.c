@@ -36,6 +36,12 @@ void port_arena_init(void) {
     }
 }
 
+/* The console's reset (port/src/reset.c): the PS1's RAM is cleared (PCSX-Redux hardResetEmulator), so are the slots
+ * and the heap; as at startup (.bss). The stand-in BIOS is ROM: it stays. */
+void port_arena_reset(void) {
+    memset(port_arena, 0, sizeof(port_arena));
+}
+
 void *port_arena_base(void) {
     return port_arena;
 }
