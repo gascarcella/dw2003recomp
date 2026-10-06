@@ -19,7 +19,7 @@ original does, and then a native PC port (`port/`, in this repository) checked a
 
 ## Progress
 <!-- progress:start -->
-_Code compiled from matching C (objdiff, Psy-Q SDK excluded); updated 2026-10-05. Every file already rebuilds byte-identical from split assembly._
+_Code compiled from matching C (objdiff, Psy-Q SDK excluded); updated 2026-10-06. Every file already rebuilds byte-identical from split assembly._
 
 | Part | Progress | Matched | Functions | Code bytes |
 |---|---|---:|---:|---:|
