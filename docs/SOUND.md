@@ -244,3 +244,114 @@ was in M1). T-libsnd's exact check needs no audio at all; T-spu's needs no LIBSN
   between two loads is to be measured with the first LIBSND build.
 - The sequence aliasing (section 1) is inferred, not yet confirmed note by note.
 - 60 Hz (`SsSetTickMode(0x1000)`, the NTSC patch) is not traced.
+
+## 6. The SPU core (`port/src/spu.c`, `spu_dsp.c`; T-spu, session 16)
+Our own, written from psx-spx "Sound Processing Unit (SPU)" and, for the ADPCM filter tables, its CD-ROM page
+("XA-ADPCM", which psx-spx names as the same algorithm). psx-spx's site and its mirror are blocked by this machine's
+proxy, but its source is not: `https://raw.githubusercontent.com/psx-spx/psx-spx.github.io/master/docs/ps1/spu/soundprocessingunitspu.md`
+(and `.../ps1/cdr/cdromformat.md`). No emulator source was read; PCSX-Redux served as an oracle only. It implements
+`port/include/spu.h` as given; the pure pieces and a read-only view of the voices are in `port/src/spu_internal.h`
+(for the tests and tools). With psx-spx in hand, section 3's assumption checks out (**verified**): the 32 registers
+`SsUtSetReverbType(3)` writes are psx-spx's "Studio Medium" preset word for word, its size `4840h` gives the base
+`F6F8h`, and `18040h`, SsInit's cleared area, is the size of the two largest presets ("Chaos Echo", "Delay").
+
+### What is modelled
+- **Registers** by offset from `0x1F801C00`, 16-bit: each stores what is written and reads it back, except ENVX
+  (`+0x0C`: the envelope), the repeat address (`+0x0E`: the voice's), ENDX, STATX and the current main volume
+  (`0x1B8`/`0x1BA`), which read the state (writes to the last three are ignored: psx-spx's read-only). An odd offset
+  acts as the even one below it; `0x200` and up (the voices' current volumes) are outside `spu.h`'s range.
+- **SPU RAM**: 512 KB. The transfer address (`0x1A6` × 8) is copied to an internal address that advances (psx-spx
+  "TSA"); `spu_dma_write` writes there (the transfer mode is not checked; the hook gets the address where the block
+  lands); FIFO writes (`0x1A8`, 32 halfwords) go to RAM when ATTR's transfer mode becomes 1 (manual write), and at once
+  while it stays 1 (the BIOS's multi-block case). STATX: ATTR bits 5-0 at once (no apply delay), bit 7 = ATTR bit 5,
+  bits 8/9 the DMA write/read request in those modes, bit 10 (busy) never set (a transfer completes when it is made),
+  bit 11 the capture buffers' half: whatever LIBSPU polls is ready. IRQA is stored only (no interrupt).
+- **ADPCM**: a 16-byte block is decoded whole when the voice reaches it (filters 0-4 with psx-spx's tables; shifts
+  13-15 act as 9; filters 5-7 as 0, never on this disc); flags: loop start copies the block's address to the repeat
+  address, loop end sets ENDX and jumps to the repeat address, and without repeat also releases the voice with its
+  envelope at 0 (code 1, "End+Mute"); code 2 is code 0.
+- **Pitch and interpolation**: psx-spx's pitch counter (PMON from the previous voice's output in the same sample; the
+  4000h clip) and its 4-point interpolation with the 512-entry table, each product `>> 15` on its own.
+- **Envelope** (one generator for the ADSR and the volume sweeps, `spu_envelope_tick`): psx-spx's step/counter
+  formula once per 44,100 Hz sample. Attack (linear, or exponential: slowed above 6000h) until the level saturates at
+  7FFFh; decay (exponential, step -8) until the level is at or below the sustain level (N+1)×800h; sustain (both modes,
+  both directions) until key off; release (linear or exponential) to 0. Rate 7Fh never steps; the counter's minimum
+  increment of 1 makes shifts 26-31 alike (psx-spx: rate 76h behaves like 6Ah). Volumes: bit 15 clear sets
+  `value × 2` when written, bit 15 set sweeps from the current volume (mode, direction, phase, shift, step).
+- **Key on / key off**: a write acts at once, between two samples: key on copies the start address, starts the
+  attack from 0 and clears ENDX; key off starts the release. Several writes between two renders act in their order at
+  the same sample: LIBSND's flush (key off, then key on) restarts a voice; registers written before a key on are used
+  by it, after it only by the next one (the start address) or at once (pitch, volume, ADSR).
+- **Noise** (NON; psx-spx's generator with ATTR's shift and step) and **PMON**, for completeness (the game sets neither).
+- **The mix**: per voice `sample × ENVX >> 15`, then `× volume >> 15` per side; the voices' sum saturated; the
+  reverb's output added (when ATTR bits 15 and 14 are both set; otherwise voices and reverb are silent, the CD input is
+  not); the CD input (`spu_cd_input`: a queue of 16,384 frames, the newest dropped beyond it) `× CD volume >> 15`,
+  added with ATTR bit 0 and fed to the reverb with bit 2; saturated; `× main volume >> 15`; saturated.
+- **Reverb**: psx-spx's formula at 22,050 Hz (every other sample), its reads and writes in psx-spx's "Reverb
+  Computation Order", each step saturated, the work area wrapped into ESA..7FFFEh (writing ESA sets the current
+  address); ATTR bit 7 clear stops the writes, not the reads. Input and output go through psx-spx's 39-tap resampling
+  filter (the output zero-stuffed and filtered at twice the gain): 38 samples of delay, psx-spx's measurement.
+- **Capture buffers**: CD left/right (before the CD volume) and voices 1 and 3 (after their envelope) written to
+  `0x000`-`0xFFF` every sample.
+
+### Readings where psx-spx is silent (assumptions)
+- The envelope counter loses 8000h when it steps (with increments that divide 8000h this is psx-spx's earlier "wait
+  1 SHL (shift-11) cycles") and starts at 0 at every key on, key off and phase change. A phase's end is checked after
+  every tick (with the sustain level 8000h the decay ends on its first tick: no decay at all).
+- psx-spx's two divisions (the ADPCM filter's "/64", exponential decrease's "/8000h") are arithmetic shifts (floor):
+  truncation would stop an exponential release above 0 (at shift 11 the step is 0 below level 4096).
+- Key on resets the pitch counter and the ADPCM and interpolation history to 0, and leaves the repeat address alone.
+- Power-on: everything 0, every voice released at level 0.
+- The mix's saturation points and the main volume over the CD input (above); left and right reverb computed together
+  (the hardware alternates them on the two 44,100 Hz cycles: psx-spx measures 1-2 LSB); the `vIIR = -8000h` sign quirk
+  is not modelled; a DMA into a block a voice is playing is heard from that voice's next block.
+
+### How it is checked
+- **Unit goldens** (`tests/spu/run.sh`, 1.4 s with the build): `spu_ref.py` is a second model of the SPU, in Python,
+  from the same psx-spx text; it generates `goldens.txt` (72 cases, 2,497 checked operations; `spu_ref.py check`
+  regenerates it in 40 s), which `spu_test.c` replays through the C core: `spu.h` (register writes and reads, DMA, CD
+  input, renders hashed sample by sample, ENVX/ENDX/repeat-address traces) and `spu_internal.h`'s pieces. Covered: the
+  table (and psx-spx's sums), ADPCM blocks with every filter and shift and the clamps, the interpolation at phases 0, 1,
+  7Fh, 80h, FFh and random ones, the envelope generator at all 128 rates in each mode (3,000 ticks each), ADSR words
+  through a voice (the game's seven and sixteen others; `goldens.txt`'s comments give the samples to 7FFFh and back
+  to 0), pitches (0, 4000h, beyond), the loop flags (one-shot, whole and mid-sample loops, no start flag, code 2), key
+  on/off orders within a tick, ENVX and repeat-address writes, every volume sweep mode, the clamps with 24 loud voices,
+  noise, PMON, the FIFO/DMA/STATX, the CD input and the capture buffers, the reverb's address arithmetic and the
+  impulse responses of "Studio Medium" (writes on and off) and "Room". All match at `-m64`, `-m32` and under ASan and
+  UBSan (`run.sh --all`). A mutation check (16 one-token changes to the C, a scratch script) was caught 15 times; the
+  miss is an equivalent change (`step > 4000h` for `step > 3FFFh`). Two models of one reading agree; a reading both get
+  wrong passes, which is what the next two checks are for.
+- **The envelope against the emulator** (`tests/spu/envelope_oracle.py gen`: the layer-1 oracle's machinery, 35 s; the
+  readings are committed as `envelope_oracle.json`, and `check` re-fits them in 3 s): a MIPS routine keys voice 23 on
+  with an ADSR word (silent, on a looping sample of COMMON) and reads ENVX at every vsync. For 14 ADSR words (linear and
+  exponential attacks at shifts 15 and 16, decay to a sustain level, sustain decreasing linear and exponential and
+  increasing, releases linear and exponential, three of the game's words) every one of the 800 readings equals our
+  envelope at sample `(k + 1) × S + t0` within 2 samples, with `S` ≈ 877.4 samples per vsync (Redux's pace; a 50 Hz tick
+  is 882): levels, rates and phase ends agree exactly. One difference: the releases fit only with the key-off moved by
+  one step period (16 samples at shift 15, 4 at 13, 1 at 10): Redux takes its first release step at once, our counter
+  (psx-spx's, from 0) a full period later; psx-spx does not settle it. Also found: on SsInit's silent block at 1000h
+  (flags 7: start, end, repeat) Redux reads ENVX as 0 at every vsync after a key-on, where psx-spx's code 3 keeps the
+  envelope going (and so do we; the oracle uses a real looping sample).
+- **The `cnty_sel` trace rendered** (`tests/spu/render_trace.py`, 1 s; the WAV goes to `build/spu_test/`): the trace's
+  6,573 stores replayed per tick (882 samples a tick), its 99 DMA blocks fetched from the disc by SHA-1: all 99 matched
+  (97 blocks of zeros, SsInit's reverb clear; COMMON's body, 297,216 bytes: the 297,200-byte VAB body and the sector's
+  zero padding; CNTY_SEL's bank, `BGM031`), and the write hook saw each one land where the trace says. 593 ticks
+  (11.86 s): silence until the music's key-ons at tick 869, then RMS 4,380-5,200 per second (L and R), peaks
+  28,281-31,416, no clipped sample. 208 key-ons: 24 keyed off in the same tick (SsInit), the other 184 all started;
+  54 on looping samples (32 reached their loop end; none muted), 130 on one-shots (80 reached their end and were muted
+  there, before any loop, at exactly the time their block count and pitch give; 50 were keyed again before their end).
+  The WAV is the same bytes every run. Speed: 53× real time at `-O2` (11.86 s in 0.22 s), 13× at `-O0`.
+- **The rendering against what the emulator played** (`tests/spu/capture.py`, one run at speed 1, ~20 s): Redux's SDL
+  disk capture of the same script (section 4) against our rendering of the trace at Redux's 877.4 samples per tick,
+  from the music's start, in 0.1 s windows located by cross-correlation: the stretch's 10 ms envelope correlates 0.971
+  over 3 s; per window the mono mix correlates 0.88 on average (30 of 47 windows at 0.9 or more, the best 0.997) and
+  the capture's level over ours is 0.95-1.05 in most windows. With the reverb left out of our rendering (EON forced to
+  0) the mean drops to 0.85. Not a golden (the capture is host-paced, Redux is an emulation), but the whole chain
+  (samples, pitch, interpolation, envelopes, volumes, reverb) comes out as Redux's does.
+
+### Open
+- The envelope counter's start (the release difference above): hardware would settle it.
+- Speed once the game drives it (T-audio): the port's CMake build has no `-O`; `-O2` on `spu*.c` gives 4×.
+- Not modelled: SPU interrupts (IRQA; the game never enables IRQ9), DMA reads (SPU → RAM), the external input,
+  `0x1AC`'s RAM-size modes, the hardware's write latency. Nothing calls `spu_init`/`spu_reset` yet: `port/src/main.c`
+  and `reset.c` (the console's reset) should, once LIBSND drives the SPU.
