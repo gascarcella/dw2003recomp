@@ -93,13 +93,16 @@ jobs:
           tools/venv/bin/python tools/port_inventory.py link -j "$DW3_JOBS"
 
       # The PC port's window (-DDW3_PORT_SDL=ON, SDL3 from tools/sdl3): it keeps compiling, and its input self-test passes
-      # on SDL's offscreen driver (no display, no disc needed: injected key and virtual-gamepad events reach the pad);
+      # on SDL's offscreen driver (no display, no disc needed: injected key and virtual-gamepad events reach the pad, hotkeys
+      # never do, the pause stops and gives back the game);
       # SDL's dummy audio driver takes the audio device's path (port/src/audio.c: open, queue, drops at --fps 0, close).
       - name: PC port with the window (SDL3), input self-test
         run: |
           cmake -S port -B build/port-sdl -G Ninja -DDW3_PORT_SDL=ON
           cmake --build build/port-sdl -j "$DW3_JOBS"
           SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=dummy build/port-sdl/dw2003 --input-test --fps 0
+          # the same with rebound keys and pads, chord hotkeys and a mod's bindings (docs/LAUNCHER_MODS_PLAN.md 4.3)
+          SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=dummy build/port-sdl/dw2003 --config tests/port/settings/rebound.json --input-test --fps 0
 
       - name: Disc from the data checkout
         if: steps.data.outputs.present == 'true'

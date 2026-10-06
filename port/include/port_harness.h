@@ -8,6 +8,7 @@
 #define PORT_HARNESS_H
 
 #include <setjmp.h>
+#include <stdio.h>
 
 #include "common.h"
 
@@ -69,16 +70,39 @@ void port_reset_state(void);
  * (`--input-test`) runs input.c's injection self-test. port_video_close: from port_exit (the present count).
  * port_video_quit: from port_exit after the audio's close, SDL torn down before exit() (docs/PLAYTEST.md). */
 extern int port_window; /* a window is open: pump.c paces the vsyncs to real time */
-extern long port_fps;   /* pump.c: the pace in window mode (`--fps`; 50, PAL; 0: unthrottled); headless: unthrottled */
+/* pump.c: the nominal rate (vsyncs per second the game is made for: 50, PAL; `--fps N`: N), which the audio's samples
+ * per vsync follow, and the pace (vsyncs per second of the wall clock in window mode; 0: unthrottled; headless:
+ * never paced). port_pace_set starts the schedule over when the pace changes (fast-forward and back). */
+extern long port_rate;
+void port_pace_set(long fps);
+long port_pace_get(void);
 int port_video_available(void);
 int port_video_screenshot_add(const char *spec); /* "FRAME:PATH"; 0 when malformed (or too many) */
 void port_video_open(int scale, int fullscreen);
 void port_video_frame(void);
 void port_video_toggle_fullscreen(void);
+void port_video_refresh(void);          /* the last image presented again (the pause) */
+void port_video_set_paused(int paused); /* the window's title says so */
 void port_video_close(void);
 void port_video_quit(void);
 void port_input_init(int test);
 void port_input_frame(void);
+
+/* ---- input.c: the settings' input section and the hotkey actions (docs/LAUNCHER_MODS_PLAN.md 4.3, 4.5) ----
+ * port_input_settings: the pad map (the defaults, then `input.keyboard`/`input.gamepad`) and the port's own actions
+ * (`input.hotkeys`: pause, fullscreen); `input` may be NULL (the defaults: the bare binary). Before port_input_init.
+ * port_input_action: registers an action with its `binding` (a PortJson in 4.3's grammar; NULL: `default_json`, the
+ * same grammar as JSON text) and returns its id; a bad binding fails the settings naming `where`. pressed: a trigger
+ * completed at this vsync's poll; held: a trigger is complete. Both 0 headless and during --input-test.
+ * port_input_poll_paused: the events and the actions only, nothing to the pad (pump.c's pause). */
+struct PortJson;
+extern int port_action_pause, port_action_fullscreen;
+void port_input_settings(const struct PortJson *input);
+int port_input_action(const char *name, const struct PortJson *binding, const char *where, const char *default_json);
+void port_input_check_binding(const struct PortJson *binding, const char *where); /* fails the settings if bad */
+int port_input_pressed(int action);
+int port_input_held(int action);
+void port_input_poll_paused(void);
 
 /* ---- spu_trace.c: the SPU write trace (M3; T-libsnd; tests/sound's text format, docs/SOUND.md section 4) ----
  * port_spu_trace_open: from now on every SPU register write and DMA block (spu.h's write hook) goes to `path`, with the
@@ -95,5 +119,18 @@ void port_spu_trace_close(void);
 void port_audio_open(int device, const char *wav_path);
 void port_audio_frame(void);
 void port_audio_close(void);
+void port_audio_pause(int paused); /* the device paused (the pump's pause); nothing rendered meanwhile */
+
+/* ---- mods.c: the built-in mods (docs/LAUNCHER_MODS_PLAN.md 4.4, 4.5) ----
+ * port_mods_settings: the settings' `mods` section (NULL: every mod off) read against the registry; a bad value fails
+ * the settings. port_mods_start: `active` 0 keeps every mod off (a --script run that did not ask for them); else the
+ * enabled mods register their hotkeys (after port_input_settings). port_mods_frame: every vsync (pump.c), the enabled
+ * mods' per-vsync work. port_mods_print: the resolved `mods` object for --print-settings; port_mods_print_registry:
+ * the registry as JSON (--print-mods), what tests/port/settings.py compares with port/mods/<id>/mod.json. */
+void port_mods_settings(const struct PortJson *mods);
+void port_mods_start(int active);
+void port_mods_frame(void);
+void port_mods_print(FILE *f, int level);
+void port_mods_print_registry(FILE *f);
 
 #endif /* PORT_HARNESS_H */

@@ -7,8 +7,8 @@
  *     "audio":    { "mute": false },
  *     "memcard1": "card1.mcd", "memcard2": "card2.mcd",                    null: no card in that slot
  *     "watchdog": 0,                                                       seconds; 0 off
- *     "input":    { "keyboard": {...}, "gamepad": {...}, "hotkeys": {...} },   input.c
- *     "mods":     { "<id>": { "enabled": false, "<option>": value } },          mods.c
+ *     "input":    { "keyboard": {...}, "gamepad": {...}, "hotkeys": {...} },   input.c (port_input_settings)
+ *     "mods":     { "<id>": { "enabled": false, "<option>": value } },          mods.c (port_mods_settings)
  *     "launcher": { ... } }                                                the launcher's own; never read
  *
  * Paths are relative to the file's directory (or absolute). A value of the wrong type or out of range ends the run
@@ -20,14 +20,14 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "port_harness.h"
 #include "port_runtime.h"
 #include "settings.h"
 
 PortSettings port_settings;
 int port_settings_loaded;
 
-static void settings_fail(const char *key, const char *fmt, ...) __attribute__((format(printf, 2, 3), noreturn));
-static void settings_fail(const char *key, const char *fmt, ...) {
+void port_settings_fail(const char *key, const char *fmt, ...) {
     va_list ap;
     fprintf(stderr, "port: settings %s: %s%s", port_settings.file, key != NULL ? key : "", key != NULL ? ": " : "");
     va_start(ap, fmt);
@@ -93,7 +93,7 @@ static const PortJson *settings_member(const PortJson *obj, const char *where, c
     if (v != NULL && v->type != type) {
         char name[128];
         snprintf(name, sizeof(name), "%s%s%s", where, where[0] ? "." : "", key);
-        settings_fail(name, "%s %s, not %s %s", settings_article(type), port_json_type_name(type),
+        port_settings_fail(name, "%s %s, not %s %s", settings_article(type), port_json_type_name(type),
                       settings_article(v->type), port_json_type_name(v->type));
     }
     return v;
@@ -112,7 +112,7 @@ static void settings_int(const PortJson *obj, const char *where, const char *key
         if (v->number != (double)(long)v->number || v->number < lo || v->number > hi) {
             char name[128];
             snprintf(name, sizeof(name), "%s%s%s", where, where[0] ? "." : "", key);
-            settings_fail(name, "an integer from %d to %d, not %g", lo, hi, v->number);
+            port_settings_fail(name, "an integer from %d to %d, not %g", lo, hi, v->number);
         }
         *out = (int)v->number;
     }
@@ -130,7 +130,7 @@ static void settings_memcard(const PortJson *root, const char *key, int slot) {
         return;
     }
     if (v->type != PORT_JSON_STRING || v->string[0] == '\0') {
-        settings_fail(key, "a path to a .mcd image (relative to the settings file), or null for no card");
+        port_settings_fail(key, "a path to a .mcd image (relative to the settings file), or null for no card");
     }
     port_settings.memcard[slot] = settings_join(port_settings.dir, v->string);
 }
@@ -160,29 +160,29 @@ void port_settings_load(const char *path) {
 
     f = fopen(path, "rb");
     if (f == NULL || fseek(f, 0, SEEK_END) != 0 || (size = ftell(f)) < 0 || fseek(f, 0, SEEK_SET) != 0) {
-        settings_fail(NULL, "cannot read: %s", strerror(errno));
+        port_settings_fail(NULL, "cannot read: %s", strerror(errno));
     }
     text = malloc((size_t)size + 1);
     if (text == NULL || fread(text, 1, (size_t)size, f) != (size_t)size) {
-        settings_fail(NULL, "cannot read");
+        port_settings_fail(NULL, "cannot read");
     }
     fclose(f);
     s->root = port_json_parse(text, (size_t)size, err, sizeof(err));
     free(text);
     if (s->root == NULL) {
-        settings_fail(NULL, "not JSON: %s", err);
+        port_settings_fail(NULL, "not JSON: %s", err);
     }
     root = s->root;
     if (root->type != PORT_JSON_OBJECT) {
-        settings_fail(NULL, "the settings are an object, not %s %s", settings_article(root->type),
+        port_settings_fail(NULL, "the settings are an object, not %s %s", settings_article(root->type),
                       port_json_type_name(root->type));
     }
     v = settings_member(root, "", "schema", PORT_JSON_NUMBER);
     if (v == NULL) {
-        settings_fail("schema", "missing (this game reads schema %d)", PORT_SETTINGS_SCHEMA);
+        port_settings_fail("schema", "missing (this game reads schema %d)", PORT_SETTINGS_SCHEMA);
     }
     if (v->number != PORT_SETTINGS_SCHEMA) {
-        settings_fail("schema", "%g, but this game reads schema %d%s", v->number, PORT_SETTINGS_SCHEMA,
+        port_settings_fail("schema", "%g, but this game reads schema %d%s", v->number, PORT_SETTINGS_SCHEMA,
                       v->number > PORT_SETTINGS_SCHEMA ? " (the file is a newer launcher's)" : "");
     }
     settings_unknown(root, "", top_keys);
@@ -203,7 +203,7 @@ void port_settings_load(const char *path) {
         settings_bool(obj, "video", "fullscreen", &s->fullscreen);
         settings_int(obj, "video", "refresh", 50, 60, &s->refresh);
         if (s->refresh != 50 && s->refresh != 60) {
-            settings_fail("video.refresh", "50 (PAL) or 60, not %d", s->refresh);
+            port_settings_fail("video.refresh", "50 (PAL) or 60, not %d", s->refresh);
         }
     }
     if ((obj = settings_member(root, "", "audio", PORT_JSON_OBJECT)) != NULL) {
@@ -218,11 +218,6 @@ void port_settings_load(const char *path) {
     s->launcher = settings_member(root, "", "launcher", PORT_JSON_OBJECT);
     port_settings_loaded = 1;
     port_log("settings: %s", s->file);
-    if (s->input != NULL || s->mods != NULL) {
-        port_log("settings: %s%s%s not applied by this build yet (read, checked as objects, printed back)",
-                 s->input != NULL ? "input" : "", s->input != NULL && s->mods != NULL ? " and " : "",
-                 s->mods != NULL ? "mods" : "");
-    }
 }
 
 static void settings_print_path(FILE *f, const char *path) {
@@ -250,10 +245,8 @@ void port_settings_print(FILE *f, const PortSettings *s) {
         fputs(",\n  \"input\": ", f);
         port_json_write(f, s->input, 2, 1);
     }
-    if (s->mods != NULL) {
-        fputs(",\n  \"mods\": ", f);
-        port_json_write(f, s->mods, 2, 1);
-    }
+    fputs(",\n  \"mods\": ", f);
+    port_mods_print(f, 1);
     if (s->launcher != NULL) {
         fputs(",\n  \"launcher\": ", f);
         port_json_write(f, s->launcher, 2, 1);

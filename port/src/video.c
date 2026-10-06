@@ -211,6 +211,18 @@ static void video_present(void) {
     video_presents++;
 }
 
+void port_video_refresh(void) {
+    if (port_window) {
+        video_present();
+    }
+}
+
+void port_video_set_paused(int paused) {
+    if (video_window != NULL) {
+        SDL_SetWindowTitle(video_window, paused ? "dw2003 (paused)" : "dw2003");
+    }
+}
+
 void port_video_close(void) {
     if (port_window) {
         double s = (double)(SDL_GetTicksNS() - video_start_ns) / 1e9;
@@ -252,6 +264,13 @@ void port_video_toggle_fullscreen(void) {
 }
 
 static void video_present(void) {
+}
+
+void port_video_refresh(void) {
+}
+
+void port_video_set_paused(int paused) {
+    (void)paused;
 }
 
 void port_video_close(void) {

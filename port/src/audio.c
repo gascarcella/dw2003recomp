@@ -7,8 +7,8 @@
  * LIBSND reads the voices' envelopes back (ENVX) to allocate voices: the game must not run differently with or without
  * --wav or a device. Vsync n (from 0) gets
  *     floor((n + 1) * 44100 / rate) - floor(n * 44100 / rate)
- * stereo frames, rate = --fps (the vsyncs per second the window paces to; 50 by default, PAL), or 50 with --fps 0
- * (unthrottled): 882 per vsync at 50, 735 at 60 (the NTSC patch's rate: SsSetTickMode(0x1000) then ticks 60 times a
+ * stereo frames, rate = the nominal rate (pump.c port_rate: 50 by default, PAL; --fps N sets it to N, and --fps 0
+ * leaves it 50; a fast-forward changes only the pace, never the rate): 882 per vsync at 50, 735 at 60 (the NTSC patch's rate: SsSetTickMode(0x1000) then ticks 60 times a
  * second), and a fractional rate is spread exactly. So the audio always lasts as long as the vsyncs do at their nominal
  * pace, and its pitch never changes; a PAL game paced at 60 plays its music 20 % faster, as such a console would. The
  * samples depend only on the SPU's register writes and the vsync count: two runs give the same bytes.
@@ -265,7 +265,7 @@ static void audio_device_close(void) {
 
 void port_audio_open(int device, const char *wav_path) {
     unsigned char h[AUDIO_WAV_HEADER];
-    audio_rate = port_fps > 0 ? port_fps : 50;
+    audio_rate = port_rate > 0 ? port_rate : 50;
     if (audio_rate > SPU_RATE) {
         audio_rate = SPU_RATE;
     }
@@ -297,6 +297,20 @@ void port_audio_frame(void) {
     if (audio_stream != NULL) {
         audio_device_frame(audio_buf, frames);
     }
+#endif
+}
+
+void port_audio_pause(int paused) {
+#ifdef DW3_PORT_SDL
+    if (audio_stream != NULL) {
+        if (paused) {
+            SDL_PauseAudioStreamDevice(audio_stream);
+        } else {
+            SDL_ResumeAudioStreamDevice(audio_stream);
+        }
+    }
+#else
+    (void)paused;
 #endif
 }
 

@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "fast_forward",
+  "name": "Fast-forward",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "Runs the game faster while a key is held, or until it is pressed again. The game itself is unchanged: only the wall clock is faster.",
+  "options": [
+    { "id": "hold", "name": "Hold", "description": "Fast-forward while this is held.", "type": "binding",
+      "default": "Tab", "group": "Controls", "applies": "live" },
+    { "id": "toggle", "name": "Toggle", "description": "Fast-forward on or off.", "type": "binding",
+      "default": "", "group": "Controls", "applies": "live" },
+    { "id": "speed", "name": "Speed", "description": "How fast, as a multiple of the normal speed (50 frames a second, or 60).",
+      "type": "enum", "default": "4x", "applies": "live",
+      "values": [
+        { "id": "2x", "label": "2x" }, { "id": "3x", "label": "3x" }, { "id": "4x", "label": "4x" },
+        { "id": "6x", "label": "6x" }, { "id": "8x", "label": "8x" }, { "id": "unlimited", "label": "Unlimited" }
+      ] },
+    { "id": "mute", "name": "Mute", "description": "No sound while fast-forwarding.", "type": "bool",
+      "default": true, "applies": "live" }
+  ]
+}

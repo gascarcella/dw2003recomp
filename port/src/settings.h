@@ -38,8 +38,11 @@ extern int port_settings_loaded; /* --config was given */
  * logged and ignored (a newer launcher's), and the `launcher` object is the launcher's own, never read. */
 void port_settings_load(const char *path);
 /* `s` (the effective settings: main.c's values after the command line) as a settings file, every key written,
- * absolute paths: `--print-settings`. Loading its output gives the same output (the round trip). */
+ * absolute paths, `input` and `launcher` as given, `mods` resolved (port_mods_print): `--print-settings`. Loading its output gives the same output (the round trip). */
 void port_settings_print(FILE *f, const PortSettings *s);
+/* A bad value in the settings: "port: settings FILE: KEY: message" on stderr, exit 64 (as a bad option). For the
+ * readers of the sections (input.c, mods.c) too. */
+void port_settings_fail(const char *key, const char *fmt, ...) __attribute__((format(printf, 2, 3), noreturn));
 /* `path` made absolute against the current directory (not resolved: no symlinks followed, it need not exist). */
 char *port_settings_abspath(const char *path);
 

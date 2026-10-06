@@ -8,8 +8,17 @@
  * status 4 and names the last Psy-Q call, instead of hanging the acceptance run.
  *
  * The window (video.c, input.c; `--window`): each vsync also polls SDL's events (the pad, unless a script owns it),
- * presents the display, and waits for the vsync's time: `--fps` per second (50, PAL; 0: as fast as it runs) against
- * CLOCK_MONOTONIC. Only the wall-clock time between vsyncs depends on it; the headless run is never paced. */
+ * presents the display, and waits for the vsync's time against CLOCK_MONOTONIC. Two rates (docs/LAUNCHER_MODS_PLAN.md
+ * 5.1): the **nominal rate** port_rate (50, PAL; `--fps N` sets it to N): the vsyncs per second the game is made for,
+ * which the audio's samples per vsync follow; and the **pace** (port_pace_set; `--fps`, fast-forward): the vsyncs per
+ * second of the wall clock (0: as fast as it runs). Every change of the pace starts the schedule over, so going back
+ * from a fast pace to a slow one never waits for the vsyncs "owed". Only the wall-clock time between vsyncs depends on
+ * them; the headless run is never paced.
+ *
+ * The pause (window mode; the `pause` hotkey, input.c): at the end of the vsync on which it is pressed the game stops
+ * between two vsyncs: the window keeps polling its events (the hotkeys, fullscreen, the close) and presenting the last
+ * image, the audio device is paused, the watchdog re-armed; the pause key again goes on with the next vsync, the
+ * schedule started over. Nothing of it reaches the game, the log or the record. */
 #include <errno.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -25,10 +34,13 @@ long port_max_frames = 600;
 long port_frames;
 int port_watchdog_sec = 10;
 int port_script_active;
-long port_fps = 50;
+long port_rate = 50;        /* the nominal rate (vsyncs per second): the audio's samples per vsync */
+static long pump_pace = 50; /* the pace (vsyncs per second of the wall clock); 0: unthrottled */
+static int pump_pace_restart;
 static volatile sig_atomic_t port_watchdog_armed;
 static void port_frame(void);
 static void port_pace(void);
+static void port_pause(void);
 
 static void port_watchdog(int sig) {
     static const char msg[] = "port: watchdog: no port_wait() for the watchdog's time: the game spins in a loop without "
@@ -91,19 +103,62 @@ static void port_frame(void) {
     if (port_max_frames > 0 && port_frames >= port_max_frames) {
         port_exit(0, "frame cap");
     }
+    port_mods_frame();
     if (port_window) {
         port_pace();
+        if (port_input_pressed(port_action_pause)) {
+            port_pause();
+        }
     }
 }
 
-/* Real-time pacing (window mode): vsync n is due at start + n / port_fps seconds; a run more than 0.1 s late (a
- * breakpoint, a slow host) starts over from now instead of hurrying to catch up. */
+void port_pace_set(long fps) {
+    if (fps != pump_pace) {
+        pump_pace = fps;
+        pump_pace_restart = 1;
+    }
+}
+
+long port_pace_get(void) {
+    return pump_pace;
+}
+
+/* The pause: between two vsyncs, until the pause key again (or the window's close, which exits). */
+static void port_pause(void) {
+    struct timespec tick = { 0, 20000000L }; /* 50 polls a second */
+    port_log("pause at frame %ld", port_frames);
+    port_video_set_paused(1);
+    port_audio_pause(1);
+    for (;;) {
+        port_input_poll_paused();
+        if (port_input_pressed(port_action_pause)) {
+            break;
+        }
+        port_video_refresh();
+        if (port_watchdog_armed) {
+            alarm((unsigned)port_watchdog_sec);
+        }
+        nanosleep(&tick, NULL);
+    }
+    port_audio_pause(0);
+    port_video_set_paused(0);
+    pump_pace_restart = 1;
+    port_log("resume at frame %ld", port_frames);
+}
+
+/* Real-time pacing (window mode): vsync n is due at start + n / pace seconds; a run more than 0.1 s late (a
+ * breakpoint, a slow host) starts over from now instead of hurrying to catch up, and so does a change of the pace (or
+ * the end of a pause). */
 static void port_pace(void) {
     static struct timespec start;
     static long long n;
     struct timespec now, due;
     long long t, ns;
-    if (port_fps <= 0) {
+    if (pump_pace_restart) {
+        pump_pace_restart = 0;
+        n = 0;
+    }
+    if (pump_pace <= 0) {
         return;
     }
     clock_gettime(CLOCK_MONOTONIC, &now);
@@ -111,7 +166,7 @@ static void port_pace(void) {
         start = now;
     }
     n++;
-    ns = n * 1000000000LL / port_fps;
+    ns = n * 1000000000LL / pump_pace;
     t = (long long)(now.tv_sec - start.tv_sec) * 1000000000LL + (now.tv_nsec - start.tv_nsec);
     if (t > ns + 100000000LL) {
         start = now;
