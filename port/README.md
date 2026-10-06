@@ -62,8 +62,8 @@ At configure time:
 - `units.cmake`: the 388 units: `src/<target>/*.c` for the EXE and the tier-1/tier-2 overlays, `src/wstag/<unit>.c`
   for the WSTAG files of `config/wstag_c.txt` (the same set `configure.py` compiles; `port_gen.py units` fails if a C
   file under `src/` is not one of them). WSTAG260 is data-only and has no unit.
-- `include/include_asm.h` (empty `INCLUDE_ASM`/`INCLUDE_RODATA`) and `include/psyq/gtemac.h` (every `gte_*` macro a
-  no-op until M5), first on the include path with the real headers' guards, as `tools/port_inventory.py probe` does.
+- `include/include_asm.h` (empty `INCLUDE_ASM`/`INCLUDE_RODATA`) and `include/psyq/gtemac.h` (every `gte_*` macro
+  translated from its MIPS sequence into calls of the software GTE, `port/psyq/gte.c`), first on the include path with the real headers' guards, as `tools/port_inventory.py probe` does.
 - `overlays.ld`: a GNU ld script (`-T`, `INSERT BEFORE .data`/`.bss`) that puts the EXE's (`src/main/`) and each
   overlay's `.data`/`.bss` input sections (the units are compiled with `-fdata-sections`, matched by path
   `*src/<dir>/*.c.o`; plus any object's `.data.dw3.<ovl>`/`.bss.dw3.<ovl>`) into `.dw3.data.<ovl>`/`.dw3.bss.<ovl>`

@@ -9,8 +9,9 @@ tests/replay/scripts/<name>.json with a tests/replay/expected/<name>.json; or th
 twice and requires the two logs and the two records to be byte-identical (determinism), then compares the record's
 cross-core view (tests/replay/replay.py cross_core_view, compare) with tests/replay/expected/<name>.json: the same
 checkpoints (name, stage, map, stable gamestate hash) and the same overlay and map sequences, without frames.
-  --m32       also build build/port-m32 (-DDW3_PORT_M32=ON, needs gcc-multilib) and require its log and record to equal
-              the 64-bit build's (the layout check: pointers are 4 bytes there, as on the PS1)
+  --m32       also build build/port-m32 (-DDW3_PORT_M32=ON, needs gcc-multilib) and require its cross-core view to equal
+              the 64-bit build's, and for new_game its log and record byte for byte (the layout check: pointers are 4
+              bytes there, as on the PS1; M32_LOG_EXACT says why the other scripts' frames may differ)
   --sanitize  also build build/port-san (-DDW3_PORT_SANITIZE=ON), run it once, and fail on any ASan/UBSan report
               (its log and record must equal the plain build's too)
   --cd-speed  the port's CD timing (default: the port's, realistic)
@@ -35,6 +36,11 @@ EXPECTED = ROOT / "tests/replay/expected"
 DISC = ROOT / "iso/dw2003.cue"
 VENV_BIN = ROOT / "tools/venv/bin"
 RUN_TIMEOUT = 600  # seconds; a plain run takes well under one, the sanitizer build a few
+# Scripts whose -m32 log must equal the -m64 log byte for byte (the M1 criterion). In the others the game frees cached
+# files by heap address (FIELDSTG's cdload free_above(0x8015C674)), and the host's heap layout differs between the two
+# pointer widths (as both differ from the PS1's), so which files stay cached, and so the CD timing and the frames, can
+# differ; their cross-core view must still be the same (DECISIONS "first_battle_save in the port").
+M32_LOG_EXACT = ("new_game",)
 # Known out-of-bounds indexes of the game's own C that stay inside one struct whose layout is the same on the host
 # (tests/host/FINDINGS.md 5 and 10): UBSan's bounds check reports them, the result is the PS1's.
 UBSAN_SUPPRESSIONS = ROOT / "tests/port/ubsan.supp"
@@ -158,10 +164,16 @@ def check_script(name, args, env, out):
         if args.m32:
             m32 = build("build/port-m32", ["-DDW3_PORT_M32=ON"], args.jobs, env)
             run = run_port(m32, script, out, "m32", args.cd_speed)
-            diffs = same_output(run1, run, "-m64 vs -m32")
-            failures += diffs
-            if not diffs:
+            diffs = compare(cross_core_view(rec), cross_core_view(run[2]))
+            failures += [f"-m32: {d}" for d in diffs]
+            log_diffs = same_output(run1, run, "-m64 vs -m32")
+            if name in M32_LOG_EXACT:
+                failures += log_diffs
+            if not diffs and not log_diffs:
                 print("  -m32: log and record identical to the 64-bit build's")
+            elif not diffs:
+                print("  -m32: the same cross-core view; the frames differ (FIELDSTG's free_above keeps other files "
+                      "cached at another heap layout: CD timing only): " + log_diffs[0].split(": ", 1)[1][:120])
         if args.sanitize:
             san = build("build/port-san", ["-DDW3_PORT_SANITIZE=ON"], args.jobs, env)
             san_env = dict(os.environ, UBSAN_OPTIONS=f"print_stacktrace=1:suppressions={UBSAN_SUPPRESSIONS}",

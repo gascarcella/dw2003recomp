@@ -1,10 +1,11 @@
 # Status
 
 _Last updated: 2026-10-06 (session 16, cloud branch `claude/peaceful-allen-q3t9f9`, delivered as a pull request):
-**PC port M1 done:** the headless port boots the user's disc (SHA-1 checked) and replays the layer-2 script `new_game`
-(CNTY_SEL -> opening movie -> title -> New Game -> FIELDSTG map 0x2D7) with the emulator's checkpoints, stage and map
-sequences and stable hashes; two runs identical, `-m32` identical to `-m64`, no ASan/UBSan report (`tests/port/run.py`,
-the `port` layer of `scripts/test.sh`). Code state unchanged: every game file rebuilds byte-identical, 98.6% of game
+**PC port M1 done, and more:** the headless port boots the user's disc (SHA-1 checked) and replays **both layer-2
+scripts**, `new_game` and `first_battle_save` (the first battle, a save to a memory card, a reset, the reload, shops,
+menus, training), with the emulator's 25 checkpoints, stage and map sequences and stable hashes; two runs identical, no
+ASan/UBSan report, `-m32` identical to `-m64` on `new_game` (the same checkpoints on `first_battle_save`); a software GTE
+checked against the PS1 (`tests/port/run.py`, the `port` layer of `scripts/test.sh`; layer-1 family `gte`). Code state unchanged: every game file rebuilds byte-identical, 98.6% of game
 code compiles from matching C, 8 holdouts stay asm._
 
 The README's progress table (`tools/progress.py --readme`) has the current numbers per part and per overlay.
@@ -65,6 +66,12 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   FINDINGS 7, 8, 9a-c, **9d** (122 object data sizes in PS1 bytes; `tools/port_inventory.py object-sizes` gates it), the
   overlay entries' truncated `Object *`, the 8-aligned host heap, two FIELDSTG host faults, `OFFSETOF`. The test:
   `tests/port/run.py [--m32] [--sanitize]` (~1 min built; a run is 0.04 s). In CI with the data checkout (`--m32`).
+- **PC port after M1 (session 16, second part; DECISIONS "first_battle_save in the port"):** memory cards over 128 KB
+  `.mcd` images (a fresh card byte-identical to PCSX-Redux's; saves move both ways), the console reset (every game
+  section restored from a startup snapshot, checked against the link map), `state.c`'s field table (`memcard_state`,
+  `fieldstg_stage`), the software GTE (`port/psyq/gte.c`, 865 golden cases), the pad a frame late as in the emulator,
+  the file cache's full-table eviction on the host, STGMCARD's two-object view split, `-m32` fixes. `DW3_PORT_PRIM_DUMP=N`
+  dumps a frame's primitives.
 - **CI (session 13):** `.github/workflows/ci.yml` on every push: toolchain, script/Python checks, `check_toolchain.sh`, and
   with the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of `dw2003-gamedata`) `build.sh --check` and
   `scripts/test.sh`; first green run 2026-10-05, ~5 min. Fork pull requests get only the disc-free steps.
@@ -185,8 +192,6 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
    WSTAG function), names-10 (FIELDSTG/WSTAG type fields), names-9 (EXE and CARDGAME fields, EXE data symbols), names-11
    (FIGHTSTG, tier-2, small overlays) and decode-1 (item data, event scripts, card scripts) are done: `unk_` uses
    15,646 → 1,097 (mostly never-read or not yet understood), 12 `func_` names left, no `Unk<addr>` types.
-2. PC port: **M1 is done** (session 16). Next: `first_battle_save` in the port: it matches the first six checkpoints
-   (through the first battle, `back_on_field`) and stops at step 50, a `wait_mem` on `memcard_state` (not mapped: its
-   type is private to `memcard.c`); the save needs LIBMCRD over a `.mcd` image (M4) and the script's `reset`; then **M2** (`docs/PC_PORT_PLAN.md`: the VRAM-exact software GPU, SDL3 via a `setup.sh`
+2. PC port: **M1 is done** (session 16) and both layer-2 scripts replay in the port. Next: **M2** (`docs/PC_PORT_PLAN.md`: the VRAM-exact software GPU, SDL3 via a `setup.sh`
    step, pixel comparison with the emulator).
 3. Holdouts/FAKEs: opportunistic retries with new techniques.

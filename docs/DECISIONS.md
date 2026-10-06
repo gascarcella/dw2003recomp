@@ -1823,5 +1823,17 @@ The user's answers to `docs/PC_PORT_PLAN.md` section 4 (asked item by item; ever
 - **UBSan's reports of the game's own in-struct overruns are suppressed by name** (`tests/port/ubsan.supp`: FINDINGS 5
   and 10 only); any other report fails the port test.
 - **The GTE is needed for game logic, not only drawing** (FIGHTSTG's fade interpolates with `gte_gpf12`): with the no-op
-  macros the result was stack garbage that differed between builds. A software GTE replacing them, checked against the
-  PS1, is in progress (T8); until it lands the `-m32` and sanitizer builds draw that fade differently from `-m64`.
+  macros the result was stack garbage that differed between builds. `port/psyq/gte.c` (T8) is a software GTE written
+  from psx-spx (every command, FLAG, saturations, the UNR division): the `gtemac.h` macros reach it by mechanical
+  translation of their MIPS (`tools/port_gen.py overrides`), and the layer-1 family `gte` (865 cases: MIPS routines in
+  scratch RAM run on the PS1) pins it; the host replay checks it at -m64, -m32 and under the sanitizers. What the
+  goldens corrected: the MAC accumulator wraps at 44 bits, LIBGTE's `RotMatrix*_gte` floors each product, `ScaleMatrix`
+  writes `MATRIX`'s pad halfword. A model's first animation step blends with parts nothing wrote (the PS1's heap
+  leftovers): the host zeroes them (`fightstg_model_new`, `PC_PORT`; drawing only). LIBGS's GTE set-up
+  (`GsSetProjection`'s H, `GsSetFlatLight`'s colour matrix) is left for M2, checked the same way.
+- **The file cache depends on heap addresses** (FIELDSTG's `cdload free_above(0x8015C674)` frees the cached files placed
+  above that address): the host's layout differs from the PS1's at either pointer width and between the two, so which
+  files stay cached, hence the CD timing and the frames, can differ by build. The game state does not: `-m32` and
+  `-m64` reach the same 20 checkpoints. `tests/port/run.py --m32` therefore requires the same cross-core view for every
+  script and byte-identical logs for `new_game` (the M1 criterion); the sanitizer build (the `-m64` layout) stays
+  byte-identical everywhere.

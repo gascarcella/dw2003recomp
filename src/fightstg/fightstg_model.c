@@ -526,6 +526,11 @@ FightstgModel *fightstg_model_new(s32 id, s32 anim_file, FightstgPos pos, Fights
     /* The data block (FightstgModelData): texture_anim, then meshes[count]. */
     obj = object_create(fightstg_model_update, sizeof(FightstgModel), (data[1] + 2) * sizeof(void *), 0x11);
     obj->parts = heap_funcs.alloc(count * sizeof(FightstgModelPart), 2);
+#ifdef PC_PORT
+    /* PC_PORT: a model's first fightstg_model_step_anim can blend with saved_trans/rot/scale that nothing has written
+     * yet (the heap's leftovers on the PS1, which differ between host builds): start them at 0. Drawing only. */
+    heap_funcs.bzero(obj->parts, count * sizeof(FightstgModelPart));
+#endif
     obj->params = params;
     obj->has_idle = has_idle;
     obj->texture_pos = pos;
