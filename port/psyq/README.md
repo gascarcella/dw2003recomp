@@ -5,7 +5,7 @@ DECISIONS "PC port decisions (session 15)"): one C file per library, against the
 MIT, like the repo. Written from the game's own use of the API and public hardware documentation; no SDK file, no
 emulator code (PsyCross, MIT, was consulted for signatures only).
 
-**M1 skeleton: headless, records, no drawing, no sound** (but a real GTE: `gte.c`). Every stub returns what lets the game go on; nothing
+**M1 skeleton: headless, records, no sound** (but a real GTE: `gte.c`, and since M2 a real GPU: `gpu.c`). Every stub returns what lets the game go on; nothing
 allocates host memory the game sees, and nothing stores a game pointer in a 32-bit field.
 
 ## Interface to the port runtime: `psyq.h`
@@ -18,7 +18,8 @@ per frame") plugs into; the runtime may ignore them.
 ## What is real, what is a stub
 | Library | Real (computes the right answer) | Fixed answer / recorded only |
 |---|---|---|
-| LIBGPU `libgpu.c` | `SetDefDispEnv`, `SetDefDrawEnv`, `SetDrawEnv` (the DR_ENV words), `SetDrawTPage`, `SetDrawMove`, `GetTPage`, `GetClut`, `SetSemiTrans`, `SetSprt`, `ClearOTag`, `ClearOTagR`; `DrawOTag`/`ContinueDraw` walk the list and hash the primitives | `DrawSync` 0, `ResetGraph` 0, `SetGraphDebug` 0, `SetDispMask`, `PutDispEnv` (returns env), `ClearImage`/`ClearImage2` 0, `LoadImage`, `MoveImage` 0, `IsIdleGPU` 0 (idle), `BreakDraw` (an empty list, so FIGHTSTG's cursor copies are still recorded) |
+| LIBGPU `libgpu.c` | `SetDefDispEnv`, `SetDefDrawEnv` (`dfe = h < 289`), `SetDrawEnv` (the PS1's packet: E3, E4 clamped to the VRAM, E5, E1, E2, E6, and with `isbg` a TILE over the clip area), `SetDrawTPage`, `SetDrawMove`, `GetTPage`, `GetClut`, `SetSemiTrans`, `SetSprt`, `ClearOTag`, `ClearOTagR`; `DrawOTag`/`ContinueDraw` walk the list, hash the primitives and draw them; `LoadImage`, `MoveImage` (-1 and nothing for an empty rectangle), `ClearImage`/`ClearImage2` (a fill, or E1 + a TILE when x or w is not a multiple of 64, as LIBGPU does) into the VRAM; `ResetGraph` 0/3 resets the drawing state; `BreakDraw` NULL (idle, as on the PS1); `psyq_gpu_vram`/`psyq_gpu_display` (the video output, `psyq.h`) | `DrawSync` 0, `IsIdleGPU` 0 (drawing completes when queued), `SetGraphDebug` 0, `SetDispMask`, `PutDispEnv` (returns env, stores the display) |
+| GPU `gpu.c` | The GPU in software (session 16, M2): a 1024x512 VRAM of 16-bit pixels and every GP0 drawing command (polygons flat/Gouraud/textured with 4/8/15-bit textures and CLUTs, the texture window, raw and modulated texels, the four blend modes, dithering, mask set/check, lines and polylines, rectangles, fill, VRAM copy, CPU-to-VRAM transfer; E1..E6), the draw area and offset; the emulator's rasterisation rules taken over where documentation is silent (`gpu.c`'s header) | GP1 beyond the drawing state; timing, the texture cache, VRAM-to-CPU |
 | GTE `gte.c` | The geometry coprocessor in software (session 16): the 64 registers with their read/write rules, every command (RTPS/RTPT with the UNR division, NCLIP, OP, DPCS/DPCT, INTPL, MVMVA, NCDS/NCDT, CDP, NCCS/NCCT, CC, NCS/NCT, SQR, DCPL, AVSZ3/4, GPF, GPL), FLAG, the saturations; the game's `gte_*` macros call it (`tools/port_gen.py overrides` translates each MIPS sequence of `include/psyq/gtemac.h` into the same register accesses: `psyq_gte_mtc2/mfc2/ctc2/cfc2/cmd`, declared in `psyq_internal.h`) | — |
 | LIBGTE `libgte.c` | `rsin`, `rcos` (computed 4096-entry table), `RotMatrixYXZ_gte`, `RotMatrixZYX_gte` (LIBGTE's GPF sequence), `ScaleMatrix`, `ApplyMatrixSV` (MVMVA); the register setters write the GTE: `InitGeom` (ZSF3/4, H, DQA/DQB, OFX/OFY), `SetGeomOffset`, `SetBackColor`, and for LIBGS (not called yet: see below) `SetGeomScreen`, `SetFarColor`, `SetColorMatrix` | — |
 | LIBGS `libgs.c` | `GsGetTimInfo` (parses the TIM header); owns `D_80081358` (world-screen matrix) and `D_800812F8` (flat-light matrix) | `GsInitGraph`, `GsInit3D` (both matrices = identity), `GsSetProjection`, `GsSetLightMode`, `GsSetFlatLight` (stores the raw direction in its row), `GsSetRefView2` 0 (leaves the matrix) |
@@ -52,7 +53,8 @@ delivered, and per movie frame its arrival, `StGetNext` and `StFreeRing`; a ring
 `DrawOTag`/`ContinueDraw` follow the 24-bit tags (`PC_PORT_PLAN.md` 2.4: `(ot & ~0xFFFFFF) + (tag & 0xFFFFFF)`),
 only inside the window `psyq_set_arena` gave (by default the heap, `port_heap_start..port_heap_end`; a link outside
 it stops the walk with a trace line). Every primitive's `len` words after its tag go into an FNV-1a hash that
-`psyq_gpu_take_hash` returns and resets: the M1 test's "hash of the primitive stream per frame".
+`psyq_gpu_take_hash` returns and resets: the M1 test's "hash of the primitive stream per frame", then to `gpu.c` as
+GP0 words.
 
 ## Behaviour assumed, to verify against the emulator later
 Each file's header comment lists its own; the ones a later milestone must check first:
@@ -72,8 +74,20 @@ Each file's header comment lists its own; the ones a later milestone must check 
   (`asm/main/psyq/libgs/`); `libgs.c` does none of it yet, so RTPS projects with InitGeom's H = 1000 (main.c calls
   `InitGeom`) instead of the layer's projection (`gfx.c` calls `GsSetProjection(obj->projection)`), and NCS lights
   with a zero colour matrix (FIGHTSTG's `GsSetFlatLight` calls).
-- **LIBGPU (M2):** `SetDefDrawEnv`'s `dfe = (h <= 256)`; `SetDrawEnv`'s packet is E1, E2, E3, E4, E5 (+ the 0x02
-  fill with isbg) and nothing else; `SetDrawMove`'s five words; what `BreakDraw` returns while the GPU is idle.
+- **LIBGPU and the GPU:** checked against the PS1 (session 16): the layer-1 family `gpu`
+  (`tests/golden/families/gpu.py`) runs GP0 lists through the game's own `DrawOTag`/`LoadImage`/`MoveImage`/
+  `ClearImage(2)` in the emulator and reads the VRAM back with `StoreImage` (every primitive type and mode, random and
+  at the edges: shared edges, thin and degenerate triangles, the 1023/511 size limit, 11-bit wrapping, draw areas,
+  texture windows, mask bits, every blend mode and depth; probes that pin the rasteriser's rules), and calls
+  `SetDrawEnv`, `SetDefDrawEnv`, `SetDrawMove` and `BreakDraw` for their packets and results; `tests/host/gpu_replay.py`
+  (run by `tests/host/replay.py`) replays its 715 cases through `libgpu.c`/`gpu.c`. What the goldens changed:
+  `SetDrawEnv`'s packet (E3/E4 clamped, E1 and E2 after E5, the E6 word, a TILE rather than a fill for `isbg`; the
+  per-frame primitive hashes changed with it), `SetDefDrawEnv`'s `dfe` (`h < 289`), `MoveImage` of an empty rectangle,
+  `ClearImage`'s TILE path, `BreakDraw` (NULL while idle: FIGHTSTG's cursor copies are drawn). The known differences
+  (`tests/host/known_mismatches.json`, 133 cases, all 1..few pixels or emulator-only behaviour): exact .5
+  interpolation ties (the emulator's fixed-point rounding), semi-transparency modes 2/3 of modulated textures (the
+  emulator's two-pixels-at-once arithmetic), and three hardware rules kept over the emulator's (fill rounding/wrap,
+  copies obey the mask, a 1x1 draw area). Not covered: GP1, interlaced `dfe`, timing.
 - **LIBGS (M2):** `GsSetRefView2`'s matrix (not computed here); whether `GsSetFlatLight` normalises the direction;
   what `GsInit3D` resets.
 - **LIBCD:** verified with the BIN (session 16): mode `0xA0` (cdload) gets the 2340-byte window from the 12-byte

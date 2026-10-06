@@ -81,6 +81,7 @@ tools/venv/bin/python tools/port_inventory.py counts [--sites KIND[:TAG]]   # PC
 tools/venv/bin/python tools/port_inventory.py probe [FILES...] [-v] [--warnings] [--m32]   # host-compile gate (-m64, -Werror on pointer/int casts, implicit declarations, incompatible pointers); exit 0 = clean (~1 s); test.sh and CI run it
 tools/venv/bin/python tools/port_inventory.py link | structs   # duplicate/undefined globals over the probe's objects; struct sizes at -m32/-m64 vs the documented PS1 sizes
 tools/venv/bin/python tests/port/run.py [--m32] [--sanitize] [--cd-speed instant]   # the port's M1 test: new_game from the disc, twice, against the emulator's record (tests/port/README.md)
+scripts/setup.sh sdl3 && cmake -S port -B build/port-sdl -G Ninja -DDW3_PORT_SDL=ON && cmake --build build/port-sdl && build/port-sdl/dw2003 --disc iso/dw2003.cue --window   # play it (M2: software GPU, SDL3 window, keyboard/gamepad)
 cmake -S port -B build/port -G Ninja && cmake --build build/port && build/port/dw2003 --max-frames 60   # the PC port (port/README.md): all 388 units + port/psyq stubs, 30 s; runs the game's main() to a frame cap
 tools/venv/bin/python tools/psyq_match.py extracted/disc/SLES_039.36   # Psy-Q signature matcher
 tools/venv/bin/python tools/compiler_id.py   # compiler-ID experiment: m2c drafts x 5 GCCs x -G0/-G8, objdiff-scored

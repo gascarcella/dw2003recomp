@@ -23,7 +23,8 @@ Options: `-DDW3_PORT_SANITIZE=ON` (`-fsanitize=address,undefined`; needs libasan
 `-DDW3_PORT_M32=ON` (a 32-bit binary: `-m32` on every compile and link; needs gcc-multilib),
 `-DDW3_PORT_ALLOW_UNRESOLVED=ON` (link with undefined symbols ignored: a private build without `port/psyq/`),
 `-DDW3_PORT_PSYQ_DIR=<dir>` (another shim directory), `-DDW3_PORT_UNIT_OVERRIDES="src/main/x.c=<path>;..."`
-(experiments: build a unit from another file, the tree untouched), `-DDW3_PORT_PSYQ_WERROR=OFF`.
+(experiments: build a unit from another file, the tree untouched), `-DDW3_PORT_PSYQ_WERROR=OFF`,
+`-DDW3_PORT_SDL=ON` (the window: below).
 
 The sanitizer and 32-bit builds go into their own build directories:
 ```sh
@@ -53,9 +54,60 @@ non-PIE in both.
 | `include/port_harness.h` | The M1 harness's interfaces (disc, frame log and probes, script) |
 | `src/pump.c` | `port_wait` (the vsync and CD ticks, the frame cap, the watchdog), `port_halt`, `port_unimplemented` |
 | `src/reset.c` | The console's reset (the script's `reset` step): `port_reset_request` (longjmp to `main()`), `port_reset_state`, `DW3_PORT_RESET_CHECK` |
+| `src/video.c` | The video output: the display area of the VRAM as 32-bit pixels, `--screenshot`, the SDL3 window (below) |
+| `src/input.c` | The window's input: keyboard and gamepads to the pad, the window's close, `--input-test` (below) |
 | `src/asmdata.c` | Zero data the PS1 build keeps in asm (FIELDSTG's `.bss` block; weak LIBGS/LIBCD data) |
 | `psyq/` | The Psy-Q shim (its own README) |
 | `../tools/port_gen.py` | The generators CMake runs (never by hand in the normal flow) |
+
+## The window (M2: `-DDW3_PORT_SDL=ON`)
+SDL3 (zlib licence; DECISIONS "PC port decisions (session 15)" item 3) shows the PS1's display and reads the keyboard and
+gamepads. It is optional: the default build has no SDL and stays headless (the tests use it). SDL3 is pinned
+(`scripts/setup.sh` `SDL3_VER`/`SDL3_SHA256`) and built from its release tarball into `tools/sdl3/` as a static library,
+so the binary needs nothing beside it; SDL loads X11/Wayland/ALSA/PulseAudio/... with `dlopen` at run time.
+```sh
+scripts/setup.sh sdl3                     # ~70 s with 2 jobs; again: "already installed"
+cmake -S port -B build/port-sdl -G Ninja -DDW3_PORT_SDL=ON && cmake --build build/port-sdl
+build/port-sdl/dw2003 --disc iso/dw2003.cue --window            # 640x480, 50 vsyncs per second (PAL)
+build/port-sdl/dw2003 --disc iso/dw2003.cue --scale 3 --fullscreen
+build/port-sdl/dw2003 --disc iso/dw2003.cue --script tests/replay/scripts/new_game.json --window   # watch a replay
+SDL_VIDEO_DRIVER=offscreen build/port-sdl/dw2003 --input-test --fps 0   # no display: the input self-test (exit 0)
+```
+SDL's backends follow the `-dev` headers present when `setup.sh sdl3` runs: missing optional ones are turned off one by
+one (logged), and with no X11/Wayland headers at all only the `offscreen` and `dummy` video drivers are built (enough
+for the tests). For a desktop window install the headers (Debian/Ubuntu: `libx11-dev libxext-dev libwayland-dev
+libxkbcommon-dev wayland-protocols libasound2-dev libpulse-dev libudev-dev`), then `rm -rf tools/sdl3 && scripts/setup.sh
+sdl3`. Another SDL3 (3.2 or newer) is used when CMake is pointed to it (`-DSDL3_DIR=<dir with SDL3Config.cmake>` or
+`CMAKE_PREFIX_PATH`). The window is 64-bit only (`DW3_PORT_M32` with `DW3_PORT_SDL` is refused).
+
+**The picture** (`src/video.c`): every vsync the display area that `PutDispEnv` set (`psyq.h` "The video output":
+`psyq_gpu_display`) is read from the VRAM (`psyq_gpu_vram`, the software GPU's) and converted to 32-bit pixels at its
+own size: 15-bit (one VRAM pixel per screen pixel, 5-bit components widened as `(c << 3) | (c >> 2)`, the mask bit not
+shown) or 24-bit (`isrgb24`, the movies and the title: 3 bytes per screen pixel, so a 320-pixel line spans 480 VRAM
+pixels; `disp.w` counts screen pixels), any width up to 640 and height up to 576 (the title's 320x480 interlaced frame
+is shown whole, both fields), wrapping in the VRAM as the GPU does; black while `SetDispMask(0)` holds. The image is
+drawn at 4:3, nearest-neighbour, as tall as an integer multiple of its lines fits the window (centred; scaled to fit when
+the window is smaller than the image). `--scale N` opens a 320N x 240N window (default 2; with an even N a 240-line and
+a 480-line display come out the same size), `--fullscreen` (F11 toggles). `--screenshot FRAME:PATH` (repeatable; any
+build, also headless) writes the image of vsync FRAME as a binary PPM: the texture's pixels, independent of the window.
+
+**Real time**: with a window the vsyncs are paced to `--fps N` per second (default 50, PAL; 60 for a later NTSC build;
+0: unthrottled) against `CLOCK_MONOTONIC`; a run more than 0.1 s late starts the pace over instead of hurrying. Only the
+time between vsyncs changes: the log and the record of a window run are the headless run's, byte for byte. Without a
+window nothing is paced.
+
+**Input** (`src/input.c`): the keyboard and every gamepad SDL sees are ORed into pad 1, a digital pad (`psyq_pad_set`),
+once per vsync. Keys (by position): arrows the D-pad; X cross, C circle, Z square, S triangle; Enter (or keypad Enter)
+START; Backspace (or right Shift) SELECT; Q L1, E R1, 1 L2, 3 R2; F11 fullscreen. Gamepads (SDL's positional buttons, the
+PlayStation layout): south cross, east circle, west square, north triangle, back SELECT, start START, shoulders L1/R1,
+triggers L2/R2, the D-pad and the left stick the D-pad. Every change of the pad goes to the log's `I` lines and the
+record's `inputs`, as a script's do. With `--script` the script owns the pad: the window's input never reaches it.
+Closing the window (or SIGINT/SIGTERM, which SDL turns into a quit) ends the run: `port_exit(0, "window closed")`, the
+log and the record written. `--input-test` checks the path: it injects every key of the map (`SDL_PushEvent`), then
+attaches a virtual SDL gamepad and presses each of its buttons, triggers and stick directions, and a chord, one per
+frame with its release in the next, and requires the buttons sent to `psyq_pad_set` to be the map's (with `--script`:
+none sent, and the script's log stays byte-identical to a run without the test); exit 0 when all 70 checks pass, 6
+otherwise. CI runs it on SDL's offscreen driver.
 
 ## What CMake generates (`build/port/gen/`, by `tools/port_gen.py`)
 At configure time:
@@ -129,8 +181,9 @@ the SHA-1 with the volatile ranges zeroed (`gamestate_sha1_stable`), as `replay.
 
 **Pump**: a frame is one vsync tick (`psyq_vsync_tick`), from the game's `VSync()` or from `PLATFORM_WAIT()` ->
 `port_wait()`, or from LIBCD's `StGetNext` once per 5000 empty polls (the movie player spins without a wait hook).
-Each tick runs `port_frame` (`pump.c`): the CD tick (`psyq_cd_tick`), the frame log, the script's step, and the exit
-at `--max-frames` (default 600; none with `--script`). `DW3_PORT_CHECKPOINT_DIR=<dir>` writes each checkpoint's PS1
+Each tick runs `port_frame` (`pump.c`): the CD tick (`psyq_cd_tick`), the frame log, the window's input (with a
+window), the script's step, the screenshots and the window's present (`video.c`), the exit at `--max-frames` (default
+600; none with `--script`), and with a window the real-time pace ("The window"). `DW3_PORT_CHECKPOINT_DIR=<dir>` writes each checkpoint's PS1
 image as `cpNN_<name>.bin`, named like `run.lua`'s dumps. A watchdog (`--watchdog SEC`,
 default 10) exits 4 when no `port_wait()` ran for that long: a loop that no hook reaches (see below).
 

@@ -49,10 +49,11 @@ jobs:
             tools/bin
             tools/ext
             tools/redux
+            tools/sdl3
           key: tools-${{ runner.os }}-${{ hashFiles('scripts/setup.sh', 'tools/requirements.txt') }}
 
       - name: Toolchain
-        run: scripts/setup.sh binutils mkpsxiso venv gcc objdiff ext redux
+        run: scripts/setup.sh binutils mkpsxiso venv gcc objdiff ext redux sdl3
 
       - name: Scripts parse, Python compiles
         run: |
@@ -69,6 +70,14 @@ jobs:
         run: |
           tools/venv/bin/python tools/port_inventory.py probe -j "$DW3_JOBS"
           tools/venv/bin/python tools/port_inventory.py link -j "$DW3_JOBS"
+
+      # The PC port's window (-DDW3_PORT_SDL=ON, SDL3 from tools/sdl3): it keeps compiling, and its input self-test passes
+      # on SDL's offscreen driver (no display, no disc needed: injected key and virtual-gamepad events reach the pad).
+      - name: PC port with the window (SDL3), input self-test
+        run: |
+          cmake -S port -B build/port-sdl -G Ninja -DDW3_PORT_SDL=ON
+          cmake --build build/port-sdl -j "$DW3_JOBS"
+          SDL_VIDEO_DRIVER=offscreen build/port-sdl/dw2003 --input-test --fps 0
 
       - name: Disc from the data checkout
         if: steps.data.outputs.present == 'true'
