@@ -205,7 +205,9 @@ interface between LIBSND and the SPU core (no Psy-Q LIBSPU API needed: the game 
   `first_battle_save` (the scripts the port already replays). Ticks may need a tolerance at bank loads (CD timing:
   the port's `--cd-speed realistic` is close but not equal); everything between two loads must be exact. Start with the
   committed `cnty_sel` trace (in `test.sh`).
-- **More coverage for LIBSND**: a trace driver that plays every sound of a bank without the CD (SOUNDTST, stage 8: the
+- **More coverage for LIBSND** (done in session 16 by `tests/sound/key_trace.py`: 343 steps over the 71 banks, the BGMs
+  and the game's literal keys, in 4 emulator boots, goldens in `tests/sound/expected/keys/`; it reaches `SsUtKeyOff`,
+  `SsSepSetDecrescendo`, CC 7/10 and the NRPN loops; a port run of the same driver is still to do): a trace driver that plays every sound of a bank without the CD (SOUNDTST, stage 8: the
   debug sound test, `src/soundtst/`, is not reachable by the pad; a Lua step that sets the next map, or the layer-1
   oracle's call mechanism calling `sound_module.play(key)` per key and letting N vsyncs run): one golden trace per
   key, every BGM and SFX of the 71 banks. This also covers `SsUtKeyOff`, the decrescendo and the CCs the two scripts

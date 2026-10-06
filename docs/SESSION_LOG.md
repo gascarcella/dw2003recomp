@@ -2,7 +2,7 @@
 
 Newest first. One short entry per session: goal, result, next steps.
 
-## 2026-10-06: Session 16: PC port M1, both layer-2 scripts in the port, M2 (cloud branch `claude/peaceful-allen-q3t9f9`, PR to `main`)
+## 2026-10-06: Session 16: PC port M1, both layer-2 scripts in the port, M2, M3 (cloud branch `claude/peaceful-allen-q3t9f9`, PR to `main`)
 - **Asked:** M1 proper with dedicated sub-agents owning disjoint files: LIBCD over the BIN, the scripted pad, the per-frame
   log, the headless runner and its test against `tests/replay/expected/new_game.json`, the findings on the boot path;
   delivered as a pull request (the user later: merge it after CI is green, keep going).
@@ -42,7 +42,13 @@ Newest first. One short entry per session: goal, result, next steps.
   mismatches with reasons; whole VRAM equal at seven `new_game` points), T10 sdl (SDL3 3.4.18 via `setup.sh sdl3`,
   `--window`, 50 Hz pacing, keyboard/gamepad, `--screenshot`, `--input-test`, CI builds the SDL variant). The port now
   draws the game (screenshots of CNTY_SEL, the field, the first battle, the save screen).
-- **Next:** M3 (SPU/LIBSND against SPU register traces), a desktop play-test, rasteriser speed, LIBGS's GTE set-up, M5.
+- **Merged as PR #4.** Then **M3**: T11 the SPU-trace oracle and `docs/SOUND.md`; the user decided LIBSND's provenance
+  (read the disassembly for facts, write our own C); T12 the GPU 2.6x faster (identical pixels); T13 the SPU core (psx-spx;
+  two models agree; the envelope against Redux); T14 LIBSND (trace-exact on the emulator's timeline); T15 `--wav`, SDL3
+  audio, 343 per-key goldens. Orchestrator: the vsync pre-hook (render before the handler), `spu_init`/`spu_reset`, the
+  options. A container restart mid-wave lost nothing (worktrees and transcripts on disk). The port now plays the game's
+  music (new_game's WAV: CNTY_SEL, title and field music).
+- **Next:** a desktop play-test, the port run of the per-key driver, M4's save round trips, M5 (movies).
 
 ## 2026-10-05: Session 15: PC port decisions, M0 and the M1 skeleton (worktree branch `gascarcella/PC-Port-Kickoff`, PR to `main`)
 - **Asked:** decide `docs/PC_PORT_PLAN.md` section 4, then M0 (and, the user's choice in phase 1, an M1 skeleton) with

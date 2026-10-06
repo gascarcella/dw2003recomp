@@ -82,6 +82,8 @@ tools/venv/bin/python tools/port_inventory.py probe [FILES...] [-v] [--warnings]
 tools/venv/bin/python tools/port_inventory.py link | structs   # duplicate/undefined globals over the probe's objects; struct sizes at -m32/-m64 vs the documented PS1 sizes
 tools/venv/bin/python tests/port/run.py [--m32] [--sanitize] [--cd-speed instant]   # the port's M1 test: new_game from the disc, twice, against the emulator's record (tests/port/README.md)
 scripts/setup.sh sdl3 && cmake -S port -B build/port-sdl -G Ninja -DDW3_PORT_SDL=ON && cmake --build build/port-sdl && build/port-sdl/dw2003 --disc iso/dw2003.cue --window   # play it (M2: software GPU, SDL3 window, keyboard/gamepad)
+tools/venv/bin/python tests/sound/spu_trace.py run|check|diff ...   # the emulator's SPU write trace (M3's oracle; docs/SOUND.md); tests/sound/key_trace.py gen|check: per-key goldens (~22 min)
+build/port/dw2003 --disc iso/dw2003.cue --script tests/replay/scripts/new_game.json --wav out.wav [--spu-trace out.trace]   # the port's audio (M3) headless
 cmake -S port -B build/port -G Ninja && cmake --build build/port && build/port/dw2003 --max-frames 60   # the PC port (port/README.md): all 388 units + port/psyq stubs, 30 s; runs the game's main() to a frame cap
 tools/venv/bin/python tools/psyq_match.py extracted/disc/SLES_039.36   # Psy-Q signature matcher
 tools/venv/bin/python tools/compiler_id.py   # compiler-ID experiment: m2c drafts x 5 GCCs x -G0/-G8, objdiff-scored
