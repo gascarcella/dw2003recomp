@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 2026-10-06 (session 16, cloud branch `claude/peaceful-allen-q3t9f9`, delivered as a pull request):
+_Last updated: 2026-10-06 (session 17, local desktop, branch `playtest-desktop-2026-10-06`): **the first desktop play-test** (docs/PLAYTEST.md): boot, movies, title, new game, the first battle, a save at the inn and its load after a restart all played on Wayland/NVIDIA/PipeWire at 49.99 fps; an SDL exit crash with NVIDIA's EGL fixed in `port/`; the battle camera is wrong (`GsSetRefView2` is a stub; issue #7). Before that (session 16, cloud branch `claude/peaceful-allen-q3t9f9`, delivered as a pull request):
 **PC port M1 done, and more:** the headless port boots the user's disc (SHA-1 checked) and replays **both layer-2
 scripts**, `new_game` and `first_battle_save` (the first battle, a save to a memory card, a reset, the reload, shops,
 menus, training), with the emulator's 25 checkpoints, stage and map sequences and stable hashes; two runs identical, no
@@ -91,6 +91,7 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
 - **PC port, M4/M5 parts (session 16; DECISIONS "M4's save round trips; M5's movies"):** `tests/saves/` (port <->
   emulator saves, layer 3), `port/psyq/mdec.c` (LIBPRESS: the movies' video; family `mdec`), `port/psyq/xa.c` (their XA
   audio; `tests/xa/` goldens).
+- **PC port, desktop play-test (session 17; docs/PLAYTEST.md):** the SDL build played by the user through the first battle, a save and its load; picture, sound and timing right except the battle's 3D camera (`GsSetRefView2` a stub: the view sits at the world origin). `port_video_quit` tears SDL down before `exit()` (NVIDIA's EGL crashed an `atexit` `SDL_Quit` on Wayland/offscreen).
 - **CI (session 13):** `.github/workflows/ci.yml` on every push: toolchain, script/Python checks, `check_toolchain.sh`, and
   with the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of `dw2003-gamedata`) `build.sh --check` and
   `scripts/test.sh`; first green run 2026-10-05, ~5 min. Fork pull requests get only the disc-free steps.
@@ -211,7 +212,7 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
    WSTAG function), names-10 (FIELDSTG/WSTAG type fields), names-9 (EXE and CARDGAME fields, EXE data symbols), names-11
    (FIGHTSTG, tier-2, small overlays) and decode-1 (item data, event scripts, card scripts) are done: `unk_` uses
    15,646 → 1,097 (mostly never-read or not yet understood), 12 `func_` names left, no `Unk<addr>` types.
-2. PC port: **M1, M2, M3, M4's saves and M5's movies are done** (session 16). Next: **a play-test on a desktop**
+2. PC port: **M1, M2, M3, M4's saves and M5's movies are done** (session 16). Next: **the battle camera: `GsSetRefView2` from `gs_131.s` with a golden family** (docs/PLAYTEST.md finding 2; the desktop play-test is done, session 17), a physical gamepad and fullscreen in play, a reset key in the window, formerly **a play-test on a desktop**
    (window, gamepads, audio device: needs the user), M5's rest (a playthrough beyond the first battle: more layer-2
    scripts, the 8 holdouts' WIP C reached in play, the debug overlays), the port run of `key_trace.py`'s driver, LIBGS's
    GTE set-up checked like the GTE, `--fps 60` with XA, a Windows/macOS build (PE has no GNU ld script). Formerly next: **M2** (`docs/PC_PORT_PLAN.md`: the VRAM-exact software GPU, SDL3 via a `setup.sh`

@@ -218,6 +218,25 @@ void port_video_close(void) {
                  s > 0 ? (double)video_presents / s : 0.0);
     }
 }
+
+/* SDL torn down before exit(), not only by the atexit(SDL_Quit) above: with NVIDIA's EGL (Wayland and offscreen
+ * drivers; driver 595.104.02) an SDL_Quit inside exit() unloads libnvidia-eglcore and the process then jumps into the
+ * unloaded code (SIGSEGV after the run's "exit" line; docs/PLAYTEST.md). X11 (GLX) was not affected. */
+void port_video_quit(void) {
+    if (video_texture != NULL) {
+        SDL_DestroyTexture(video_texture);
+        video_texture = NULL;
+    }
+    if (video_renderer != NULL) {
+        SDL_DestroyRenderer(video_renderer);
+        video_renderer = NULL;
+    }
+    if (video_window != NULL) {
+        SDL_DestroyWindow(video_window);
+        video_window = NULL;
+    }
+    SDL_Quit();
+}
 #else
 int port_video_available(void) {
     return 0;
@@ -236,6 +255,9 @@ static void video_present(void) {
 }
 
 void port_video_close(void) {
+}
+
+void port_video_quit(void) {
 }
 #endif
 
