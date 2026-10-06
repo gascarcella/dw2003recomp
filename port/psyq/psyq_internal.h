@@ -52,6 +52,17 @@ void gpu_load_image(int x, int y, int w, int h, const u16 *pixels);
 const u16 *gpu_vram_pixels(void);
 void gpu_draw_state(u32 *e1, u32 *e3, u32 *e4, u32 *e5);
 
+/* mdec.c: the movie decoder (LIBPRESS's bit-stream decoder and the MDEC). mdec_vlc_decode expands a .STR version 2
+ * frame (its 8-byte header, then the bit stream) into the MDEC's run-level words at out (the command word 0x3800xxxx,
+ * then xxxx words) and returns 0. mdec_reset loads the default quantisation and IDCT tables and ends any decode;
+ * mdec_decode_start takes the run-level words (the command word's bits 27-25 select the output: 24-bit or 15-bit,
+ * signed, bit 15; NULL ends the decode); mdec_decode_out writes up to `words` words of pixels and returns how many it
+ * wrote (fewer when the run-level words ran out). */
+int mdec_vlc_decode(const u8 *frame, u32 *out);
+void mdec_reset(void);
+void mdec_decode_start(const u32 *rl);
+u32 mdec_decode_out(u32 *dst, u32 words);
+
 /* libpad.c: the controllers were polled again (run by the vsync tick). */
 void psyq_pad_vsync(void);
 
