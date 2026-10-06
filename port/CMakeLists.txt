@@ -78,7 +78,6 @@ target_include_directories(dw3_game BEFORE PRIVATE ${DW3_GAME_INCLUDES})
 target_compile_options(dw3_game PRIVATE ${DW3_COMMON_FLAGS} -fno-builtin -fno-common -fdata-sections
                        -ffunction-sections -Wall -Wno-pointer-sign -Wno-unused-but-set-variable -Wno-unused-variable)
 # GCC 14+ makes some old-C constructs errors; the probe (tools/port_inventory.py) keeps them warnings the same way.
-include(CheckCCompilerFlag)
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 14)
     target_compile_options(dw3_game PRIVATE -fpermissive)
 endif()
@@ -96,14 +95,14 @@ add_custom_command(OUTPUT "${DW3_GEN}/overlay_tables.c"
 
 # ---- The Psy-Q shim (port/psyq/, T9's): built when the directory has sources; without it the link needs
 # DW3_PORT_ALLOW_UNRESOLVED (a stand-in directory can be given as DW3_PORT_PSYQ_DIR).
-file(GLOB DW3_PSYQ_SRCS "${DW3_PORT_PSYQ_DIR}/*.c")
+file(GLOB DW3_PSYQ_SRCS CONFIGURE_DEPENDS "${DW3_PORT_PSYQ_DIR}/*.c")
 if(NOT DW3_PSYQ_SRCS AND NOT DW3_PORT_ALLOW_UNRESOLVED)
     message(FATAL_ERROR "no Psy-Q shim sources in ${DW3_PORT_PSYQ_DIR}: set DW3_PORT_PSYQ_DIR, or "
                         "-DDW3_PORT_ALLOW_UNRESOLVED=ON for a link that ignores undefined symbols")
 endif()
 
 # ---- The binary: the runtime, the tables, the shim, the units.
-file(GLOB DW3_RUNTIME_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
+file(GLOB DW3_RUNTIME_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
 add_executable(dw2003 ${DW3_RUNTIME_SRCS} "${DW3_GEN}/overlay_tables.c" ${DW3_PSYQ_SRCS} $<TARGET_OBJECTS:dw3_game>)
 set_target_properties(dw2003 PROPERTIES C_STANDARD 99 C_EXTENSIONS ON C_STANDARD_REQUIRED ON
                       LINK_DEPENDS "${DW3_GEN}/overlays.ld")
