@@ -74,6 +74,25 @@ u32 port_overlay_word0(int tier) {
     return (tier == 1 || tier == 2) ? port_word0[tier] : 0;
 }
 
+/* The copy's CPU time on the PS1 (session 16, found by tests/port's new_game run): the game copies a file into its slot
+ * with LIBC2's memcpy (0x8002514C), a byte loop of 6 instructions, about 12 cycles a byte (2 per instruction, as
+ * PCSX-Redux counts them, and about what a load from main RAM costs); a PAL frame is 33,868,800 / 50 = 677,376
+ * cycles. So FIELDSTG's 0x19000 bytes take 1.8 frames, and the vsync interrupt runs during the copy: the emulator's
+ * replays see FIELDSTG's stage with no stage file yet (file -1) for two frames, and new_game's `new_game_field`
+ * checkpoint is taken there, before FIELDSTG's start-up writes gamestate_data. The port's copy is instant, so it runs
+ * the whole frames the copy would have taken (rounded down) after it, through the pump: the interrupt sees the new
+ * stage, the new overlay in place and the game's state as the copy left it. Smaller copies (CNTY_SEL 0x1800,
+ * STDWTITL 0x6800, a WSTAG file) take no frame. */
+#define PORT_COPY_CYCLES_PER_BYTE 12
+#define PORT_CYCLES_PER_FRAME 677376 /* PAL */
+
+static void port_overlay_copy_time(u32 size) {
+    unsigned long long frames = (unsigned long long)size * PORT_COPY_CYCLES_PER_BYTE / PORT_CYCLES_PER_FRAME;
+    while (frames-- > 0) {
+        port_wait();
+    }
+}
+
 /* The source's first word (the PS1 is little-endian, as the hosts are; read byte-wise: the buffer may be unaligned). */
 static u32 port_first_word(const void *src, u32 size) {
     const u8 *s = src;
@@ -98,6 +117,7 @@ void *port_overlay_load(int tier, s32 file, void *dst, const void *src, u32 size
         port_current[tier] = o;
         port_log("overlay: tier %d, file 0x%X, %s (%d functions; .data %zu, .bss %zu bytes restored)", tier, file,
                  o->name, o->func_count, data, bss);
+        port_overlay_copy_time(size);
         return dst;
     }
     /* Not code: a data file into the slot buffer, exactly the PS1's memcpy (a sector-rounded size may run past the
@@ -111,6 +131,7 @@ void *port_overlay_load(int tier, s32 file, void *dst, const void *src, u32 size
     memcpy(dst, src, size);
     port_current[tier] = NULL;
     port_log("overlay: tier %d, file 0x%X, data (%u bytes into the slot)", tier, file, size);
+    port_overlay_copy_time(size);
     return dst;
 }
 

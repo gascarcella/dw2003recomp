@@ -63,6 +63,35 @@ static void psyq_gpu_hash_words(const u32 *w, u32 n) {
     psyq_gpu_hash = h;
 }
 
+/* One primitive's words as the GPU reads them. A textured polygon's (POLY_FT3/FT4/GT3/GT4) third and fourth texture
+ * coordinate words carry padding in their high half (pad1/pad2), which the GPU ignores and the game never writes: it
+ * holds whatever the packet buffer held before, which differs between the -m32 and -m64 builds (their heaps differ;
+ * session 16, FIELDSTG's actor sprites in new_game), so it is hashed as 0. Words: the command and color, then per
+ * vertex [its color, gouraud only, not the first] its position and its texture coordinates. */
+static void psyq_gpu_hash_prim(const u32 *w, u32 len) {
+    u32 code = w[0] >> 24;
+    u32 copy[16];
+    u32 per, verts, i;
+
+    if (code < 0x20 || code >= 0x40 || !(code & 0x04) || len > 16) {
+        psyq_gpu_hash_words(w, len); /* not a textured polygon */
+        return;
+    }
+    per = (code & 0x10) ? 3 : 2; /* words per vertex after the first */
+    verts = (code & 0x08) ? 4 : 3;
+    if (len < 1 + 2 + (verts - 1) * per) {
+        psyq_gpu_hash_words(w, len);
+        return;
+    }
+    for (i = 0; i < len; i++) {
+        copy[i] = w[i];
+    }
+    for (i = 2; i < verts; i++) {
+        copy[2 + i * per] &= 0xFFFF;
+    }
+    psyq_gpu_hash_words(copy, len);
+}
+
 /* Follows the list from `p` (an OT entry or a primitive) to the 0xFFFFFF terminator, hashing every primitive's
  * words (the `len` words after its tag). */
 static void psyq_gpu_walk(const u32 *p, const char *who) {
@@ -81,7 +110,7 @@ static void psyq_gpu_walk(const u32 *p, const char *who) {
         const u32 *q;
 
         if (len != 0) {
-            psyq_gpu_hash_words(p + 1, len);
+            psyq_gpu_hash_prim(p + 1, len);
             prims++;
         }
         if (next == 0xFFFFFF) {
