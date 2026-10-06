@@ -225,7 +225,17 @@ typedef struct FieldstgCamera {
 /* The object of type 4 that fieldstg_camera_apply asks for the map size. */
 typedef struct FieldstgBackgroundView {
     /* 0x000 */ Object base;
+#ifndef PC_PORT
     /* 0x050 */ u8 unk_050[0xE0];
+#else
+    /* PC_PORT: FieldstgBackground's (fieldstg_80085590.c) two pointers before get_size, so that it lies at the
+     * object's offset on the host too */
+    u8 unk_050[0x4];
+    void *header;
+    u8 unk_058[0xAC]; /* x .. slots */
+    void *tiles;
+    u8 unk_108[0x28]; /* visible .. first_y */
+#endif
     /* 0x130 */ FieldstgPos *(*get_size)(struct FieldstgBackgroundView *obj);
 } FieldstgBackgroundView;
 
@@ -978,6 +988,13 @@ void fieldstg_loader_load_action_anims(Object *obj) {
     s32 b = 0;
     s32 c = 0;
 
+#ifdef PC_PORT
+    /* PC_PORT: a stage without map events (WSTAG780, map 0x2D7: fieldstg_find_stage zeroed the field) leaves NULL
+     * here; the PS1 reads the end marker's 0 from low RAM (0x00000008, 0 there: checked in the emulator). */
+    if (entry == NULL) {
+        return;
+    }
+#endif
     for (; entry->type != 0; entry++) {
         switch (entry->type) {
         case 2:
