@@ -12,7 +12,7 @@
     { "id": "hold", "name": "Hold", "description": "Skip while this is held.", "type": "binding",
       "default": "", "group": "Controls", "applies": "live" },
     { "id": "fast_forward_waits", "name": "Also fast-forward cutscene waits",
-      "description": "While skipping, a cutscene's pauses, walks and animations also run fast (at the fast-forward speed). Walking around yourself stays at normal speed.",
+      "description": "While skipping, a cutscene's pauses, walks and animations also run fast, at fast-forward's speed and with its mute setting (their defaults when fast-forward is off). Walking around yourself stays at normal speed.",
       "type": "bool", "default": false, "applies": "live" }
   ]
 }
