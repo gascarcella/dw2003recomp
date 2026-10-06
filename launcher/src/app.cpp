@@ -376,12 +376,11 @@ void App::play() {
     switch (probe.result) {
     case GameProbe::Result::Valid:
         args = game_args(game_, settings_);
-        interim_ = false;
         break;
     case GameProbe::Result::NoConfig:
-        args = game_args_interim(game_, settings_);
-        interim_ = true;
-        break;
+        play_error_ = "This game build is too old for the launcher: it has no --config. Rebuild it from the "
+                      "current source (cmake --build build/port-sdl).";
+        return;
     case GameProbe::Result::Invalid:
         play_error_ = "The game does not accept the settings file:\n" + probe.message;
         return;
@@ -394,8 +393,7 @@ void App::play() {
         play_error_ = err;
         return;
     }
-    std::fprintf(stderr, "launcher: started %s%s\n", run_.command().c_str(),
-                 interim_ ? " (interim options: this game build has no --config)" : "");
+    std::fprintf(stderr, "launcher: started %s\n", run_.command().c_str());
     SDL_HideWindow(window_);
 }
 
@@ -639,11 +637,6 @@ void App::draw_play() {
         } else {
             ImGui::TextDisabled("The settings file is from a newer launcher: this one does not start the game.");
         }
-    }
-    if (interim_ && play_error_.empty()) {
-        ImGui::Spacing();
-        ImGui::TextDisabled("This game build has no --config: it was started with the equivalent options "
-                            "(60 Hz is not passed).");
     }
     draw_play_error();
 }

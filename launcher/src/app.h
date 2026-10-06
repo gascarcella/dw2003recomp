@@ -120,7 +120,6 @@ private:
     bool echo_game_ = true;
     std::vector<std::string> game_tried_; // where game_find looked
     GameRun run_;
-    bool interim_ = false;  // the last start used game_args_interim (the game predates --config)
     std::string play_error_; // why the last start failed, or how the game ended
     std::vector<std::string> play_log_; // the game's last lines when it ended with an error
 };

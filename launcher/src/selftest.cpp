@@ -515,26 +515,13 @@ static void test_game(const std::string &root) {
               run.lines().front() == "line 51",
           "the last 200 lines are kept, the unterminated last one too");
 
-    // The interim options (until --config is on main).
     SettingsFile f;
-    f.load(path_join(root, "interim"));
-    f.values.disc_path = "disc/dw.cue";
-    f.values.scale = 4;
-    f.values.mute = true;
-    f.values.memcard[1].present = false;
-    std::vector<std::string> a = game_args_interim("g", f);
-    std::string line;
-    for (const std::string &x : a) {
-        line += x + " ";
-    }
-    check(line == "g --window --scale 4 --watchdog 0 --disc " + f.resolve("disc/dw.cue") + " --mute --memcard1 " +
-                      f.resolve("card1.mcd") + " --memcard2 none ",
-          "the interim options: " + line);
+    f.load(path_join(root, "command"));
     check(game_args("g", f) == std::vector<std::string>({ "g", "--config", f.path() }), "the --config command");
     SDL_UnsetEnvironmentVariable(SDL_GetEnvironment(), SELF_TEST_GAME_ENV);
 
-    // The real game, when the environment names it (DW3_SELFTEST_GAME: an SDL build of dw2003): the probe tells
-    // --config from the interim options; with DW3_SELFTEST_DISC too, the game runs 300 frames from the launcher's
+    // The real game, when the environment names it (DW3_SELFTEST_GAME: an SDL build of dw2003): the probe must accept
+    // the file; with DW3_SELFTEST_DISC too, the game runs 300 frames from the launcher's
     // command (offscreen video, no audio device, unthrottled) and must end normally with the disc checked.
     const char *real = SDL_getenv("DW3_SELFTEST_GAME");
     if (real == nullptr) {
@@ -555,15 +542,11 @@ static void test_game(const std::string &root) {
     r.values.hotkeys["fullscreen"] = {};
     check(r.save(&err), "the real game's settings: " + err);
     p = game_probe(real, r.path());
-    check(p.result == GameProbe::Result::Valid || p.result == GameProbe::Result::NoConfig,
-          "the real game's probe: " + p.message);
-    std::fprintf(stderr, "self-test: the real game %s\n",
-                 p.result == GameProbe::Result::Valid ? "takes --config" : "has no --config: the interim options");
-    if (r.values.disc_path.empty()) {
+    check(p.result == GameProbe::Result::Valid, "the real game accepts the launcher's file: " + p.message);
+    if (r.values.disc_path.empty() || p.result != GameProbe::Result::Valid) {
         return;
     }
-    std::vector<std::string> args =
-        p.result == GameProbe::Result::Valid ? game_args(real, r) : game_args_interim(real, r);
+    std::vector<std::string> args = game_args(real, r);
     args.insert(args.end(), { "--max-frames", "300", "--fps", "0" });
     SDL_Environment *env = SDL_GetEnvironment();
     SDL_SetEnvironmentVariable(env, "SDL_VIDEO_DRIVER", "offscreen", true);
@@ -659,16 +642,11 @@ static void test_play(SDL_Window *window, const std::string &root) {
     std::string png = path_join(shots, "5-Play-error.png");
     app.frame(png.c_str());
 
-    // A game without --config: the interim options; it ends normally, no error.
+    // A game too old for --config: told so, nothing started.
     set_fake_mode("old");
     app.play();
-    pump_until(app, [&] { return !app.game_run().running(); }, 10000);
-    check(app.play_error().empty() && app.game_run().exit_code() == 0, "a game without --config runs with options");
-    bool has_disc = false;
-    for (const std::string &l : app.game_run().lines()) {
-        has_disc |= l == "arg " + path_join(dir, "disc/dw2003.cue");
-    }
-    check(has_disc, "the interim options pass the disc's absolute path");
+    check(!app.game_run().running() && app.play_error().find("too old") != std::string::npos,
+          "a game without --config is reported: " + app.play_error());
 
     // The game rejects the file: shown, nothing started.
     set_fake_mode("invalid");

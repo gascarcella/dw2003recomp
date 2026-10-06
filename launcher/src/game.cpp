@@ -91,26 +91,6 @@ std::vector<std::string> game_args(const std::string &game, const SettingsFile &
     return { game, "--config", settings.path() };
 }
 
-std::vector<std::string> game_args_interim(const std::string &game, const SettingsFile &settings) {
-    const Settings &s = settings.values;
-    std::vector<std::string> args = { game, "--window", "--scale", std::to_string(s.scale), "--watchdog", "0" };
-    if (!s.disc_path.empty()) {
-        args.insert(args.end(), { "--disc", settings.resolve(s.disc_path) });
-    }
-    if (s.fullscreen) {
-        args.push_back("--fullscreen");
-    }
-    if (s.mute) {
-        args.push_back("--mute");
-    }
-    for (int i = 0; i < 2; i++) {
-        const MemoryCard &c = s.memcard[i];
-        args.push_back(i == 0 ? "--memcard1" : "--memcard2");
-        args.push_back(c.present ? settings.resolve(c.path) : "none");
-    }
-    return args;
-}
-
 std::string game_exit_text(int code) {
     switch (code) {
     case 0:

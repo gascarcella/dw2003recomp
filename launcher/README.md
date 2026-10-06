@@ -89,10 +89,7 @@ stderr) is read without blocking, copied to the launcher's stderr, and its last 
 window comes back; on an error status it shows the status in words (1 a fatal error, 4 the watchdog, 64 bad
 settings, a signal) and the last 40 lines, with a Copy button. Closing the launcher does not end a running game.
 
-**Interim, until `--config` is on `main` (PR #10):** a game build that rejects `--config` (its usage, exit 64) is
-started with the equivalent options instead (`--window --scale N [--fullscreen] [--mute] --watchdog 0 --disc PATH
---memcard1 PATH|none --memcard2 PATH|none`; `game_args_interim` in `src/game.cpp`, to delete at integration). 60 Hz is
-not passed that way.
+A game build from before `--config` (its usage, exit 64, at the probe) is reported as too old, with how to rebuild it.
 
 ## Settings and controls
 
@@ -145,7 +142,7 @@ data-gated part.
 | `src/settings.cpp`, `settings.h` | The settings directory's lookup, the settings file |
 | `src/json_value.cpp`, `json_value.h` | An editable JSON tree over the port's reader, and a writer |
 | `src/disc.cpp`, `disc.h` | The `.cue` reader and the SHA-1 check on a thread |
-| `src/game.cpp`, `game.h` | Finding the game, its `--print-settings` probe, the command (and the interim options), the running game |
+| `src/game.cpp`, `game.h` | Finding the game, its `--print-settings` probe, the command, the running game |
 | `src/input.cpp`, `input.h` | The PS1 buttons, the game's default bindings, the binding grammar, the input prompt |
 | `src/paths.cpp`, `paths.h` | Paths and files through SDL's calls only (no POSIX: Windows comes later) |
 | `src/selftest.cpp`, `selftest.h` | The self-test |

@@ -22,7 +22,7 @@ struct GameProbe {
     enum class Result {
         Valid,       // exit 0: the game reads the file as it is
         Invalid,     // exit 64 naming a key: `message` has the game's words
-        NoConfig,    // the game predates --config (its usage, without "--config"): use game_args_interim
+        NoConfig,    // the game predates --config (its usage, without "--config"): too old for the launcher
         Failed,      // it could not be run, or ended otherwise: `message`
     } result = Result::Failed;
     std::string message;
@@ -31,11 +31,6 @@ GameProbe game_probe(const std::string &game, const std::string &settings_path);
 
 // The command line: `game --config FILE`.
 std::vector<std::string> game_args(const std::string &game, const SettingsFile &settings);
-
-// INTERIM, to delete at integration: once path B's --config is on main (pull request #10), every game build takes the
-// file and game_probe never answers NoConfig. Until then the settings are translated into the options the game
-// already has. video.refresh 60 is not passed (--fps 60 alone would run everything 20% fast; plan 3.5).
-std::vector<std::string> game_args_interim(const std::string &game, const SettingsFile &settings);
 
 // A text form of an exit status (SDL_WaitProcess's: negative = killed by that signal).
 std::string game_exit_text(int code);

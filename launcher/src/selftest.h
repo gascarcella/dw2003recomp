@@ -13,7 +13,7 @@ namespace dw3 {
 bool self_test_run(const std::string &dir);
 
 // The game's stand-in: the self-test starts this executable with SELF_TEST_GAME_ENV set to a mode, so the launch
-// path (game_probe, GameRun, the interim options) is tested without the game or a disc. main() calls it first.
+// path (game_probe, GameRun) is tested without the game or a disc. main() calls it first.
 constexpr const char *SELF_TEST_GAME_ENV = "DW3_LAUNCHER_FAKE_GAME";
 int self_test_fake_game(const char *mode, int argc, char **argv);
 
