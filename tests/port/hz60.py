@@ -72,7 +72,7 @@ def cmd_record(out):
     trace_out = out / "emu_trace"
     subprocess.run([py, str(ROOT / "tests/sound/spu_trace.py"), "run", str(SCRIPTS / "new_game.json"), "--calls",
                     "--repeat", "2", "--prelude", str(PRELUDE), "--out", str(trace_out)], check=True)
-    with gzip.open(HZ60 / "new_game.trace.gz", "wb", mtime=0) as f:
+    with open(HZ60 / "new_game.trace.gz", "wb") as raw, gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as f:
         f.write((trace_out / "run1/spu.trace").read_bytes())
     print(f"hz60: recorded {', '.join(p.name for p in sorted(HZ60.iterdir()))}")
     return 0
