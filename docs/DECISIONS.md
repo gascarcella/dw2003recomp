@@ -1896,3 +1896,23 @@ inside the port).
 - **Audio output** (T15): `--wav FILE` (any build) and an SDL3 audio stream in window mode, fed 44100/fps samples per
   vsync (735 at `--fps 60`: the NTSC patch's tempo); the device queue is held by a +-0.2% frequency ratio, refills and
   drops, never by changing the game's timing.
+
+## 2026-10-06: M4's save round trips; M5's movies (session 16, agents T16-T18)
+- **Saves move both ways, as a test** (`tests/saves/run.py`, layer 3, ~50 s): the port and the emulator each save at the
+  Asuka Inn on a fresh card (cuts of `first_battle_save`, found by checkpoint and step type), then each loads a copy of
+  the other's card; both `saved` and both `loaded` checkpoints equal `first_battle_save`'s stable hashes, and
+  `tests/saves/cards.py` requires the two cards equal byte for byte but 8 named fields (directory frame 63, which the
+  emulator's BIOS writes even on a load; checksums; play time; `encounter_timer`; two stale buffer tails). The game's own
+  checksum test is lenient (`sum & ~stored`), so `cards.py` checks the sums exactly.
+- **The movies decode** (`port/psyq/mdec.c`, LIBPRESS): the STR v2 bitstream (all 14 movies: v2, 320x416), the MDEC's
+  run-level decode, dequantisation, IDCT and colour conversion, from psx-spx's description; `DecDCTvlc2`'s output and
+  `DecDCTin`'s command words are exact on the PS1 (layer-1 family `mdec`: 17 cases; disc data referenced by source and
+  SHA-1, never stored); pixels differ from PCSX-Redux by 1-3 (its IDCT rounding), and where Redux and psx-spx disagree
+  (0xFE00 before a DC, out-of-range colours) psx-spx is kept, as known mismatches. `DecDCTout`'s callback chain runs as a
+  loop: the recursion overwrote the slice the callback was about to upload.
+- **The movies' sound** (`port/psyq/xa.c`): XA ADPCM (file 1 channel 1, stereo 37.8 kHz; the game sets no filter) and the
+  drive's zigzag resampler to 44.1 kHz, from psx-spx's tables; two independent models agree (32 golden cases, all 2,261
+  audio sectors of the opening movie); against the emulator's capture: correlation >= 0.9997 per 0.1 s window, level
+  ratio 1.000. The queue lives in libcd.c (pushed 882 frames per CD tick into `spu_cd_input`, one tick of delay at the
+  start of a run), flushed on Pause, a new read, `StUnSetRing`, `CdInit`, reset. At `--fps` other than 50 the drive's
+  882 frames per tick no longer meet the render's rate (documented, not solved).

@@ -343,11 +343,15 @@ emulator's SPU write traces (on the emulator's timeline: the port's own frames d
 - SOUNDTST (the debug sound test overlay) as the driver.
 
 ### M4: Save data
+**Done in session 16:** LIBMCRD over `.mcd` images (a fresh card equal to PCSX-Redux's) and the round trips with the
+emulator as a layer-3 test (`tests/saves/`).
 - LIBMCRD over `.mcd` files, through `memcard.c` and STGMCARD.
 
 **Test:** save, quit, load; load a save made in an emulator; the port's save loads in an emulator.
 
 ### M5: Full game
+**Movies done in session 16:** our MDEC (`port/psyq/mdec.c`) and XA decoder (`port/psyq/xa.c`), checked against the PS1
+and the emulator. Left: the rest below.
 - GTE in C for FIGHTSTG: the 29 macros as calls into a software GTE with the PS1's fixed-point and flag behaviour,
   plus the LIBGTE/LIBGS functions.
 - CARDGAME and every overlay.

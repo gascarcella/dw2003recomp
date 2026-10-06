@@ -72,6 +72,8 @@ class Write:
     data: bytes = b""
     field: str = ""
     file: str = None          # instead of data: a file under the repo root, copied whole (an overlay, a data file)
+    source: str = None        # data derived from the disc (a movie frame): the golden keeps this text, the size and the
+                              # SHA-1 instead of the bytes (no game data in the repo); the family rebuilds the bytes
 
 
 @dataclass
@@ -231,6 +233,8 @@ def fixture_json(fixture):
         if w.file:
             data = (ROOT / w.file).read_bytes()
             entry.update(file=w.file, size=len(data), sha1=hashlib.sha1(data).hexdigest())
+        elif w.source:
+            entry.update(source=w.source, size=len(w.data), sha1=hashlib.sha1(w.data).hexdigest())
         else:
             entry["hex"] = w.data.hex()
         out.append(entry)
