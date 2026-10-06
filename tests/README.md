@@ -256,6 +256,11 @@ blocks as SPU address, length, SHA-1), from the EXE's entry point on. `check` re
 `tests/sound/expected/cnty_sel.trace` (the boot to CNTY_SEL + 300 frames, ~25 s; `scripts/test.sh` layer 2 runs it);
 `run <script> [--until CHECKPOINT]` traces any script; `diff` compares two traces (the port's against the emulator's).
 Format, costs and findings: `docs/SOUND.md`.
+`tests/sound/key_trace.py` plays every sound of the game one at a time (the oracle's call mechanism stops the game in
+CNTY_SEL's main loop and calls `sound_play` per key, with `sound_load_extra_bank` for each of the 71 banks: no pad
+route) and records a trace per step: `tests/sound/expected/keys/` (the plan and one xz trace per bank, 818 KB); `check`
+reproduces them (4 emulator boots of ~5 min, `--boots N` one; not in `test.sh`), `diff` compares a port trace of the
+same driver step by step.
 
 ## Layer 3: formats
 
