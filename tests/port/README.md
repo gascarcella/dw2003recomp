@@ -56,6 +56,22 @@ the emulator's dump (`tests/replay/replay.py run tests/replay/scripts/new_game.j
 depends on timing (it joins `VOLATILE_RANGES` only by the rule in tests/README.md "The stable hash and the RNG", and
 only with the maintainer's approval), or a real divergence.
 
+## The sound (`sound.py`, `sound_replay.c`; M3, docs/SOUND.md section 7)
+```sh
+tests/port/sound.py [--m32] [--sanitize]          # LIBSND on the emulator's timeline: the committed traces (~5 s)
+tests/port/sound.py TRACE                         # any emulator trace (tests/sound/spu_trace.py run SCRIPT --calls)
+tests/port/sound.py port PORT.trace [EMU.trace]   # a port run's trace (dw2003 --spu-trace)
+```
+The port does not reproduce the frames at which the game calls LIBSND (the PS1 drops frames, the CD and the script's
+taps land elsewhere), so its own trace cannot equal the emulator's tick for tick. `sound.py` turns an emulator SPU
+trace (with the `--calls` comments) into a replay script: the game's LIBSND calls, their pointers resolved to the sound
+bank files on the disc, and the emulator's vsyncs at its ticks; `sound_replay` (built with the host gcc from
+`port/psyq/libsnd*.c` and `port/src/spu*.c` into `build/port-sound/`) makes them and must write the emulator's trace:
+every store and DMA block at the same tick. `run.py` runs it once on the committed traces (`tests/sound/expected/`,
+`tests/port/sound/new_game.trace.gz`), then on each script's run: the three builds' SPU traces identical, the run's
+trace equal to the replay of its own calls (once `port/src/audio.c` renders), and for `new_game` the same LIBSND calls
+as the emulator's, with a report of where the two games' frames differ.
+
 ## What it found (session 16)
 - **The overlay copy takes CPU time on the PS1.** The game copies FIELDSTG (0x19000 bytes) into its slot with LIBC2's
   byte-loop `memcpy`, about 1.8 frames, so the emulator samples FIELDSTG's stage with no stage file yet (`(2, -1)` in the

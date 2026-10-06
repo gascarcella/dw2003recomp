@@ -4,7 +4,8 @@
 #include "psyq/libetc.h"
 
 static void (*psyq_vsync_handler)(void);
-static void (*psyq_vsync_hook)(void); /* the port runtime's per-frame work (psyq_set_vsync_hook) */
+static void (*psyq_vsync_hook)(void);
+static void (*psyq_vsync_pre_hook)(void); /* the runtime's work before the game's handler (psyq_set_vsync_pre_hook) */ /* the port runtime's per-frame work (psyq_set_vsync_hook) */
 static int psyq_vsync_count;      /* frames since boot: what VSync(0) returns */
 static int psyq_video_mode = MODE_PAL;
 
@@ -21,6 +22,9 @@ int VSyncCallback(void (*f)(void)) {
 void psyq_vsync_tick(void) {
     psyq_vsync_count++;
     psyq_pad_vsync();
+    if (psyq_vsync_pre_hook != NULL) {
+        psyq_vsync_pre_hook();
+    }
     if (psyq_vsync_handler != NULL) {
         psyq_vsync_handler();
     }
@@ -31,6 +35,10 @@ void psyq_vsync_tick(void) {
 
 void psyq_set_vsync_hook(void (*hook)(void)) {
     psyq_vsync_hook = hook;
+}
+
+void psyq_set_vsync_pre_hook(void (*hook)(void)) {
+    psyq_vsync_pre_hook = hook;
 }
 
 /* The console's reset (psyq.c psyq_reset): no handler, the vsync count from 0, PAL. The runtime's hook stays. */

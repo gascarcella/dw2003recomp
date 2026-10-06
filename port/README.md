@@ -56,7 +56,9 @@ non-PIE in both.
 | `src/reset.c` | The console's reset (the script's `reset` step): `port_reset_request` (longjmp to `main()`), `port_reset_state`, `DW3_PORT_RESET_CHECK` |
 | `src/video.c` | The video output: the display area of the VRAM as 32-bit pixels, `--screenshot`, the SDL3 window (below) |
 | `src/input.c` | The window's input: keyboard and gamepads to the pad, the window's close, `--input-test` (below) |
+| `src/audio.c` | The audio output: the SPU core rendered every vsync, `--wav`, the SDL3 audio device (below) |
 | `src/asmdata.c` | Zero data the PS1 build keeps in asm (FIELDSTG's `.bss` block; weak LIBGS/LIBCD data) |
+| `include/spu.h`, `src/spu.c`, `src/spu_dsp.c`, `src/spu_internal.h` | The SPU core (M3, below): registers, SPU RAM, voices, mix, reverb; the DSP pieces; the internals the tests see |
 | `psyq/` | The Psy-Q shim (its own README) |
 | `../tools/port_gen.py` | The generators CMake runs (never by hand in the normal flow) |
 
@@ -228,6 +230,48 @@ JSON written at exit, with the keys of `tests/replay`'s records (`replay.py` `cr
 (`{frame, stage, file}`), `map_sequence` (`{frame, map}`), and `inputs` (`{frame, buttons: [names]}`, the names
 sorted as run.lua sorts them) once the script has called `port_framelog_input`. The sequences follow run.lua's vsync
 listener: an entry at every change, the first frame always (`{1, 0, 0}`, map 0).
+
+## The SPU core (M3)
+`src/spu.c` and `src/spu_dsp.c` are the PS1's sound chip, our own from psx-spx (docs/SOUND.md section 6 has what is
+modelled, the readings taken where psx-spx is silent, and the checks): the register file by offset from
+`0x1F801C00` (`spu_write16`/`spu_read16`), 512 KB of SPU RAM (`spu_dma_write`, the FIFO), 24 voices (ADPCM, pitch
+with the 4-point interpolation, ADSR, volume sweeps, noise, PMON), the mix with its clamps, the reverb at 22,050 Hz,
+the CD input (`spu_cd_input`) and the capture buffers. `spu_render(out, frames)` renders 44,100 Hz stereo; time moves
+only there (a register write acts between two samples), so the output is a function of the writes and the frame
+counts. `spu_set_write_hook` sees every write and DMA block (the trace writer). Nothing drives it yet (LIBSND is a
+stub); its tests are host-only: `tests/spu/run.sh [--all]` (unit goldens from a Python model of the same psx-spx text,
+`-m64`/`-m32`/sanitizers), `tests/spu/render_trace.py` (the committed `cnty_sel` SPU trace to a WAV, with checks),
+`tests/spu/envelope_oracle.py` and `tests/spu/capture.py` (against PCSX-Redux). 53× real time at `-O2`, 13× at `-O0`.
+
+## Audio (M3: `--wav`, the SDL3 audio device)
+`src/audio.c` renders the SPU core once per vsync (`port_audio_frame`, `pump.c`'s vsync pre-hook: at the start of the
+tick, before the game's VSyncCallback handler, where LIBSND's flush reads the envelopes and writes the SPU): vsync n gets `floor((n + 1) * 44100 / rate) - floor(n * 44100 / rate)` stereo frames
+with `rate` = `--fps` (50 by default: 882 frames a vsync; `--fps 60`: 735, the NTSC patch's 60 ticks a second; `--fps
+0`: 50). So the audio lasts exactly as long as the vsyncs at their nominal pace and its pitch never changes (a PAL game
+paced at 60 plays its music 20 % faster). It renders whether anything listens or not: LIBSND reads the voices'
+envelopes back, so the game must not run differently with or without an output. The samples depend only on the SPU
+writes and the vsync count: two runs give the same bytes.
+```sh
+build/port/dw2003 --disc iso/dw2003.cue --script tests/replay/scripts/new_game.json --wav run.wav   # any build, headless
+build/port-sdl/dw2003 --disc iso/dw2003.cue --window            # sound through SDL3's default device
+build/port-sdl/dw2003 --disc iso/dw2003.cue --window --mute     # no device
+SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=disk SDL_AUDIO_DISK_OUTPUT_FILE=out.raw build/port-sdl/dw2003 --disc iso/dw2003.cue --window --max-frames 3000
+```
+`--wav FILE`: 44,100 Hz, stereo, signed 16-bit little-endian PCM; the header's sizes are written at exit
+(`port_exit`), so the file is `44 + vsyncs × 882 × 4` bytes (every vsync of the run, the last one too). The window's device (unless `--mute`) is an SDL3 audio stream fed the
+same samples. Its clock and the window's pace (`CLOCK_MONOTONIC`, `pump.c`) drift apart; the queue (frames put and
+not yet played, measured before each vsync's put) is held without touching the game's timing or the samples: a moving
+average above the band (target ± one vsync, target = the device's period + two vsyncs: 63 ms ± 20 ms at 1,024 frames)
+speeds the stream's playback up by 0.2 % (`SDL_SetAudioStreamFrequencyRatio`, 3.5 cents) until it is back at the
+target, below the band slows it down as much; an empty queue (the host was late) is refilled with the target's worth
+of silence; above target + three vsyncs (an unthrottled `--fps 0`, a device that stalled) the vsync's samples are
+dropped. The log (stderr) gets the device, the watermarks, and every 10 s and at exit the queue's minimum, maximum and
+mean, the ratio changes, refills and drops. Without a device (none on the host, or SDL fails) the run goes on silent.
+SDL's `disk` driver plays in real time into a file (S16LE stereo at 44,100 Hz) and `dummy` discards: headless tests of
+the path (CI runs the input self-test with `dummy`). Measured (session 16): the WAV of a window run equals the
+headless run's, byte for byte; over 60 s of the game (CNTY_SEL's music, LIBSND) on the `disk` driver the queue stayed
+at 24-85 ms (mean 57) with no refill and no drop, and the disk file holds the WAV's sound ~90 ms later (the same RMS,
+5,198 vs 5,200). `new_game` headless: silent until CNTY_SEL's music at 4.1 s (vsync 207), RMS ~3,000-6,400 a second.
 
 ## Known gaps (M1)
 - Fixed in session 16 (kept here as the record of what the `-m32`/`-m64` log comparison and the sanitizer found):

@@ -1860,3 +1860,39 @@ The user's answers to `docs/PC_PORT_PLAN.md` section 4 (asked item by item; ever
   screen pixels, a 24-bit area spans `w * 3 / 2` VRAM pixels), 4:3, integer-scaled by lines (default 2), real-time pacing
   at 50 Hz only with a window (a window run's log is byte-identical to a headless one's), keyboard and gamepads merged
   into pad 0 (logged like a script's inputs; a script owns the pad when given). `--screenshot FRAME:PATH` works headless.
+
+## 2026-10-06: LIBSND in the port: read the disassembly for facts, write our own code (user decision, session 16)
+Asked in M3 (docs/SOUND.md "Open points": matching the emulator's SPU write traces exactly needs Sony's arithmetic):
+the user chose that an agent **may read the EXE's LIBSND disassembly** (Psy-Q code kept as split asm, never decompiled
+in this project) **to learn constants, tables, the order of operations and formulas**, and **writes original C**: no
+instruction-by-instruction or function-by-function translation, no copied code; numeric tables read there are cited
+where used. `docs/SOUND.md` "Provenance" records what came from the disassembly and what from the traces. Rejected:
+black-box only (cleaner, but trace-exactness unlikely) and the R3000 interpreter fallback (exact, but an interpreter
+inside the port).
+- Also in M3 so far: the SPU-write trace oracle (`tests/sound/`, T11), the SPU core from psx-spx (`port/src/spu*.c`,
+  T13: unit goldens on two independent models, the ADSR against Redux within 2 samples; Redux takes its first release
+  step one period earlier than psx-spx's counter reading: we follow psx-spx), the GPU 2.6x faster with identical pixels
+  (T12: span loops per kind, decoded texel segments invalidated by VRAM write marks, `gpu.c` at `-O3`).
+
+## 2026-10-06: M3: sound (session 16, agents T11, T13-T15)
+- **The oracle is the emulator's SPU write trace** (`tests/sound/spu_trace.py`, T11: write breakpoints on the SPU and DMA4
+  registers under `-debugger -interpreter`, the written value decoded from the storing instruction, DMA blocks by SHA-1,
+  recording from the EXE's entry point because the BIOS shell plays its own boot sound with its own LIBSND). The
+  committed `cnty_sel` trace runs in `scripts/test.sh` (~24 s); per-key goldens (`tests/sound/key_trace.py`, T15: 343 steps
+  driven through oracle calls in CNTY_SEL's frozen main loop, 4 boots because one long boot fails near frame 32,500 for a
+  reason not found; 818 KB xz) are a separate 22-minute run.
+- **LIBSND is checked by replaying the game's calls on the emulator's timeline** (`tests/port/sound.py`): the port's
+  LIBSND, fed the calls (pointers resolved to the disc's banks) at the emulator's vsyncs, produces the emulator's trace
+  store for store (`cnty_sel`, `new_game`, `first_battle_save` to `battle_won`: 214,956 events), at -m64, -m32 and under
+  the sanitizers; the port's own run is checked against the replay of its own calls. A direct port-vs-emulator diff
+  differs only where the game calls LIBSND at other frames (CD timing, the START taps): every difference traced.
+- **The SPU core follows psx-spx** (T13), with two independent models agreeing on 72 golden cases; where Redux differs
+  (its first release step one period earlier; ENVX of a flags-7 block) we keep psx-spx. The port renders 882 samples per
+  PAL vsync, Redux about 877.3: LIBSND's voice reuse can differ when a release ends within a few samples of a flush
+  (new_game tick 1,754 in the replay at 882; exact at 876-880).
+- **The SPU renders before the game's vsync handler, every vsync, headless too** (`psyq_set_vsync_pre_hook`): LIBSND's
+  per-tick flush reads the voices' envelopes, so a frame's samples must exist before it runs (T14's finding: without it a
+  game-side `SsUtAllKeyOff` diverged).
+- **Audio output** (T15): `--wav FILE` (any build) and an SDL3 audio stream in window mode, fed 44100/fps samples per
+  vsync (735 at `--fps 60`: the NTSC patch's tempo); the device queue is held by a +-0.2% frequency ratio, refills and
+  drops, never by changing the game's timing.

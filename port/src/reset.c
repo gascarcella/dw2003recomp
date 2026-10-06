@@ -26,6 +26,7 @@
 #include "port_arena_gen.h"
 #include "port_harness.h"
 #include "port_runtime.h"
+#include "spu.h"
 #include "psyq.h"
 
 jmp_buf port_reset_jmp;
@@ -43,6 +44,7 @@ void port_reset_state(void) {
     port_overlay_reset();
     port_arena_reset();
     psyq_reset();
+    spu_reset(); /* the SPU's registers, voices and RAM (the console's reset clears them) */
     port_pump_reset();
     port_reset_check("reset");
 }

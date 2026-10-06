@@ -332,6 +332,8 @@ screen-level comparison at the other checkpoints listed below waits on matching 
 first field map, field menu, a shop. Exact for 2D screens.
 
 ### M3: Input and sound
+**Done in session 16** (DECISIONS "M3: sound"): input with M2's window; the SPU core and LIBSND, checked against the
+emulator's SPU write traces (on the emulator's timeline: the port's own frames differ at CD loads), `--wav` and SDL3 audio.
 - LIBPAD over SDL3 (gamepad and keyboard, rumble).
 - The SPU core and LIBSND (2.7).
 

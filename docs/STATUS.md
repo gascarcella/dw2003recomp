@@ -7,7 +7,9 @@ menus, training), with the emulator's 25 checkpoints, stage and map sequences an
 ASan/UBSan report, `-m32` identical to `-m64` on `new_game` (the same checkpoints on `first_battle_save`); a software GTE
 checked against the PS1 (`tests/port/run.py`, the `port` layer of `scripts/test.sh`; layer-1 family `gte`). **M2
 done:** a software GPU checked against the emulator (layer-1 family `gpu`, 715 cases; whole VRAM equal at seven points of
-`new_game`) and an SDL3 window with keyboard and gamepad (`setup.sh sdl3`, `-DDW3_PORT_SDL=ON`, `--window`). Code state unchanged: every game file rebuilds byte-identical, 98.6% of game
+`new_game`) and an SDL3 window with keyboard and gamepad (`setup.sh sdl3`, `-DDW3_PORT_SDL=ON`, `--window`). **M3
+sound done:** our SPU core and LIBSND reproduce the emulator's SPU write traces on its timeline; music and effects play
+(`--wav`, SDL3 audio). Code state unchanged: every game file rebuilds byte-identical, 98.6% of game
 code compiles from matching C, 8 holdouts stay asm._
 
 The README's progress table (`tools/progress.py --readme`) has the current numbers per part and per overlay.
@@ -80,6 +82,11 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   -DDW3_PORT_SDL=ON`) `--window [--scale N] [--fullscreen]` shows it at 50 Hz with keyboard and gamepad input
   (`--input-test` checks the mapping). Movies still show nothing (MDEC is M5); no sound (M3); the cards are files (M4 done
   in part: `.mcd` images).
+- **PC port, M3 (session 16; DECISIONS "M3: sound", "LIBSND in the port"):** `port/src/spu*.c` (the SPU from psx-spx),
+  `port/psyq/libsnd*.c` (LIBSND, from the disassembly's facts and the traces), `port/src/audio.c` (`--wav`, the SDL3
+  stream), `--spu-trace`; the oracle `tests/sound/` (`spu_trace.py`, the `cnty_sel` trace in test.sh, `key_trace.py`'s
+  343 per-key goldens); `tests/port/sound.py` (LIBSND replayed on the emulator's timeline). The GPU is 2.6x faster
+  (identical pixels).
 - **CI (session 13):** `.github/workflows/ci.yml` on every push: toolchain, script/Python checks, `check_toolchain.sh`, and
   with the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of `dw2003-gamedata`) `build.sh --check` and
   `scripts/test.sh`; first green run 2026-10-05, ~5 min. Fork pull requests get only the disc-free steps.
@@ -200,9 +207,8 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
    WSTAG function), names-10 (FIELDSTG/WSTAG type fields), names-9 (EXE and CARDGAME fields, EXE data symbols), names-11
    (FIGHTSTG, tier-2, small overlays) and decode-1 (item data, event scripts, card scripts) are done: `unk_` uses
    15,646 → 1,097 (mostly never-read or not yet understood), 12 `func_` names left, no `Unk<addr>` types.
-2. PC port: **M1 and M2 are done** (session 16) and both layer-2 scripts replay in the port. Next: M3 (the SPU and
-   LIBSND, checked against the emulator's SPU register-write traces; SOUNDTST as the driver), a play-test of the window on
-   a desktop (real gamepads, GPU renderers), speeding up the rasteriser (span specialisation), then M5 (MDEC/XA for the
-   movies). Formerly next: **M2** (`docs/PC_PORT_PLAN.md`: the VRAM-exact software GPU, SDL3 via a `setup.sh`
+2. PC port: **M1, M2 and M3 are done** (session 16). Next: a play-test on a desktop (window, gamepads, audio device),
+   the port run of `key_trace.py`'s driver, M4's rest (save round trips in layer 3), M5 (MDEC/XA: the movies), LIBGS's GTE
+   set-up checked like the GTE. Formerly next: **M2** (`docs/PC_PORT_PLAN.md`: the VRAM-exact software GPU, SDL3 via a `setup.sh`
    step, pixel comparison with the emulator).
 3. Holdouts/FAKEs: opportunistic retries with new techniques.

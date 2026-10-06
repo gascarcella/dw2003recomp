@@ -67,6 +67,8 @@ for L in $LAYERS; do
         if command -v gcc >/dev/null; then
             echo "--- host-side replay of the goldens (tests/host)"
             "$PY" "$ROOT/tests/host/replay.py"; ran=$((ran + 1))
+            echo "--- the SPU core's unit goldens (tests/spu, ~2 s)"
+            "$ROOT/tests/spu/run.sh"; ran=$((ran + 1))
         else
             skip "no gcc for the host-side replay (tests/host)"
         fi ;;
@@ -78,6 +80,8 @@ for L in $LAYERS; do
             skip "no disc image (iso/dw2003.cue; scripts/setup.sh disc or gamedata)"
         else
             "$PY" "$ROOT/tests/replay/replay.py" check; ran=$((ran + 1))
+            echo "--- SPU write trace of the boot and CNTY_SEL's music (tests/sound, ~25 s)"
+            "$PY" "$ROOT/tests/sound/spu_trace.py" check
         fi ;;
     3)
         layer 3 "formats and save round trips (tests/formats)"

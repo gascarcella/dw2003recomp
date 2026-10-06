@@ -11,6 +11,8 @@
 #         tables whose entry is a function start inside the overlay's .text; the table equals config/wstag.txt.
 #   flag ranges: tools/flag_census.py --check (reads src/): every flag of a bit-array type (gamestate save data) that
 #         the game's data or code reads or sets has an index inside its array.
+#   sound banks: tests/sound/sound_formats.py --check: the 71 banks' VAB headers, VAB bodies (SPU ADPCM) and SEPs parse
+#         as docs/FORMATS.md "Sound" describes them (sizes, tone records, block flags, 16 sequences per SEP).
 # Save round trips (.mcd files exchanged with the port) are added here once the port writes saves.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -40,5 +42,8 @@ echo "$(grep -vc '^#' <<<"$table") WSTAG overlays, each entry a function start i
 
 echo "--- flag ranges: bit-array flags inside their arrays (tools/flag_census.py --check)"
 "$PY" "$ROOT/tools/flag_census.py" --check
+
+echo "--- sound banks: VAB headers and bodies, SEPs (tests/sound/sound_formats.py --check)"
+"$PY" "$ROOT/tests/sound/sound_formats.py" --check
 
 echo "formats: ok"
