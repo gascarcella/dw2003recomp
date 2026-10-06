@@ -2024,3 +2024,8 @@ stop. The game side (path B: `--config`, the settings reader, the mod runtime) i
   `DW3_CONFIG_DIR`; the launcher keeps every member of `settings.json` it does not know (order included), writes the
   file only when its text changes, keeps an unreadable one as `settings.json.broken`, and never writes a file with a
   newer `schema`.
+- Settled in phases 2-4 (proposed, not objected to): **only what the user changed is written** for bindings
+  (`input.*`) and mod options (`mods.<id>.<option>`), so a default changed in a later game or manifest reaches everyone
+  who never touched it; **Play asks the game** (`--print-settings`) before starting it, and a game without `--config`
+  is reported as too old (the interim translation into old flags existed only until PR #10 landed); the game's binding
+  limits (4 inputs a chord, 8 triggers) are enforced by the launcher; the mods are read from `<game dir>/mods/`.

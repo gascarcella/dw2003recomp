@@ -13,6 +13,7 @@
 #include "game.h"
 #include "input.h"
 #include "json_value.h"
+#include "mods.h"
 #include "paths.h"
 #include "settings.h"
 
@@ -365,6 +366,148 @@ static void test_input(const std::string &root) {
     check(!c.active() && !c.take_done(&t), "Escape cancels");
 }
 
+// ---- the mods
+
+// Path B's manifest (port/mods/fast_forward/mod.json, PR #11) as it was, the plan's example (4.4), one with every
+// option type, and three that cannot be used.
+static const char FAST_FORWARD_MANIFEST[] = R"({
+  "schema": 1,
+  "id": "fast_forward",
+  "name": "Fast-forward",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "Runs the game faster while a key is held, or until it is pressed again. The game itself is unchanged: only the wall clock is faster.",
+  "options": [
+    { "id": "hold", "name": "Hold", "description": "Fast-forward while this is held.", "type": "binding",
+      "default": "Tab", "group": "Controls", "applies": "live" },
+    { "id": "toggle", "name": "Toggle", "description": "Fast-forward on or off.", "type": "binding",
+      "default": "", "group": "Controls", "applies": "live" },
+    { "id": "speed", "name": "Speed", "description": "How fast, as a multiple of the normal speed (50 frames a second, or 60).",
+      "type": "enum", "default": "4x", "applies": "live",
+      "values": [
+        { "id": "2x", "label": "2x" }, { "id": "3x", "label": "3x" }, { "id": "4x", "label": "4x" },
+        { "id": "6x", "label": "6x" }, { "id": "8x", "label": "8x" }, { "id": "unlimited", "label": "Unlimited" }
+      ] },
+    { "id": "mute", "name": "Mute", "description": "No sound while fast-forwarding.", "type": "bool",
+      "default": true, "applies": "live" }
+  ]
+}
+)";
+
+static const char SKIP_DIALOGUES_MANIFEST[] = R"({
+  "schema": 1, "id": "skip_dialogues", "name": "Skip dialogues", "version": "1.0", "kind": "builtin",
+  "description": "Text appears at once and advances by itself. Choices still wait for you.",
+  "options": [
+    { "id": "toggle", "name": "Toggle", "type": "binding", "default": "F2" },
+    { "id": "hold",   "name": "Hold",   "type": "binding", "default": "" },
+    { "id": "fast_forward_waits", "name": "Also fast-forward cutscene waits", "type": "bool", "default": false,
+      "applies": "live" }
+  ]
+}
+)";
+
+static const char EVERY_TYPE_MANIFEST[] = R"({
+  "schema": 1, "id": "every_type", "name": "Every option type", "version": "2.3", "kind": "builtin",
+  "requires_port": 1, "description": "A test manifest: one option of each type.",
+  "options": [
+    { "id": "count", "name": "Count", "type": "int", "min": 1, "max": 9, "default": 3, "group": "Numbers" },
+    { "id": "free", "name": "Unbounded", "type": "int", "step": 5, "default": 10, "group": "Numbers" },
+    { "id": "ratio", "name": "Ratio", "type": "float", "min": 0, "max": 1, "step": 0.05, "default": 0.5,
+      "group": "Numbers", "applies": "restart" },
+    { "id": "mode", "name": "Mode", "type": "enum", "values": [ { "id": "a", "label": "First" }, { "id": "b" } ],
+      "default": "b" },
+    { "id": "flag", "name": "Flag", "type": "bool", "default": true, "description": "A checkbox." },
+    { "id": "chord", "name": "Chord", "type": "binding", "default": [["pad:guide", "pad:south"], "F9"],
+      "group": "Controls" }
+  ]
+}
+)";
+
+static void write_mod(const std::string &mods, const std::string &id, const std::string &text) {
+    path_make_dir(path_join(mods, id), nullptr);
+    write(path_join(path_join(mods, id), "mod.json"), text);
+}
+
+// A game directory with a stand-in game file and the mods above; returns the game's path.
+static std::string make_game_dir(const std::string &root) {
+    const std::string dir = path_join(root, "gamedir"), mods = path_join(dir, "mods");
+    path_make_dir(mods, nullptr);
+    write(path_join(dir, "dw2003"), "");
+    write_mod(mods, "fast_forward", FAST_FORWARD_MANIFEST);
+    write_mod(mods, "skip_dialogues", SKIP_DIALOGUES_MANIFEST);
+    write_mod(mods, "every_type", EVERY_TYPE_MANIFEST);
+    write_mod(mods, "broken", "{ \"schema\": 1, ");
+    write_mod(mods, "elsewhere", R"({"schema": 1, "id": "other", "name": "Wrong id", "kind": "builtin"})");
+    write_mod(mods, "textures", R"({"schema": 1, "id": "textures", "name": "Texture pack", "kind": "data"})");
+    return path_join(dir, "dw2003");
+}
+
+static void test_mods(const std::string &root) {
+    const std::string game = make_game_dir(root);
+    std::vector<ModManifest> mods = mods_scan(path_join(path_dir(game), "mods"));
+    check(mods.size() == 6, "six manifests found: " + std::to_string(mods.size()));
+    auto find = [&](const std::string &id) -> const ModManifest * {
+        for (const ModManifest &m : mods) {
+            if (m.id == id) {
+                return &m;
+            }
+        }
+        return nullptr;
+    };
+    const ModManifest *ff = find("fast_forward"), *every = find("every_type");
+    check(ff != nullptr && ff->error.empty() && ff->options.size() == 4 && ff->requires_port == 1 &&
+              ff->option("speed")->type == ModOption::Type::Enum && ff->option("speed")->values.size() == 6 &&
+              ff->option("hold")->group == "Controls",
+          "path B's fast_forward manifest reads: " + (ff != nullptr ? ff->error : std::string("missing")));
+    check(find("skip_dialogues") != nullptr && find("skip_dialogues")->error.empty(), "the plan's example reads");
+    check(every != nullptr && every->error.empty() && every->option("ratio")->restart &&
+              every->option("ratio")->step == 0.05 && every->option("mode")->values[1].label == "b",
+          "every option type reads: " + (every != nullptr ? every->error : std::string()));
+    check(find("broken") != nullptr && !find("broken")->error.empty(), "a manifest that is not JSON is listed, unusable");
+    check(find("elsewhere") != nullptr && find("elsewhere")->error.find("directory") != std::string::npos,
+          "an id that is not its directory's name");
+    check(find("textures") != nullptr && find("textures")->error.find("built-in") != std::string::npos,
+          "a data mod: not yet");
+    std::string err;
+    check(!mod_manifest_load(path_join(root, "nowhere")).error.empty(), "a missing manifest");
+
+    // The values: only changes written; "enabled" false is the default.
+    Json doc = Json::object();
+    ModValues v(&doc);
+    check(!v.enabled("fast_forward") && v.value(*ff, *ff->option("speed")) == Json::string("4x"), "defaults");
+    v.set_enabled("fast_forward", true);
+    v.set(*ff, *ff->option("speed"), Json::string("8x"));
+    check(doc == Json::parse(R"({"mods": {"fast_forward": {"enabled": true, "speed": "8x"}}})", nullptr),
+          "enabled and a changed option are written: " + doc.dump());
+    v.set(*ff, *ff->option("speed"), Json::string("4x"));
+    check(doc == Json::parse(R"({"mods": {"fast_forward": {"enabled": true}}})", nullptr),
+          "an option set back to its default is removed");
+    v.set(*ff, *ff->option("mute"), Json::boolean(false));
+    v.set_enabled("fast_forward", false);
+    check(doc == Json::parse(R"({"mods": {"fast_forward": {"mute": false, "enabled": false}}})", nullptr),
+          "a mod turned off keeps its options, and says it is off: " + doc.dump());
+    v.reset("fast_forward", "mute");
+    check(doc == Json::object(), "nothing left: the mods object goes");
+    // A value the manifest rejects: reported, the default used; unknown mods and options are kept.
+    doc = Json::parse(R"({"mods": {"fast_forward": {"enabled": true, "speed": "9x", "future": 1}, "other": {"enabled": true}}})",
+                      nullptr);
+    check(v.stored(*ff, *ff->option("speed"), &err) == nullptr && err.find("speed") != std::string::npos &&
+              v.value(*ff, *ff->option("speed")) == Json::string("4x"),
+          "an invalid stored value: the default, and why");
+    v.set(*ff, *ff->option("speed"), Json::string("2x"));
+    check(doc.find("mods")->find("other") != nullptr && doc.find("mods")->find("fast_forward")->find("future") != nullptr,
+          "unknown mods and options are kept");
+    // The option types' checks.
+    const ModOption &count = *every->option("count");
+    check(count.valid(Json::number(9), &err) && !count.valid(Json::number(10), &err) &&
+              !count.valid(Json::number(2.5), &err) && !count.valid(Json::string("3"), &err),
+          "int: whole, in range");
+    check(every->option("chord")->valid(Json::parse(R"([["pad:guide", "pad:south"], "F9"])", nullptr), &err) &&
+              mod_binding(v, *every, *every->option("chord")).size() == 2,
+          "a binding option's default chord");
+}
+
 // ---- the disc check
 
 static DiscCheck::State wait_check(DiscCheck &c) {
@@ -540,9 +683,41 @@ static void test_game(const std::string &root) {
     r.values.gamepad["select"] = {};
     r.values.hotkeys["pause"] = { { "pad:guide", "pad:start" }, { "P" } };
     r.values.hotkeys["fullscreen"] = {};
+    // Every mod beside the game turned on, every option off its default (the game's own checks of mods.<id>).
+    int mods_set = 0;
+    ModValues mv(&r.doc);
+    for (const ModManifest &m : mods_scan(path_join(path_dir(real), "mods"))) {
+        check(m.error.empty(), "the game's manifest " + m.id + ": " + m.error);
+        if (!m.error.empty()) {
+            continue;
+        }
+        mv.set_enabled(m.id, true);
+        for (const ModOption &o : m.options) {
+            Json v;
+            switch (o.type) {
+            case ModOption::Type::Bool:
+                v = Json::boolean(!o.def.as_bool(false));
+                break;
+            case ModOption::Type::Int:
+            case ModOption::Type::Float:
+                v = Json::number(o.has_max ? o.max : o.has_min ? o.min : o.def.as_number(0) + 1);
+                break;
+            case ModOption::Type::Enum:
+                v = Json::string(o.values.back().id == o.def.as_string("") ? o.values.front().id
+                                                                             : o.values.back().id);
+                break;
+            case ModOption::Type::Binding:
+                v = Json::parse(R"([["pad:guide", "pad:north"], "F9"])", nullptr);
+                break;
+            }
+            mv.set(m, o, v);
+            mods_set++;
+        }
+    }
     check(r.save(&err), "the real game's settings: " + err);
     p = game_probe(real, r.path());
     check(p.result == GameProbe::Result::Valid, "the real game accepts the launcher's file: " + p.message);
+    std::fprintf(stderr, "self-test: the real game accepts the file (%d mod options set)\n", mods_set);
     if (r.values.disc_path.empty() || p.result != GameProbe::Result::Valid) {
         return;
     }
@@ -716,6 +891,48 @@ static void test_play(SDL_Window *window, const std::string &root) {
                                                                             app.disc_message());
 }
 
+// The mods screen over the fixtures: a rebind of a mod's key through the prompt, a picture of each kind of page.
+static void test_mods_window(SDL_Window *window, const std::string &root) {
+    const std::string shots = path_join(root, "screens");
+    SettingsDir location;
+    location.dir = path_join(root, "modsui");
+    location.source = DirSource::Argument;
+    AppOptions options;
+    options.game = make_game_dir(path_join(root, "modsui-game"));
+    App app(window, SDL_GetRenderer(window), location, options);
+    check(app.mods().size() == 6 && app.mods_dir() == path_join(path_dir(options.game), "mods"),
+          "the launcher finds the mods beside the game");
+    app.set_screen(Screen::Mods);
+    app.select_mod("fast_forward");
+    pump(app, 3);
+    std::string png = path_join(shots, "10-Mods-fast_forward.png");
+    app.frame(png.c_str());
+    // Toggle gets X through the prompt: the file has it, and X is marked (Cross uses it).
+    app.capture_for_mod("fast_forward", "toggle");
+    pump(app, 1);
+    push_key(window, SDL_SCANCODE_X, SDL_KMOD_NONE, true);
+    pump(app, 1);
+    push_key(window, SDL_SCANCODE_X, SDL_KMOD_NONE, false);
+    pump(app, 3);
+    Json written = Json::parse(read(path_join(location.dir, SETTINGS_FILE)), nullptr);
+    const Json *ff = written.find("mods") != nullptr ? written.find("mods")->find("fast_forward") : nullptr;
+    check(ff != nullptr && ff->find("toggle") != nullptr && *ff->find("toggle") == Json::string("X") &&
+              ff->find("enabled") == nullptr,
+          "a mod's binding through the prompt is saved (and the mod stays off)");
+    pump(app, 2);
+    png = path_join(shots, "11-Mods-binding-conflict.png");
+    app.frame(png.c_str());
+    app.select_mod("every_type");
+    pump(app, 3);
+    png = path_join(shots, "12-Mods-every-type.png");
+    app.frame(png.c_str());
+    app.select_mod("broken");
+    pump(app, 3);
+    png = path_join(shots, "13-Mods-broken.png");
+    app.frame(png.c_str());
+    check(app.last_error().empty(), "no error in the status bar: " + app.last_error());
+}
+
 static void test_window(const std::string &root) {
     SDL_Window *window = nullptr;
     SDL_Renderer *renderer = nullptr;
@@ -807,6 +1024,7 @@ static void test_window(const std::string &root) {
         check(app.last_error().empty(), "no error in the status bar: " + app.last_error());
     }
     test_play(window, root);
+    test_mods_window(window, root);
     gui_close(window, renderer);
 }
 
@@ -832,6 +1050,7 @@ bool self_test_run(const std::string &dir) {
     test_lookup(path_join(root, "lookup"));
     test_settings_file(path_join(root, "files"));
     test_input(path_join(root, "controls"));
+    test_mods(path_join(root, "mods"));
     test_disc(path_join(root, "disc"));
     test_game(path_join(root, "game"));
     test_window(root);

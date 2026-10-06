@@ -4,10 +4,11 @@
 behind it are in `docs/LAUNCHER_MODS_PLAN.md` (sections 4.1-4.4 are the contract with the game; 4.6 is this program)
 and DECISIONS "Launcher and mods (session 18)". It is C++17 with Dear ImGui on SDL3 + `SDL_Renderer`; the game stays C.
 
-**Status (phase 3 of 4):** the window and its navigation, the settings directory, reading and writing
-`settings.json`, the disc screen (file dialog, drag-and-drop, typed path, the SHA-1 check), the play button (the game's
-exit status and last lines on an error), the settings screen (video, 50/60 Hz, audio, memory cards), the controls
-screen (keyboard, gamepad, hotkeys), the self-test. The mods screen follows.
+**Status (all four phases of the plan's section 7, phase 3, on Linux):** the window and its navigation, the settings
+directory, reading and writing `settings.json`, the disc screen (file dialog, drag-and-drop, typed path, the SHA-1
+check), the play button (the game's exit status and last lines on an error), the settings screen (video, 50/60 Hz,
+audio, memory cards), the controls screen (keyboard, gamepad, hotkeys), the mods screen (each mod's page generated from
+its `mod.json`), the self-test. Windows comes later (the plan's section 6); the code uses SDL's calls, not POSIX.
 
 ## Build
 
@@ -106,6 +107,23 @@ events before ImGui, and gamepad navigation pauses until the gamepad is released
 not also click a button. An input used by two buttons (or a button and a single-input hotkey) is marked, with a
 tooltip naming the other use. A mod's own bindings are its options (phase 4).
 
+## Mods (plan 4.4)
+
+The launcher lists the manifests beside the game, `<game dir>/mods/<id>/mod.json` (the port's CMake copies
+`port/mods/` there), sorted by name. Each mod has an on/off switch and a page generated from its manifest: its name,
+version and description, then its options, the ungrouped ones first and then each `group` under its title. One widget
+per type: `bool` a checkbox; `int` and `float` a slider between `min` and `max` (a number field with `step` when
+either is missing; floats are rounded to `step`); `enum` a list of the values' labels; `binding` the chips and the
+prompt of the hotkeys (any key, gamepad input or chord). An option's `description` is its tooltip; `applies: restart`
+is marked. A manifest that cannot be used (not JSON, another schema, an `id` that is not its directory's name, a bad
+option, a `kind` other than `builtin` until data mods exist) is listed with the reason and cannot be switched on.
+
+In `settings.json` (`mods.<id>`, the plan's 4.3): `"enabled": true` when on; an option is written only when it differs
+from the manifest's default (setting it back, or **Default**, removes it); a mod turned off keeps its changed options
+with `"enabled": false`; a mod with nothing left is removed, and so is an empty `mods`. Unknown mods and options are
+kept. A stored value the manifest rejects is reported on the mod's page, and its default shown. The mods' bindings
+take part in the conflict marks (a key both on a PS1 button and a mod's hold, say).
+
 ## Keys
 
 The mouse, the keyboard (arrows, Space/Enter, Escape) and a gamepad (ImGui's navigation) all work. Ctrl+PageDown /
@@ -125,12 +143,15 @@ and the SHA-1 check, the launch path
 with **the launcher itself as the game's stand-in** (`DW3_LAUNCHER_FAKE_GAME=mode`: a game with and without
 `--config`, one that rejects the file, one that crashes, one that fails after 250 lines), then opens the window, walks
 every screen with injected key events and a virtual gamepad, plays with the stand-in (a file of the BIN's size stands
-for the verified disc), rebinds a key through the prompt and checks the file, drops a wrong file on the window, and saves a picture of each screen in
+for the verified disc), rebinds a key through the prompt and checks the file, drops a wrong file on the window, renders the mods screen over test manifests (path B's `fast_forward`, the plan's
+example, one with every option type, three unusable ones) and rebinds a mod's key through the prompt, and saves a picture of each screen in
 `DIR/launcher-self-test/screens/`.
 
 Optional, with the data: `DW3_SELFTEST_DISC=iso/dw2003.cue` also checks the real disc;
 `DW3_SELFTEST_GAME=build/port-sdl/dw2003` also probes the real game and, with the disc, runs it 300 frames from the
-launcher's command (offscreen, unthrottled), which must end with status 0 and the disc checked. CI runs both in its
+launcher's command (offscreen, unthrottled), which must end with status 0 and the disc checked. The file it probes has
+rebinds, a chord, an unbound hotkey and every mod beside that game switched on with every option changed: the game's
+own parser must accept it. CI runs both in its
 data-gated part.
 
 ## Files
@@ -144,5 +165,6 @@ data-gated part.
 | `src/disc.cpp`, `disc.h` | The `.cue` reader and the SHA-1 check on a thread |
 | `src/game.cpp`, `game.h` | Finding the game, its `--print-settings` probe, the command, the running game |
 | `src/input.cpp`, `input.h` | The PS1 buttons, the game's default bindings, the binding grammar, the input prompt |
+| `src/mods.cpp`, `mods.h` | The manifests (reading, checking), the user's values in `mods.<id>` |
 | `src/paths.cpp`, `paths.h` | Paths and files through SDL's calls only (no POSIX: Windows comes later) |
 | `src/selftest.cpp`, `selftest.h` | The self-test |

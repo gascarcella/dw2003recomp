@@ -5,6 +5,7 @@
 #include "imgui_impl_sdlrenderer3.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 
 #include "paths.h"
@@ -94,6 +95,7 @@ static void gui_style(float scale) {
     c[ImGuiCol_HeaderHovered] = rgb(ACCENT, 0.32f);
     c[ImGuiCol_HeaderActive] = rgb(ACCENT, 0.45f);
     c[ImGuiCol_CheckMark] = rgb(ACCENT);
+    c[ImGuiCol_CheckboxSelectedBg] = rgb(ACCENT, 0.22f);
     c[ImGuiCol_SliderGrab] = rgb(ACCENT, 0.85f);
     c[ImGuiCol_SliderGrabActive] = rgb(ACCENT);
     c[ImGuiCol_Separator] = rgb(0x2E333D);
@@ -197,6 +199,14 @@ App::App(SDL_Window *window, SDL_Renderer *renderer, const SettingsDir &location
     }
     game_ = game_find(options.game, exe_dir, &game_tried_);
     echo_game_ = options.echo_game;
+    // The mods are installed beside the game (mods/<id>/mod.json; port/CMakeLists.txt copies them there).
+    if (!game_.empty()) {
+        mods_dir_ = path_join(path_dir(game_), "mods");
+        mods_ = mods_scan(mods_dir_);
+        if (!mods_.empty()) {
+            mod_selected_ = mods_[0].id;
+        }
+    }
     SDL_strlcpy(disc_input_, settings_.values.disc_path.c_str(), sizeof(disc_input_));
     // First run, or the disc went away: start on the disc screen (LAUNCHER_MODS_PLAN 1). A disc set by hand (no
     // verified SHA-1, or its size changed) is checked right away.
@@ -533,7 +543,7 @@ void App::draw() {
         draw_controls();
         break;
     case Screen::Mods:
-        draw_placeholder("The mods with their switches and each mod's options (phase 4).");
+        draw_mods();
         break;
     case Screen::Count:
         break;
@@ -842,6 +852,264 @@ void App::draw_settings() {
     }
 }
 
+// ---- the mods
+
+const ModManifest *App::find_mod(const std::string &id) const {
+    for (const ModManifest &m : mods_) {
+        if (m.id == id) {
+            return &m;
+        }
+    }
+    return nullptr;
+}
+
+void App::select_mod(const std::string &id) {
+    mod_selected_ = id;
+}
+
+void App::capture_for_mod(const std::string &mod, const std::string &option) {
+    const ModManifest *m = find_mod(mod);
+    const ModOption *o = m != nullptr ? m->option(option) : nullptr;
+    if (o == nullptr || o->type != ModOption::Type::Binding) {
+        return;
+    }
+    begin_capture(InputCapture::Kind::Binding, 3, mod, m->name + ": " + o->name);
+    capture_option_ = option;
+}
+
+void App::draw_mods() {
+    if (mods_.empty()) {
+        ImGui::TextWrapped("%s", game_.empty() ? "The game was not found, so neither were its mods (the Play screen "
+                                                 "says where the launcher looked)."
+                                               : ("No mods were found in " + mods_dir_ + ".").c_str());
+        return;
+    }
+    ModValues values(&settings_.doc);
+    const float list_w = 230 * ImGui::GetStyle().FontScaleDpi;
+    ImGui::BeginChild("modlist", ImVec2(list_w, 0), ImGuiChildFlags_Borders);
+    ImGui::BeginDisabled(!settings_.writable());
+    for (const ModManifest &m : mods_) {
+        ImGui::PushID(m.id.c_str());
+        bool on = values.enabled(m.id);
+        ImGui::BeginDisabled(!m.error.empty());
+        if (ImGui::Checkbox("##on", &on)) {
+            values.set_enabled(m.id, on);
+            dirty_ = true;
+        }
+        ImGui::SetItemTooltip(on ? "On: the game starts with this mod" : "Off");
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        if (ImGui::Selectable(m.name.c_str(), mod_selected_ == m.id)) {
+            mod_selected_ = m.id;
+        }
+        if (!m.error.empty()) {
+            ImGui::SameLine();
+            ImGui::TextColored(rgb(ERROR_RED), "!");
+        }
+        ImGui::PopID();
+    }
+    ImGui::EndDisabled();
+    ImGui::EndChild();
+    ImGui::SameLine();
+    ImGui::BeginChild("mod", ImVec2(0, 0));
+    if (const ModManifest *m = find_mod(mod_selected_)) {
+        draw_mod(*m);
+    }
+    ImGui::EndChild();
+    draw_capture_popup();
+}
+
+void App::draw_mod(const ModManifest &m) {
+    ModValues values(&settings_.doc);
+    ImGui::PushFont(nullptr, ImGui::GetStyle().FontSizeBase * 1.2f);
+    ImGui::TextUnformatted(m.name.c_str());
+    ImGui::PopFont();
+    ImGui::SameLine();
+    ImGui::TextDisabled("%s%s", m.version.empty() ? "" : "v", m.version.c_str());
+    if (!m.description.empty()) {
+        ImGui::TextWrapped("%s", m.description.c_str());
+    }
+    if (!m.error.empty()) {
+        ImGui::PushStyleColor(ImGuiCol_Text, rgb(ERROR_RED));
+        ImGui::TextWrapped("This mod cannot be used: %s", m.error.c_str());
+        ImGui::PopStyleColor();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+        ImGui::TextWrapped("%s", path_join(m.dir, "mod.json").c_str());
+        ImGui::PopStyleColor();
+        return;
+    }
+    bool on = values.enabled(m.id);
+    ImGui::BeginDisabled(!settings_.writable());
+    if (ImGui::Checkbox("Enabled", &on)) {
+        values.set_enabled(m.id, on);
+        dirty_ = true;
+    }
+    ImGui::EndDisabled();
+    if (m.options.empty()) {
+        return;
+    }
+    // The options: the ungrouped ones first, then each group in the order the manifest names it.
+    std::vector<std::string> groups = { "" };
+    for (const ModOption &o : m.options) {
+        if (std::find(groups.begin(), groups.end(), o.group) == groups.end()) {
+            groups.push_back(o.group);
+        }
+    }
+    const std::vector<BindingUse> uses = binding_uses();
+    ImGui::BeginDisabled(!settings_.writable());
+    for (const std::string &g : groups) {
+        bool any = false;
+        for (const ModOption &o : m.options) {
+            any |= o.group == g;
+        }
+        if (!any) {
+            continue;
+        }
+        ImGui::Spacing();
+        if (!g.empty()) {
+            ImGui::SeparatorText(g.c_str());
+        } else {
+            ImGui::Separator();
+        }
+        if (!ImGui::BeginTable(("opts" + g).c_str(), 3, ImGuiTableFlags_SizingFixedFit)) {
+            continue;
+        }
+        ImGui::TableSetupColumn("name", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("default", ImGuiTableColumnFlags_WidthFixed);
+        for (const ModOption &o : m.options) {
+            if (o.group == g && draw_mod_option(m, o, values, uses)) {
+                dirty_ = true;
+            }
+        }
+        ImGui::EndTable();
+    }
+    ImGui::EndDisabled();
+    // Values in the file that the manifest rejects (a hand edit, an older manifest): said once, the default shown.
+    for (const ModOption &o : m.options) {
+        std::string err;
+        if (values.stored(m, o, &err) == nullptr && !err.empty()) {
+            ImGui::PushStyleColor(ImGuiCol_Text, rgb(ERROR_RED));
+            ImGui::TextWrapped("%s", err.c_str());
+            ImGui::PopStyleColor();
+        }
+    }
+    if (m.requires_port > 0) {
+        ImGui::Spacing();
+        ImGui::TextDisabled("Built into the game (mod interface %d).", m.requires_port);
+    }
+}
+
+bool App::draw_mod_option(const ModManifest &m, const ModOption &o, ModValues &values,
+                          const std::vector<BindingUse> &uses) {
+    bool changed = false;
+    ImGui::PushID(o.id.c_str());
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted(o.name.c_str());
+    if (!o.description.empty()) {
+        ImGui::SetItemTooltip("%s", o.description.c_str());
+    }
+    if (o.restart) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("(restart)");
+        ImGui::SetItemTooltip("Changing it in the game takes effect at the next start");
+    }
+    ImGui::TableNextColumn();
+    const Json v = values.value(m, o);
+    const float w = 260 * ImGui::GetStyle().FontScaleDpi;
+    switch (o.type) {
+    case ModOption::Type::Bool: {
+        bool b = v.as_bool(false);
+        if (ImGui::Checkbox("##v", &b)) {
+            values.set(m, o, Json::boolean(b));
+            changed = true;
+        }
+        break;
+    }
+    case ModOption::Type::Int: {
+        int x = (int)v.as_number(0);
+        ImGui::SetNextItemWidth(w);
+        bool edited = o.has_min && o.has_max
+                          ? ImGui::SliderInt("##v", &x, (int)o.min, (int)o.max, "%d", ImGuiSliderFlags_AlwaysClamp)
+                          : ImGui::InputInt("##v", &x, o.step > 0 ? (int)o.step : 1);
+        if (edited) {
+            if (o.has_min && x < o.min) {
+                x = (int)o.min;
+            }
+            if (o.has_max && x > o.max) {
+                x = (int)o.max;
+            }
+            values.set(m, o, Json::number(x));
+            changed = true;
+        }
+        break;
+    }
+    case ModOption::Type::Float: {
+        float x = (float)v.as_number(0);
+        ImGui::SetNextItemWidth(w);
+        const char *fmt = o.step >= 1 ? "%.0f" : o.step >= 0.1 ? "%.1f" : o.step >= 0.01 ? "%.2f" : "%.3f";
+        bool edited = o.has_min && o.has_max
+                          ? ImGui::SliderFloat("##v", &x, (float)o.min, (float)o.max, fmt, ImGuiSliderFlags_AlwaysClamp)
+                          : ImGui::InputFloat("##v", &x, (float)o.step, (float)o.step * 10, fmt);
+        if (edited) {
+            double d = x;
+            if (o.step > 0) {
+                d = (o.has_min ? o.min : 0) + std::round((d - (o.has_min ? o.min : 0)) / o.step) * o.step;
+            }
+            if (o.has_min && d < o.min) {
+                d = o.min;
+            }
+            if (o.has_max && d > o.max) {
+                d = o.max;
+            }
+            values.set(m, o, Json::number(d));
+            changed = true;
+        }
+        break;
+    }
+    case ModOption::Type::Enum: {
+        const std::string cur = v.as_string("");
+        std::string label = cur;
+        for (const ModOption::Value &e : o.values) {
+            if (e.id == cur) {
+                label = e.label;
+            }
+        }
+        ImGui::SetNextItemWidth(w);
+        if (ImGui::BeginCombo("##v", label.c_str())) {
+            for (const ModOption::Value &e : o.values) {
+                if (ImGui::Selectable(e.label.c_str(), e.id == cur)) {
+                    values.set(m, o, Json::string(e.id));
+                    changed = true;
+                }
+            }
+            ImGui::EndCombo();
+        }
+        break;
+    }
+    case ModOption::Type::Binding: {
+        Binding b = mod_binding(values, m, o);
+        if (binding_editor("mod:" + m.id + "." + o.id, &b, uses)) {
+            values.set(m, o, binding_to_json(b));
+            changed = true;
+        }
+        if (want_capture_) {
+            capture_for_mod(m.id, o.id);
+        }
+        break;
+    }
+    }
+    ImGui::TableNextColumn();
+    if (values.is_set(m.id, o.id) && ImGui::SmallButton("Default")) {
+        values.reset(m.id, o.id);
+        changed = true;
+    }
+    ImGui::PopID();
+    return changed;
+}
+
 // ---- the controls
 
 void App::capture_for(int section, const std::string &id) {
@@ -876,7 +1144,19 @@ void App::finish_capture() {
         return;
     }
     Settings &s = settings_.values;
-    if (capture_section_ == 2) {
+    if (capture_section_ == 3) {
+        const ModManifest *m = find_mod(capture_id_);
+        const ModOption *o = m != nullptr ? m->option(capture_option_) : nullptr;
+        if (o == nullptr) {
+            return;
+        }
+        ModValues values(&settings_.doc);
+        Binding b = mod_binding(values, *m, *o);
+        if (std::find(b.begin(), b.end(), t) == b.end() && b.size() < BINDING_MAX_TRIGGERS) {
+            b.push_back(t);
+        }
+        values.set(*m, *o, binding_to_json(b));
+    } else if (capture_section_ == 2) {
         Binding b = s.hotkey_for(capture_id_);
         if (std::find(b.begin(), b.end(), t) == b.end()) {
             b.push_back(t);
@@ -892,8 +1172,31 @@ void App::finish_capture() {
     dirty_ = true;
 }
 
-// The other buttons (or hotkeys) using `input`, for the conflict marks.
-static std::string uses_of(const Settings &s, bool pad, const std::string &input, const std::string &except) {
+// Everything bound to a binding (the hotkeys, the mods' binding options), for the conflict marks.
+std::vector<App::BindingUse> App::binding_uses() const {
+    std::vector<BindingUse> uses;
+    const Settings &s = settings_.values;
+    for (const HotkeyAction &a : hotkey_actions()) {
+        uses.push_back({ std::string("hotkey:") + a.id, std::string("the hotkey ") + a.label, s.hotkey_for(a.id) });
+    }
+    ModValues values(const_cast<Json *>(&settings_.doc));
+    for (const ModManifest &m : mods_) {
+        if (!m.error.empty()) {
+            continue;
+        }
+        for (const ModOption &o : m.options) {
+            if (o.type == ModOption::Type::Binding) {
+                uses.push_back({ "mod:" + m.id + "." + o.id, m.name + ": " + o.name, mod_binding(values, m, o) });
+            }
+        }
+    }
+    return uses;
+}
+
+// The other buttons and bindings using `input` (a key name, or a gamepad name with `pad`), except `except` (a button
+// id, or a BindingUse key).
+static std::string uses_of(const Settings &s, const std::vector<App::BindingUse> &uses, bool pad,
+                           const std::string &input, const std::string &except) {
     std::string out;
     for (const PadButton &b : pad_buttons()) {
         std::vector<std::string> names = pad ? s.pad_for(b.id) : s.keys_for(b.id);
@@ -902,10 +1205,11 @@ static std::string uses_of(const Settings &s, bool pad, const std::string &input
         }
     }
     const std::string full = pad ? "pad:" + input : input;
-    for (const HotkeyAction &a : hotkey_actions()) {
-        for (const Trigger &t : s.hotkey_for(a.id)) {
-            if (a.id != except && t.size() == 1 && t[0] == full) {
-                out += (out.empty() ? "" : ", ") + std::string("the hotkey ") + a.label;
+    for (const App::BindingUse &u : uses) {
+        for (const Trigger &t : u.binding) {
+            if (u.key != except && t.size() == 1 && t[0] == full) {
+                out += (out.empty() ? "" : ", ") + u.label;
+                break;
             }
         }
     }
@@ -967,6 +1271,7 @@ void App::draw_names_table(bool pad) {
     if (!ImGui::BeginTable(pad ? "pad" : "keys", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit)) {
         return;
     }
+    const std::vector<BindingUse> uses = binding_uses();
     ImGui::TableSetupColumn("Button", ImGuiTableColumnFlags_WidthFixed);
     ImGui::TableSetupColumn("Inputs", ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableSetupColumn("Default", ImGuiTableColumnFlags_WidthFixed);
@@ -980,7 +1285,7 @@ void App::draw_names_table(bool pad) {
         std::vector<std::string> names = pad ? s.pad_for(b.id) : s.keys_for(b.id);
         for (size_t i = 0; i < names.size(); i++) {
             const std::string label = pad ? pad_input_label(names[i]) : names[i];
-            if (chip(label, uses_of(s, pad, names[i], b.id), std::to_string(i).c_str())) {
+            if (chip(label, uses_of(s, uses, pad, names[i], b.id), std::to_string(i).c_str())) {
                 names.erase(names.begin() + (long)i);
                 map[b.id] = names;
                 dirty_ = true;
@@ -1007,6 +1312,35 @@ void App::draw_names_table(bool pad) {
     ImGui::EndTable();
 }
 
+bool App::binding_editor(const std::string &key, Binding *b, const std::vector<BindingUse> &uses) {
+    const Settings &s = settings_.values;
+    bool changed = false;
+    want_capture_ = false;
+    for (size_t i = 0; i < b->size(); i++) {
+        std::string conflict;
+        if ((*b)[i].size() == 1) {
+            const std::string &in = (*b)[i][0];
+            bool pad = in.compare(0, 4, "pad:") == 0;
+            conflict = uses_of(s, uses, pad, pad ? in.substr(4) : in, key);
+        }
+        if (chip(binding_label({ (*b)[i] }), conflict, std::to_string(i).c_str())) {
+            b->erase(b->begin() + (long)i);
+            changed = true;
+            break;
+        }
+    }
+    if (b->empty()) {
+        ImGui::TextDisabled("unbound");
+        ImGui::SameLine();
+    }
+    ImGui::BeginDisabled(b->size() >= BINDING_MAX_TRIGGERS);
+    want_capture_ = ImGui::SmallButton("+");
+    ImGui::EndDisabled();
+    ImGui::SetItemTooltip("Add a key, a gamepad input or a chord (up to %d inputs held together)",
+                          (int)CHORD_MAX_INPUTS);
+    return changed;
+}
+
 void App::draw_hotkeys() {
     Settings &s = settings_.values;
     ImGui::TextWrapped("The port's own actions. A hotkey never reaches the game's pad. A chord: hold its inputs "
@@ -1014,6 +1348,7 @@ void App::draw_hotkeys() {
     if (!ImGui::BeginTable("hotkeys", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit)) {
         return;
     }
+    const std::vector<BindingUse> uses = binding_uses();
     ImGui::TableSetupColumn("Action", ImGuiTableColumnFlags_WidthFixed);
     ImGui::TableSetupColumn("Binding", ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableSetupColumn("Default", ImGuiTableColumnFlags_WidthFixed);
@@ -1026,31 +1361,13 @@ void App::draw_hotkeys() {
         ImGui::SetItemTooltip("%s", a.description);
         ImGui::TableNextColumn();
         Binding b = s.hotkey_for(a.id);
-        for (size_t i = 0; i < b.size(); i++) {
-            std::string conflict;
-            if (b[i].size() == 1) {
-                const std::string &in = b[i][0];
-                bool pad = in.compare(0, 4, "pad:") == 0;
-                conflict = uses_of(s, pad, pad ? in.substr(4) : in, a.id);
-            }
-            if (chip(binding_label({ b[i] }), conflict, std::to_string(i).c_str())) {
-                b.erase(b.begin() + (long)i);
-                s.hotkeys[a.id] = b;
-                dirty_ = true;
-                break;
-            }
+        if (binding_editor(std::string("hotkey:") + a.id, &b, uses)) {
+            s.hotkeys[a.id] = b;
+            dirty_ = true;
         }
-        if (b.empty()) {
-            ImGui::TextDisabled("unbound");
-            ImGui::SameLine();
-        }
-        ImGui::BeginDisabled(b.size() >= BINDING_MAX_TRIGGERS);
-        if (ImGui::SmallButton("+")) {
+        if (want_capture_) {
             capture_for(2, a.id);
         }
-        ImGui::EndDisabled();
-        ImGui::SetItemTooltip("Add a key, a gamepad input or a chord (up to %d inputs held together)",
-                              (int)CHORD_MAX_INPUTS);
         ImGui::TableNextColumn();
         if (s.hotkeys.count(a.id) != 0) {
             if (ImGui::SmallButton("Default")) {
@@ -1076,6 +1393,7 @@ void App::draw_capture_popup() {
         ImGui::CloseCurrentPopup();
     }
     const char *what = capture_section_ == 0   ? "a key"
+                       : capture_section_ == 3 ? "a key, a gamepad input, or several together (a chord)"
                        : capture_section_ == 1 ? "a gamepad button, trigger or stick direction"
                                                : "a key, a gamepad input, or several together (a chord)";
     ImGui::Text("%s: press %s.", capture_label_.c_str(), what);
@@ -1088,10 +1406,6 @@ void App::draw_capture_popup() {
         ImGui::CloseCurrentPopup();
     }
     ImGui::EndPopup();
-}
-
-void App::draw_placeholder(const char *what) {
-    ImGui::TextDisabled("%s", what);
 }
 
 } // namespace dw3

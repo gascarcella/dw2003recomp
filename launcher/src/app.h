@@ -10,6 +10,7 @@
 
 #include "disc.h"
 #include "game.h"
+#include "mods.h"
 #include "settings.h"
 
 namespace dw3 {
@@ -37,6 +38,13 @@ struct AppOptions {
 
 class App {
 public:
+    // A binding somewhere in the settings (a hotkey, a mod's binding option): the conflict marks look at all of them.
+    struct BindingUse {
+        std::string key;   // "hotkey:<action>", "mod:<mod>.<option>"
+        std::string label; // "the hotkey Pause", "Fast-forward: Hold"
+        Binding binding;
+    };
+
     App(SDL_Window *window, SDL_Renderer *renderer, const SettingsDir &location, const AppOptions &options = {});
 
     // Every SDL event goes through here (ImGui's backend first).
@@ -68,6 +76,11 @@ public:
     // The controls' prompt (the self-test drives it with events).
     InputCapture &capture() { return capture_; }
     void capture_for(int section, const std::string &id); // 0 keyboard, 1 gamepad (button ids), 2 hotkeys (actions)
+    void capture_for_mod(const std::string &mod, const std::string &option);
+    // The mods found beside the game.
+    const std::vector<ModManifest> &mods() const { return mods_; }
+    const std::string &mods_dir() const { return mods_dir_; }
+    void select_mod(const std::string &id);
 
 private:
     void draw();
@@ -76,11 +89,18 @@ private:
     void draw_play();
     void draw_disc();
     void draw_settings();
-    void draw_placeholder(const char *what);
     void draw_controls();
     void draw_names_table(bool pad);
     void draw_hotkeys();
     void draw_capture_popup();
+    void draw_mods();
+    void draw_mod(const ModManifest &m);
+    bool draw_mod_option(const ModManifest &m, const ModOption &o, ModValues &values,
+                         const std::vector<BindingUse> &uses);
+    std::vector<BindingUse> binding_uses() const;
+    // A binding's chips (x removes one) and its + button (want_capture_ set when pressed). True when changed.
+    bool binding_editor(const std::string &key, Binding *b, const std::vector<BindingUse> &uses);
+    const ModManifest *find_mod(const std::string &id) const;
     void begin_capture(InputCapture::Kind kind, int section, const std::string &id, const std::string &label);
     void finish_capture();
     void draw_play_error();
@@ -114,6 +134,13 @@ private:
     std::string capture_id_, capture_label_;
     bool capture_popup_ = false;  // the prompt is to be opened this frame
     bool pad_nav_hold_ = false;   // a gamepad press just went to a capture: no gamepad navigation until released
+    bool want_capture_ = false;   // binding_editor's + was pressed
+    std::string capture_option_;  // section 3 (a mod's binding option): capture_id_ is the mod
+
+    // The mods: the manifests beside the game, the one shown.
+    std::string mods_dir_;
+    std::vector<ModManifest> mods_;
+    std::string mod_selected_;
 
     // The game.
     std::string game_;                    // its executable ("" = not found)
