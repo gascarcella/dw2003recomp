@@ -5,8 +5,9 @@ one 64-bit host binary (`docs/PC_PORT_PLAN.md`; DECISIONS "PC port decisions (se
 (`configure.py`, `build.ninja`) is untouched: the hooks in `include/port.h` expand to the original code without
 `PC_PORT`, and `scripts/build.sh` proves the EXE and the overlays byte-identical.
 
-**M1 skeleton (this state):** headless, no rendering, no sound, no disc. `build/port/dw2003` runs the game's `main()`
-against the shim's stubs and ends at a frame cap.
+**M1 (this state, session 16):** headless, no rendering, no sound. `build/port/dw2003 --disc iso/dw2003.cue` reads
+the user's disc (SHA-1 checked), and `--script` replays a layer-2 pad script (`tests/replay/scripts/*.json`) with a
+per-frame log and a record that `tests/port/` compares with the emulator's (`tests/port/README.md`).
 
 ## Build and run
 ```sh
@@ -15,6 +16,8 @@ cmake --build build/port                  # ~30 s from scratch with -j6
 build/port/dw2003 --max-frames 60         # exit 0 at the frame cap; 3 from port_unimplemented; 2 PLATFORM_HALT; 4 watchdog
 build/port/dw2003 --trace                 # every tick, overlay load/resolve and stub call, to stderr
 build/port/dw2003 --max-frames 600 --log run.log --record run.json   # the per-frame log and the record (below)
+build/port/dw2003 --disc iso/dw2003.cue --script tests/replay/scripts/new_game.json --log run.log --record run.json
+build/port/dw2003 --help                  # every option (--cd-speed instant|realistic, --no-disc-check, ...)
 ```
 Options: `-DDW3_PORT_SANITIZE=ON` (`-fsanitize=address,undefined`; needs libasan/libubsan installed),
 `-DDW3_PORT_M32=ON` (a 32-bit binary: `-m32` on every compile and link; needs gcc-multilib),
@@ -136,22 +139,18 @@ JSON written at exit, with the keys of `tests/replay`'s records (`replay.py` `cr
 sorted as run.lua sorts them) once the script has called `port_framelog_input`. The sequences follow run.lua's vsync
 listener: an entry at every change, the first frame always (`{1, 0, 0}`, map 0).
 
-## Known gaps (M1 skeleton)
-- **The 64-bit build loses the stage's root object** (found by the `-m32`/`-m64` log comparison, session 16):
-  `overlay_run_object` (`src/main/overlay.c`) stores the overlay entry's result, an `Object *`, through `s32 *result`
-  into a children block of `sizeof(s32)` bytes (`overlay_create_object`; `OVERLAY_ENTRY` is `s32 (*)(void)` in
-  `include/port.h`), so at -m64 the pointer is truncated and `child_count` is 4 / 8 = 0: CNTY_SEL's root object never
-  runs. CNTY_SEL's own root has the same pattern (`object_new(cnty_sel_update_root, sizeof(Object), 4)` holding a
-  `CntySelMenu *`). The `-m32` build runs them and draws CNTY_SEL (142 primitives a frame); with both blocks sized
-  `sizeof(void *)` and the entry called as returning `void *` (an uncommitted experiment), the two builds' logs are
-  identical over 1000 frames with the disc.
-- No disc: the shim's reads end with no data (the game retries). `psyq_cd_set_reader` over the user's BIN is the
-  next step (M1 "LIBCD over the BIN"), hash-checked (DECISIONS item 7).
+## Known gaps (M1)
+- Fixed in session 16 (kept here as the record of what the `-m32`/`-m64` log comparison and the sanitizer found):
+  the overlay entry's `Object *` truncated through `s32 *result` and 122 object data blocks sized in PS1 bytes
+  (`tests/host/FINDINGS.md` 9d, `tools/port_inventory.py object-sizes` keeps the class closed), the host heap's
+  4-byte block alignment (now 8 under `PC_PORT`, `src/main/heap.c` `HEAP_ALIGN`), FIELDSTG's NULL map-event list and
+  `FieldstgBackgroundView`'s byte pad. The disc is read through `--disc` (`src/disc.c`, SHA-1 checked).
 - The BIOS is a stand-in: `BIOS_PTR` serves a 256-byte region at `0x1FC00100` holding a version string.
 - Windows/macOS: the ld script (`INSERT`, `-T`) and the 16 MB `.bss` alignment are GNU ld/ELF; PE needs another
   arrangement for the arena (allocate at startup; `port.h` would need the slot symbols as pointers) and for the
   per-overlay sections.
 - The snapshot copies with plain byte loops in `no_sanitize_address` functions (ASan's redzones between globals
-  are inside the ranges); a sanitizer run of 600 frames reports nothing (session 16). With a sector source (boot to
-  CNTY_SEL), UBSan reports misaligned `HeapBlock`/`Object` accesses (`src/main/heap.c`, `object.c`): the game's heap
-  hands out 4-byte-aligned blocks, and 64-bit structs with pointers want 8.
+  are inside the ranges); so a sanitizer build's overlay-load log lines show other section sizes (ASan's redzones)
+  than a normal build's: compare logs only between builds of the same kind.
+- Movies are streamed (frame headers, timing) but not decoded (LIBPRESS is a stub until M5); no drawing (M2), no
+  sound (M3), no memory card (M4: every card command reports "no card").
