@@ -28,15 +28,6 @@
 #include "port_runtime.h"
 #include "psyq.h"
 
-/* The runtime's reset parts (overlay.c, arena.c, framelog.c, pump.c; pump.c calls port_reset_check). Declared here
- * until include/port_runtime.h, which the runtime's files share, has them. */
-void port_overlay_reset(void);
-size_t port_overlay_check(size_t *checked);
-void port_arena_reset(void);
-void port_framelog_reset(void);
-void port_pump_reset(void);
-void port_reset_check(const char *when);
-
 jmp_buf port_reset_jmp;
 static long port_reset_count;
 

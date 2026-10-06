@@ -6,6 +6,8 @@
  * the walk resolves `tag & 0xFFFFFF` against `ot & ~0xFFFFFF` and follows it only inside the window psyq_set_arena
  * gave (by default the heap, port_heap_start..port_heap_end). */
 #include <stdint.h>
+#include <stdlib.h>
+
 #include "psyq_internal.h"
 #include "psyq/libgpu.h"
 
@@ -19,6 +21,9 @@ static const u8 *psyq_gpu_lo;
 static const u8 *psyq_gpu_hi;
 static u32 psyq_gpu_hash = 0x811C9DC5u; /* FNV-1a offset basis */
 static u32 psyq_gpu_count;
+/* DW3_PORT_PRIM_DUMP=N: the words of every primitive hashed in frame N (the N-th psyq_gpu_take_hash period, counted
+ * from 1 like the frame log), to stderr: to find what makes two builds' primitive hashes differ. */
+static long psyq_gpu_dump_frame = -1, psyq_gpu_frame = 1;
 static u32 psyq_gpu_terminator = 0xFFFFFF; /* what BreakDraw hands out: an empty list */
 
 void psyq_set_arena(const void *base, unsigned long size) {
@@ -29,6 +34,7 @@ void psyq_set_arena(const void *base, unsigned long size) {
 u32 psyq_gpu_take_hash(u32 *count) {
     u32 h = psyq_gpu_hash;
 
+    psyq_gpu_frame++;
     if (count != NULL) {
         *count = psyq_gpu_count;
     }
@@ -59,6 +65,17 @@ static void psyq_gpu_hash_words(const u32 *w, u32 n) {
     u32 i;
     u32 h = psyq_gpu_hash;
 
+    if (psyq_gpu_dump_frame < 0) {
+        const char *env = getenv("DW3_PORT_PRIM_DUMP");
+        psyq_gpu_dump_frame = env != NULL ? strtol(env, NULL, 0) : 0;
+    }
+    if (psyq_gpu_dump_frame == psyq_gpu_frame) {
+        fprintf(stderr, "prim frame %ld:", psyq_gpu_frame);
+        for (i = 0; i < n; i++) {
+            fprintf(stderr, " %08x", w[i]);
+        }
+        fputc('\n', stderr);
+    }
     for (i = 0; i < n; i++) {
         u32 x = w[i];
         int b;

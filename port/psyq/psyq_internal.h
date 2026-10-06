@@ -19,6 +19,16 @@ void psyq_trace_printf(const char *fmt, ...) __attribute__((format(printf, 1, 2)
         }                                    \
     } while (0)
 
+/* Each library's part of the console's reset (psyq_reset in psyq.c; psyq_mcrd_reset is in psyq.h). */
+void psyq_etc_reset(void);
+void psyq_cd_reset(void);
+void psyq_pad_reset(void);
+void psyq_gpu_reset(void);
+void psyq_gs_reset(void);
+void psyq_gte_reset(void);
+void psyq_press_reset(void);
+void psyq_snd_reset(void);
+
 /* libpad.c: the controllers were polled again (run by the vsync tick). */
 void psyq_pad_vsync(void);
 

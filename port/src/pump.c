@@ -32,7 +32,6 @@ static void port_watchdog(int sig) {
     _exit(4);
 }
 
-void port_reset_check(const char *when); /* reset.c: DW3_PORT_RESET_CHECK */
 
 void port_pump_init(void) {
     psyq_set_vsync_hook(port_frame);

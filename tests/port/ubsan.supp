@@ -1,0 +1,10 @@
+# UBSan suppressions for the port's sanitizer run (tests/port/run.py --sanitize, UBSAN_OPTIONS=suppressions=...).
+# Only out-of-bounds indexes of the game's own C that stay inside one struct whose layout is the same on the host,
+# so the host computes what the PS1 computes (tests/host/FINDINGS.md). Each line names the function and the finding.
+# FINDINGS 10: stplnmet's name trim reads name[19] of a u16[12] (the s32 fields after it).
+bounds:stplnmet_entry_run
+# FINDINGS 5: fightstg_rules_get_stats reads GamestateStats.values[6..18] (values, stats and resists in a row).
+bounds:fightstg_rules_get_stats
+# FINDINGS 5: fieldstg_tile_upload writes sprites[0][5] of a [3][5] array (a tile row of 6 sprites): sprites[1][0],
+# which row 1's own loop then rewrites.
+bounds:fieldstg_tile_upload

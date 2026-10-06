@@ -10,12 +10,10 @@
 
 #include "port_harness.h"
 #include "port_runtime.h"
+#include "psyq.h"
 
 #define PORT_MEMCARD_SIZE 0x20000
 
-/* LIBMCRD's card store (port/psyq/libmcrd.c; to move to psyq.h with the shim's other runtime interfaces). */
-void psyq_mcrd_set_card(int slot, u8 *image, void (*written)(int slot));
-void psyq_mcrd_format_image(u8 *image);
 
 typedef struct PortMemcard {
     u8 image[PORT_MEMCARD_SIZE];

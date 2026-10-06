@@ -91,6 +91,13 @@ extern long port_frames;      /* vsync ticks so far (frames) */
 extern int port_script_active; /* --script given: port_script_frame runs every frame */
 extern int port_watchdog_sec; /* --watchdog: exit 4 after this many wall-clock seconds without a port_wait() */
 void port_pump_init(void);
+/* ---- The console's reset (reset.c; port_harness.h): each part back to power-on */
+void port_overlay_reset(void);                 /* overlay.c: every game section from its startup snapshot */
+size_t port_overlay_check(size_t *checked);    /* overlay.c: bytes that differ from the snapshot (debug check) */
+void port_arena_reset(void);                   /* arena.c: the PS1 RAM cleared */
+void port_framelog_reset(void);                /* framelog.c: the log's R line */
+void port_pump_reset(void);                    /* pump.c: the watchdog re-armed */
+void port_reset_check(const char *when);       /* reset.c: DW3_PORT_RESET_CHECK=1 or --trace */
 void port_exit(int status, const char *reason) __attribute__((noreturn)); /* logs the frame count and the reason */
 
 #endif /* PORT_RUNTIME_H */

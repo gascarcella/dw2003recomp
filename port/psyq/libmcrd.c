@@ -31,9 +31,6 @@
 #include "psyq_internal.h"
 #include "psyq/libmcrd.h"
 
-/* The runtime's card store interface (port/src/memcard.c declares them too; to move to psyq.h). */
-void psyq_mcrd_set_card(int slot, u8 *image, void (*written)(int slot));
-void psyq_mcrd_format_image(u8 *image);
 
 #define MCRD_CARD_SIZE 0x20000
 #define MCRD_FRAME 0x80
