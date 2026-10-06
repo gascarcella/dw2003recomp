@@ -17,9 +17,9 @@ void wfightts_stage_menu_update();
 
 s32 wfightts_stage_menu_cursor = 0; /* wfightts_stage_menu_update's cursor (0..13) */
 s32 wfightts_stage_menu_first_line = 0; /* its first entry shown (0..41) */
-extern u8 wfightts_stage_name_0[]; /* the table's first string (its padding bytes are not 0) */
+extern const u8 wfightts_stage_name_0[20]; /* the table's first string (its padding bytes are not 0) */
 u8 *wfightts_stage_names[55] = { /* its entries' text */
-    wfightts_stage_name_0,
+    (u8 *)wfightts_stage_name_0,
     "\x82\x6C\x82\x65\x82\x72\x82\x73\x82\x66\x82\x4F\x82\x4F\x82\x51",
     "\x82\x6C\x82\x65\x82\x72\x82\x73\x82\x66\x82\x4F\x82\x4F\x82\x52",
     "\x82\x6C\x82\x65\x82\x72\x82\x73\x82\x66\x82\x4F\x82\x4F\x82\x53",
@@ -75,7 +75,9 @@ u8 *wfightts_stage_names[55] = { /* its entries' text */
     "\x82\x6C\x82\x64\x82\x65\x82\x73\x82\x4F\x82\x4F\x82\x54\x82\x53",
     "\x82\x6C\x82\x64\x82\x65\x82\x73\x82\x4F\x82\x4F\x82\x54\x82\x54",
 };
-INCLUDE_RODATA("asm/wfightts/nonmatchings/wfightts_800A8484", wfightts_stage_name_0);
+/* the table's first string, as an array: the bytes after its NUL are the non-zero fill psylink left at
+ * the end of the original object's .rodata, so a string literal cannot reproduce them */
+const u8 wfightts_stage_name_0[20] = { 0x82, 0x6C, 0x82, 0x65, 0x82, 0x72, 0x82, 0x73, 0x82, 0x66, 0x82, 0x4F, 0x82, 0x4F, 0x82, 0x50, 0x00, 0xF8, 0x40, 0x00 };
 
 /* A list menu (data block: its 14 windows): up/down move the cursor (10 at a time while 0x8000 is held), 0x2000
  * picks, 0x4000 cancels; the cursor's window blinks. */
@@ -143,7 +145,7 @@ void wfightts_stage_menu_update(WfighttsStageMenu *obj, MessageWindow **windows)
 }
 
 WfighttsStageMenu *wfightts_stage_menu_create(s32 *arg0) {
-    WfighttsStageMenu *obj = object_new(wfightts_stage_menu_update, sizeof(WfighttsStageMenu), 0x38);
+    WfighttsStageMenu *obj = object_new(wfightts_stage_menu_update, sizeof(WfighttsStageMenu), 14 * sizeof(MessageWindow *));
 
     obj->result = arg0;
     return obj;

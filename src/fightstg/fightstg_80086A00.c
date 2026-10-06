@@ -197,7 +197,7 @@ typedef struct FightstgPlayerReactionData {
     /* 0x4 */ FightstgScript *script;
 } FightstgPlayerReactionData; /* size 0x8 */
 
-extern SVECTOR fightstg_player_reaction_pos; /* {0, 120, 0x7FFF}: a screen position */
+extern const SVECTOR fightstg_player_reaction_pos; /* {0, 120, 0x7FFF}: a screen position */
 
 void fightstg_entrance_update(FightstgEntrance *obj, FightstgEntranceData *data);
 void fightstg_main_update(Object *obj, Object **data);
@@ -377,7 +377,7 @@ void fightstg_entrance_update(FightstgEntrance *obj, FightstgEntranceData *data)
 }
 
 FightstgEntrance *fightstg_entrance_create(s32 id, s32 enemy, s32 weak) {
-    FightstgEntrance *obj = object_new(fightstg_entrance_update, sizeof(FightstgEntrance), 0xC);
+    FightstgEntrance *obj = object_new(fightstg_entrance_update, sizeof(FightstgEntrance), 0xC); /* PC_PORT: 3 children; only data->flash is known */
 
     obj->base.key1 = id;
     if (enemy != 0) {
@@ -417,7 +417,7 @@ void fightstg_main_update(Object *obj, Object **data) {
 
 /* The overlay's entry point: creates the battle's main object. */
 void fightstg_entry(void) {
-    object_new(fightstg_main_update, sizeof(Object), 4);
+    object_new(fightstg_main_update, sizeof(Object), sizeof(Object *));
 }
 
 /* The idle camera: plays camera sequences (fightstg_idle_camera_steps: frames and a mode per step), each
@@ -602,7 +602,7 @@ void fightstg_idle_camera_update(FightstgIdleCamera *obj) {
 }
 
 void fightstg_idle_camera_create(void) {
-    object_new(fightstg_idle_camera_update, 0x6C, 0);
+    object_new(fightstg_idle_camera_update, sizeof(FightstgIdleCamera), 0);
 }
 
 void fightstg_slots_update(FightstgSlots *obj) {
@@ -791,7 +791,7 @@ void fightstg_player_reaction_update(FightstgPlayerReaction *obj, FightstgPlayer
         switch (obj->base.step) {
         case 0:
             other->set(other, other->get_default(other));
-            data->effect = (Object *)fightstg_effect_create(0x33, &fightstg_player_reaction_pos);
+            data->effect = (Object *)fightstg_effect_create(0x33, (SVECTOR *)&fightstg_player_reaction_pos);
             sound_module.play(0x800429BF);
             obj->base.next_step(obj);
             /* fallthrough */
@@ -820,7 +820,7 @@ void fightstg_player_reaction_update(FightstgPlayerReaction *obj, FightstgPlayer
 }
 
 void fightstg_player_reaction_create(s32 arg0, s32 arg1) {
-    FightstgPlayerReaction *obj = object_new(fightstg_player_reaction_update, sizeof(FightstgPlayerReaction), 8);
+    FightstgPlayerReaction *obj = object_new(fightstg_player_reaction_update, sizeof(FightstgPlayerReaction), sizeof(FightstgPlayerReactionData));
 
     obj->reaction = arg0;
     obj->unk_5C = arg1;
@@ -875,7 +875,9 @@ s32 fightstg_enemy_turn_find_target(FightstgEnemyTurn *obj) {
     return -1;
 }
 
-INCLUDE_RODATA("asm/fightstg/nonmatchings/fightstg_80086A00", fightstg_player_reaction_pos);
+const SVECTOR fightstg_player_reaction_pos = { 0, 120, 0x7FFF, 0 };
+
+s32 fightstg_enemy_check_condition(u8 type, s16 value);
 
 /* The enemy's turn (side 0x10): flees at low HP, then shows its state (flags 8/2/4), or picks an action
  * (the first of its Digimon's three whose condition holds) and runs it: an attack, an item, a call for
@@ -1070,7 +1072,7 @@ void fightstg_enemy_turn_update(FightstgEnemyTurn *obj, FightstgEnemyTurnData *d
 }
 
 void fightstg_enemy_turn_create(void) {
-    object_new(fightstg_enemy_turn_update, 0x80, 8);
+    object_new(fightstg_enemy_turn_update, sizeof(FightstgEnemyTurn), sizeof(FightstgEnemyTurnData));
 }
 
 /* Whether condition `type` holds with `value` (an action's condition): a random chance out of 128,
@@ -1396,7 +1398,7 @@ s32 fightstg_prop_get_file(s32 id) {
 }
 
 FightstgProp *fightstg_prop_create(s32 id, SVECTOR *pos, SVECTOR *rot) {
-    FightstgProp *obj = object_new(fightstg_prop_update, sizeof(FightstgProp), 4);
+    FightstgProp *obj = object_new(fightstg_prop_update, sizeof(FightstgProp), sizeof(FightstgModel *));
     FightstgPropEntry *entry;
 
     obj->id = 0;
@@ -1487,7 +1489,7 @@ void fightstg_effect_update(FightstgEffect *obj, FightstgSpriteAnim **anims) {
 }
 
 FightstgEffect *fightstg_effect_create(s32 id, SVECTOR *pos) {
-    FightstgEffect *obj = object_new(fightstg_effect_update, sizeof(FightstgEffect), 30 * 4);
+    FightstgEffect *obj = object_new(fightstg_effect_update, sizeof(FightstgEffect), 30 * sizeof(FightstgSpriteAnim *));
     FightstgEffectEntry *entry;
 
     obj->id = -1;
@@ -1801,7 +1803,7 @@ void fightstg_digivolve_update(FightstgDigivolve *obj, FightstgDigivolveData *da
 }
 
 void fightstg_digivolve_create(s32 digimon, s32 blast) {
-    Object *obj = object_new(fightstg_digivolve_update, 0x74, 0x18);
+    Object *obj = object_new(fightstg_digivolve_update, sizeof(FightstgDigivolve), sizeof(FightstgDigivolveData));
 
     obj->key1 = digimon;
     obj->key2 = blast;

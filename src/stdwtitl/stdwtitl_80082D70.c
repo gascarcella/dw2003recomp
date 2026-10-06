@@ -250,8 +250,10 @@ void stdwtitl_start_cd_stream(CdlLOC *loc) {
     param = 0x80;
     do {
         while (CdControl(2, (u8 *)loc, 0) == 0) {
+            PLATFORM_WAIT();
         }
         while (CdControl(0xE, &param, 0) == 0) {
+            PLATFORM_WAIT();
         }
     } while (CdRead2(0x1E0) == 0);
 }

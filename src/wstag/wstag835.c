@@ -4,7 +4,7 @@
 
 extern WstagExits *wstag835_exits[];
 extern WstagFuncs wstag835_funcs;
-extern CVECTOR wstag835_color;
+const CVECTOR wstag835_color = { 0x54, 0x67, 0x96, 1 };
 extern FieldstgBattleLists wstag835_battle_lists[];
 extern FieldstgVramPlace wstag835_vram_places[];
 extern FieldstgPlacedActor *wstag835_actors[];
@@ -83,8 +83,6 @@ void wstag835_setup(void) {
     fieldstg_attr.set_file(4, 0x06E50003);
     fieldstg_attr.init_layer(0);
 }
-
-INCLUDE_RODATA("asm/wstag835/nonmatchings/wstag835", wstag835_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag835_setup(void);

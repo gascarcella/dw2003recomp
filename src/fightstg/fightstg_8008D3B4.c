@@ -1116,7 +1116,7 @@ void fightstg_item_update(FightstgItem *obj, FightstgMessage **data) {
 }
 
 void fightstg_item_create(s32 item) {
-    FightstgItem *obj = object_new(fightstg_item_update, sizeof(FightstgItem), 4);
+    FightstgItem *obj = object_new(fightstg_item_update, sizeof(FightstgItem), sizeof(FightstgMessage *));
 
     obj->item = item;
 }
@@ -1303,7 +1303,7 @@ void fightstg_counter_update(FightstgCounter *obj, FightstgMessage **data) {
 }
 
 void *fightstg_counter_create(s8 side, s32 damage_taken, s32 no_knockout) {
-    FightstgCounter *obj = object_new(fightstg_counter_update, sizeof(FightstgCounter), 4);
+    FightstgCounter *obj = object_new(fightstg_counter_update, sizeof(FightstgCounter), sizeof(FightstgMessage *));
 
     obj->side = side;
     obj->damage_taken = damage_taken;
@@ -1370,7 +1370,7 @@ void fightstg_tech_update(FightstgTech *obj, FightstgMessage **data) {
         if (rec->element == 2 || rec->element == 3) {
             fightstg_action.run(obj->side, obj->tech);
         } else {
-            heap_funcs.bzero(&fightstg_action, 0x68);
+            heap_funcs.bzero(&fightstg_action, 0x68); /* PC_PORT: a byte count: the state before `run` (pointer-free) */
         }
         *data = fightstg_message_create();
         if (rec->anim_script == 0xC) {
@@ -1955,7 +1955,7 @@ void fightstg_tech_update(FightstgTech *obj, FightstgMessage **data) {
 }
 
 void fightstg_tech_create(s8 side, s32 tech) {
-    FightstgTech *obj = object_new(fightstg_tech_update, sizeof(FightstgTech), 4);
+    FightstgTech *obj = object_new(fightstg_tech_update, sizeof(FightstgTech), sizeof(FightstgMessage *));
 
     obj->side = side;
     obj->tech = tech;
@@ -2019,7 +2019,7 @@ void fightstg_scripted_turn_update(FightstgScriptedTurn *obj, FightstgMessage **
 }
 
 void fightstg_scripted_turn_create(void) {
-    object_new(fightstg_scripted_turn_update, sizeof(FightstgScriptedTurn), 4);
+    object_new(fightstg_scripted_turn_update, sizeof(FightstgScriptedTurn), sizeof(FightstgMessage *));
 }
 
 void fightstg_boss_turn_update(FightstgBossTurn *obj, FightstgMessage **data) {
@@ -2201,7 +2201,7 @@ void fightstg_boss_turn_update(FightstgBossTurn *obj, FightstgMessage **data) {
 }
 
 void *fightstg_boss_turn_create(s32 arg0, s32 arg1) {
-    FightstgBossTurn *obj = object_new(fightstg_boss_turn_update, sizeof(FightstgBossTurn), 4);
+    FightstgBossTurn *obj = object_new(fightstg_boss_turn_update, sizeof(FightstgBossTurn), sizeof(FightstgMessage *));
 
     obj->counter = arg0;
     obj->no_knockout = arg1;
@@ -2373,7 +2373,7 @@ void fightstg_results_update(FightstgResults *obj, FightstgMessage **data) {
 }
 
 FightstgResults *fightstg_results_create(u8 side) {
-    FightstgResults *obj = object_new(fightstg_results_update, sizeof(FightstgResults), 4);
+    FightstgResults *obj = object_new(fightstg_results_update, sizeof(FightstgResults), sizeof(FightstgMessage *));
 
     obj->side = side;
     return obj;
@@ -3333,7 +3333,7 @@ void fightstg_command_menu_update(FightstgCommandMenu *obj, FightstgCommandMenuD
 }
 
 FightstgCommandMenu *fightstg_command_menu_create(s32 sel, s32 *result) {
-    FightstgCommandMenu *obj = object_new(fightstg_command_menu_update, sizeof(FightstgCommandMenu), 0x1C);
+    FightstgCommandMenu *obj = object_new(fightstg_command_menu_update, sizeof(FightstgCommandMenu), sizeof(FightstgCommandMenuData));
 
     obj->result = result;
     *result = -1;
@@ -3589,7 +3589,7 @@ void fightstg_digivolve_menu_update(FightstgDigivolveMenu *obj, FightstgDigivolv
 }
 
 FightstgDigivolveMenu *fightstg_digivolve_menu_create(s32 *result) {
-    FightstgDigivolveMenu *obj = object_new(fightstg_digivolve_menu_update, sizeof(FightstgDigivolveMenu), 0x1C);
+    FightstgDigivolveMenu *obj = object_new(fightstg_digivolve_menu_update, sizeof(FightstgDigivolveMenu), sizeof(FightstgDigivolveMenuData));
 
     obj->result = result;
     obj->member = *result;
@@ -3846,7 +3846,7 @@ void fightstg_status_update(FightstgStatus *obj, FightstgStatusData *data) {
 }
 
 FightstgStatus *fightstg_status_create(s32 member, s32 page, s32 entry) {
-    FightstgStatus *obj = object_new(fightstg_status_update, sizeof(FightstgStatus), 0x60);
+    FightstgStatus *obj = object_new(fightstg_status_update, sizeof(FightstgStatus), sizeof(FightstgStatusData));
 
     obj->member = member;
     obj->page = page;
@@ -3967,7 +3967,7 @@ void fightstg_item_menu_update(FightstgItemMenu *obj, FightstgItemMenuData *data
             }
         }
         if (obj->count != 0) {
-            obj->list = heap_funcs.alloc(obj->count * 2, 2);
+            obj->list = heap_funcs.alloc(obj->count * sizeof(s16), 2);
             for (i = 0, n = 0; i < count; i++) {
                 if (obj->items[i] == 0) {
                     break;
@@ -4053,7 +4053,7 @@ void fightstg_item_menu_update(FightstgItemMenu *obj, FightstgItemMenuData *data
 }
 
 FightstgItemMenu *fightstg_item_menu_create(s32 *result) {
-    FightstgItemMenu *obj = object_new(fightstg_item_menu_update, sizeof(FightstgItemMenu), 0x34);
+    FightstgItemMenu *obj = object_new(fightstg_item_menu_update, sizeof(FightstgItemMenu), sizeof(FightstgItemMenuData));
 
     obj->result = result;
     *result = -1;
@@ -4384,7 +4384,7 @@ void fightstg_tech_menu_update(FightstgTechMenu *obj, FightstgTechMenuData *data
 }
 
 FightstgTechMenu *fightstg_tech_menu_create(s32 *result) {
-    FightstgTechMenu *obj = object_new(fightstg_tech_menu_update, sizeof(FightstgTechMenu), 0x40);
+    FightstgTechMenu *obj = object_new(fightstg_tech_menu_update, sizeof(FightstgTechMenu), sizeof(FightstgTechMenuData));
 
     obj->result = result;
     *result = -1;
@@ -5527,7 +5527,9 @@ extern u32 fightstg_cursor_ot[2];
 
 /* Vsync callback of fightstg_cursor_update: copies the highlight into VRAM (cursor entry sel, and
  * restores entry drawn_sel). */
-void fightstg_cursor_copy_highlight(FightstgCursor *obj) {
+/* `arg` is gfx_module.vsync_arg, the cursor object as an s32 (PTR_TO_S32 in fightstg_cursor_update). */
+void fightstg_cursor_copy_highlight(s32 arg) {
+    FightstgCursor *obj = S32_TO_PTR(FightstgCursor *, arg);
     u32 *cont;
     s32 i;
     s32 y;
@@ -5557,6 +5559,7 @@ void fightstg_cursor_copy_highlight(FightstgCursor *obj) {
             addPrim(fightstg_cursor_ot, &fightstg_cursor_moves[i + 1]);
         }
         while (IsIdleGPU(0) != 0) {
+            PLATFORM_WAIT();
         }
         ContinueDraw(fightstg_cursor_ot, cont);
     }
@@ -5597,7 +5600,7 @@ void fightstg_cursor_draw(FightstgCursor *obj) {
     }
 }
 
-void fightstg_cursor_copy_highlight(FightstgCursor *obj);
+void fightstg_cursor_copy_highlight(s32 arg);
 
 void fightstg_cursor_update(FightstgCursor *obj) {
     s32 pad;
@@ -5611,8 +5614,8 @@ void fightstg_cursor_update(FightstgCursor *obj) {
         switch (obj->base.step) {
         case 2:
         default:
-            gfx_module.vsync_callback = (void (*)(s32))fightstg_cursor_copy_highlight;
-            gfx_module.vsync_arg = (s32)obj;
+            gfx_module.vsync_callback = fightstg_cursor_copy_highlight;
+            gfx_module.vsync_arg = PTR_TO_S32(obj);
         case 0:
         case 1:
             obj->base.next_step(obj);
@@ -6798,7 +6801,7 @@ void fightstg_action_apply_effect(void) {
 void fightstg_action_run(u8 side, s32 id) {
     RecordsTechnique *rec;
 
-    heap_funcs.bzero(&fightstg_action, 0x68);
+    heap_funcs.bzero(&fightstg_action, 0x68); /* PC_PORT: a byte count: the state before `run` (pointer-free) */
     rec = &records_techniques[id - 1];
     fightstg_action.side = side;
     fightstg_action.tech = id;
@@ -7038,7 +7041,7 @@ void fightstg_models_select(s32 i) {
 u8 *fightstg_models_get_texture_anim(s32 id) {
     FightstgModelFile *file = (FightstgModelFile *)cdload_module.files.get_file(0x1CC);
 
-    return (u8 *)(((FightstgModelRecordA *)fightstg_models_get(id))->texture_anims - file->base + (s32)file);
+    return PTR_ADD(u8 *, ((FightstgModelRecordA *)fightstg_models_get(id))->texture_anims - file->base, file);
 }
 
 /* The first and last entry of file 0x1CC whose record is of type `type` (0: A, 1: B). */

@@ -4,7 +4,7 @@
 
 extern WstagExits *wstag962_exits[];
 extern WstagFuncs wstag962_funcs;
-extern CVECTOR wstag962_color;
+const CVECTOR wstag962_color = { 0x54, 0x67, 0x96, 1 };
 extern FieldstgVramPlace wstag962_vram_places[];
 extern FieldstgPlacedActor *wstag962_actors[];
 extern FieldstgSprite wstag962_sprites[];
@@ -83,8 +83,6 @@ void wstag962_setup(void) {
     fieldstg_attr.set_file(4, 0x09330005);
     fieldstg_attr.init_layer(0);
 }
-
-INCLUDE_RODATA("asm/wstag962/nonmatchings/wstag962", wstag962_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag962_setup(void);

@@ -5,7 +5,7 @@
 extern WstagFuncs wstag455_funcs;
 void wstag455_update();
 extern WstagAnimKey D_WSTAG455_800A6378[];
-extern CVECTOR wstag455_color;
+const CVECTOR wstag455_color = { 0x80, 0x80, 0x80, 0 };
 extern FieldstgBattleLists wstag455_battle_lists;
 extern FieldstgVramPlace wstag455_vram_places[];
 extern FieldstgPlacedActor *wstag455_actors[];
@@ -129,8 +129,6 @@ void wstag455_setup(void) {
     fieldstg_attr.set_file(4, 0x03910003);
     fieldstg_attr.init_layer(0);
 }
-
-INCLUDE_RODATA("asm/wstag455/nonmatchings/wstag455", wstag455_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag455_setup(void);

@@ -366,6 +366,7 @@ void sound_init(void) {
     while (sound_is_loading()) {
         cdload_module.update();
         sound_update_loading();
+        PLATFORM_WAIT(); /* the CD interrupt ends this loop */
     }
 }
 

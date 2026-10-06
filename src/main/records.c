@@ -141,7 +141,7 @@ RecordsDigimon records_digimon[] = {
 };
 
 /* .sdata: the heap's start (heap_init), read by heap.c. */
-HeapBlock *D_8005CB50 = (HeapBlock *)0x800AB800;
+HeapBlock *D_8005CB50 = HEAP_START(HeapBlock *);
 
 /* Each item's data (RecordsItem.data), its struct by the item's type (include/records.h): RecordsUsable (types
  * 25-28; 4 bytes, so in .sdata), RecordsWeapon (2-14), RecordsArmor (15-20), RecordsAccessory (21-24). Comments: the

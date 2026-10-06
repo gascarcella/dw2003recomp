@@ -80,7 +80,7 @@ WstagAnimObject *wstag630_anim_new(void) {
     return object_new(wstag630_anim_update, sizeof(WstagAnimObject), 0);
 }
 
-void wstag630_update(WstagObject *obj, Object **data) {
+void wstag630_update(WstagObject *obj, WstagAnimObject **data) {
     switch (obj->base.state) {
     case OBJECT_STATE_INIT:
     default:

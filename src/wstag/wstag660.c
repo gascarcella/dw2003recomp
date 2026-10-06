@@ -3,7 +3,7 @@
 /* WSTAG660: stage 0x25D (fieldstg_stages). */
 
 extern WstagFuncs wstag660_funcs;
-extern CVECTOR wstag660_color;
+const CVECTOR wstag660_color = { 0x54, 0x67, 0x96, 0 };
 extern FieldstgVramPlace wstag660_vram_places[];
 extern FieldstgPlacedActor *wstag660_actors[];
 extern FieldstgSprite wstag660_sprites[];
@@ -58,8 +58,6 @@ void wstag660_setup(void) {
         fieldstg_stage.sound = 0x607C0000;
     }
 }
-
-INCLUDE_RODATA("asm/wstag660/nonmatchings/wstag660", wstag660_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag660_setup(void);

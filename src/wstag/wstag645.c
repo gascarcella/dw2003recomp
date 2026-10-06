@@ -79,7 +79,7 @@ WstagAnimObject *wstag645_anim_new(void) {
     return object_new(wstag645_anim_update, sizeof(WstagAnimObject), 0);
 }
 
-void wstag645_update(WstagObject *obj, Object **data) {
+void wstag645_update(WstagObject *obj, WstagAnimObject **data) {
     switch (obj->base.state) {
     case OBJECT_STATE_INIT:
     default:

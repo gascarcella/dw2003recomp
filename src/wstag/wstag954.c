@@ -60,7 +60,7 @@ void wstag954_anim1_update(WstagAnim1Object *obj) {
 }
 
 Object *wstag954_anim1_create(void) {
-    return object_new(wstag954_anim1_update, 0x54, 0);
+    return object_new(wstag954_anim1_update, sizeof(WstagAnim1Object), 0);
 }
 
 void wstag954_update(WstagObject *obj, WstagEventData *data) {

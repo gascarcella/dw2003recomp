@@ -129,7 +129,7 @@ void wstag625_anims_update(Wstag625Anims *obj) {
 }
 
 Object *wstag625_anims_create(s32 arg0) {
-    return object_create(wstag625_anims_update, 0x80, 0, arg0);
+    return object_create(wstag625_anims_update, sizeof(Wstag625Anims), 0, arg0);
 }
 
 void wstag625_update(WstagObject *obj, WstagObjEventData *data) {

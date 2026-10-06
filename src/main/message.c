@@ -141,7 +141,7 @@ extern MessageDialogLayout message_dialog_layouts[];
 extern s32 (*message_control_handlers[])(MessageWindow *obj, MessageLine *line, MessageDrawState *state);
 
 /* "メッセージがせっていされていません" (no message has been set); in message_draw_window's .rodata for now */
-extern u8 message_no_text[];
+extern const u8 message_no_text[];
 
 void message_copy_line_text(MessageWindow *obj, MessageLine *line, u8 *text);
 void message_set_line_number(MessageWindow *obj, s32 line, s32 value);
@@ -293,7 +293,7 @@ void message_set_line_text(MessageWindow *obj, u8 *text, s32 arg2, s32 line) {
     obj->lines[line].is_sjis = 0;
 }
 
-INCLUDE_RODATA("asm/main/nonmatchings/message", message_no_text);
+const u8 message_no_text[] = "\x83\x81\x83\x62\x83\x5A\x81\x5B\x83\x57\x82\xAA\x82\xB9\x82\xC1\x82\xC4\x82\xA2\x82\xB3\x82\xEA\x82\xC4\x82\xA2\x82\xDC\x82\xB9\x82\xF1";
 
 void message_draw_window(MessageWindow *obj) {
     MessageDrawState state;
@@ -827,7 +827,7 @@ s32 message_code_insert_line(MessageWindow *obj, MessageLine *line, MessageDrawS
 
     if (obj->lines[n].text == NULL) {
         /* "メッセージがせっていされていません" (no message has been set) */
-        message_set_ext_line_text(obj, message_no_text, n);
+        message_set_ext_line_text(obj, (u8 *)message_no_text, n);
         return 0x8003;
     }
     if (obj->lines[n].pos >= obj->lines[n].length) {
@@ -1273,7 +1273,7 @@ void message_box_frame_update(MessageBoxFrame *obj) {
 }
 
 MessageBoxFrame *message_box_frame_create(s32 arg0) {
-    MessageBoxFrame *obj = object_new(message_box_frame_update, 0x6C, 0);
+    MessageBoxFrame *obj = object_new(message_box_frame_update, sizeof(MessageBoxFrame), 0);
 
     obj->layer_id = arg0;
     sound_module.play(0x40019);
@@ -1326,7 +1326,7 @@ void message_box_update(Object *obj, MessageBoxData *data) {
 }
 
 Object *message_box_create(s32 arg0, u8 *text, s32 arg2) {
-    Object *obj = object_new(message_box_update, 0x50, 8);
+    Object *obj = object_new(message_box_update, sizeof(Object), sizeof(MessageBoxData));
     MessageBoxData *data = (MessageBoxData *)obj->children;
 
     data->window = message_create_window(arg0, 1, 0x12, 0xB0);
@@ -1451,7 +1451,7 @@ void message_dialog_frame_update(MessageDialogFrame *obj) {
 }
 
 MessageDialogFrame *message_dialog_frame_create(MessageDialog *arg0) {
-    MessageDialogFrame *obj = object_new(message_dialog_frame_update, 0x60, 0);
+    MessageDialogFrame *obj = object_new(message_dialog_frame_update, sizeof(MessageDialogFrame), 0);
 
     obj->dialog = arg0;
     return obj;
@@ -1783,6 +1783,15 @@ s16 message_decode_char(u8 *text, u8 arg1, MessageFont *font) {
     }
     return 0x300;
 }
+
+/* The data block at 0x8004DC10 (DECISIONS "Data split per file": owner open; placed at the start of message's .data,
+ * where it fits the link order): a zero VECTOR, an identity MATRIX (D_8004DC20: FIGHTSTG points its models at it; no
+ * EXE code reads any of them) and the matrices scaling x, y and both by 2. In .data: explicitly zero-initialized. */
+VECTOR D_8004DC10 = { 0, 0, 0, 0 };
+MATRIX D_8004DC20 = { { { 0x1000, 0, 0 }, { 0, 0x1000, 0 }, { 0, 0, 0x1000 } }, { 0, 0, 0 } };
+MATRIX D_8004DC40 = { { { 0x2000, 0, 0 }, { 0, 0x1000, 0 }, { 0, 0, 0x1000 } }, { 0, 0, 0 } };
+MATRIX D_8004DC60 = { { { 0x1000, 0, 0 }, { 0, 0x2000, 0 }, { 0, 0, 0x1000 } }, { 0, 0, 0 } };
+MATRIX D_8004DC80 = { { { 0x2000, 0, 0 }, { 0, 0x2000, 0 }, { 0, 0, 0x1000 } }, { 0, 0, 0 } };
 
 /* The handlers that take only (obj, line) ignore the state. */
 #define MESSAGE_HANDLER(func) ((s32 (*)(MessageWindow *, MessageLine *, MessageDrawState *))(func))

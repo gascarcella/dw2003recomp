@@ -108,7 +108,7 @@ void fightstg_intro_camera_update(FightstgIntroCamera *obj) {
 }
 
 void fightstg_intro_camera_create(void) {
-    object_new(fightstg_intro_camera_update, 0xA4, 0);
+    object_new(fightstg_intro_camera_update, sizeof(FightstgIntroCamera), 0);
 }
 
 /* .data (address order) */

@@ -1264,7 +1264,7 @@ s32 stgtrain_anim_load(s32 file) {
     }
     state = &stgtrain_module;
     if (file != state->file) {
-        heap_funcs.bzero(&state->data, 0x2D8); /* data, file and parts */
+        heap_funcs.bzero(&state->data, sizeof(state->data) + sizeof(state->file) + sizeof(state->parts));
         state->file = file;
         cdload_module.queue_file(stgtrain_anim_files[file].file);
         state->data = NULL;

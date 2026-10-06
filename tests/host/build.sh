@@ -23,10 +23,12 @@ UNITS+=(src/stgdglab/stgdglab_8008EB30.c)
 UNITS+=(src/wfightmn/wfightmn_800A6440.c)
 # FIELDSTG's battle table (fieldstg_battles, data only): fieldstg_start_battle (wfightmn_spoils).
 UNITS+=(src/fieldstg/fieldstg_80083784.c)
-# -fpermissive: GCC 14+ makes implicit declarations and incompatible pointer assignments errors in C; keep them warnings
-# (older GCC ignores it for C with a warning, which -w hides).
+# FIELDSTG's field unit (fieldstg_encounter) and FIGHTSTG's first unit (wfightmn_enemy_ai): built like the others since
+# session 15 (their forward calls have real prototypes in the C; tools/port_inventory.py probe keeps every unit clean of
+# implicit declarations and incompatible pointer types, so no -fpermissive here).
+UNITS+=(src/fieldstg/fieldstg_80087DB0.c src/fightstg/fightstg_80086A00.c)
 CFLAGS=(-m64 -std=gnu99 -fwrapv -fsigned-char -fno-strict-aliasing -fno-stack-protector -DNON_MATCHING -w
-        -fpermissive -I"$ROOT/tests/host" -I"$ROOT/include" -I"$ROOT")
+        -I"$ROOT/tests/host" -I"$ROOT/include" -I"$ROOT")
 mkdir -p "$(dirname "$OUT")"
 OBJS=()
 for u in "${UNITS[@]}"; do
@@ -34,21 +36,13 @@ for u in "${UNITS[@]}"; do
     gcc "${CFLAGS[@]}" -c "$ROOT/$u" -o "$o"
     OBJS+=("$o")
 done
-# heap.c gives heap_objects and its search (gamestate_cond_object): its scratchpad-stack switch (MIPS inline asm, in
-# heap_run_object, never reached here) is compiled away, and its heap_funcs is made weak so the shims' libc heap wins.
+# heap.c gives heap_objects and its search (gamestate_cond_object): its scratchpad-stack switch (heap_run_object, never
+# reached here) is the MIPS inline asm of include/port.h's PORT_SCRATCHPAD_STACK_ENTER/LEAVE, since the harness builds
+# without -DPC_PORT (the PC_PORT side declares port_* symbols nothing implements yet: M1); -D__asm__= and
+# tests/host/no_asm.h compile it away. Its heap_funcs is made weak so the shims' libc heap wins.
 o="$(dirname "$OUT")/heap.o"
 gcc "${CFLAGS[@]}" -include "$ROOT/tests/host/no_asm.h" -D__asm__= -c "$ROOT/src/main/heap.c" -o "$o"
 objcopy --weaken-symbol=heap_funcs "$o"
-OBJS+=("$o")
-# FIELDSTG's field unit for the encounter redraw (fieldstg_encounter): one function it calls before defining it gets its
-# prototype forced in (tests/host/fieldstg_protos.h).
-o="$(dirname "$OUT")/fieldstg_80087DB0.o"
-gcc "${CFLAGS[@]}" -include "$ROOT/tests/host/fieldstg_protos.h" -c "$ROOT/src/fieldstg/fieldstg_80087DB0.c" -o "$o"
-OBJS+=("$o")
-# FIGHTSTG's first unit for the enemy's choice of action (wfightmn_enemy_ai): one function it calls before defining it gets
-# its prototype forced in (tests/host/fightstg_protos.h).
-o="$(dirname "$OUT")/fightstg_80086A00.o"
-gcc "${CFLAGS[@]}" -include "$ROOT/tests/host/fightstg_protos.h" -c "$ROOT/src/fightstg/fightstg_80086A00.c" -o "$o"
 OBJS+=("$o")
 for u in tests/host/shims.c tests/host/layout.c tests/host/replay.c; do
     o="$(dirname "$OUT")/$(basename "$u" .c).o"

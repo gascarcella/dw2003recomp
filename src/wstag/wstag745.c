@@ -228,7 +228,7 @@ void wstag745_two_sprite_update(WstagTwoSpriteObject *obj) {
         obj->sprites[0].frame = obj->frame;
         obj->sprites[0].palette = wstag745_anim_advance(&obj->palette_anim, D_WSTAG745_800A6CCC, 0, 0);
         if (obj->sprites[0].frame != 0 && wstag745_is_on_screen(obj->x, obj->y, 0x20, 0x20)) {
-            layer->add_callback(layer, wstag745_two_sprite_draw, obj, obj->y, 0);
+            layer->add_callback(layer, (WstagDrawCallback)wstag745_two_sprite_draw, obj, obj->y, 0);
         }
         break;
     case OBJECT_STATE_DONE:
@@ -259,10 +259,10 @@ void wstag745_two_sprite_update(WstagTwoSpriteObject *obj) {
             obj->base.set_state(obj, OBJECT_STATE_RUN);
         }
         if (obj->sprites[0].frame != 0 && wstag745_is_on_screen(obj->x, obj->y, 0x20, 0x20)) {
-            layer->add_callback(layer, wstag745_two_sprite_draw, obj, obj->y, 0);
+            layer->add_callback(layer, (WstagDrawCallback)wstag745_two_sprite_draw, obj, obj->y, 0);
         }
         if (obj->sprites[1].frame != 0 && wstag745_is_on_screen(obj->x, obj->y - 0x20, 0x20, 0x40)) {
-            layer->add_callback(layer, wstag745_two_sprite_draw, obj, obj->y + 0x12, 1);
+            layer->add_callback(layer, (WstagDrawCallback)wstag745_two_sprite_draw, obj, obj->y + 0x12, 1);
         }
         break;
     case OBJECT_STATE_END:

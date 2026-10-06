@@ -28,6 +28,10 @@ FieldstgSprite *fieldstg_sprites_find_first(s32 type);
 /* Starts the stage's listed battle 5 (an event's FieldstgEventDef.start in several stages). */
 s32 fieldstg_start_battle_5(void);
 
+/* A layer draw callback as GfxLayer.add_callback takes it; the stages' draw functions take their own object type as
+ * the first argument and are passed through this cast. */
+typedef void (*WstagDrawCallback)(void *, GfxLayer *, s32);
+
 /* The stage's object (the entry creates it, with the field manager it was called with). */
 typedef struct WstagObject {
     /* 0x00 */ Object base;

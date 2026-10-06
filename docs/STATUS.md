@@ -1,11 +1,11 @@
 # Status
 
-_Last updated: 2026-10-05 (session 14, cloud, branch `claude/optimistic-heisenberg-3b2i6d`: the two-repository cloud
-session proven: both checkouts side by side, the disc from `../dw2003-gamedata`, `build.sh --check`, `check_toolchain.sh`,
-`check_emulator.sh --bios retail` and `scripts/test.sh` all pass. One finding: with two repositories selected the project
-directory is their parent, so the SessionStart hook does not fire and is run by hand (CLAUDE.md step 0). Docs only.
-Code state unchanged since session 7: every game file rebuilds byte-identical,
-98.6% of game code compiles from matching C, the EXE and WSTAG 100%, 8 holdouts stay asm)._
+_Last updated: 2026-10-05 (session 15, worktree branch `gascarcella/PC-Port-Kickoff`, delivered as a pull request):
+the PC port's decisions taken (DECISIONS "PC port decisions (session 15)"), **M0 done** (every PS1 byte unchanged: hook
+macros in `include/port.h`, every `INCLUDE_RODATA` and the EXE matrix block in C, literal sizes to `sizeof`, all 388 units
+host-clean under `tools/port_inventory.py probe`, which now gates `scripts/test.sh` and CI), and the **M1 skeleton**:
+`port/` builds all 388 units plus the stub shim into one 64-bit binary that runs the game's `main()` to a frame cap.
+Code state: every game file rebuilds byte-identical, 98.6% of game code compiles from matching C, 8 holdouts stay asm)._
 
 The README's progress table (`tools/progress.py --readme`) has the current numbers per part and per overlay.
 
@@ -36,6 +36,26 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
 - **Infrastructure:** cloud sessions (SessionStart hook, the data checkout beside the repo; with both repositories
   selected the hook is run by hand, CLAUDE.md step 0, verified session 14), worktree-isolated agents
   (`docs/AGENT_BRIEF.md`), `scripts/merge_checkpoint.sh`, `DW3_JOBS`, README progress table.
+- **PC port, M0 (session 15):** `include/port.h` holds the hook macros, each the plain PS1 code without `PC_PORT` and a
+  `port_*` call or constant with it: `PLATFORM_WAIT`/`PLATFORM_HALT` (the 9 interrupt-ended loops and FIELDSTG's hang),
+  the scratchpad stack, `OVERLAY_COPY`, `PTR_ADD`/`PTR_TO_S32`/`S32_TO_PTR`/`PTR_TO_U32` (`setaddr` too), `SLOT_FUNC`/
+  `WSTAG_ENTRY`/`OVERLAY_ENTRY`/`OVERLAY_FN` (293 stage entries, 67 script objects, 20 overlay entries), `SLOT_PTR` (50
+  script pointers, `main_overlay_base`/`main_file_base`), `HEAP_*`, `BIOS_PTR`, `LATE_FUNC`/`LATE_CALL` (the 4 late-bound
+  calls; the fifth, `D_8009B6A4`, binds by name). `INCLUDE_RODATA` 106 → 0 (incl. the 92 WSTAG colours; the EXE matrix block
+  `0x8004DC10` is C in `message.c`); literal sizes 88 → 23 (the rest are true byte counts, each marked `PC_PORT:`);
+  prototypes for `fieldstg_spots_create`/`fightstg_enemy_check_condition`, explicit casts at the CARDGAME/STDWTITL
+  method slots, `CardgameGame.opponents` a pointer. `tools/port_inventory.py` (counts, probe, link, structs): **388 of
+  388 units compile at `-m64 -Werror`, no duplicate global**; it runs first in `scripts/test.sh` and as a disc-free CI
+  step. `tests/host/build.sh` no longer needs `-fpermissive` or the prototype headers. Left as asm: FIELDSTG's zero
+  block (psylink's "IN" fill inside its `.bss` run: needs a FILL facility in `configure.py`).
+- **PC port, M1 skeleton (session 15):** `port/CMakeLists.txt` (`cmake -S port -B build/port -G Ninja && cmake --build
+  build/port`, 30 s) compiles the 388 units with `-DPC_PORT -DNON_MATCHING` and links them with `port/src/` (the 16 MB-aligned
+  arena mirroring the PS1 from `0x80082CB0`, the overlay manager with per-overlay `.data`/`.bss` sections from a generated
+  ld script and address tables from `tools/port_gen.py`: 1612 tier-1 and 1646 tier-2 functions, every tag site checked at
+  build time; the interrupt pump `port_wait`; a watchdog) and `port/psyq/` (113 Psy-Q functions: the pure ones real, the
+  rest fixed answers or recorders, `DW3_PORT_TRACE`; LIBC2/LIBAPI are the host libc). `build/port/dw2003 --max-frames 60`
+  runs the game's `main()` to the frame cap (exit 0); with a 20-line sector reader over the BIN (an experiment, not
+  committed) it loads the sound banks and CNTY_SEL and runs 6000 frames. No SDL, no drawing, no sound, no disc yet.
 - **CI (session 13):** `.github/workflows/ci.yml` on every push: toolchain, script/Python checks, `check_toolchain.sh`, and
   with the secret `GAMEDATA_DEPLOY_KEY` (a read-only deploy key of `dw2003-gamedata`) `build.sh --check` and
   `scripts/test.sh`; first green run 2026-10-05, ~5 min. Fork pull requests get only the disc-free steps.
@@ -108,12 +128,13 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   the deploy-key secret, description/topics/features set (Issues on; Wiki, Projects, Discussions off). The cloud
   environment with both repositories works (session 14: section 5 step 0 done; the hook is run by hand there). **Left for
   the user:** closing pull requests by hand (GitHub cannot disable them).
-- **PC-port decisions** (`docs/PC_PORT_PLAN.md` section 4): needed before any port code.
+- **The port's sanitizer build:** `-DDW3_PORT_SANITIZE=ON` needs `libasan`/`libubsan` installed (sudo); the `-m32`
+  oracle needs `glibc-devel.i686` (DECISIONS "PC port decisions (session 15)", item 4). Both are the user's installs.
 - **Mechanics sources:** `docs/MECHANICS.md` "Sources wanted" lists the GameFAQs/StrategyWiki URLs the cloud session
   cannot reach; fetched text (or a local copy) would let the tests get names and expected behaviours from written sources.
 - **Review follow-ups (session 8, recommended, not decided):** done since: the LICENSE (MIT), CI, the public release as a
   fresh repo, the milestone tag (`v0.1-matching-closed`, on the public `c1ca6f2` rather than the private `0804d5b`). Left: splitting
-  the GCC-lessons journal out of `docs/DECISIONS.md`; `gcc-multilib` for a 32-bit layout oracle during the port.
+  the GCC-lessons journal out of `docs/DECISIONS.md`.
 
 ## Not done / open
 - **8 holdouts** stay `INCLUDE_ASM` with WIP C and final notes (DECISIONS "last-rest lessons; the matching phase
@@ -124,8 +145,10 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
   and WSTAG's own types have their understood fields named (DECISIONS "Naming pass names-10"), and so have the EXE's
   and CARDGAME's (DECISIONS "Naming pass names-9": what is left there is unread, padding or per-effect scratch).
 - Kept as is: object list in `heap`, random module in `pad`, gamestate one file vs two, `object` vs `main`.
-- PC port: a proposal awaiting the user's decisions (`docs/PC_PORT_PLAN.md`, section 4); background notes in
-  `docs/PC_PORT_RESEARCH.md`. `docs/FORMATS.md` is now a verified reference.
+- PC port: decided and started (`docs/PC_PORT_PLAN.md`: M0 done, M1 skeleton); `docs/PC_PORT_RESEARCH.md` stays background.
+  Open from the agents' reports: `object_destroy` scans mixed data blocks as pointers (FINDINGS 9c), `gfx.h`'s
+  `vsync_arg` could be a pointer field, `GfxLayer.add_callback` wants a public typedef, an `offsetof` macro for the
+  three partial `bzero`s, `include/psyq/` prototype nits listed in `port/psyq/README.md`.
 
 ## Next: candidate goals (priority order)
 0. **Reference tests** (direction agreed in session 8; DECISIONS "Reference tests for the port"): (1) golden tests of the
@@ -144,6 +167,8 @@ The README's progress table (`tools/progress.py --readme`) has the current numbe
    WSTAG function), names-10 (FIELDSTG/WSTAG type fields), names-9 (EXE and CARDGAME fields, EXE data symbols), names-11
    (FIGHTSTG, tier-2, small overlays) and decode-1 (item data, event scripts, card scripts) are done: `unk_` uses
    15,646 → 1,097 (mostly never-read or not yet understood), 12 `func_` names left, no `Unk<addr>` types.
-2. PC-port groundwork: **the user decides `docs/PC_PORT_PLAN.md` section 4** (11 decisions with recommendations), then
-   its M0 (byte-identical groundwork in `src/`).
+2. PC port, **M1 proper** (`docs/PC_PORT_PLAN.md`): LIBCD over the BIN (hash-checked; `psyq_cd_set_reader` exists),
+   the scripted pad, the per-frame primitive-stream hash (`psyq_gpu_take_hash`) and overlay log, the headless boot to
+   STDWTITL's menu with two identical runs, `-m32` against `-m64` once `glibc-devel.i686` is installed, ASan/UBSan once
+   `libasan`/`libubsan` are. Then M2 (the software GPU, SDL3 via a `setup.sh` step).
 3. Holdouts/FAKEs: opportunistic retries with new techniques.

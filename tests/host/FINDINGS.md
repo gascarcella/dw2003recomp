@@ -8,7 +8,7 @@ own code (a bounds check, a shim, a documented divergence).
 
 State on 2026-10-05 (21 families, 3,437 cases, 5,333 calls): everything matches except findings 1, 2 and 7 (41 mismatching calls,
 6, 34 and 1, listed by the 21 entries of `known_mismatches.json`); findings 3, 4, 6 and 8 agree by accident, 5 by the same struct
-layout.
+layout; finding 9 comes from reading the C (session 15), no golden reaches it.
 
 ## 1. `gamestate_check_party_stat` reads past `gamestate_party_stat_levels` (flag type 0x72, index >= 15)
 
@@ -160,6 +160,44 @@ port keeps the struct layout (the save struct `gamestate_data` must keep it anyw
 - **For the port: give these creators their real return type** (return the object). The declarations that disagree are
   marked in the C, which keeps them as they are (tests never change `src/`).
 
+## 9. Objects created with size 0, and data blocks that are not arrays of pointers (from reading the C, session 15)
+
+Not replayed by a golden (no case reaches these creators); found by the M0 agents while sizing every `object_new` /
+`object_create` call in `sizeof` units, verified here against the C.
+
+- **Where:** (a) `wfightts_main_create` (`src/wfightts/wfightts_800A67B8.c` 449) creates its object with
+  `object_create(wfightts_main_update, 0, 0, 0)`, while `wfightts_main_update` uses it as a `WfighttsMain` (0x6C bytes:
+  `obj->menu`, ...) and writes its data block as a `WfighttsMainData` (0x2C bytes: `data->command = ...`) through
+  `children`, which stays NULL (`data_size == 0` allocates nothing). (b) `stagslct_create`
+  (`src/stagslct/stagslct_800849CC.c` 714, the documented bug: `object_new(stagslct_update, 0, 0)`) does the same for a
+  `StageSelect` (0x70) and its `StageSelectData` (0x9C: the windows). (c) `object_destroy` (`src/main/object.c`) scans a
+  data block as `child_count` pointers and stops every non-NULL one (`heap_objects.stop`: `set_state(END)` through it).
+  `object_create` sets `child_count = data_size / 4` on the PS1 and, since this session, `data_size / sizeof(void *)`
+  under `PC_PORT`, with the creators passing `sizeof(<T>Data)` (so a pointer-only block, e.g. `FightstgCommandMenuData`,
+  is scanned right at either width). But about a dozen of the 124 `*Data` blocks mix other fields with the pointers:
+  `FieldstgEventData` (`s32 started` first, then 13 pointers), `FightstgDigivolveData` (`unk_4` between pointers),
+  `Wstag800Data` (`unk_18`), `StgdglabFormsetData` (`unk_9C` last), and the byte pads `unk_7C[4]` of `StageSelectData`,
+  `unk_4[4]` of `FightstgEnemyTurnData`, `unk_00[4]` of `FightstgStatusData`, `unk_5C[0x10]` of `StstatusItemListData`,
+  `unk_9C[8]` of `StstatusEquipPageData`.
+- **Original:** (a) and (b) work by accident. `heap_alloc(0)` returns a block of 0 bytes (`heap_try_alloc` rounds the size
+  to 0 and splits the free block right behind the header), so the 0x50-byte `Object` header and the type's fields are
+  written over the next block's header and whatever follows it, and the data fields go to `0x0 + offset` (KUSEG's low
+  RAM: no fault on the R3000). WFIGHTTS is a debug overlay (DISC_LAYOUT: a test battle, reached from STAGSLCT's stage
+  list, MECHANICS "WFIGHTTS needs map 0x600"), and STAGSLCT the debug stage select: neither runs in normal play. (c) On
+  the PS1 every 4-byte field is one scanned word, so the mix is harmless as long as a non-pointer word is 0 or a real
+  object at destroy time (`FieldstgEventData.started` is an object pointer typed `s32`; the `unk_` words are 0 or
+  unknown).
+- **Host:** (a) and (b) are a heap overflow of `malloc(0)` and a write through NULL: a crash as soon as either overlay
+  runs. (c) At `-m64` the mixed blocks are no longer arrays of pointers: `FieldstgEventData` has 4 bytes of padding after
+  `started` and its first scanned "pointer" is `started` plus the padding; `FightstgDigivolveData.unk_4` and its padding
+  make one bogus word; the byte pads shift every pointer after them by 4 into the middle of a scanned word. Whatever
+  `child_count` says, `object_destroy` calls `set_state` through garbage.
+- **For the port:** (a) and (b) need the real sizes (`sizeof(WfighttsMain)`/`sizeof(WfighttsMainData)`,
+  `sizeof(StageSelect)`/`sizeof(StageSelectData)`); until then the port must not run WFIGHTTS or STAGSLCT as they are.
+  For (c), either give those objects a `destroy` that knows the block's layout (stop the pointer fields by name), or keep
+  the data blocks pointer-only (move the odd field into the object, give the pads a pointer-sized type). The matching
+  build keeps the C as it is (tests never change `src/`).
+
 ## What the host does not replay (by design, not findings)
 
 - Stack leftovers: `replay.c` zeroes 64 KB of stack before every call, so a local the C reads uninitialised is 0 on the
@@ -172,8 +210,9 @@ port keeps the struct layout (the save struct `gamestate_data` must keep it anyw
   cdload entry writes (`replay.py` turns them into file registrations).
 - Pointer-bearing structs are wider on an LP64 host. Fixture offsets are chosen in the pointer-free part of each struct
   (`gamestate_data` before `.funcs`, `fightstg_battle.state`, `fightstg_rules.stats`); the one fixture buffer of such a
-  struct (`CardgameGame`, whose `Object` header holds pointers) is remapped with the offsets `layout.c` reports, and so are
-  the reads of it (`buf:game` past the header).
+  struct (`CardgameGame`, whose `Object` header holds pointers, and whose `opponents` at 0x2F0 is a struct pointer) is
+  remapped with the offsets `layout.c` reports, and so are the reads of it (`buf:game` past the header; `replay.py`
+  `BUFFER_LAYOUTS`: a pointer field in the tail splits it into segments).
   A 32-bit host build (`gcc -m32`, needs `gcc-multilib`) would need none of that.
 - UI calls inside a rule (`ststatus_items_use`, `ststatus_tech_use`): the goldens give the page's windows methods that do
   nothing (every word of a `window` buffer is `heap_nop`'s address, the data block points every window at it); the host

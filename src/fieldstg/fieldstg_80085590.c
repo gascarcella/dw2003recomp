@@ -1224,7 +1224,7 @@ void fieldstg_map_title_update(FieldstgMapTitle *obj, FieldstgMapTitleData *data
 }
 
 Object *fieldstg_map_title_create(s32 show) {
-    Object *obj = object_create(fieldstg_map_title_update, 0x1C0, 8, 9);
+    Object *obj = object_create(fieldstg_map_title_update, sizeof(FieldstgMapTitle), 8, 9);
 
     obj->key1 = show;
     fieldstg_stage.title_shown = 1;

@@ -123,7 +123,7 @@ void wstag270_choice_1518_update(WstagChoice *obj, WstagChoiceData *data) {
 }
 
 Object *wstag270_event_1518_start(void) {
-    return object_new(wstag270_choice_1518_update, 0x64, 0x14);
+    return object_new(wstag270_choice_1518_update, sizeof(WstagChoice), sizeof(WstagChoiceData));
 }
 
 void wstag270_choice_1520_update(WstagChoice *obj, WstagChoiceData *data) {
@@ -235,7 +235,7 @@ void wstag270_choice_1520_update(WstagChoice *obj, WstagChoiceData *data) {
 }
 
 Object *wstag270_event_1520_start(void) {
-    return object_new(wstag270_choice_1520_update, 0x64, 0x14);
+    return object_new(wstag270_choice_1520_update, sizeof(WstagChoice), sizeof(WstagChoiceData));
 }
 
 void wstag270_update(WstagObject *obj) {

@@ -257,6 +257,7 @@ void cdload_load_file(s32 id) {
     cdload_queue_file(id);
     do {
         cdload_update();
+        PLATFORM_WAIT(); /* the CD interrupt ends this loop */
     } while (cdload_is_loading(id) != 0);
 }
 
@@ -269,6 +270,7 @@ u8 *cdload_get_file(s32 id) {
         return entry->buffer;
     }
     while (cdload_reader.is_busy() != 0) {
+        PLATFORM_WAIT();
     }
     cdload_load_file(id);
     return cdload_find_entry(id)->buffer;
@@ -330,11 +332,11 @@ void *cdload_get_subfile_by_id(u32 id) {
     s32 index = id & 0xFFFF;
     s32 *data = (s32 *)cdload_get_file(id >> 16);
 
-    return (void *)(data[index] + (s32)data);
+    return PTR_ADD(void *, data[index], data);
 }
 
 void *cdload_get_subfile(u16 index, s32 *data) {
-    return (void *)(data[index] + (s32)data);
+    return PTR_ADD(void *, data[index], data);
 }
 
 void cdload_mark_loaded(void) {

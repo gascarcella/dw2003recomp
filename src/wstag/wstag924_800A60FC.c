@@ -169,7 +169,7 @@ void wstag924_menu_1602_update(WstagMenu *obj, WstagMenuData *data) {
 }
 
 Object *wstag924_event_1602_start(void) {
-    return object_new(wstag924_menu_1602_update, 0x84, 0x28);
+    return object_new(wstag924_menu_1602_update, sizeof(WstagMenu), sizeof(WstagMenuData));
 }
 
 void wstag924_menu_1604_update(WstagMenu *obj, WstagMenuData *data) {
@@ -331,7 +331,7 @@ void wstag924_menu_1604_update(WstagMenu *obj, WstagMenuData *data) {
 }
 
 Object *wstag924_event_1604_start(void) {
-    return object_new(wstag924_menu_1604_update, 0x84, 0x28);
+    return object_new(wstag924_menu_1604_update, sizeof(WstagMenu), sizeof(WstagMenuData));
 }
 
 /* The file's .data: the list frame's sprite per count - 5. */

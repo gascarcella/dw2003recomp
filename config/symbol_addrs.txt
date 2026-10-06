@@ -1655,5 +1655,10 @@ _card_read = 0x8003ED0C; // type:func
 // LIBMCRD.LIB/UNFORMAT.OBJ
 MemCardUnformat = 0x8003ED1C; // type:func
 
-// An identity MATRIX (overlays read its columns and its t by offset: FIGHTSTG fightstg_battle_to_screen).
+// The data block at 0x8004DC10 (message.c): a zero VECTOR, an identity MATRIX (overlays read its columns and its t by
+// offset: FIGHTSTG fightstg_battle_to_screen) and three scale matrices.
+D_8004DC10 = 0x8004DC10; // size:0x10
 D_8004DC20 = 0x8004DC20; // size:0x20
+D_8004DC40 = 0x8004DC40; // size:0x20
+D_8004DC60 = 0x8004DC60; // size:0x20
+D_8004DC80 = 0x8004DC80; // size:0x20

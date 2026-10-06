@@ -86,10 +86,16 @@ void gamestate_add_stat_bonus(s16 *stats, s32 type, s32 value);
 /* FIELDSTG's functions, called by address (the EXE can't link against an overlay; config/fieldstg.symbols.txt):
  * fieldstg_goto_map (a map's high byte picks its overlay, overlay_files), fieldstg_start_indexed_event,
  * fieldstg_open_inn and fieldstg_start_listed_battle_func. */
-void func_8008B770(s32, s32, s32, s32, s32); /* in an overlay */
-void func_8008BFA4(s32);                   /* in an overlay */
-void func_8008C000(void);                  /* in an overlay (FIELDSTG: takes no arguments) */
-extern void (*D_8009B6A4)(s32);            /* in an overlay */
+LATE_FUNC(1, 0x8008B770, void, func_8008B770, (s32, s32, s32, s32, s32)); /* in an overlay */
+LATE_FUNC(1, 0x8008BFA4, void, func_8008BFA4, (s32)); /* in an overlay */
+LATE_FUNC(1, 0x8008C000, void, func_8008C000, (void)); /* in an overlay (FIELDSTG: takes no arguments) */
+#ifndef PC_PORT
+extern void (*D_8009B6A4)(s32);            /* in an overlay: FIELDSTG's fieldstg_start_listed_battle_func */
+#else
+/* The host links FIELDSTG in: the variable itself (its .data is restored by the overlay manager on each load). */
+extern void (*fieldstg_start_listed_battle_func)();
+#define D_8009B6A4 fieldstg_start_listed_battle_func
+#endif
 
 s32 gamestate_test_bit(u8 *bits, s32 index, s32 set) {
     s32 byte = index >> 3;
@@ -490,7 +496,7 @@ void gamestate_change_card(s32 arg0, s32 arg1) {
 /* Flag types 0x76/0x78: a card game (map 0x700, CARDGAME) against opponent arg0 * 2 + arg1 + 1 (the map entry is
  * CardgameGame.opponent; two opponents per deck name). gamestate_update_map_flags sets flag 0x10 to the result. */
 void gamestate_start_card_game(s32 arg0, s32 arg1) {
-    func_8008B770(0x700, arg0 * 2 + arg1 + 1, 0, 0, 0);
+    LATE_CALL(func_8008B770)(0x700, arg0 * 2 + arg1 + 1, 0, 0, 0);
 }
 
 s32 gamestate_get_flag(u16 flag, u16 value) {
@@ -603,28 +609,28 @@ void gamestate_set_flag(s32 flag, s32 value) {
         gamestate_change_item(index, value);
     }
     if (type == 0x90) {
-        func_8008BFA4(index);
+        LATE_CALL(func_8008BFA4)(index);
     }
     if (type == 0x92) {
         gamestate_change_card(index, value);
     }
     if (type == 0x94) {
-        func_8008B770(0xA00, index, 0, 0, 0);
+        LATE_CALL(func_8008B770)(0xA00, index, 0, 0, 0);
     }
     if (type == 0x7A) {
         if (index < 30) {
-            func_8008B770(0xF00, index, 0, 0, 0);
+            LATE_CALL(func_8008B770)(0xF00, index, 0, 0, 0);
         } else if ((index >= 0x31 && index <= 0x43) || (index >= 0x46 && index <= 0x4A)) {
-            func_8008B770(0x1300, index, 0, 0, 0);
+            LATE_CALL(func_8008B770)(0x1300, index, 0, 0, 0);
         } else {
-            func_8008C000();
+            LATE_CALL(func_8008C000)();
         }
     }
     if (type == 0x7C) {
         if (index == 0) {
-            func_8008B770(0xD00, 0, 0, 0, 0);
+            LATE_CALL(func_8008B770)(0xD00, 0, 0, 0, 0);
         } else if (index == 1) {
-            func_8008B770(0xB00, 0, 0, 0, 0);
+            LATE_CALL(func_8008B770)(0xB00, 0, 0, 0, 0);
         }
     }
 }
@@ -673,7 +679,7 @@ void gamestate_update_map_flags(void) {
 }
 
 void gamestate_new_game(void) {
-    heap_funcs.bzero(&gamestate_data, 0x26C4);
+    heap_funcs.bzero(&gamestate_data, (unsigned long)&((GamestateData *)0)->map);
     gamestate_data.map = 0x1600;
     gamestate_data.next_map = 0x1600;
     gamestate_data.digivolve_demo = 1;

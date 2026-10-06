@@ -5,7 +5,7 @@
 
 extern WstagFadeFuncs wstag210_funcs;
 extern s32 D_WSTAG210_800A7F84[];
-extern CVECTOR wstag210_color;
+extern const CVECTOR wstag210_color;
 extern FieldstgBattleLists wstag210_battle_lists;
 extern FieldstgVramPlace wstag210_vram_places[];
 extern FieldstgPlacedActor *wstag210_actors[];
@@ -176,7 +176,7 @@ void wstag210_menu_update(WstagMenu *obj, WstagMenuData *data) {
 }
 
 Object *wstag210_event_8_start(void) {
-    return object_new(wstag210_menu_update, 0x84, 0x28);
+    return object_new(wstag210_menu_update, sizeof(WstagMenu), sizeof(WstagMenuData));
 }
 
 void wstag210_choice_9_update(WstagChoice *obj, WstagChoiceData *data) {
@@ -288,7 +288,7 @@ void wstag210_choice_9_update(WstagChoice *obj, WstagChoiceData *data) {
 }
 
 Object *wstag210_event_9_start(void) {
-    return object_new(wstag210_choice_9_update, 0x64, 0x14);
+    return object_new(wstag210_choice_9_update, sizeof(WstagChoice), sizeof(WstagChoiceData));
 }
 
 void wstag210_choice_1510_update(WstagChoice *obj, WstagChoiceData *data) {
@@ -400,7 +400,7 @@ void wstag210_choice_1510_update(WstagChoice *obj, WstagChoiceData *data) {
 }
 
 Object *wstag210_event_1510_start(void) {
-    return object_new(wstag210_choice_1510_update, 0x64, 0x14);
+    return object_new(wstag210_choice_1510_update, sizeof(WstagChoice), sizeof(WstagChoiceData));
 }
 
 void wstag210_update(WstagObject *obj, WstagEventData *data) {
@@ -502,7 +502,7 @@ s32 wstag210_fade_update(WindowAnim *fade) {
     return 0;
 }
 
-INCLUDE_RODATA("asm/wstag210/nonmatchings/wstag210", wstag210_color);
+const CVECTOR wstag210_color = { 0x54, 0x67, 0x96, 0 };
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag210_setup(void);

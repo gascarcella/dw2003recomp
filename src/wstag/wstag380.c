@@ -3,7 +3,7 @@
 /* WSTAG380: stage 0x227 (fieldstg_stages). */
 
 extern WstagFuncs wstag380_funcs;
-extern CVECTOR wstag380_color;
+const CVECTOR wstag380_color = { 0x54, 0x67, 0x96, 0 };
 extern FieldstgBattleLists wstag380_battle_lists;
 extern FieldstgBattleLists wstag380_battle_lists2;
 extern FieldstgBattleLists wstag380_battle_lists3;
@@ -69,8 +69,6 @@ void wstag380_setup(void) {
         fieldstg_stage.battle_lists = &wstag380_battle_lists3;
     }
 }
-
-INCLUDE_RODATA("asm/wstag380/nonmatchings/wstag380", wstag380_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag380_setup(void);

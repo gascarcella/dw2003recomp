@@ -2,6 +2,30 @@
 
 Newest first. One short entry per session: goal, result, next steps.
 
+## 2026-10-05: Session 15: PC port decisions, M0 and the M1 skeleton (worktree branch `gascarcella/PC-Port-Kickoff`, PR to `main`)
+- **Asked:** decide `docs/PC_PORT_PLAN.md` section 4, then M0 (and, the user's choice in phase 1, an M1 skeleton) with
+  dedicated sub-agents owning disjoint files, delivered as a pull request.
+- **Decisions:** every recommendation taken (DECISIONS "PC port decisions (session 15)"); the `-m32` oracle wanted for M1
+  (the user installs `glibc-devel.i686`).
+- **Done, in waves of worktree agents** (32 cores: 5 at once with `DW3_JOBS=6`; each merged with `merge_checkpoint.sh`,
+  byte-identical every time):
+  - Wave 0: T0 `include/port.h` (the hook macros, both sides, proven at every site) + the `MoveImage` prototype;
+    T6 `tools/port_inventory.py`. Baseline under GCC 16: 31 of 388 units failed the probe (93 errors, 60 of them
+    `incompatible-pointer-types`, warnings under the plan's GCC 13).
+  - Wave 1, by file owner (EXE, FIELDSTG, battle, WSTAG, the 17 small overlays): every transform of the plan's M0; the
+    probe clean on the whole tree. Extras the plan missed: 67 `SLOT_FUNC` script objects, 17 more literal sizes, the
+    `D_8009B6A4` data pointer, two CD-ended loops without a wait hook (`cdload_load_file`, `sound_init`).
+  - Wave 2: T7 `tests/host/build.sh` without `-fpermissive`/the prototype headers; the probe gates `scripts/test.sh` and
+    a disc-free CI step; FINDINGS 9. T7 also found the host replay broken by the `opponents` retype (fixed in `replay.py`).
+  - Wave 3: T9 `port/psyq/` (113 stubs, real where pure) and T8 `port/` (CMake, arena, overlay manager with generated
+    ld script and tables, pump, `tools/port_gen.py`). The real link has no unresolved symbol; `build/port/dw2003
+    --max-frames 60` exits 0 at the cap.
+  - Orchestrator: `setaddr` through `PTR_TO_U32`, `object.c`'s `child_count` in pointer units on the host, the two
+    `PLATFORM_WAIT`s, the `D_8009B6A4` binding.
+- **Left as is:** FIELDSTG's zero block (asm; psylink fill), 23 literal byte counts (annotated), the open items in
+  STATUS "Not done". The sanitizer link needs `libasan`/`libubsan` (sudo).
+- **Next:** M1 proper (STATUS "Next" 2).
+
 ## 2026-10-05: Session 14: the two-repository cloud session proven (cloud, branch `claude/optimistic-heisenberg-3b2i6d`)
 - **Asked:** check that building and testing still work after the split into `dw2003recomp` (public, code) and
   `dw2003-gamedata` (private, data), from a cloud environment that selects both.

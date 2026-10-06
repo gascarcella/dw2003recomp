@@ -59,6 +59,7 @@ struct Inn {
     /* 0x6C */ WindowAnim title_anim;    /* the panels of the inn's name and the money */
     /* 0x7C */ WindowAnim question_anim; /* the price and stay / don't stay panel */
     /* 0x8C */ WindowAnim message_anim;  /* the "not enough BIT" panel */
+    /* 0x9C */ s32 unk_9C;               /* unused; inn_create allocates 0xA0 */
 }; /* size 0xA0 */
 
 /* inn_update's data block (object_new's third argument). */
@@ -321,7 +322,7 @@ void inn_update(Inn *obj, InnData *data) {
 }
 
 Inn *inn_create(s32 layer) {
-    Inn *obj = object_new(inn_update, 0xA0, 0x20);
+    Inn *obj = object_new(inn_update, sizeof(Inn), sizeof(InnData));
 
     obj->layer_id = layer;
     obj->ot_depth = 1;

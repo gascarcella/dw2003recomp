@@ -416,7 +416,7 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
 }
 
 Fieldmenu *fieldmenu_create(s32 layer, s32 option) {
-    Fieldmenu *obj = object_new(fieldmenu_update, 0xA0, 0xAC);
+    Fieldmenu *obj = object_new(fieldmenu_update, sizeof(Fieldmenu), sizeof(FieldmenuWindows));
 
     obj->layer_id = layer;
     obj->ot_depth = 1;

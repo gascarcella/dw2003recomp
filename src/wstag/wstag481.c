@@ -4,7 +4,7 @@
 
 extern WstagSeqKey **D_WSTAG481_800A6564[];
 extern WstagFuncs wstag481_funcs;
-extern CVECTOR wstag481_color;
+extern const CVECTOR wstag481_color;
 extern FieldstgBattleLists wstag481_battle_lists;
 extern FieldstgVramPlace wstag481_vram_places[];
 extern FieldstgSprite wstag481_sprites[];
@@ -91,7 +91,7 @@ void wstag481_seq_update(WstagSeqObject *obj) {
 }
 
 Object *wstag481_seq_create(void) {
-    return object_new(wstag481_seq_update, 0x78, 0);
+    return object_new(wstag481_seq_update, sizeof(WstagSeqObject), 0);
 }
 
 void wstag481_update(WstagObject *obj, Object **data) {
@@ -137,7 +137,7 @@ void wstag481_setup(void) {
     fieldstg_attr.init_layer(0);
 }
 
-INCLUDE_RODATA("asm/wstag481/nonmatchings/wstag481", wstag481_color);
+const CVECTOR wstag481_color = { 0x80, 0x80, 0x80, 0 };
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag481_setup(void);

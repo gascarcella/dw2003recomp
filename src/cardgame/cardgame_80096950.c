@@ -2134,8 +2134,8 @@ void cardgame_board_set_lamps(CardgameBoard *obj, s32 flags) {
 }
 
 void cardgame_board_clear_lamps(CardgameBoard *obj) {
-    heap_funcs.bzero(obj->panels[0].lamps, 10);
-    heap_funcs.bzero(obj->panels[1].lamps, 10);
+    heap_funcs.bzero(obj->panels[0].lamps, sizeof(obj->panels[0].lamps));
+    heap_funcs.bzero(obj->panels[1].lamps, sizeof(obj->panels[1].lamps));
 }
 
 s32 cardgame_board_remove_card(CardgameBoard *obj, s32 i) {
@@ -2248,9 +2248,11 @@ CardgameBoard *cardgame_board_create(s16 *ids) {
     obj->close_popup = cardgame_board_close_popup;
     obj->set_lamps = cardgame_board_set_lamps;
     obj->clear_lamps = cardgame_board_clear_lamps;
-    obj->open_dialog = cardgame_board_open_dialog;
+    /* The slots take words (their callers pass words, which keeps their bytes); the functions' narrow parameters are
+     * what the original's prologues show. The values passed are small, so both agree. */
+    obj->open_dialog = (void (*)(struct CardgameBoard *, s32, s32, s32, s32))cardgame_board_open_dialog;
     obj->close_dialog = cardgame_board_close_dialog;
-    obj->set_dialog_answer = cardgame_board_set_dialog_answer;
+    obj->set_dialog_answer = (void (*)(struct CardgameBoard *, s32))cardgame_board_set_dialog_answer;
     obj->confirm_dialog = cardgame_board_confirm_dialog;
     obj->open_menu = cardgame_board_open_menu;
     obj->close_menu = cardgame_board_close_menu;

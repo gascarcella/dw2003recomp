@@ -242,7 +242,7 @@ void wstag935_menu_1616_update(WstagMenu *obj, WstagMenuData *data) {
 }
 
 Object *wstag935_event_1616_start(void) {
-    return object_new(wstag935_menu_1616_update, 0x84, 0x28);
+    return object_new(wstag935_menu_1616_update, sizeof(WstagMenu), sizeof(WstagMenuData));
 }
 
 void wstag935_menu_1618_update(WstagMenu *obj, WstagMenuData *data) {
@@ -404,7 +404,7 @@ void wstag935_menu_1618_update(WstagMenu *obj, WstagMenuData *data) {
 }
 
 Object *wstag935_event_1618_start(void) {
-    return object_new(wstag935_menu_1618_update, 0x84, 0x28);
+    return object_new(wstag935_menu_1618_update, sizeof(WstagMenu), sizeof(WstagMenuData));
 }
 
 /* The stage's .data (tools/wstag_data.py). */

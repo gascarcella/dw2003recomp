@@ -7,7 +7,7 @@ extern WstagPos D_WSTAG212_800A817C[];
 extern s32 D_WSTAG212_800A8188[];
 extern WstagFuncs wstag212_funcs;
 extern s8 D_WSTAG212_800A8178[];
-extern CVECTOR wstag212_color;
+const CVECTOR wstag212_color = { 0x54, 0x67, 0x96, 0 };
 extern FieldstgVramPlace wstag212_vram_places[];
 extern FieldstgPlacedActor *wstag212_actors[];
 extern FieldstgSprite wstag212_sprites[];
@@ -215,8 +215,6 @@ void wstag212_setup(void) {
     fieldstg_attr.set_file(0, 0x04CE0001);
     fieldstg_attr.init_layer(0);
 }
-
-INCLUDE_RODATA("asm/wstag212/nonmatchings/wstag212", wstag212_color);
 
 /* The stage's .data (tools/wstag_data.py). */
 void wstag212_setup(void);

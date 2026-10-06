@@ -1688,3 +1688,62 @@ Each entry: date, decision, why, alternatives considered.
 - **Why:** one reviewable unit per session, CI (`build.sh --check`, `scripts/test.sh`) on the branch before it reaches
   `main`, and a public record of what changed and why now that the repo is public.
 - **Not changed:** outside pull requests stay closed by policy (README; "Going public"); the user closes them by hand.
+
+## 2026-10-05: PC port decisions (session 15)
+The user's answers to `docs/PC_PORT_PLAN.md` section 4 (asked item by item; every recommendation was taken):
+1. **Approach:** our own Psy-Q shim (`port/psyq/`) against the 123-function checklist. PsyCross is an MIT reference
+   only, not forked (this supersedes `PC_PORT_RESEARCH.md`'s "fork PsyCross for bring-up" leaning).
+2. **Renderer:** a VRAM-exact software GPU first (pixel-comparable with the emulator); a hardware renderer on the SDL3
+   GPU API later, on the same primitive stream.
+3. **SDL3**, pinned and built from source into `tools/` by a `setup.sh` step.
+4. **64-bit host**, with the measured cleanup (M0). **The `-m32` layout oracle is wanted for M1:** the user installs the
+   32-bit glibc headers system-wide themselves; an agent never runs sudo. Measured on the dev machine (Nobara, GCC
+   16.2): `gcc -m32` fails at link (`crt1.o` missing), `libgcc.i686` is present, the missing package is
+   `glibc-devel.i686` (`gcc-multilib` on Ubuntu, for CI). M0 does not need it.
+5. **Overlays:** static link with an overlay manager (`.data`/`.bss` snapshot and restore on load; late-bound addresses
+   through tables generated from the `config/` symbol files), not one shared library per overlay.
+6. **Sound:** our own SPU core and LIBSND reimplementation, checked against emulator SPU register-write traces. The
+   R3000 interpreter running the user's LIBSND stays the fallback.
+7. **Disc input:** LIBCD over the user's BIN/CUE, hash-checked; no extracted-files mode.
+8. **Licence:** unchanged from "Going public": MIT; the port admits only MIT/BSD/zlib code; emulators are external
+   test oracles, never linked or copied.
+9. **Layout:** unchanged from "Going public": `port/` in this repo, hook macros in `include/`, a few `#ifdef PC_PORT`
+   in `src/`, each verified byte-identical.
+10. **Movies:** our own MDEC + XA decoder (so no FFmpeg), not before M5.
+11. **Frame rate:** PAL 50 Hz by default, 60 Hz as an option through `records_60hz`.
+- **Session 15's scope (user's choice): M0 plus an M1 skeleton**, not M0 alone.
+
+## 2026-10-05: M0 facts and the M1 skeleton's design (session 15, agents T0-T9)
+- **Hook macros live in `include/port.h`, included from `common.h`;** each is the exact PS1 code without `PC_PORT`. A
+  function in an overlay slot is a *tag* on the host (the PS1 address in the function pointer, a constant expression for
+  the static tables) and is only ever called through `OVERLAY_FN`/`LATE_CALL`, which resolve it in the current overlay.
+  `SLOT_PTR`/`HEAP_*` are constant expressions on both sides because the arena's buffers are link-time symbols.
+- **GCC 2.8.1 facts found while moving data to C** (all byte-identical in the end): a 4-byte `const` goes to `.sdata` at
+  `-G8` unless the section is named (`main.c`'s `MAIN_RODATA`); a `const` word must be defined after the functions whose
+  jump tables precede it in `.rodata` (source order); a C `.rodata` definition placed right before an `INCLUDE_ASM` whose
+  asm carries `.rodata` makes GCC omit the next `.rdata` directive, so the following functions' literals land in `.text`
+  (SHOCKTST: the word is typed `asciz` in the symbol file so splat migrates it into the holdout's asm instead); strings
+  followed by psylink's non-zero fill become `const u8[N]` arrays with the fill spelled out (the "stays INCLUDE_RODATA"
+  rule for the two cursor strings is superseded). The EXE matrix block `0x8004DC10` is C at the start of `message.c`'s
+  `.data` (owner still a guess). FIELDSTG's zero block stays asm: psylink's "IN" fill sits inside one `.bss` run, which GNU
+  ld cannot reproduce without a FILL facility in `configure.py`.
+- **Method slots keep word-sized parameters** (`cardgame_board_open_dialog`, `set_dialog_answer`, `stdwtitl_menu_get_result`,
+  `gfx_set_clip_*`): narrowing a slot's parameter types changes the callers' bytes, so the assignments carry explicit
+  casts; the host calls an `s16`-parameter function through an `s32` pointer (UB that GCC's callee re-extension tolerates).
+  `CardgameGame.opponents` is a pointer field (byte-identical retype). `object_create`'s `child_count` is `data_size / 4`
+  on the PS1 and `data_size / sizeof(void *)` on the host; a data block mixing `s32` and pointers is still a port hazard
+  (FINDINGS 9c).
+- **The probe is a gate:** `tools/port_inventory.py probe` (`-m64`, `-Werror` on pointer/int casts, implicit declarations,
+  incompatible pointer types; `-fpermissive` only on GCC 14+ so the gate is the same on CI's GCC 13) and `link` run first
+  in `scripts/test.sh` and as a disc-free CI step. They need no `include/asm_generated/`.
+- **The port runtime (`port/`):** the arena mirrors the PS1 layout from `0x80082CB0` (slots at the PS1 distances, a 4 MB
+  heap) in one 16 MB-aligned non-PIE `.bss` block; PS1-style addresses are base + offset. Overlay data isolation is a
+  generated GNU ld script (`.dw3.data/.bss.<ovl>` inserted before `.data`/`.bss`); the snapshot is taken before
+  `game_main`. The address tables are generated at build time from the symbol files filtered by `nm` of the objects, and
+  the build fails if a tag site in the C does not resolve. `src/main/main.c` is compiled with `-Dmain=game_main`.
+  Loops the game ends only by a CD interrupt carry `PLATFORM_WAIT()`; the runtime's watchdog (exit 4) catches the ones
+  that do not. LIBC2/LIBAPI are the host libc (a definition in the executable would interpose on every shared library).
+- **Agents on this machine:** 32 cores and 125 GB allow 5 worktree agents at once with `DW3_JOBS=6`
+  (`scripts/build.sh --check` takes 22 s on ~12 cores, 110 MB peak per process); `docs/AGENT_BRIEF.md`'s `DW3_JOBS=1` is
+  the shared-4-core default, overridden per brief.
+

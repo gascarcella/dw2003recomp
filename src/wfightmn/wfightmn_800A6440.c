@@ -1555,10 +1555,10 @@ void wfightmn_run_events(WfightmnMain *obj) {
 /* The overlay's entry (FIGHTSTG's fightstg_main_update keeps the object it returns): creates the battle's
  * main object (wfightmn_main_update, 0x74 bytes) and clears the battle state and the last battle's results. */
 Object *wfightmn_main_create(void) {
-    Object *obj = object_create(wfightmn_main_update, 0x74, 0x20, 0xC);
+    Object *obj = object_create(wfightmn_main_update, sizeof(WfightmnMain), sizeof(WfightmnMainData), 0xC);
 
     heap_funcs.bzero(&fightstg_battle.state, sizeof(FightstgBattleState));
-    heap_funcs.bzero(&records_battle_results, 0x12);
+    heap_funcs.bzero(&records_battle_results, 0x12); /* PC_PORT: a byte count: the fields before unk_12 (pointer-free) */
     return obj;
 }
 
