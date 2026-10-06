@@ -1860,3 +1860,16 @@ The user's answers to `docs/PC_PORT_PLAN.md` section 4 (asked item by item; ever
   screen pixels, a 24-bit area spans `w * 3 / 2` VRAM pixels), 4:3, integer-scaled by lines (default 2), real-time pacing
   at 50 Hz only with a window (a window run's log is byte-identical to a headless one's), keyboard and gamepads merged
   into pad 0 (logged like a script's inputs; a script owns the pad when given). `--screenshot FRAME:PATH` works headless.
+
+## 2026-10-06: LIBSND in the port: read the disassembly for facts, write our own code (user decision, session 16)
+Asked in M3 (docs/SOUND.md "Open points": matching the emulator's SPU write traces exactly needs Sony's arithmetic):
+the user chose that an agent **may read the EXE's LIBSND disassembly** (Psy-Q code kept as split asm, never decompiled
+in this project) **to learn constants, tables, the order of operations and formulas**, and **writes original C**: no
+instruction-by-instruction or function-by-function translation, no copied code; numeric tables read there are cited
+where used. `docs/SOUND.md` "Provenance" records what came from the disassembly and what from the traces. Rejected:
+black-box only (cleaner, but trace-exactness unlikely) and the R3000 interpreter fallback (exact, but an interpreter
+inside the port).
+- Also in M3 so far: the SPU-write trace oracle (`tests/sound/`, T11), the SPU core from psx-spx (`port/src/spu*.c`,
+  T13: unit goldens on two independent models, the ADSR against Redux within 2 samples; Redux takes its first release
+  step one period earlier than psx-spx's counter reading: we follow psx-spx), the GPU 2.6x faster with identical pixels
+  (T12: span loops per kind, decoded texel segments invalidated by VRAM write marks, `gpu.c` at `-O3`).

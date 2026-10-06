@@ -10,6 +10,10 @@ void psyq_vsync_tick(void);
 /* The runtime's per-frame hook: called at the end of every vsync tick (from VSync() as from the pump), after the
  * game's VSyncCallback handler. NULL: none. */
 void psyq_set_vsync_hook(void (*hook)(void));
+/* The runtime's work at the start of every vsync tick, before the game's VSyncCallback handler: the SPU renders that
+ * frame's samples there (port_audio_frame), so that LIBSND's per-tick flush in the handler (SsSeqCalledTbyT) sees the
+ * voices advanced by a whole frame, as on the PS1, where the SPU runs while the game's frame runs. NULL: none. */
+void psyq_set_vsync_pre_hook(void (*hook)(void));
 /* The CD "interrupt", once per vsync: completes the pending CdControlF command (CdSyncCallback's handler), delivers
  * this tick's sectors of a read (CdReadyCallback's handler, once per sector) or of a stream (CdRead2: into the ring
  * StSetRing gave). Returns 1 if a handler ran. */

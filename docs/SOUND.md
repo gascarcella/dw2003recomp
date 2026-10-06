@@ -43,8 +43,10 @@ The sound keys of `play` (FORMATS "Sound"): a SEP sequence is addressed as (acce
 sequence is not range-checked against the SEP's 16: CNTY_SEL and the battle play COMMON's SEP 0 with sequence `0x1C`,
 `0x19`, `0x1A` (**verified** in the trace: `SsSepPlay(0, 0x1c, 1, 1)` at tick 908 of `new_game`). With
 `SsSetTableSize(table, 6, 16)` the score table is one array of 6 × 16 entries, so sequence 28 of access 0 is entry
-`0 × 16 + 28` = sequence 12 of access 1, i.e. COMMON's second SEP (**assumed**: inferred from the table layout; the
-LIBSND task must check it against the trace's key-ons). A faithful LIBSND must keep this aliasing.
+`0 × 16 + 28` = sequence 12 of access 1, i.e. COMMON's second SEP (**verified**, section 7: LIBSND's disassembly
+addresses the table as `table[access] + sequence × entry size`, and the port's LIBSND replayed on `new_game`'s timeline
+matches the emulator's stores only with the aliasing: bounded to 16, the effect's notes at tick 910 are missing). A
+faithful LIBSND must keep this aliasing.
 
 ## 2. The LIBSND/LIBSPU functions and what they reach
 The EXE links 91 LIBSND objects (119 functions) and 27 LIBSPU objects (43 functions) (docs/TOOLCHAIN.md; names in
@@ -236,13 +238,12 @@ T-spu and T-libsnd can run in parallel once `spu.h` is fixed (the orchestrator w
 was in M1). T-libsnd's exact check needs no audio at all; T-spu's needs no LIBSND.
 
 ### Open points
-- **How close to Sony's code may LIBSND follow?** Exact traces need LIBSND's exact arithmetic (tick/tempo
-  accumulation, volume and pan curves, voice allocation order). Reading the disassembly for numbers and order is
-  probably unavoidable; the port's code must be our own (DECISIONS "Going public": MIT/BSD/zlib only). A decision for
-  the user; the interpreter fallback (PC_PORT_PLAN 2.7) stays if a faithful reimplementation proves too costly.
-- **Tick alignment** at bank loads and screen changes depends on the CD timing; how strict the port comparison can be
-  between two loads is to be measured with the first LIBSND build.
-- The sequence aliasing (section 1) is inferred, not yet confirmed note by note.
+- **How close to Sony's code may LIBSND follow?** Settled by the user (session 16): the disassembly may be read for
+  constants, tables, formulas and the order of operations; the C is our own (section 7, "Provenance").
+- **Tick alignment**: measured with the LIBSND build (section 7): the game's own frames between two LIBSND calls differ
+  between the port and the emulator (not only at bank loads), so the exact check replays the emulator's calls on its
+  timeline, and the port's run is checked against the replay of its own calls.
+- The sequence aliasing (section 1): confirmed (section 7).
 - 60 Hz (`SsSetTickMode(0x1000)`, the NTSC patch) is not traced.
 
 ## 6. The SPU core (`port/src/spu.c`, `spu_dsp.c`; T-spu, session 16)
@@ -355,3 +356,131 @@ proxy, but its source is not: `https://raw.githubusercontent.com/psx-spx/psx-spx
 - Not modelled: SPU interrupts (IRQA; the game never enables IRQ9), DMA reads (SPU → RAM), the external input,
   `0x1AC`'s RAM-size modes, the hardware's write latency. Nothing calls `spu_init`/`spu_reset` yet: `port/src/main.c`
   and `reset.c` (the console's reset) should, once LIBSND drives the SPU.
+
+## 7. LIBSND (`port/psyq/libsnd*.c`; T-libsnd, session 16)
+The 24 functions the game calls (section 1) and what they reach (section 2), over the SPU core of section 6, written so
+that the SPU sees what it sees on the PS1: the same stores in the same order at the same vsync, the same DMA blocks.
+`libsnd.c` has the public calls, start-up and the VABs; `libsnd_seq.c` the score table and the sequencer;
+`libsnd_voice.c` the voice manager; `libsnd_spu.c` the SPU side (what LIBSPU does on the PS1: the game never calls
+LIBSPU, so the port has no LIBSPU API); `libsnd_internal.h` the shared state. LIBCD's `CdInit` makes its five SPU
+stores (`port/psyq/libcd.c`). `--spu-trace FILE` (`port/src/spu_trace.c`) writes the port's trace in section 4's format,
+with the game's LIBSND calls as comments (`# <tick> call SsSepPlay(2, 2, 1, 1)`, a SEP's pointer as its offset from the
+VAB header, the console's reset as `reset()`).
+
+### Provenance
+The user's decision (session 16): LIBSND is Sony's library code, in the EXE as split asm that this project never
+decompiles; its disassembly may be read to learn constants, tables, formulas and the order of operations, and the
+port's C is our own, with no routine translated instruction by instruction or function by function and no data copied
+beyond numeric facts (a table of numbers is a fact, cited where it is used). The code is MIT like the rest of the repo;
+its structure (the state, the files, the names) is ours. The disassembly (`asm/main/psyq/libsnd/`, `libspu/`; m2c's
+pseudo-C of it served as a reading aid only, in scratch) gave:
+- **Start-up**: `SsInit`'s order of stores (LIBSPU's register set-up, the 16-byte silent block written through the
+  FIFO, every voice pointed at it, keyed on and off; the reverb work area of types 7/8 cleared in 1 KB DMA blocks, each
+  waited for; LIBSND's 16 control registers; every voice set to pitch 1000h, address 1000h, ADSR 80FFh/4000h and keyed
+  off). One quirk the trace shows: the start-up clears the low half of the pending key-off mask only, so the first flush
+  writes `koff.hi 00ff`.
+- **The flush** (once a tick, before the sequences): every voice's envelope read, a 16-entry ring of "read 0" masks of
+  which 15 are ANDed (a note is over once its envelope read 0 for 15 flushes), key-ons cancelled by key-offs, then per
+  voice the changed registers (pitch, volume L/R, start address, ADSR: LIBSPU's order), KOFF, KON, EON (the voice
+  count's bits from LIBSND, the rest read back from the SPU), NON; the masks cleared except EON.
+- **The allocator**: the first voice whose status is free and whose envelope read 0; else the voice of the lowest
+  priority below the note's, among equal priorities the one with the lowest envelope, then the oldest (an age every
+  allocation increments).
+- **Volume**: velocity × channel volume / 127; × (VAB volume × 16383) / 16129; × program volume × tone volume /
+  16129; × sequence volume / 127 per side; three pans (tone, program, note: below 64 the right side × pan / 63, from 64
+  the left × (127 − pan) / 63); sequence notes squared (/ 16383), `SsUtKeyOn`'s not. `SsSepSetVol` and CC 7/10
+  recompute the sounding notes' volumes, each with its own small differences (which program record, which pan),
+  reproduced as found.
+- **Pitch**: LIBSND's two tables (12 semitones and 128 fine steps, the EXE's `0x8005C0E0`/`0x8005C0F8`; not exactly
+  2^(k/12) rounded either way, so carried as numbers), the octave shift with rounding, 3FFFh from two octaves above the
+  centre note; a sequence note's fine tune is clamped to 7Fh, a pitch bend uses the tone's range (`pbmax` up in 1/63
+  steps, `pbmin` down in 1/64 steps).
+- **Time**: delta times × 10; a sequence advances resolution × bpm × 10 / (rate × 60) units per tick (rounded to
+  nearest; below 1, a frame counter instead); the header's tempo rounded to whole bpm, a tempo event's not.
+- **Events and controls**: note-on (velocity 0 = off), CC 0 (VAB), 6 (data entry), 7, 10, 98/99 (NRPN), the rest
+  skipped with their value; program change; pitch bend (MSB only); a meta event other than end of track is read as a
+  3-byte tempo, and after any meta event the running status is FF; NRPN 20/30 bracket a loop (count by data entry,
+  127 endless); NRPN 16/15 and 16/16 set the reverb type and depth; data entry looks the program up, which selects its
+  VAB as a side effect later calls see (as do several other calls: the "current note" state is global, as in LIBSND).
+- **Play, stop, close**: play resets the position and applies the sequence volume; stop keys the notes off and is done
+  again at the next tick; the end of the track keys off at once and stops in the same tick; `SsSepSetVol` only reaches
+  sounding notes while the sequence's flags are exactly "playing"; close sets sequence 0's volume to 0 (its notes' too).
+  The score table is `table[access] + sequence`, unchecked (section 1's aliasing).
+- **Reverb**: a type change silences the reverb (SPUCNT bit 7 cleared if set, depth 0), writes the 32 registers and the
+  work area's start, and restores bit 7; the depth is d × 7FFFh / 127. The ten presets and work-area starts are LIBSPU's
+  table (`0x8005C840`, `0x8005C810`), type 3 = psx-spx's "Studio Medium" (section 6).
+- **VABs**: each program's tone block, each VAG's SPU address (the size table × 8 from version 5), the 0x7EFF0 transfer
+  cap, the body sent in 64-byte DMA blocks (so up to 63 bytes after the body go too); `SsVabTransCompleted` reads the
+  DMA's completion event.
+- **Tick mode**: `SsSetTickMode`'s codes (here 0x1032: no timer, 50 ticks a second).
+
+The traces gave what the code cannot: when the DMA's completion interrupt comes (below), that the emulator reads the
+current main volume as 0 (so `CdInit`'s five stores all happen; the port makes them unconditionally, the same main
+volume either way), that the vsync falls inside `SsInit` (after 69 of the 97 clearing blocks), and the emulator's SPU
+pace of 877.3 samples per vsync (section 6's envelope fits), which decides which voice LIBSND finds free.
+
+### Timing models (the port's)
+- **The body DMA's completion**: the oracle completes a body of 30-83 KB (each of the 11 in-game loads of both
+  scripts) in its frame, right after `sound_update_loading`'s first poll (that poll returns 0, the next frame's 1), and
+  COMMON's 297 KB (`sound_init`) after the next vsync, before that tick's flush (the poll running across the vsync
+  returns 1). The port: a body up to `SND_DMA_BYTES_PER_FRAME` (0x30000) completes after the first poll, a longer one
+  at the next vsync (`snd_spu_vsync`, at the start of `SsSeqCalledTbyT`). A fit to the oracle, between its 83 KB and
+  297 KB.
+- **`SsInit`'s vsync**: not modelled (the port's `SsInit` runs in one frame; the PS1's vsync after its 69th clearing
+  block is CPU time).
+- **The trace's tick** (`spu_trace.c`): the port's frame; a store made by the vsync handler's sequencer tick gets the
+  frame being started (`psyq_snd_in_vsync`), as the emulator counts it.
+
+### How it is checked (`tests/port/sound.py`, `tests/port/sound_replay.c`; run by `tests/port/run.py`)
+The game calls LIBSND at frames that depend on CPU time the port does not reproduce, so the port's own run cannot be
+compared tick for tick with the emulator's (2 below). The exact check takes the game out:
+1. **LIBSND on the emulator's timeline.** `sound.py` turns an emulator trace (recorded with `spu_trace.py run --calls`)
+   into a replay script: every LIBSND call the game made with its arguments (pointers resolved to the bank files on the
+   disc, the bank found by its body DMA's SHA-1), and the emulator's vsyncs (one inside `SsInit`). `sound_replay`,
+   built from `port/psyq/libsnd*.c` and `port/src/spu*.c`, makes those calls at those ticks, rendering 877.3 samples per
+   vsync, and writes its trace, which must equal the emulator's: every store and DMA block, in order, at the same tick.
+   **Result: identical** for the committed `cnty_sel` (6,672 events) and `new_game` (20,204;
+   `tests/port/sound/new_game.trace.gz`, 70 KB), and for `first_battle_save` to `battle_won` (214,956 events over
+   21,331 ticks: COMMON and 11 bank loads, the field, registration and battle music, 211 `SsUtKeyOn`, pitch bends,
+   tempo events, NRPN reverb, three `SsUtAllKeyOff`; 4.9 MB, not committed: `spu_trace.py run
+   tests/replay/scripts/first_battle_save.json --until battle_won --calls`, ~9 min, then `sound.py TRACE`, 13 s). One
+   DMA block's SHA-1 is not compared: bank 64's body ends 4 bytes before its last 64-byte block, which the DMA reads
+   from the RAM after the file (no file holds them; the port sends zeros there, the file padding every other bank has:
+   all zero); its address and length are. Identical too in the -m32 and
+   ASan/UBSan builds (no report), and at 876, 877, 878 and 880 samples per vsync; at the port's 882 the first
+   difference is `new_game`'s tick 1,754: a release that ends 18 samples after the emulator's flush reads it ends 14
+   samples before the port's, so LIBSND reuses another voice.
+2. **The port's own run** (`sound.py port`, on `run.py`'s `new_game` run): (a) its trace (19,290 events) equals the
+   replay of its own calls on its own timeline at 882 samples per vsync: the integration (the handler's tick, the DMA
+   model, `CdInit`) is exact; (b) the game makes the same 108 LIBSND calls as on the emulator, in the same order, with
+   the same arguments (completion polls aside: 104 for COMMON in the emulator's busy loop, 1 in the port); (c) the frames
+   between two calls differ at 14 of them, and every segment that differs (22 of 108: the stores after a call, ticks
+   counted from it) follows one of those: the boot (+5 frames before `sound_init`), the CD's timing at loads, a frame the
+   PS1 drops before CNTY_SEL's music (+1), the script's START taps meeting the menu at another frame (CNTY_SEL's effect
+   +15, the title's first menu sound −14); a different voice then carries the state on (the reverb mask, which voices
+   are free). So the port's sound is LIBSND's exact output for the port's game timing, and the game timing is the only
+   difference from the emulator's.
+3. **`first_battle_save` in the port** (41,826 frames, with a console reset): its trace (451,356 events) equals the
+   replay of its own calls when the SPU renders a vsync's samples **before** the game's vsync handler (LIBSND's flush);
+   rendered after it (where `port_audio_frame` runs, in the pump's per-frame hook), the first difference is at tick
+   19,648: `SsUtAllKeyOff` writes every voice's ADSR at once from game code, and the next flush reads the envelopes
+   after 0 samples instead of a frame's, so LIBSND finds other voices free. On the PS1 the SPU runs through the frame
+   while the game code runs early in it: the samples of frame N belong between frame N's game code and the flush of
+   N + 1.
+
+### Findings for the rest of M3
+- **The audio output must render before the vsync handler** (above): `psyq_vsync_tick` runs the game's handler, then
+  the runtime's hook (`port_frame`: the CD, the frame log, the script, `port_audio_frame`, the video). The samples for a
+  frame must be rendered after that frame's game code and before the next flush, e.g. by a pre-handler hook in
+  `psyq_vsync_tick` that renders 882 samples. And every vsync, headless too (LIBSND reads the envelopes); `run.py` skips
+  2(a) while `port/src/audio.c` is the step-0 stub.
+- **882 vs 877.3 samples per vsync**: the PAL rate the port renders (`SPU_RATE` / 50) is not the emulator's pace; a note
+  whose release ends within ~0.5 % of a frame of a flush may get another voice than in the emulator (seen once in
+  `new_game`, at tick 1,754). Hardware: 44,100 Hz against 49.76 vsyncs a second would be 886 samples.
+
+### Not covered by the traces (implemented from the disassembly, untested)
+`SsSepSetDecrescendo` (FIGHTSTG's fade-out), `SsUtKeyOff`, CC 7 and CC 10 (in SEPs the two scripts do not play), the
+slow-tempo frame counter, `SsSetTickMode`'s other codes. Left out (on no SEP on the disc, or never called by the game):
+noise voices, RPN/VAG attributes and NRPN attributes other than 15 and 16 (a trace line when one occurs), CC
+11/64/91/100/101/121, timer tick modes, the next-SEP chaining, crescendo and tempo changes by call. Section 5's "More
+coverage" (a trace per sound key through SOUNDTST or the layer-1 oracle) would cover the first group.
