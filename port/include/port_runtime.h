@@ -44,6 +44,46 @@ extern const PortOverlay port_overlays[];
 extern const int port_overlay_count;
 void port_overlay_init(void); /* snapshots every overlay's .data (before game_main) */
 const PortOverlay *port_overlay_current(int tier);
+/* The first word (little-endian) of the file last loaded into the tier's slot, 0 before any load: what the PS1's slot
+ * starts with (run.lua's wait_stage reads 0x80082CB0); on the host a code overlay's slot holds no code. */
+u32 port_overlay_word0(int tier);
+
+/* ---- The game-state probes (state.c; the tables come from tools/port_gen.py state -> port_state_tables.c) */
+typedef struct PortExeFunc {
+    u32 addr;  /* the EXE function's PS1 address (config/symbol_addrs.txt) */
+    PortFn fn; /* the host function */
+} PortExeFunc;
+typedef struct PortExeData {
+    u32 addr;         /* the PS1 address */
+    u32 size;         /* the PS1 size (the symbol's size: in config/symbol_addrs.txt) */
+    const char *name;
+    const void *host; /* the host object */
+    u32 identical;    /* bytes from the start that have the PS1 layout by the default rule: size, or 0 (port_gen) */
+} PortExeData;
+typedef struct PortRange {
+    u32 lo, hi; /* [lo, hi) */
+} PortRange;
+extern const PortExeFunc port_exe_funcs[];
+extern const int port_exe_func_count;
+extern const PortExeData port_exe_data[];
+extern const int port_exe_data_count;
+extern const PortRange port_gamestate_volatile[]; /* tests/replay/replay.py VOLATILE_RANGES */
+extern const int port_gamestate_volatile_count;
+
+#define PORT_GAMESTATE_PS1_SIZE 0x275C /* gamestate_data on the PS1: what a checkpoint hashes */
+/* gamestate_data's PS1 image: the pointer-free bytes before funcs as they are, then funcs as the PS1 addresses of the
+ * host functions it holds (fatal if one is not an EXE function). */
+void port_state_gamestate_image(u8 out[PORT_GAMESTATE_PS1_SIZE]);
+/* The SHA-1s of the image (40 hex digits): whole, and with the volatile ranges zeroed (gamestate_sha1_stable). */
+void port_state_gamestate_sha1(char full[41], char stable[41]);
+s32 port_state_random_index(void); /* pad_random.index */
+
+/* ---- The per-frame log's events (framelog.c), from the runtime and the script */
+/* A file copied into a slot (port_overlay_load): `name` is the overlay's, or NULL for a data file. */
+void port_framelog_overlay_load(int tier, s32 file, const char *name, u32 word0, u32 size);
+/* The pad the script holds this frame (psyq_pad_set's bits, active high): a change goes to the log and to the record's
+ * `inputs` ({frame, buttons: [names]}, as run.lua's apply_pad); the record has `inputs` once this has been called. */
+void port_framelog_input(u16 buttons);
 
 /* ---- The interrupt pump (pump.c) */
 extern long port_max_frames;  /* --max-frames: port_wait() exits 0 after this many vsync ticks (0: no cap) */

@@ -11,6 +11,7 @@ project(dw2003port C)
 
 option(DW3_PORT_ALLOW_UNRESOLVED "Link with --unresolved-symbols=ignore-all (a private build without port/psyq/)" OFF)
 option(DW3_PORT_SANITIZE "Build with -fsanitize=address,undefined" OFF)
+option(DW3_PORT_M32 "Build a 32-bit binary (-m32, gcc-multilib): its --log must equal the 64-bit build's" OFF)
 option(DW3_PORT_PSYQ_WERROR "-Werror for port/psyq/ too (port/src/ always has it; port/psyq/check.sh uses it)" ON)
 set(DW3_PORT_PSYQ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/psyq" CACHE PATH "The Psy-Q shim's sources (psyq.h and *.c)")
 set(DW3_PORT_UNIT_OVERRIDES "" CACHE STRING
@@ -68,6 +69,11 @@ if(DW3_PORT_SANITIZE)
     add_link_options(-fsanitize=address,undefined)
 endif()
 add_link_options(-no-pie)
+# -m32: everything compiled and linked 32-bit (the arena is 16 MB-aligned and non-PIE there too; nm reads both).
+if(DW3_PORT_M32)
+    add_compile_options(-m32)
+    add_link_options(-m32)
+endif()
 
 # ---- The game's units: one object library, each overlay's data in its own sections (-fdata-sections) for the ld
 # script to collect. The game's own main() becomes game_main (port/src/main.c has the host's).
@@ -93,6 +99,16 @@ add_custom_command(OUTPUT "${DW3_GEN}/overlay_tables.c"
                            "${DW3_ROOT}/src/fieldstg/fieldstg_80087DB0.c"
                    COMMENT "port_gen.py tables (the overlay address tables)" VERBATIM)
 
+# ---- The game-state tables (port/src/state.c): the EXE's functions and sized data symbols, from nm of the EXE's
+# objects and config/symbol_addrs.txt; the pointer test compiles the defining units at -m64 (port_gen.py state).
+add_custom_command(OUTPUT "${DW3_GEN}/port_state_tables.c"
+                   COMMAND "${DW3_PYTHON}" "${DW3_PORT_GEN}" state --nm "${CMAKE_NM}" --cc "${CMAKE_C_COMPILER}"
+                           --gen-include "${DW3_GEN}/include" --objects "${DW3_GEN}/game_objects.rsp"
+                           --out "${DW3_GEN}/port_state_tables.c"
+                   DEPENDS $<TARGET_OBJECTS:dw3_game> "${DW3_PORT_GEN}" "${DW3_ROOT}/config/symbol_addrs.txt"
+                           "${DW3_ROOT}/tests/replay/replay.py"
+                   COMMENT "port_gen.py state (the EXE's function and data tables)" VERBATIM)
+
 # ---- The Psy-Q shim (port/psyq/, T9's): built when the directory has sources; without it the link needs
 # DW3_PORT_ALLOW_UNRESOLVED (a stand-in directory can be given as DW3_PORT_PSYQ_DIR).
 file(GLOB DW3_PSYQ_SRCS CONFIGURE_DEPENDS "${DW3_PORT_PSYQ_DIR}/*.c")
@@ -103,14 +119,16 @@ endif()
 
 # ---- The binary: the runtime, the tables, the shim, the units.
 file(GLOB DW3_RUNTIME_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
-add_executable(dw2003 ${DW3_RUNTIME_SRCS} "${DW3_GEN}/overlay_tables.c" ${DW3_PSYQ_SRCS} $<TARGET_OBJECTS:dw3_game>)
+add_executable(dw2003 ${DW3_RUNTIME_SRCS} "${DW3_GEN}/overlay_tables.c" "${DW3_GEN}/port_state_tables.c" ${DW3_PSYQ_SRCS}
+               $<TARGET_OBJECTS:dw3_game>)
 set_target_properties(dw2003 PROPERTIES C_STANDARD 99 C_EXTENSIONS ON C_STANDARD_REQUIRED ON
                       LINK_DEPENDS "${DW3_GEN}/overlays.ld")
 target_compile_definitions(dw2003 PRIVATE ${DW3_GAME_DEFINES})
 target_include_directories(dw2003 BEFORE PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${DW3_PORT_PSYQ_DIR}"
                            ${DW3_GAME_INCLUDES})
 target_compile_options(dw2003 PRIVATE ${DW3_COMMON_FLAGS} -Wall -Wextra)
-set_source_files_properties(${DW3_RUNTIME_SRCS} "${DW3_GEN}/overlay_tables.c" PROPERTIES COMPILE_OPTIONS "-Werror")
+set_source_files_properties(${DW3_RUNTIME_SRCS} "${DW3_GEN}/overlay_tables.c" "${DW3_GEN}/port_state_tables.c"
+                            PROPERTIES COMPILE_OPTIONS "-Werror")
 if(DW3_PORT_PSYQ_WERROR AND DW3_PSYQ_SRCS)
     set_source_files_properties(${DW3_PSYQ_SRCS} PROPERTIES COMPILE_OPTIONS "-Werror")
 endif()

@@ -14,11 +14,24 @@ cmake -S port -B build/port -G Ninja      # CMake >= 3.20; Ninja or Make; GCC (o
 cmake --build build/port                  # ~30 s from scratch with -j6
 build/port/dw2003 --max-frames 60         # exit 0 at the frame cap; 3 from port_unimplemented; 2 PLATFORM_HALT; 4 watchdog
 build/port/dw2003 --trace                 # every tick, overlay load/resolve and stub call, to stderr
+build/port/dw2003 --max-frames 600 --log run.log --record run.json   # the per-frame log and the record (below)
 ```
 Options: `-DDW3_PORT_SANITIZE=ON` (`-fsanitize=address,undefined`; needs libasan/libubsan installed),
+`-DDW3_PORT_M32=ON` (a 32-bit binary: `-m32` on every compile and link; needs gcc-multilib),
 `-DDW3_PORT_ALLOW_UNRESOLVED=ON` (link with undefined symbols ignored: a private build without `port/psyq/`),
 `-DDW3_PORT_PSYQ_DIR=<dir>` (another shim directory), `-DDW3_PORT_UNIT_OVERRIDES="src/main/x.c=<path>;..."`
 (experiments: build a unit from another file, the tree untouched), `-DDW3_PORT_PSYQ_WERROR=OFF`.
+
+The sanitizer and 32-bit builds go into their own build directories:
+```sh
+cmake -S port -B build/port-san -G Ninja -DDW3_PORT_SANITIZE=ON && cmake --build build/port-san
+build/port-san/dw2003 --max-frames 600    # any ASan/UBSan report goes to stderr (and ASan's exits non-zero)
+cmake -S port -B build/port-m32 -G Ninja -DDW3_PORT_M32=ON && cmake --build build/port-m32
+build/port-m32/dw2003 --max-frames 600 --log m32.log && build/port/dw2003 --max-frames 600 --log m64.log && cmp m32.log m64.log
+```
+The `-m32` build is the layout check: pointers are 4 bytes there, as on the PS1, so a run whose log differs from the
+64-bit build's has a pointer-size bug on one side (the log holds no host address). The arena is 16 MB-aligned and
+non-PIE in both.
 
 ## Layout
 | Path | Contents |
@@ -28,6 +41,10 @@ Options: `-DDW3_PORT_SANITIZE=ON` (`-fsanitize=address,undefined`; needs libasan
 | `src/main.c` | Options, setup, `game_main()` (the game's `main`, renamed by `-Dmain=game_main` on `src/main/main.c`) |
 | `src/arena.c` | The memory arena: `port_arena`, `port_ptr_to_s32`/`port_s32_to_ptr`, the stand-in BIOS |
 | `src/overlay.c` | The overlay manager: `port_overlay_load` (snapshot restore), `port_overlay_resolve` (tag -> function) |
+| `src/framelog.c` | The per-frame log (`--log`) and the run's record (`--record`): `port_harness.h` |
+| `src/state.c` | The game-state probes (`port_state_*`), `port_state_read` (a PS1-address read), gamestate_data's PS1 image and hashes |
+| `src/sha1.c` | SHA-1 (our own): the disc check, the checkpoint hashes |
+| `include/port_harness.h` | The M1 harness's interfaces (disc, frame log and probes, script) |
 | `src/pump.c` | `port_wait` (the vsync and CD ticks, the frame cap, the watchdog), `port_halt`, `port_unimplemented` |
 | `src/asmdata.c` | Zero data the PS1 build keeps in asm (FIELDSTG's `.bss` block; weak LIBGS/LIBCD data) |
 | `psyq/` | The Psy-Q shim (its own README) |
@@ -54,6 +71,13 @@ At build time, after the units are compiled:
   WFIGHTMN/WFIGHTTS 0x208/0x209, the WSTAG files from FIELDSTG's stage tables joined with `config/wstag.txt`.
   The generator also checks every tag site in the C (`WSTAG_ENTRY`, `OVERLAY_ENTRY`, `SLOT_FUNC`, `LATE_FUNC`)
   against the tables and fails the build if one does not resolve.
+- `port_state_tables.c` (`port_gen.py state`): the EXE's functions (`{ PS1 address, host function }`, the
+  `type:func` lines of `config/symbol_addrs.txt` that nm finds in the EXE's objects), its data symbols with a `size:`
+  there (`{ PS1 address, PS1 size, host object, layout-identical length }`), and `VOLATILE_RANGES`, read from
+  `tests/replay/replay.py`. A data symbol is layout-identical as a whole when its `sizeof` at `-m64` is its PS1 size
+  (a pointer or a `long` makes it larger at -m64); the generator measures that size by compiling the defining units
+  at `-m64` (to assembly, ~1 s) in every build, so the `-m32` build's table is the same, and it fails if a
+  pointer-free object's size differs between the two.
 
 ## The runtime
 **Arena** (`PC_PORT_PLAN.md` 2.4): one 16 MB-aligned `.bss` block, smaller than 16 MB, mirroring the PS1 from
@@ -71,19 +95,56 @@ call `port_overlay_resolve(tier, addr)`: a tag (an address in `0x80000000..0x802
 current overlay's table (fatal if absent: static, still asm, or a data file is loaded); anything else is a host
 function pointer and comes back unchanged.
 
+**Game-state probes** (`state.c`): what `tests/replay/run.lua` reads from PS1 RAM, read from the host's objects:
+`overlay_module.stage`/`.file`, `gamestate_data.map`, `pad_random.index`, and the slot's first word (run.lua's
+`wait_stage` checks `0x80082CB0`: on the host `port_overlay_load` keeps the first word of every file it copies,
+per tier). `port_state_read(addr, size, signed, &v)` (the script's `wait_mem`) maps a PS1 address only inside a
+layout-identical range: a whole data symbol by the rule above, or the prefix `state.c` lists for a pointer-bearing
+object (`overlay_module` 8 bytes, `gamestate_data` 0x26FC bytes, `pad_random` 4; each checked by `_Static_assert`);
+anything else returns 0 (unmapped). Not mapped yet: `memcard_state` (its type is private to `memcard.c`, and its
+fields at 0x90 and 0x300 follow a pointer) and overlay data (e.g. `0x80099DD0`).
+
+**The checkpoint hash**: `gamestate_data`'s PS1 image is its first 0x26FC bytes as they are (no pointer before
+`funcs`), then the 24 `funcs` entries as the PS1 addresses of the host functions they point to (the generated table;
+fatal if one is not there): 0x275C bytes, the emulator's dump (`run.lua` `checkpoint`). The record has its SHA-1 and
+the SHA-1 with the volatile ranges zeroed (`gamestate_sha1_stable`), as `replay.py` computes them.
+
 **Pump**: `PLATFORM_WAIT()` -> `port_wait()` runs one vsync tick (`psyq_vsync_tick`) and one CD tick
 (`psyq_cd_tick`), counts a frame, and exits 0 at `--max-frames` (default 600). A watchdog (`--watchdog SEC`,
 default 10) exits 4 when no `port_wait()` ran for that long: a loop that no hook reaches (see below).
 
+## The per-frame log (`--log FILE`)
+Text, line-buffered, one line per frame and one per event; nothing in it depends on the host (no time, no address),
+so two runs, and the `-m32` and `-m64` builds, write the same bytes. `<frame>` is `port_frames`: the vsync ticks so
+far (an event between two ticks carries the last tick's number, as the emulator's listener would see it at the next).
+| Line | Meaning |
+|---|---|
+| `# dw2003 port frame log 1 (port/README.md)` | The header (the format's version) |
+| `F <frame> st <stage> fl <file> map 0x<map> prims <n> hash <8 hex>` | Every frame: `overlay_module.stage`/`.file`, `gamestate_data.map`, and the primitive stream of the frame (`psyq_gpu_take_hash`: the primitives DrawOTag walked since the previous frame, their FNV-1a hash) |
+| `S <frame> stage <stage> file <file>` | An overlay-sequence entry: `(stage, file)` changed (frame 1 always) |
+| `M <frame> map 0x<map>` | A map-sequence entry: the map changed (frame 1 always) |
+| `L <frame> tier <t> file 0x<id> <name> word0 0x<8 hex> size 0x<n>` | A file copied into a slot (`port_overlay_load`): the overlay's name, or `(data)`; its first word; its size |
+| `C <frame> <name> stage <stage> map 0x<map> rnd <index> sha1 <40 hex> stable <40 hex>` | A checkpoint |
+| `I <frame> buttons 0x<4 hex>` | The script's pad changed (`port_framelog_input`; PS1 bit order, active high) |
+| `X <frame> status <status> <reason>` | The exit (`port_exit`) |
+
+## The record (`--record FILE`)
+JSON written at exit, with the keys of `tests/replay`'s records (`replay.py` `cross_core_view` reads it as it is):
+`runner` (`"port"`), `status` (the exit status), `reason`, `frames`, `checkpoints` (`name`, `frame`, `stage`, `map`,
+`random_index`, `gamestate_sha1`, `gamestate_sha1_stable`, as run.lua and replay.py record them), `overlay_sequence`
+(`{frame, stage, file}`), `map_sequence` (`{frame, map}`), and `inputs` (`{frame, buttons: [names]}`, the names
+sorted as run.lua sorts them) once the script has called `port_framelog_input`. The sequences follow run.lua's vsync
+listener: an entry at every change, the first frame always (`{1, 0, 0}`, map 0).
+
 ## Known gaps (M1 skeleton)
-- **Two CD polling loops have no `PLATFORM_WAIT()` hook** (`src/main/cdload.c` `cdload_load_file`:
-  `do { cdload_update(); } while (cdload_is_loading(id))`, and `src/main/sound.c` `sound_init`:
-  `while (sound_is_loading()) { ... }`). On the PS1 the CD interrupt ends them; on the host nothing runs the
-  shim's tick inside them, so the first file load spins until the watchdog (exit 4). Adding `PLATFORM_WAIT();` as
-  the last statement of each loop body is byte-identical on the PS1 (verified with `scripts/build.sh`) and lets the
-  run reach the frame cap; with a sector source for the shim it then boots to CNTY_SEL (verified in an experiment
-  through `DW3_PORT_UNIT_OVERRIDES`). Those two files are not the port's to change; it is the first thing to do
-  in `src/`.
+- **The 64-bit build loses the stage's root object** (found by the `-m32`/`-m64` log comparison, session 16):
+  `overlay_run_object` (`src/main/overlay.c`) stores the overlay entry's result, an `Object *`, through `s32 *result`
+  into a children block of `sizeof(s32)` bytes (`overlay_create_object`; `OVERLAY_ENTRY` is `s32 (*)(void)` in
+  `include/port.h`), so at -m64 the pointer is truncated and `child_count` is 4 / 8 = 0: CNTY_SEL's root object never
+  runs. CNTY_SEL's own root has the same pattern (`object_new(cnty_sel_update_root, sizeof(Object), 4)` holding a
+  `CntySelMenu *`). The `-m32` build runs them and draws CNTY_SEL (142 primitives a frame); with both blocks sized
+  `sizeof(void *)` and the entry called as returning `void *` (an uncommitted experiment), the two builds' logs are
+  identical over 1000 frames with the disc.
 - No disc: the shim's reads end with no data (the game retries). `psyq_cd_set_reader` over the user's BIN is the
   next step (M1 "LIBCD over the BIN"), hash-checked (DECISIONS item 7).
 - The BIOS is a stand-in: `BIOS_PTR` serves a 256-byte region at `0x1FC00100` holding a version string.
@@ -91,4 +152,6 @@ default 10) exits 4 when no `port_wait()` ran for that long: a loop that no hook
   arrangement for the arena (allocate at startup; `port.h` would need the slot symbols as pointers) and for the
   per-overlay sections.
 - The snapshot copies with plain byte loops in `no_sanitize_address` functions (ASan's redzones between globals
-  are inside the ranges); unverified under ASan on this machine (no libasan installed).
+  are inside the ranges); a sanitizer run of 600 frames reports nothing (session 16). With a sector source (boot to
+  CNTY_SEL), UBSan reports misaligned `HeapBlock`/`Object` accesses (`src/main/heap.c`, `object.c`): the game's heap
+  hands out 4-byte-aligned blocks, and 64-bit structs with pointers want 8.
