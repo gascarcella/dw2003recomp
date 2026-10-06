@@ -78,7 +78,7 @@ jobs:
         if: steps.data.outputs.present == 'true'
         run: scripts/build.sh --check
 
-      # The layers 1-3 and the PC port's M1 test (layer "port": tests/port/run.py, new_game replayed by the port).
+      # The layers 1-3 and the PC port's M1 test (layer "port": tests/port/run.py, the layer-2 scripts replayed by the port).
       - name: Reference tests
         if: steps.data.outputs.present == 'true'
         run: scripts/test.sh

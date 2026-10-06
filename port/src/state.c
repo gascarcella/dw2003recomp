@@ -5,7 +5,8 @@
  * bytes on the PS1 and 0x18 here). port_state_read maps a PS1 address to a host byte only inside a layout-identical
  * range: the whole object for the EXE's sized data symbols whose -m64 size is their PS1 size (port_gen.py state
  * decides it the same way in the -m32 build), or the prefix listed below for the pointer-bearing objects the scripts
- * read, each checked by _Static_assert. Anything else reads as unmapped (the caller makes that fatal). */
+ * read, each checked by _Static_assert, or a field of the field table below (objects whose fields after a pointer the
+ * scripts read, and an overlay's data). Anything else reads as unmapped (the caller makes that fatal). */
 #include <stddef.h>
 #include <string.h>
 
@@ -13,9 +14,13 @@
 #include "port_runtime.h"
 #include "sha1.h"
 
+#include "fieldstg.h"
 #include "gamestate.h"
+#include "memcard.h"
 #include "overlay.h"
 #include "pad.h"
+
+extern MemcardState memcard_state; /* src/main/memcard.c (not in memcard.h: STGMCARD declares it with its own type) */
 
 /* ---- The layout-identical prefixes of the pointer-bearing objects */
 
@@ -49,6 +54,102 @@ static PortPrefix port_prefixes[] = {
 };
 #define PORT_PREFIX_COUNT ((int)(sizeof(port_prefixes) / sizeof(port_prefixes[0])))
 
+/* ---- The field table: single fields at their PS1 addresses, for objects whose PS1 layout the host does not keep
+ * past a pointer (a field's PS1 offset is not its host offset) and for an overlay's data (mapped only while that
+ * overlay is the current tier-1 one: on the PS1 the address holds another file's bytes otherwise). An entry is a PS1
+ * range [addr, addr + size) and the host field it reads, of the same size (scalars and pointer-free members only).
+ * The PS1 offsets are checked against offsetof where the host agrees: everywhere at -m32 (4-byte pointers), and the
+ * distances between fields with no pointer between them at -m64. */
+
+#if __SIZEOF_POINTER__ == 4
+#define PORT_FIELD_AT_PS1(type, member, ps1) \
+    _Static_assert(offsetof(type, member) == (ps1), #type "." #member ": not at its PS1 offset")
+#else
+#define PORT_FIELD_AT_PS1(type, member, ps1) _Static_assert(sizeof(((type *)0)->member) != 0, #type "." #member)
+#endif
+
+/* memcard_state (0x80048750, size 0x328; config/symbol_addrs.txt): run.lua's wait_mem reads state (+0x0), command
+ * (+0x90) and done (+0x300); the other scalars come with them. file_name (+0xC) and files (DIRENTRY has a pointer)
+ * move every later field on the host. */
+#define PORT_MEMCARD_STATE 0x80048750u
+#define PORT_MEMCARD_STATE_SIZE 0x328
+PORT_FIELD_AT_PS1(MemcardState, header, 0x10);
+PORT_FIELD_AT_PS1(MemcardState, command, 0x90);
+PORT_FIELD_AT_PS1(MemcardState, file_count, 0xA4);
+PORT_FIELD_AT_PS1(MemcardState, done, 0x300);
+PORT_FIELD_AT_PS1(MemcardState, icon_frames, 0x314);
+_Static_assert(offsetof(MemcardState, state) == 0 && offsetof(MemcardState, unk_008) == 0x8, "MemcardState: prefix");
+_Static_assert(sizeof(MemcardHeader) == 0x80, "MemcardHeader: 0x80 bytes, pointer-free");
+_Static_assert(offsetof(MemcardState, file_count) - offsetof(MemcardState, command) == 0x14,
+               "MemcardState: command..file_count");
+_Static_assert(offsetof(MemcardState, icon_frames) - offsetof(MemcardState, done) == 0x14,
+               "MemcardState: done..icon_frames");
+
+/* fieldstg_stage (FIELDSTG's 0x80099D80, size 0x80; config/fieldstg.symbols.txt): the scripts read menu_open (+0x50).
+ * Its pointers (entry at +0x4 first) move the later fields on the host. */
+#define PORT_FIELDSTG_STAGE 0x80099D80u
+PORT_FIELD_AT_PS1(FieldstgStageState, menu_open, 0x50);
+PORT_FIELD_AT_PS1(FieldstgStageState, return_dir, 0x6C);
+_Static_assert(offsetof(FieldstgStageState, actor_busy) - offsetof(FieldstgStageState, menu_open) == 0x10,
+               "FieldstgStageState: menu_open..actor_busy");
+_Static_assert(offsetof(FieldstgStageState, event_text) - offsetof(FieldstgStageState, start_pos) == 0x1C,
+               "FieldstgStageState: start_pos..event_text");
+
+typedef struct PortField {
+    u32 addr;            /* the PS1 address */
+    u32 size;            /* the PS1 size */
+    const void *host;    /* the host field */
+    u32 host_size;       /* its host size (must be size) */
+    const char *overlay; /* NULL: an EXE object; else the tier-1 overlay that must be current */
+    const void *object;  /* the host object and its PS1 address: at -m32 the field must be at its PS1 offset */
+    u32 object_addr;
+} PortField;
+
+#define PORT_FIELD(base, object, member, ps1, overlay)                                                      \
+    { (base) + (ps1), sizeof((object).member), &(object).member, sizeof((object).member), overlay, &(object), \
+      (base) }
+#define PORT_MEMCARD_FIELD(member, ps1) PORT_FIELD(PORT_MEMCARD_STATE, memcard_state, member, ps1, NULL)
+#define PORT_FIELDSTG_FIELD(member, ps1) PORT_FIELD(PORT_FIELDSTG_STAGE, fieldstg_stage, member, ps1, "FIELDSTG")
+
+static const PortField port_fields[] = {
+    PORT_MEMCARD_FIELD(state, 0x0),
+    PORT_MEMCARD_FIELD(unk_004, 0x4),
+    PORT_MEMCARD_FIELD(unk_008, 0x8),
+    PORT_MEMCARD_FIELD(header, 0x10),
+    PORT_MEMCARD_FIELD(command, 0x90),
+    PORT_MEMCARD_FIELD(result, 0x94),
+    PORT_MEMCARD_FIELD(retries, 0x98),
+    PORT_MEMCARD_FIELD(max_retries, 0x9C),
+    PORT_MEMCARD_FIELD(retry, 0xA0),
+    PORT_MEMCARD_FIELD(file_count, 0xA4),
+    PORT_MEMCARD_FIELD(done, 0x300),
+    PORT_MEMCARD_FIELD(offset, 0x304),
+    PORT_MEMCARD_FIELD(unk_308, 0x308),
+    PORT_MEMCARD_FIELD(slot_size, 0x30C),
+    PORT_MEMCARD_FIELD(part1_size, 0x310),
+    PORT_MEMCARD_FIELD(icon_frames, 0x314),
+    PORT_FIELDSTG_FIELD(code_file, 0x0),
+    PORT_FIELDSTG_FIELD(background_file, 0x8),
+    PORT_FIELDSTG_FIELD(sprite_file, 0xC),
+    PORT_FIELDSTG_FIELD(mask_subfile, 0x18),
+    PORT_FIELDSTG_FIELD(mask_file, 0x1C),
+    PORT_FIELDSTG_FIELD(start_pos, 0x2C),
+    PORT_FIELDSTG_FIELD(start_dir, 0x34),
+    PORT_FIELDSTG_FIELD(color, 0x38),
+    PORT_FIELDSTG_FIELD(music, 0x3C),
+    PORT_FIELDSTG_FIELD(sound, 0x40),
+    PORT_FIELDSTG_FIELD(talk_file, 0x44),
+    PORT_FIELDSTG_FIELD(event_text, 0x48),
+    PORT_FIELDSTG_FIELD(menu_open, 0x50),
+    PORT_FIELDSTG_FIELD(title_shown, 0x54),
+    PORT_FIELDSTG_FIELD(event_running, 0x58),
+    PORT_FIELDSTG_FIELD(battle_starting, 0x5C),
+    PORT_FIELDSTG_FIELD(actor_busy, 0x60),
+    PORT_FIELDSTG_FIELD(return_pos, 0x64),
+    PORT_FIELDSTG_FIELD(return_dir, 0x6C),
+};
+#define PORT_FIELD_COUNT ((int)(sizeof(port_fields) / sizeof(port_fields[0])))
+
 static const PortExeData *port_exe_data_of(const void *host) {
     int i;
     for (i = 0; i < port_exe_data_count; i++) {
@@ -72,6 +173,20 @@ static void port_state_init(void) {
             port_fatal("state: prefix %d: not a sized EXE data symbol of config/symbol_addrs.txt", i);
         }
         port_prefixes[i].addr = d->addr;
+    }
+    d = port_exe_data_of(&memcard_state);
+    if (d == NULL || d->addr != PORT_MEMCARD_STATE || d->size != PORT_MEMCARD_STATE_SIZE) {
+        port_fatal("state: memcard_state is not at 0x%08X (size 0x%X) in config/symbol_addrs.txt", PORT_MEMCARD_STATE,
+                   PORT_MEMCARD_STATE_SIZE);
+    }
+    for (i = 0; i < PORT_FIELD_COUNT; i++) {
+        const PortField *f = &port_fields[i];
+        if (f->size != f->host_size) {
+            port_fatal("state: field 0x%08X: 0x%X bytes on the PS1, 0x%X here", f->addr, f->size, f->host_size);
+        }
+        if (sizeof(void *) == 4 && (u32)((const u8 *)f->host - (const u8 *)f->object) != f->addr - f->object_addr) {
+            port_fatal("state: field 0x%08X: not at its PS1 offset at -m32", f->addr);
+        }
     }
     d = port_exe_data_of(&gamestate_data);
     if (d->size != PORT_GAMESTATE_PS1_SIZE) {
@@ -117,6 +232,16 @@ static const u8 *port_state_map_addr(u32 addr, u32 size) {
         const PortExeData *d = &port_exe_data[i];
         if (addr >= d->addr && addr - d->addr + size <= d->identical) {
             return (const u8 *)d->host + (addr - d->addr);
+        }
+    }
+    for (i = 0; i < PORT_FIELD_COUNT; i++) {
+        const PortField *f = &port_fields[i];
+        if (addr >= f->addr && addr - f->addr + size <= f->size) {
+            const PortOverlay *o = port_overlay_current(1);
+            if (f->overlay != NULL && (o == NULL || strcmp(o->name, f->overlay) != 0)) {
+                return NULL; /* the overlay's data is not in the slot */
+            }
+            return (const u8 *)f->host + (addr - f->addr);
         }
     }
     return NULL;

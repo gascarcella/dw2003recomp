@@ -2,7 +2,7 @@
 
 Newest first. One short entry per session: goal, result, next steps.
 
-## 2026-10-06: Session 16: PC port M1, the headless port replays new_game (cloud branch `claude/peaceful-allen-q3t9f9`, PR to `main`)
+## 2026-10-06: Session 16: PC port M1, then both layer-2 scripts in the port (cloud branch `claude/peaceful-allen-q3t9f9`, PR to `main`)
 - **Asked:** M1 proper with dedicated sub-agents owning disjoint files: LIBCD over the BIN, the scripted pad, the per-frame
   log, the headless runner and its test against `tests/replay/expected/new_game.json`, the findings on the boot path;
   delivered as a pull request (the user later: merge it after CI is green, keep going).
@@ -27,7 +27,18 @@ Newest first. One short entry per session: goal, result, next steps.
   - Orchestrator: `DW3_PORT_TRACE` fixed, `OFFSETOF` for `fieldstg_find_stage`'s clear, FINDINGS 10, docs.
 - **Result:** `tests/port/run.py --m32 --sanitize`: all 5 checkpoints (stage, map, stable hash), both sequences, two runs
   identical, `-m32` == `-m64`, no sanitizer report; `scripts/test.sh`: probe + 5 layers passed.
-- **Next:** `first_battle_save` in the port (times out at step 21 after matching `asuka_lobby`), then M2 (software GPU, SDL3).
+- **Merged as PR #2** (CI green; the user had asked to merge after completion and go on).
+- **Second part (the user: keep going), branch restarted from `main`:**
+  - The pad a frame late as in the emulator (found from the emulator's per-frame trajectory of a `walk`): `first_battle_save`
+    then matched through the first battle.
+  - T6 memcard (`.mcd` images, LIBMCRD, `state.c`'s field table), T7 reset (every game section from a startup snapshot,
+    the link map checked), T8 GTE (`port/psyq/gte.c`, golden family `gte`, 865 cases on the PS1).
+  - Orchestrator: STGMCARD's view split (T6's patch), the full file cache freed on the host, `object_destroy` at `-m32`,
+    `fightstg_model_new`'s parts zeroed, `tests/port/run.py` over every script, `ubsan.supp`, FINDINGS 5 additions,
+    `DW3_PORT_PRIM_DUMP`.
+  - Result: `tests/port/run.py --m32 --sanitize` passes both scripts (all 25 checkpoints); `scripts/test.sh` green.
+    Found and documented: FIELDSTG's `free_above` makes the file cache, hence frames, depend on the heap layout.
+- **Next:** M2 (the software GPU against the emulator's VRAM, SDL3; LIBGS's GTE set-up checked like the GTE).
 
 ## 2026-10-05: Session 15: PC port decisions, M0 and the M1 skeleton (worktree branch `gascarcella/PC-Port-Kickoff`, PR to `main`)
 - **Asked:** decide `docs/PC_PORT_PLAN.md` section 4, then M0 (and, the user's choice in phase 1, an M1 skeleton) with

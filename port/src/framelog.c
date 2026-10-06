@@ -146,6 +146,13 @@ void port_framelog_checkpoint(const char *name) {
               c->random_index, c->sha1, c->stable);
 }
 
+/* The console's reset (port/src/reset.c): an event line; the sequences go on (run.lua's listener keeps its last
+ * stage/file/map across PCSX-Redux's hardResetEmulator, so the next frame records the cleared RAM's (0, 0) and map 0
+ * as a change), and so do the checkpoints and the input trace. */
+void port_framelog_reset(void) {
+    port_logf("R %ld reset", port_frames);
+}
+
 void port_framelog_input(u16 buttons) {
     port_inputs_used = 1;
     if (buttons == port_last_buttons) {

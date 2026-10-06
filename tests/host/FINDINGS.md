@@ -115,6 +115,12 @@ port keeps the struct layout (the save struct `gamestate_data` must keep it anyw
   has `{1 or 2, 0, 0}` there (187 attack, 6 `tech_2`), and 58 of the 193 records have no unconditional action among the
   three, so this is the game's default action, used often. A port must read it (declare `actions[4]`), not stop at 3
   (sweep4; the conditions themselves are golden `wfightmn_enemy_ai`).
+- `fightstg_rules_get_stats` (FIGHTSTG, every combatant's stats block) indexes `GamestateStats.values[6..18]`: the
+  `s16 values[6]`, `stats[6]` and `resists[7]` arrays read as one array (`&stats.values[6]`, `&stats.values[12]`).
+  Reported by UBSan in the port's sanitizer run of `first_battle_save` (session 16); `tests/port/ubsan.supp` names it.
+- `fieldstg_tile_upload` (FIELDSTG, a map tile's sprite lists): a row of 6 sprites writes `sprites[0][5]` of the
+  `[3][5]` array, i.e. `sprites[1][0]`, which row 1's own loop rewrites next (seen 3 times in `first_battle_save`, always
+  row 0). Reported by UBSan in the same run; in `tests/port/ubsan.supp`.
 
 ## 6. `fightstg_rules_roll_wake` without a sleep event reads `fightstg_events.events[-1]` (agrees on the host by accident)
 

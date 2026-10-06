@@ -32,17 +32,21 @@ encounter timer: frame counts again) and the **input trace** (its frames follow 
 game state, not frame counts, so it holds on every timing.
 
 The script must be the one the expected file was recorded from (`script_sha1`); a changed script fails until
-`tests/replay/replay.py run tests/replay/scripts/new_game.json --record` re-records it.
+`tests/replay/replay.py run tests/replay/scripts/<name>.json --record` re-records it. `run.py` runs every script that has
+an expected file (`new_game`, `first_battle_save`), or the names given; its sanitizer run reads
+`tests/port/ubsan.supp`, which names the game's own in-struct overruns (tests/host/FINDINGS.md 5 and 10) and nothing
+else.
 
 ## The script engine
 `port/src/script.c` runs `tests/replay/scripts/*.json` with `tests/replay/run.lua`'s semantics, frame for frame: the step
 runs after the frame log's sample on every vsync tick, instant steps (a checkpoint, a wait already satisfied, a `press`
 whose `until` holds, a `walk` that arrived) chain within the frame (at most 100), the held buttons go to the pad
 (`psyq_pad_set`, the physical buttons in the PS1 pad's bit order; the game rotates the face buttons itself) and to the
-record's `inputs`. Every step type but `reset` is implemented (`walk` reads the player actor from `heap_objects` on the
-host). Exit status: 0 "script complete", 5 a step's timeout or `max_frames` (run.lua's message), 6 `reset` (not in M1: it
-would restart `game_main` with every global, the arena and the shim back at their startup state), 1 a bad script or a
-`wait_mem` address the port does not map (`port/src/state.c` maps only layout-identical ranges). The JSON reader is
+record's `inputs`. Every step type is implemented: `walk` reads the player actor from `heap_objects` on the host, and
+`reset` restarts `game_main` with the game's data, the arena and the shim at power-on, the memory cards kept
+(`port/src/reset.c`). Exit status: 0 "script complete", 5 a step's timeout or `max_frames` (run.lua's message), 1 a bad
+script or a `wait_mem` address the port does not map (`port/src/state.c`: layout-identical ranges and an explicit
+field table). The JSON reader is
 `port/src/json.c` (strict RFC 8259).
 
 `DW3_PORT_CHECKPOINT_DIR=<dir>` makes every checkpoint also write the image it hashes to `<dir>/cpNN_<name>.bin`, as

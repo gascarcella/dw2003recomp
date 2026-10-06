@@ -6,6 +6,7 @@
  *    reads it, rewrites one row and stores it back; fightstg_model.c composes it with a model's matrix for
  *    gte_SetLightMatrix. gfx.c calls it the world-screen matrix (its save/restore pairs are what matters there).
  * GsGetTimInfo is real (it parses a TIM header, docs/FORMATS.md "TIM"); the rest records. */
+#include <string.h>
 #include "psyq_internal.h"
 #include "psyq/libgs.h"
 #include "psyq/libgpu.h"
@@ -21,6 +22,13 @@ static struct {
     u8 light_rgb[3][3];    /* GsSetFlatLight's colours */
     u16 w, h, intl, dither, vram; /* GsInitGraph */
 } psyq_gs;
+
+/* The console's reset (psyq.c psyq_reset): LIBGS's .bss (the two matrices) and the recorded settings zero. */
+void psyq_gs_reset(void) {
+    memset(&D_80081358, 0, sizeof(D_80081358));
+    memset(&D_800812F8, 0, sizeof(D_800812F8));
+    memset(&psyq_gs, 0, sizeof(psyq_gs));
+}
 
 /* Stub: records the screen size (the PS1 version also resets the GPU and sets up LIBGS's draw/display environments,
  * none of which the game reads back: it uses its own gfx module). */

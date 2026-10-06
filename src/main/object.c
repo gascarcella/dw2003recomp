@@ -107,7 +107,7 @@ static Object *object_child_word(u32 w) {
  * the object off the list and frees it. */
 void object_destroy(Object *obj) {
 #ifdef PC_PORT
-    /* PC_PORT: FINDINGS 9c: the block's bytes in order, as the PS1 scans its words: at each 8-byte slot of the block
+    /* PC_PORT: FINDINGS 9c: the block's bytes in order, as the PS1 scans its words: at each pointer-sized slot of the block
      * (where the host puts a pointer field) a live object is stopped and both halves are done; otherwise each 4-byte
      * word is tried on its own (an s32 that holds an object). A value that is not a live object is skipped where the
      * PS1 would call set_state through it (a zero, a non-pointer field, an object already destroyed). */
@@ -119,11 +119,11 @@ void object_destroy(Object *obj) {
 
     if (obj->data_size != 0) {
         for (ofs = 0; ofs + 4 <= obj->data_size; ofs += 4) {
-            if ((ofs & 7) == 0 && ofs + 8 <= obj->data_size) {
+            if (ofs % (s32)sizeof(v) == 0 && ofs + (s32)sizeof(v) <= obj->data_size) {
                 memcpy(&v, data + ofs, sizeof(v));
                 if (v != 0 && (child = object_live((const u8 *)v)) != NULL) {
                     heap_objects.stop(child);
-                    ofs += 4;
+                    ofs += (s32)sizeof(v) - 4; /* the pointer's other half, at -m64 (none at -m32) */
                     continue;
                 }
             }

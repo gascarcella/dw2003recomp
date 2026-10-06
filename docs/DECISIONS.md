@@ -1797,3 +1797,43 @@ The user's answers to `docs/PC_PORT_PLAN.md` section 4 (asked item by item; ever
 - **This machine (cloud, session 16):** 4 cores, 15 GB: 3 worktree agents at once with `DW3_JOBS=1`, `-j2` for the port.
   `gcc-multilib` installed by the user's approval (apt, root); ASan/UBSan were already present. The `Agent` tool's
   worktrees start from `main`, not the current branch: every brief must say to reset onto the session branch.
+
+## 2026-10-06: first_battle_save in the port: memory cards, the reset, the file cache (session 16, agents T6-T8)
+- **The port replays both layer-2 scripts.** `first_battle_save` (the first battle, a save, a reset, the reload, the
+  shop, the lab, the card album and deck editor, the card shop, training) matches all 20 checkpoints and both sequences
+  of `tests/replay/expected/first_battle_save.json`; `tests/port/run.py` runs every script with an expected file.
+- **Memory cards are raw 128 KB `.mcd` images** (`port/src/memcard.c`, `port/psyq/libmcrd.c`; `--memcard1|2 PATH|none`,
+  default a fresh card in memory as the replay runner gives PCSX-Redux). A fresh port card is byte-identical to
+  PCSX-Redux's; saves move both ways (the emulator loads the port's save and vice versa, the `loaded` checkpoint equal).
+  LIBMCRD's commands complete after a fixed number of `MemCardSync` polls (the game spins on them); the first access
+  after insertion or reset answers McErrNewCard (3), as the emulator's run shows.
+- **The reset** (`port/src/reset.c`): every game section (`.data`/`.bss` of the EXE units and the overlays, in output
+  sections of their own) restored from the startup snapshot, the arena cleared, every Psy-Q library back to power-on,
+  the cards and the disc kept, then `game_main` again (a longjmp from the vsync tick). `tools/port_gen.py sections`
+  checks the link map at every build: no game data outside the restored sections. A run after a reset is byte-identical
+  to a fresh one; the BIOS boot time is not modelled (frames are not compared).
+- **The file cache frees its oldest file when its 64 entries are full on the host** (`cdload_queue_file`, `PC_PORT`):
+  the PS1 frees cached files only when the heap runs out, which its 1.3 MB does before 64 files; the port's 4 MB heap
+  never does. Only which files stay cached changes, so only the CD timing.
+- **Views of two objects as one cannot work on the host:** STGMCARD declared `memcard_state` as a struct holding
+  `memcard_state` and `memcard_funcs` (adjacent on the PS1); under `PC_PORT` it uses the two objects' own types.
+- **The `-m32` build found a 64-bit assumption in the port's own code** (`object_destroy`'s scan skipped the word after
+  a live object, as if every pointer were 8 bytes): the 32-bit build never ended a FIELDSTG event. Comparing the two
+  builds' logs is the cheapest layout check there is; it runs in CI.
+- **UBSan's reports of the game's own in-struct overruns are suppressed by name** (`tests/port/ubsan.supp`: FINDINGS 5
+  and 10 only); any other report fails the port test.
+- **The GTE is needed for game logic, not only drawing** (FIGHTSTG's fade interpolates with `gte_gpf12`): with the no-op
+  macros the result was stack garbage that differed between builds. `port/psyq/gte.c` (T8) is a software GTE written
+  from psx-spx (every command, FLAG, saturations, the UNR division): the `gtemac.h` macros reach it by mechanical
+  translation of their MIPS (`tools/port_gen.py overrides`), and the layer-1 family `gte` (865 cases: MIPS routines in
+  scratch RAM run on the PS1) pins it; the host replay checks it at -m64, -m32 and under the sanitizers. What the
+  goldens corrected: the MAC accumulator wraps at 44 bits, LIBGTE's `RotMatrix*_gte` floors each product, `ScaleMatrix`
+  writes `MATRIX`'s pad halfword. A model's first animation step blends with parts nothing wrote (the PS1's heap
+  leftovers): the host zeroes them (`fightstg_model_new`, `PC_PORT`; drawing only). LIBGS's GTE set-up
+  (`GsSetProjection`'s H, `GsSetFlatLight`'s colour matrix) is left for M2, checked the same way.
+- **The file cache depends on heap addresses** (FIELDSTG's `cdload free_above(0x8015C674)` frees the cached files placed
+  above that address): the host's layout differs from the PS1's at either pointer width and between the two, so which
+  files stay cached, hence the CD timing and the frames, can differ by build. The game state does not: `-m32` and
+  `-m64` reach the same 20 checkpoints. `tests/port/run.py --m32` therefore requires the same cross-core view for every
+  script and byte-identical logs for `new_game` (the M1 criterion); the sanitizer build (the `-m64` layout) stays
+  byte-identical everywhere.

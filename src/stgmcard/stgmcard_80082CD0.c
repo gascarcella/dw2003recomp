@@ -216,7 +216,19 @@ typedef struct StgmcardMemcard {
     /* 0x328 */ MemcardFuncs funcs;   /* memcard_funcs */
 } StgmcardMemcard; /* size 0x35C */
 
+#ifndef PC_PORT
 extern StgmcardMemcard memcard_state;
+#define STGMCARD_MEMCARD_FUNCS memcard_state.funcs
+#define STGMCARD_ICON_FRAME memcard_state.icon_frame
+#else
+/* PC_PORT: the host's memcard_state (MemcardState, include/memcard.h) and memcard_funcs are two objects with their own
+ * layouts (pointers are 8 bytes), so this overlay reaches them through their own types; the icon frame being written,
+ * kept in the unused icons[3] on the PS1, is a variable of its own. */
+extern MemcardState memcard_state;
+static s32 stgmcard_icon_frame;
+#define STGMCARD_MEMCARD_FUNCS memcard_funcs
+#define STGMCARD_ICON_FRAME stgmcard_icon_frame
+#endif
 extern StgmcardContentsWindow stgmcard_contents_windows[19];
 extern s32 stgmcard_party_anims[8][7]; /* frames of the save files' sprite animations, ended by -1 */
 extern s32 stgmcard_slot_icons[]; /* per card status - 3: sprite */
@@ -1022,7 +1034,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
         if (data->frame->base.step == 0) {
             data->frame->open(data->frame, 1, 0x4C);
         }
-        ret = memcard_state.funcs.wait_accept(obj->port);
+        ret = STGMCARD_MEMCARD_FUNCS.wait_accept(obj->port);
         obj->status = ret;
         if (ret != 0) {
             if (ret == 1 || ret - 1 == 3) {
@@ -1035,7 +1047,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
         break;
     }
     case 0xB:
-        obj->status = memcard_state.funcs.list_files(obj->port);
+        obj->status = STGMCARD_MEMCARD_FUNCS.list_files(obj->port);
         if (obj->status != 0) {
             data->frame->open(data->frame, 2, 0x14);
             obj->base.step++;
@@ -1060,7 +1072,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
         }
         /* fallthrough */
     case 0x15:
-        obj->status = memcard_state.funcs.read(obj->port, stgmcard_module.header, 0xD4, 1);
+        obj->status = STGMCARD_MEMCARD_FUNCS.read(obj->port, stgmcard_module.header, 0xD4, 1);
         if (obj->status != 0) {
             data->frame->open(data->frame, 2, 0x14);
             obj->base.step++;
@@ -1074,7 +1086,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
                     heap_funcs.bzero(stgmcard_module.header, 0x44);
                     stgmcard_module.header->magic = 0x33574D44;
                     stgmcard_module.header->version = 4;
-                } else if (memcard_state.funcs.get_checksum((u8 *)stgmcard_module.header + 4, 0xD0) &
+                } else if (STGMCARD_MEMCARD_FUNCS.get_checksum((u8 *)stgmcard_module.header + 4, 0xD0) &
                            ~stgmcard_module.header->checksum) {
                     obj->status = 9;
                     stgmcard_screen_report(obj, data);
@@ -1159,7 +1171,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
                 obj->base.step = 0x5A;
                 obj->base.substep = 1;
             } else {
-                ret = memcard_state.funcs.wait_exist(obj->port);
+                ret = STGMCARD_MEMCARD_FUNCS.wait_exist(obj->port);
                 if (ret != 0) {
                     if (ret != 1) {
                         obj->status = ret - 1;
@@ -1213,14 +1225,14 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
     case 0x47: {
         s32 ret;
 
-        ret = memcard_state.funcs.read(obj->port, stgmcard_module.save, 0x26C4,
+        ret = STGMCARD_MEMCARD_FUNCS.read(obj->port, stgmcard_module.save, 0x26C4,
                                         stgmcard_module.slot + 2);
         obj->status = ret;
         if (ret != 0) {
             if (ret != 1) {
                 obj->status = ret - 1;
                 stgmcard_screen_report_after_slots(obj, data);
-            } else if (memcard_state.funcs.get_checksum((u8 *)stgmcard_module.save + 4, 0x26C0) &
+            } else if (STGMCARD_MEMCARD_FUNCS.get_checksum((u8 *)stgmcard_module.save + 4, 0x26C0) &
                        ~stgmcard_module.save->checksum) {
                 obj->status = 8;
                 stgmcard_screen_report_after_slots(obj, data);
@@ -1281,7 +1293,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
             obj->base.substep = 0x20;
             data->slots->base.step = 6;
         } else {
-            ret = memcard_state.funcs.wait_exist(obj->port);
+            ret = STGMCARD_MEMCARD_FUNCS.wait_exist(obj->port);
             if (ret != 0) {
                 if (ret != 1) {
                     data->yes->set_visible(data->yes, 0);
@@ -1308,7 +1320,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
         card = &stgmcard_module.header->slots[stgmcard_module.slot];
         *(StgmcardSaveData *)stgmcard_module.save = *(StgmcardSaveData *)&gamestate_data;
         stgmcard_module.save->checksum =
-            memcard_state.funcs.get_checksum((u8 *)stgmcard_module.save + 4, 0x26C0);
+            STGMCARD_MEMCARD_FUNCS.get_checksum((u8 *)stgmcard_module.save + 4, 0x26C0);
         stgmcard_module.save->version = 4;
         strcpy(card->name, stgmcard_module.save->name);
         card->area = obj->parent->area;
@@ -1321,14 +1333,14 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
             card->party[i] = stgmcard_module.save->digimon[ret].joined;
         }
         stgmcard_module.header->last_slot = stgmcard_module.slot;
-        stgmcard_module.header->checksum = memcard_state.funcs.get_checksum((u8 *)stgmcard_module.header + 4, 0xD0);
+        stgmcard_module.header->checksum = STGMCARD_MEMCARD_FUNCS.get_checksum((u8 *)stgmcard_module.header + 4, 0xD0);
         obj->base.step++;
         break;
     }
     case 0x34: {
         s32 ret;
 
-        ret = memcard_state.funcs.write(obj->port, stgmcard_module.header, 0xD4, 1);
+        ret = STGMCARD_MEMCARD_FUNCS.write(obj->port, stgmcard_module.header, 0xD4, 1);
         obj->status = ret;
         if (ret != 0) {
             if (ret == 1) {
@@ -1343,7 +1355,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
     case 0x35: {
         s32 ret;
 
-        ret = memcard_state.funcs.write(obj->port, stgmcard_module.save, 0x26C4,
+        ret = STGMCARD_MEMCARD_FUNCS.write(obj->port, stgmcard_module.save, 0x26C4,
                                         stgmcard_module.slot + 2);
         obj->status = ret;
         if (ret != 0) {
@@ -1394,7 +1406,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
                 }
             }
         } else {
-            ret = memcard_state.funcs.wait_exist(obj->port);
+            ret = STGMCARD_MEMCARD_FUNCS.wait_exist(obj->port);
             if (ret != 0) {
                 if (ret != 1) {
                     obj->arrow_shown = 0;
@@ -1524,7 +1536,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
                 obj->base.substep = 1;
                 data->frame->close(data->frame);
             }
-            ret = memcard_state.funcs.wait_exist(obj->port);
+            ret = STGMCARD_MEMCARD_FUNCS.wait_exist(obj->port);
             if (ret != 0) {
                 if (ret != 1) {
                     obj->status = ret;
@@ -1541,7 +1553,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
         break;
     }
     case 0x190:
-        obj->status = memcard_state.funcs.wait_exist(obj->port);
+        obj->status = STGMCARD_MEMCARD_FUNCS.wait_exist(obj->port);
         if (obj->status != 0) {
             obj->base.step++;
         }
@@ -1557,7 +1569,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
     case 0x6E: {
         s32 ret;
 
-        ret = memcard_state.funcs.format(obj->port);
+        ret = STGMCARD_MEMCARD_FUNCS.format(obj->port);
         obj->status = ret;
         if (ret != 0) {
             if (ret == 1) {
@@ -1581,7 +1593,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
     case 0x79: {
         s32 ret;
 
-        ret = memcard_state.funcs.create_file(obj->port);
+        ret = STGMCARD_MEMCARD_FUNCS.create_file(obj->port);
         obj->status = ret;
         if (ret != 0) {
             if (ret == 1) {
@@ -1595,7 +1607,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
     case 0x7A: {
         s32 ret;
 
-        ret = memcard_state.funcs.write(obj->port, &memcard_state.header, 0x80, 0);
+        ret = STGMCARD_MEMCARD_FUNCS.write(obj->port, &memcard_state.header, 0x80, 0);
         obj->status = ret;
         if (ret != 0) {
             if (ret == 1) {
@@ -1603,7 +1615,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
                     obj->status = 3;
                     stgmcard_screen_report(obj, data);
                 } else {
-                    memcard_state.icon_frame = 0;
+                    STGMCARD_ICON_FRAME = 0;
                     obj->base.step++;
                 }
             } else {
@@ -1616,17 +1628,17 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
     case 0x7B: {
         s32 ret;
 
-        ret = memcard_state.funcs.write(obj->port, memcard_state.icons[memcard_state.icon_frame], 0x80,
-                                        (memcard_state.icon_frame * 0x80 + 0x80) << 8);
+        ret = STGMCARD_MEMCARD_FUNCS.write(obj->port, memcard_state.icons[STGMCARD_ICON_FRAME], 0x80,
+                                        (STGMCARD_ICON_FRAME * 0x80 + 0x80) << 8);
         obj->status = ret;
         if (ret != 0) {
             if (ret == 1) {
-                if (++memcard_state.icon_frame > memcard_state.icon_frames - 1) {
+                if (++STGMCARD_ICON_FRAME > memcard_state.icon_frames - 1) {
                     heap_funcs.bzero(stgmcard_module.header, sizeof(StgmcardSaveHeader));
                     stgmcard_module.header->magic = 0x33574D44;
                     stgmcard_module.header->version = 4;
                     stgmcard_module.header->checksum =
-                        memcard_state.funcs.get_checksum((u8 *)stgmcard_module.header + 4, 0xD0);
+                        STGMCARD_MEMCARD_FUNCS.get_checksum((u8 *)stgmcard_module.header + 4, 0xD0);
                     obj->header = *stgmcard_module.header;
                     stgmcard_module.cursor_slot = stgmcard_module.header->last_slot;
                     obj->base.step++;
@@ -1639,7 +1651,7 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
         break;
     }
     case 0x7C:
-        obj->status = memcard_state.funcs.write(obj->port, stgmcard_module.header, 0xD4, 1);
+        obj->status = STGMCARD_MEMCARD_FUNCS.write(obj->port, stgmcard_module.header, 0xD4, 1);
         if (obj->status != 0) {
             data->frame->open(data->frame, 2, 0x14);
             obj->base.step++;

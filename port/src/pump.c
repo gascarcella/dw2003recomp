@@ -32,6 +32,7 @@ static void port_watchdog(int sig) {
     _exit(4);
 }
 
+
 void port_pump_init(void) {
     psyq_set_vsync_hook(port_frame);
     if (port_watchdog_sec > 0) {
@@ -41,6 +42,18 @@ void port_pump_init(void) {
         sigaction(SIGALRM, &sa, NULL);
         alarm((unsigned)port_watchdog_sec);
         port_watchdog_armed = 1;
+    }
+    /* the last call before game_main: the game's data must still be as snapshotted (nothing in the setup wrote it),
+     * which is what a reset restores */
+    port_reset_check("startup");
+}
+
+/* The console's reset (port/src/reset.c): the frame count goes on; the watchdog starts over (the longjmp left the
+ * tick that re-armed it), the per-frame hook stays the runtime's. */
+void port_pump_reset(void) {
+    psyq_set_vsync_hook(port_frame);
+    if (port_watchdog_armed) {
+        alarm((unsigned)port_watchdog_sec);
     }
 }
 

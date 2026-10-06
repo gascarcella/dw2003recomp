@@ -14,6 +14,7 @@ remapped with the host offsets layout.c reports, and a pointer field that holds 
 buffer's host address."""
 import argparse
 import hashlib
+import importlib
 import json
 import re
 import struct
@@ -77,6 +78,10 @@ SHIFTED_TAILS = {"records_state": (0x58, "RecordsState.gauges", "sizeof(RecordsS
 # arena (wfightmn_spoils: the fade object wfightmn_battle_end creates); the host's heap is libc's (shims.c).
 HOST_SKIPPED_GLOBALS = {"heap_funcs": "heap_funcs.first/end (the oracle's scratch heap arena; the host allocates with libc)"}
 SYMBOL_FILE = ROOT / "config/symbol_addrs.txt"
+# Families replayed by a runner of their own instead of the game's C (their cases call MIPS routines of the family, not
+# game functions): family -> module in tests/host with build(out_dir) -> binary and replay(golden, binary) ->
+# (calls, [(case, what, original, host)]). gte: the port's software GTE and LIBGTE (tests/host/gte_replay.py).
+HOST_RUNNERS = {"gte": "gte_replay"}
 SCRATCH_BASE = 0x80180000    # tests/golden/oracle.py: where the oracle placed the case's buffers, in order, 16-aligned
 CDLOAD_ENTRIES = 4           # CdloadModule.entries
 CDLOAD_ENTRY_SIZE = 0x10
@@ -466,6 +471,8 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     families = args.families or sorted(p.stem for p in GOLDEN_DIR.glob("*.json"))
     goldens = [json.loads((GOLDEN_DIR / f"{f}.json").read_text()) for f in families]
+    runner_goldens = [g for g in goldens if g["family"] in HOST_RUNNERS]
+    goldens = [g for g in goldens if g["family"] not in HOST_RUNNERS]
     symtab = out / "symtab.c"
     write_symtab(golden_symbols(goldens), symtab)
     binary = out / "replay"
@@ -491,6 +498,20 @@ def main():
         if new:
             status = 1
     host.close()
+    for g in runner_goldens:
+        sys.path.insert(0, str(ROOT / "tests/host"))
+        runner = importlib.import_module(HOST_RUNNERS[g["family"]])
+        calls, found = runner.replay(g, runner.build(out / g["family"]), args.verbose)
+        mismatches = [(f"{g['family']}/{name}: {label}", "registers/output", exp, got, "") for name, label, exp, got in found]
+        all_mismatches += mismatches
+        new = [m for m in mismatches if not any(m[0].startswith(k["where"]) for k in known)]
+        print(f"  {g['family']}: {len(g['cases'])} cases, {calls} calls: "
+              + ("matches the original" if not mismatches else f"{len(new)} NEW MISMATCH(ES), {len(mismatches) - len(new)} known")
+              + f" ({HOST_RUNNERS[g['family']]}.py)")
+        for where, what, exp, got, comment in (mismatches if args.findings else new[:10]):
+            print(f"    {where} [{what}]: original {str(exp)[:40]}, host {str(got)[:40]}")
+        if new:
+            status = 1
     (out / "findings.json").write_text(json.dumps([dict(zip(("where", "what", "original", "host", "comment"), m)) for m in all_mismatches], indent=1))
     return 0 if args.findings else status
 

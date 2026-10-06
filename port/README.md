@@ -43,7 +43,7 @@ non-PIE in both.
 | `include/port_runtime.h` | The runtime's internal interface (tables, arena, pump, logging) |
 | `src/main.c` | Options, setup, `game_main()` (the game's `main`, renamed by `-Dmain=game_main` on `src/main/main.c`) |
 | `src/arena.c` | The memory arena: `port_arena`, `port_ptr_to_s32`/`port_s32_to_ptr`, the stand-in BIOS |
-| `src/overlay.c` | The overlay manager: `port_overlay_load` (snapshot restore), `port_overlay_resolve` (tag -> function) |
+| `src/overlay.c` | The overlay manager: `port_overlay_load` (snapshot restore), `port_overlay_resolve` (tag -> function); the game's `.data`/`.bss` snapshots (the reset's `port_overlay_reset`/`_check`) |
 | `src/framelog.c` | The per-frame log (`--log`) and the run's record (`--record`): `port_harness.h` |
 | `src/state.c` | The game-state probes (`port_state_*`), `port_state_read` (a PS1-address read), gamestate_data's PS1 image and hashes |
 | `src/sha1.c` | SHA-1 (our own): the disc check, the checkpoint hashes |
@@ -52,6 +52,7 @@ non-PIE in both.
 | `src/json.c` | A small strict JSON reader (our own), for the scripts |
 | `include/port_harness.h` | The M1 harness's interfaces (disc, frame log and probes, script) |
 | `src/pump.c` | `port_wait` (the vsync and CD ticks, the frame cap, the watchdog), `port_halt`, `port_unimplemented` |
+| `src/reset.c` | The console's reset (the script's `reset` step): `port_reset_request` (longjmp to `main()`), `port_reset_state`, `DW3_PORT_RESET_CHECK` |
 | `src/asmdata.c` | Zero data the PS1 build keeps in asm (FIELDSTG's `.bss` block; weak LIBGS/LIBCD data) |
 | `psyq/` | The Psy-Q shim (its own README) |
 | `../tools/port_gen.py` | The generators CMake runs (never by hand in the normal flow) |
@@ -61,12 +62,13 @@ At configure time:
 - `units.cmake`: the 388 units: `src/<target>/*.c` for the EXE and the tier-1/tier-2 overlays, `src/wstag/<unit>.c`
   for the WSTAG files of `config/wstag_c.txt` (the same set `configure.py` compiles; `port_gen.py units` fails if a C
   file under `src/` is not one of them). WSTAG260 is data-only and has no unit.
-- `include/include_asm.h` (empty `INCLUDE_ASM`/`INCLUDE_RODATA`) and `include/psyq/gtemac.h` (every `gte_*` macro a
-  no-op until M5), first on the include path with the real headers' guards, as `tools/port_inventory.py probe` does.
-- `overlays.ld`: a GNU ld script (`-T`, `INSERT BEFORE .data`/`.bss`) that puts each overlay's `.data`/`.bss` input
-  sections (its objects are compiled with `-fdata-sections`, matched by path `*src/<dir>/*.c.o`; plus any object's
-  `.data.dw3.<ovl>`/`.bss.dw3.<ovl>`) into `.dw3.data.<ovl>`/`.dw3.bss.<ovl>` with `__start_dw3_*`/`__stop_dw3_*`
-  symbols, and defines `port_slot1`, `port_slot2`, `port_heap_start`, `port_heap_end` inside `port_arena`.
+- `include/include_asm.h` (empty `INCLUDE_ASM`/`INCLUDE_RODATA`) and `include/psyq/gtemac.h` (every `gte_*` macro
+  translated from its MIPS sequence into calls of the software GTE, `port/psyq/gte.c`), first on the include path with the real headers' guards, as `tools/port_inventory.py probe` does.
+- `overlays.ld`: a GNU ld script (`-T`, `INSERT BEFORE .data`/`.bss`) that puts the EXE's (`src/main/`) and each
+  overlay's `.data`/`.bss` input sections (the units are compiled with `-fdata-sections`, matched by path
+  `*src/<dir>/*.c.o`; plus any object's `.data.dw3.<ovl>`/`.bss.dw3.<ovl>`) into `.dw3.data.<ovl>`/`.dw3.bss.<ovl>`
+  (`<ovl>` = `main` for the EXE) with `__start_dw3_*`/`__stop_dw3_*` symbols, and defines `port_slot1`, `port_slot2`,
+  `port_heap_start`, `port_heap_end` inside `port_arena`.
 - `include/port_arena_gen.h`: the arena's sizes.
 
 At build time, after the units are compiled:
@@ -85,6 +87,11 @@ At build time, after the units are compiled:
   at `-m64` (to assembly, ~1 s) in every build, so the `-m32` build's table is the same, and it fails if a
   pointer-free object's size differs between the two.
 
+After the link (`port_gen.py sections`, POST_BUILD): the link map (`build/port/dw2003.map`, `-Wl,-Map`) must show every
+writable input section of a game object (`.data*`, `.bss*`, `COMMON` of the units in CMake's `dw3_game.dir`) inside a
+`.dw3.*` output section, the ranges the console's reset restores; one outside fails the build (`-v` lists the
+runtime's and the shim's own writable data, which reset themselves).
+
 ## The runtime
 **Arena** (`PC_PORT_PLAN.md` 2.4): one 16 MB-aligned `.bss` block, smaller than 16 MB, mirroring the PS1 from
 `0x80082CB0` up: slot 1 (`0x23130` bytes), slot 2 (`0x5A20`), then the heap (4 MB, larger than the PS1's
@@ -94,8 +101,8 @@ the shim's `DrawOTag` walks them from the arena's base. The 16 MB alignment is a
 non-PIE executable (`-no-pie`; checked at startup).
 
 **Overlay manager** (2.5): every overlay is linked in. `OVERLAY_COPY` (the game's two `memcpy` sites) calls
-`port_overlay_load(tier, file, ...)`: a file with a table becomes the tier's current overlay and gets its `.data`
-restored from the startup snapshot and its `.bss` zeroed (what the PS1's copy of the file did); a file without one
+`port_overlay_load(tier, file, ...)`: a file with a table becomes the tier's current overlay and gets its `.data` and
+`.bss` restored from the startup snapshot (`.bss`: zero; what the PS1's copy of the file did); a file without one
 (WSTAG260, FIELDSTG's data files) is copied into the slot buffer, exactly the PS1's memcpy. `OVERLAY_FN`/`LATE_CALL`
 call `port_overlay_resolve(tier, addr)`: a tag (an address in `0x80000000..0x80200000`) is looked up in the tier's
 current overlay's table (fatal if absent: static, still asm, or a data file is loaded); anything else is a host
@@ -110,8 +117,10 @@ state between the copy and the overlay's start-up (`new_game_field` does). `port
 per tier). `port_state_read(addr, size, signed, &v)` (the script's `wait_mem`) maps a PS1 address only inside a
 layout-identical range: a whole data symbol by the rule above, or the prefix `state.c` lists for a pointer-bearing
 object (`overlay_module` 8 bytes, `gamestate_data` 0x26FC bytes, `pad_random` 4; each checked by `_Static_assert`);
-anything else returns 0 (unmapped). Not mapped yet: `memcard_state` (its type is private to `memcard.c`, and its
-fields at 0x90 and 0x300 follow a pointer) and overlay data (e.g. `0x80099DD0`).
+anything else returns 0 (unmapped). Besides those ranges, an explicit field table maps the pointer-bearing objects'
+fields the scripts read, each checked by `_Static_assert`: `memcard_state`'s (`state`, `command`, `done`, ...; the type
+is in `include/memcard.h`) and FIELDSTG's `fieldstg_stage` non-pointer fields (`menu_open`, ...), the latter only while
+FIELDSTG is the tier-1 overlay.
 
 **The checkpoint hash**: `gamestate_data`'s PS1 image is its first 0x26FC bytes as they are (no pointer before
 `funcs`), then the 24 `funcs` entries as the PS1 addresses of the host functions they point to (the generated table;
@@ -124,6 +133,24 @@ Each tick runs `port_frame` (`pump.c`): the CD tick (`psyq_cd_tick`), the frame 
 at `--max-frames` (default 600; none with `--script`). `DW3_PORT_CHECKPOINT_DIR=<dir>` writes each checkpoint's PS1
 image as `cpNN_<name>.bin`, named like `run.lua`'s dumps. A watchdog (`--watchdog SEC`,
 default 10) exits 4 when no `port_wait()` ran for that long: a loop that no hook reaches (see below).
+
+**The console's reset** (`reset.c`; the script's `reset` step, run.lua's `PCSX.hardResetEmulator()`): the step releases
+the pad and ends its frame as run.lua does (the input trace, the end-of-script check), then `port_reset_request`
+longjmps from the vsync tick, however deep in the game's stack (a `VSync`, a `PLATFORM_WAIT`, `StGetNext`'s polling
+tick, an overlay copy's ticks), to `main()`, which calls `port_reset_state` and `game_main()` again. The reset puts
+back: every game global (the EXE's and every overlay's `.data`/`.bss` from the startup snapshot, static locals
+included; no overlay current; `port_overlay_reset`), the arena (zero: the PS1's RAM is cleared), the shim
+(`psyq_reset`: each library's `psyq_<lib>_reset`; the CD's sector source and timing model, the vsync hook, the GPU walk
+window, the memory cards' contents and the trace setting stay). The frame count, the frame log's sequences (the next
+frame records `(0, 0)` and map 0 as a change, as the emulator's listener records the cleared RAM), the checkpoints,
+the input trace and the script's next step go on; the log gets an `R` line. `DW3_PORT_RESET_CHECK=1` (or `--trace`)
+proves the restore: at startup (the last setup call before `game_main`) and after every reset, every game section is
+compared with its startup snapshot and the arena with zero, fatal on a difference; with `port_gen.py sections` (no
+game data outside the sections) that is the whole of the game's writable state. Session 16's check: `new_game` with a
+reset inserted (after `title_screen`, mid-movie in `StGetNext`'s tick, after `first_field_map`; and after
+`first_battle_save`'s `back_on_field`) and the boot steps repeated runs, after the reset, a log byte-identical to a
+plain `new_game` run's (frames shifted), with the same full and stable checkpoint hashes, in the -m64, -m32 and
+sanitizer builds.
 
 ## The per-frame log (`--log FILE`)
 Text, line-buffered, one line per frame and one per event; nothing in it depends on the host (no time, no address),
@@ -138,6 +165,7 @@ far (an event between two ticks carries the last tick's number, as the emulator'
 | `L <frame> tier <t> file 0x<id> <name> word0 0x<8 hex> size 0x<n>` | A file copied into a slot (`port_overlay_load`): the overlay's name, or `(data)`; its first word; its size |
 | `C <frame> <name> stage <stage> map 0x<map> rnd <index> sha1 <40 hex> stable <40 hex>` | A checkpoint |
 | `I <frame> buttons 0x<4 hex>` | The script's pad changed (`port_framelog_input`; PS1 bit order, active high) |
+| `R <frame> reset` | The console's reset (the script's `reset` step): the next frame runs the game from `main()` again |
 | `X <frame> status <status> <reason>` | The exit (`port_exit`) |
 
 ## The record (`--record FILE`)

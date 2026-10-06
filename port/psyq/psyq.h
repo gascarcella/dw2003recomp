@@ -25,6 +25,11 @@ void psyq_cd_set_timing(int timing);
  * which psyq_reset calls. */
 void psyq_reset(void);
 void psyq_mcrd_reset(void);
+/* LIBMCRD's card store (port/src/memcard.c owns the images and their files): card `slot` (0, 1) is the 128 KB image
+ * at `image` (NULL: no card); `written` is called after every change to it (to write the file back). */
+void psyq_mcrd_set_card(int slot, u8 *image, void (*written)(int slot));
+/* A freshly formatted card, as PCSX-Redux creates one ("MC" frame, 15 free directory frames, ...). */
+void psyq_mcrd_format_image(u8 *image);
 /* Tracing: on/off and the stream (stderr by default). */
 void psyq_set_trace(int on, FILE *stream);
 

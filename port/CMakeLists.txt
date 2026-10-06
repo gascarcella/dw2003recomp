@@ -132,8 +132,13 @@ set_source_files_properties(${DW3_RUNTIME_SRCS} "${DW3_GEN}/overlay_tables.c" "$
 if(DW3_PORT_PSYQ_WERROR AND DW3_PSYQ_SRCS)
     set_source_files_properties(${DW3_PSYQ_SRCS} PROPERTIES COMPILE_OPTIONS "-Werror")
 endif()
-# The ld script: per-overlay .data/.bss sections and the arena's symbols.
-target_link_options(dw2003 PRIVATE "-Wl,-T,${DW3_GEN}/overlays.ld")
+# The ld script: the EXE's and each overlay's .data/.bss sections and the arena's symbols. The link map is checked
+# after every link: a game object's writable data outside those sections would survive the console's reset
+# (port/src/reset.c; port_gen.py sections).
+target_link_options(dw2003 PRIVATE "-Wl,-T,${DW3_GEN}/overlays.ld" "-Wl,-Map,${CMAKE_BINARY_DIR}/dw2003.map")
+add_custom_command(TARGET dw2003 POST_BUILD
+                   COMMAND "${DW3_PYTHON}" "${DW3_PORT_GEN}" sections --map "${CMAKE_BINARY_DIR}/dw2003.map"
+                   COMMENT "port_gen.py sections (the game's data is all in the reset's ranges)" VERBATIM)
 if(DW3_PORT_ALLOW_UNRESOLVED)
     target_link_options(dw2003 PRIVATE "-Wl,--unresolved-symbols=ignore-all")
 endif()

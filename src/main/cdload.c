@@ -203,6 +203,15 @@ void cdload_queue_file(s32 id) {
         return;
     }
     entry = cdload_find_free_entry();
+#ifdef PC_PORT
+    /* PC_PORT: the PS1 frees cached files only when the heap runs out (heap.c calls free_oldest), which keeps fewer
+     * than 64 in its 1.3 MB; the port's heap is larger, so the table can fill: free the least recent file then (on the
+     * PS1 a full table would write through NULL). Only which files stay cached changes, so only the CD timing. */
+    if (entry == NULL) {
+        cdload_free_oldest();
+        entry = cdload_find_free_entry();
+    }
+#endif
     entry->id = id;
     entry->buffer = heap_funcs.alloc(filetable_funcs.get_sectors(id) << 11, 3);
     entry->state = 1;

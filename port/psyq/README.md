@@ -5,7 +5,7 @@ DECISIONS "PC port decisions (session 15)"): one C file per library, against the
 MIT, like the repo. Written from the game's own use of the API and public hardware documentation; no SDK file, no
 emulator code (PsyCross, MIT, was consulted for signatures only).
 
-**M1 skeleton: headless, records, no drawing, no sound.** Every stub returns what lets the game go on; nothing
+**M1 skeleton: headless, records, no drawing, no sound** (but a real GTE: `gte.c`). Every stub returns what lets the game go on; nothing
 allocates host memory the game sees, and nothing stores a game pointer in a 32-bit field.
 
 ## Interface to the port runtime: `psyq.h`
@@ -19,12 +19,13 @@ per frame") plugs into; the runtime may ignore them.
 | Library | Real (computes the right answer) | Fixed answer / recorded only |
 |---|---|---|
 | LIBGPU `libgpu.c` | `SetDefDispEnv`, `SetDefDrawEnv`, `SetDrawEnv` (the DR_ENV words), `SetDrawTPage`, `SetDrawMove`, `GetTPage`, `GetClut`, `SetSemiTrans`, `SetSprt`, `ClearOTag`, `ClearOTagR`; `DrawOTag`/`ContinueDraw` walk the list and hash the primitives | `DrawSync` 0, `ResetGraph` 0, `SetGraphDebug` 0, `SetDispMask`, `PutDispEnv` (returns env), `ClearImage`/`ClearImage2` 0, `LoadImage`, `MoveImage` 0, `IsIdleGPU` 0 (idle), `BreakDraw` (an empty list, so FIGHTSTG's cursor copies are still recorded) |
-| LIBGTE `libgte.c` | `rsin`, `rcos` (computed 4096-entry table), `RotMatrixYXZ_gte`, `RotMatrixZYX_gte`, `ScaleMatrix`, `ApplyMatrixSV` | `InitGeom`, `SetGeomOffset`, `SetBackColor` (values kept for M2) |
+| GTE `gte.c` | The geometry coprocessor in software (session 16): the 64 registers with their read/write rules, every command (RTPS/RTPT with the UNR division, NCLIP, OP, DPCS/DPCT, INTPL, MVMVA, NCDS/NCDT, CDP, NCCS/NCCT, CC, NCS/NCT, SQR, DCPL, AVSZ3/4, GPF, GPL), FLAG, the saturations; the game's `gte_*` macros call it (`tools/port_gen.py overrides` translates each MIPS sequence of `include/psyq/gtemac.h` into the same register accesses: `psyq_gte_mtc2/mfc2/ctc2/cfc2/cmd`, declared in `psyq_internal.h`) | — |
+| LIBGTE `libgte.c` | `rsin`, `rcos` (computed 4096-entry table), `RotMatrixYXZ_gte`, `RotMatrixZYX_gte` (LIBGTE's GPF sequence), `ScaleMatrix`, `ApplyMatrixSV` (MVMVA); the register setters write the GTE: `InitGeom` (ZSF3/4, H, DQA/DQB, OFX/OFY), `SetGeomOffset`, `SetBackColor`, and for LIBGS (not called yet: see below) `SetGeomScreen`, `SetFarColor`, `SetColorMatrix` | — |
 | LIBGS `libgs.c` | `GsGetTimInfo` (parses the TIM header); owns `D_80081358` (world-screen matrix) and `D_800812F8` (flat-light matrix) | `GsInitGraph`, `GsInit3D` (both matrices = identity), `GsSetProjection`, `GsSetLightMode`, `GsSetFlatLight` (stores the raw direction in its row), `GsSetRefView2` 0 (leaves the matrix) |
 | LIBETC `libetc.c` | `VSyncCallback` (stores, returns the previous), `SetVideoMode` (returns the previous), `VSync` (ticks the vsync inline for modes 0 and > 1, returns the count) | `ResetCallback` 0 |
 | LIBCD `libcd.c` | `CdIntToPos`, `CdPosToInt`; the command model: `CdControl`/`CdControlB` apply at once and return 1, `CdControlF` completes on the next tick with `CdlComplete` to the sync handler; a read delivers its sectors from the sector source (the BIN, `port/src/disc.c`), one `CdlDataReady` call per sector, at the drive's rate in vsync ticks (`psyq_cd_set_timing`: "realistic" = 3 sectors per tick at double speed, 1.5 at single, after a seek of 3..40 ticks; "instant" = up to 75 per tick, no seek), stops at a command a handler issues, ends with `CdlDataEnd` past the source's end; `CdGetSector` reads through the delivered sector in the size the mode byte selects; `CdReadyCallback`/`CdSyncCallback` store and return the previous. The movie stream: `CdRead2` streams from the Setloc position at the drive's rate, video sectors (StHEADER magic `0x80010160`) are assembled into whole frames in the game's `StSetRing` buffer (a slot = the 32-byte StHEADER + the frame's data), XA audio is skipped; `StGetNext` hands out the oldest complete frame (and runs a vsync tick every 5000 empty polls, as the PS1's interrupts run while the player spins), `StFreeRing` releases it, `StSetStream` keeps the frame range, `StUnSetRing` ends the stream. Owns `D_80081454` (StCdIntrFlag, always 0) | `CdInit` 1, `CdSetDebug` 0, `StCdInterrupt` (nothing is deferred); `StSetStream`'s callbacks are not called (the game passes none) |
 | LIBPAD `libpad.c` | A digital pad on port 0 (none on port 1): `PadInitDirect`/`PadInitMtap` fill the buffers (status 0, id 0x41, buttons active low), `PadChkVsync` 1 once per vsync tick, `PadGetState` 6 (stable) / 0, `PadInfoMode(…, 2, …)` 4 (digital) | `PadStartCom` 0, `PadStopCom`, `PadInfoAct` 0, `PadSetAct`, `PadSetActAlign` 0, `PadSetMainMode` 0 |
-| LIBMCRD `libmcrd.c` | — | no card: the asynchronous commands return 1 (accepted) and `MemCardSync` reports them done with result 1 (`McErrCardNotExist`); `MemCardCreateFile`/`Format`/`Unformat`/`GetDirentry` return 1 at once |
+| LIBMCRD `libmcrd.c` | The cards over raw 128 KB `.mcd` images (`port/src/memcard.c` inserts them with `psyq_mcrd_set_card`; the layout: docs/FORMATS.md "The card image"): `MemCardExist`/`Accept`/`ReadFile`/`WriteFile` register an asynchronous command (1; 0 while one is pending) that `MemCardSync` reports done with its number (1 Exist, 2 Accept, 3 ReadFile, 4 WriteFile) and LIBMCRD's result (0 none, 1 no card, 2 invalid, 3 new card, 4 not formatted, 5 no such file); `MemCardCreateFile` (first free blocks; 6 exists, 7 full), `Format` (the directory a new PCSX-Redux card has), `Unformat` (frame 0 cleared), `GetDirentry` (`*`/`?` patterns; name, size, head) answer at once. The first access after insertion or `psyq_mcrd_reset` answers 3 (new card) and clears the flag, as in the emulator. Every change of an image goes back to its file | `MemCardInit`, `MemCardStart`; the timing: a command completes at the 2nd (Exist), 4th (Accept) or (1 + bytes/128)th (a transfer) `MemCardSync` poll, `MemCardSync(0, …)` at once (the emulator's card is slower; the scripts wait on `memcard_state`) |
 | LIBSND `libsnd.c` | — | every call a no-op reporting success: `SsVabOpenHeadSticky`/`SsVabTransBody` return the id given, `SsVabTransCompleted` 1, `SsSepOpen` a fresh access number, `SsUtKeyOn` a voice number, `SsUtKeyOff` 0, `SsUtSetReverbType` 0 |
 | LIBPRESS `libpress.c` | — | nothing is decoded or written; `DecDCTout` runs the `DecDCToutCallback` handler at once (STDWTITL's decode wait needs it), `DecDCTvlc2` 0 |
 | LIBC2, LIBAPI | the host libc (see below) | — |
@@ -55,10 +56,22 @@ it stops the walk with a trace line). Every primitive's `len` words after its ta
 
 ## Behaviour assumed, to verify against the emulator later
 Each file's header comment lists its own; the ones a later milestone must check first:
-- **LIBGTE (M2):** Psy-Q's sine table is reproduced as round-to-nearest of `4096 * sin` (Sony's may differ by 1 in
-  places); matrix products are 64-bit then `>> 12` with sign (the GTE's rounding); `RotMatrixYXZ` is `Ry*Rx*Rz`
-  and `RotMatrixZYX` is `Rz*Ry*Rx` with Psy-Q's right-handed matrices; `ScaleMatrix` scales column j by `v_j`. The
-  layer-1 oracle (`tests/golden/oracle.py`) can call these on the PS1 and dump the words.
+- **GTE and LIBGTE:** checked against the PS1 (session 16): the layer-1 family `gte` (`tests/golden/families/gte.py`)
+  runs MIPS routines in the emulator that load all 64 registers, issue one command and store them back (every
+  command with sf/lm 0/1, MVMVA's 64 mx/v/cv combinations, the game's nine command words, the registers' write/read
+  rules, MAC 44-bit overflow, saturations, NCLIP/AVSZ limits, RTPS sweeps over every UNR table entry and H >= 2 * SZ3)
+  and calls LIBGTE's own `rsin`/`rcos` (a whole turn and outside it), `RotMatrix*_gte`, `ScaleMatrix` and
+  `ApplyMatrixSV`, with the GTE state each leaves; `tests/host/gte_replay.py` (run by `tests/host/replay.py`) replays
+  all 865 cases through `gte.c`/`libgte.c`: every register and word equal. What the goldens changed: the sine table was
+  right; `RotMatrix*_gte` floors each product on its own (it was one exact product, off by one in 80 of 96 cases);
+  `ScaleMatrix` writes the pad halfword after `m[2][2]` and multiplies in 32 bits; the MAC accumulator wraps at 44 bits.
+  Not covered: the GTE's timing (a command is instant here) and the power-on register values (zero here).
+- **LIBGS (M2), what the GTE now needs from it:** on the PS1 `GsSetProjection` calls `SetGeomScreen` (H),
+  `GsInitGraph`'s `gte_init` calls `InitGeom`, `SetFarColor(0, 0, 0)` and `SetGeomOffset`, `GsInit3D`'s
+  `GsSetDrawBuffOffset` calls `SetGeomOffset`, `GsSetFlatLight` writes the light colours with `SetColorMatrix`
+  (`asm/main/psyq/libgs/`); `libgs.c` does none of it yet, so RTPS projects with InitGeom's H = 1000 (main.c calls
+  `InitGeom`) instead of the layer's projection (`gfx.c` calls `GsSetProjection(obj->projection)`), and NCS lights
+  with a zero colour matrix (FIGHTSTG's `GsSetFlatLight` calls).
 - **LIBGPU (M2):** `SetDefDrawEnv`'s `dfe = (h <= 256)`; `SetDrawEnv`'s packet is E1, E2, E3, E4, E5 (+ the 0x02
   fill with isbg) and nothing else; `SetDrawMove`'s five words; what `BreakDraw` returns while the GPU is idle.
 - **LIBGS (M2):** `GsSetRefView2`'s matrix (not computed here); whether `GsSetFlatLight` normalises the direction;
@@ -75,7 +88,11 @@ Each file's header comment lists its own; the ones a later milestone must check 
   estimate of the PS1 loop's speed); our ring layout (LIBCD's own is not documented publicly; the game only needs
   `*addr` contiguous and `*header`'s frameCount, width and height).
 - **LIBPAD (M3):** the mode ids (4 digital, 7 analog), state 6, a digital pad without actuators.
-- **LIBMCRD (M4):** the command numbers in `*cmds` and that a missing card is result 1 for every command.
+- **LIBMCRD:** checked against the emulator (session 16, `first_battle_save`: `memcard_state` traced each frame): the
+  command numbers, results 3 (the first Accept after boot and after the reset), 5 (ReadFile of a missing file) and 0.
+  Still assumed: a missing card is result 1 for every command; ReadFile/WriteFile also answer 3 on a new card; the
+  results for a transfer outside the file (2) and for CreateFile's errors; `DIRENTRY.attr`/`head` (the game reads
+  only `size`).
 - **LIBPRESS (M5):** running the out-callback synchronously (the real MDEC runs it from the DMA end).
 
 ## Checks

@@ -9,6 +9,11 @@
 
 static void (*psyq_press_out_handler)(void);
 
+/* The console's reset (psyq.c psyq_reset): no DecDCTout handler. */
+void psyq_press_reset(void) {
+    psyq_press_out_handler = NULL;
+}
+
 void DecDCTReset(int mode) {
     PSYQ_TRACE("DecDCTReset %d", mode);
 }

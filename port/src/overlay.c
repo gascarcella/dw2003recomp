@@ -6,15 +6,35 @@
  * function of the tier's current overlay (port_overlay_resolve). A file that is not an overlay (no table: WSTAG260,
  * the data files FIELDSTG loads into the tier-2 slot) is copied into the slot buffer, as on the PS1. Every load keeps
  * the file's first word (port_overlay_word0: the replay scripts' wait_stage checks the slot's) and goes to the frame
- * log. */
+ * log.
+ *
+ * The EXE's units (src/main/) have their .data/.bss in their own sections too (tools/port_gen.py ldscript:
+ * .dw3.data.main, .dw3.bss.main), snapshotted at startup with the overlays': the console's reset (port/src/reset.c)
+ * puts every game global back with port_overlay_reset, and port_overlay_check proves it (DW3_PORT_RESET_CHECK). The
+ * link map check (port_gen.py sections, after every link) proves that no game object's writable data is outside
+ * these sections. */
 #include <stdlib.h>
 #include <string.h>
 
 #include "port_runtime.h"
 
+
+/* The EXE's units' .data and .bss (the ld script's symbols, as the overlays' in overlay_tables.c). */
+extern char __start_dw3_data_main[], __stop_dw3_data_main[], __start_dw3_bss_main[], __stop_dw3_bss_main[];
+
+/* A section of the game's writable data and its contents at startup: .data's initial values, .bss's zeros (under
+ * AddressSanitizer .bss also holds its ODR indicators, which ASan sets before main: the snapshot keeps them). */
+typedef struct PortRegion {
+    const char *name; /* for the check's log: "EXE .data", "FIELDSTG .bss", ... */
+    char *start, *stop;
+    u8 *snapshot;
+} PortRegion;
+
 static const PortOverlay *port_current[3]; /* per tier (index 1, 2) */
 static u32 port_word0[3];                  /* per tier: the first word of the file last loaded */
-static u8 **port_snapshots;                /* per overlay: its .data at startup (.bss was zero) */
+/* [0] the EXE's .data, [1] its .bss, then [2 + 2 * i] overlay i's .data and [3 + 2 * i] its .bss */
+static PortRegion *port_regions;
+static int port_region_count;
 
 /* Copies with plain byte accesses: under AddressSanitizer a memcpy over a whole section would trip on the redzones
  * between the globals (the bytes are untouched; copying them is harmless). */
@@ -26,35 +46,106 @@ __attribute__((no_sanitize_address)) static void port_copy_raw(void *dst, const 
     }
 }
 
-__attribute__((no_sanitize_address)) static void port_zero_raw(void *dst, size_t n) {
-    volatile u8 *d = dst;
-    while (n--) {
-        *d++ = 0;
+static void port_region_init(PortRegion *r, const char *name, char *start, char *stop) {
+    size_t n = (size_t)(stop - start);
+    if (stop < start) {
+        port_fatal("overlay: %s: bad section bounds", name);
     }
+    r->name = name;
+    r->start = start;
+    r->stop = stop;
+    r->snapshot = malloc(n ? n : 1);
+    if (r->snapshot == NULL) {
+        port_fatal("overlay: out of memory");
+    }
+    port_copy_raw(r->snapshot, start, n);
+}
+
+static void port_region_restore(const PortRegion *r) {
+    port_copy_raw(r->start, r->snapshot, (size_t)(r->stop - r->start));
 }
 
 void port_overlay_init(void) {
+    static char names[2][16];
+    size_t total = 0;
     int i;
-    port_snapshots = calloc((size_t)port_overlay_count, sizeof(*port_snapshots));
-    if (port_snapshots == NULL) {
+    port_region_count = 2 + 2 * port_overlay_count;
+    port_regions = calloc((size_t)port_region_count, sizeof(*port_regions));
+    if (port_regions == NULL) {
         port_fatal("overlay: out of memory");
     }
+    snprintf(names[0], sizeof(names[0]), "EXE .data");
+    snprintf(names[1], sizeof(names[1]), "EXE .bss");
+    port_region_init(&port_regions[0], names[0], __start_dw3_data_main, __stop_dw3_data_main);
+    port_region_init(&port_regions[1], names[1], __start_dw3_bss_main, __stop_dw3_bss_main);
     for (i = 0; i < port_overlay_count; i++) {
         const PortOverlay *o = &port_overlays[i];
-        size_t n = (size_t)(o->data_stop - o->data_start);
-        if (o->data_stop < o->data_start || o->bss_stop < o->bss_start) {
-            port_fatal("overlay %s: bad section bounds", o->name);
-        }
-        port_snapshots[i] = malloc(n ? n : 1);
-        if (port_snapshots[i] == NULL) {
-            port_fatal("overlay: out of memory");
-        }
-        port_copy_raw(port_snapshots[i], o->data_start, n);
+        port_region_init(&port_regions[2 + 2 * i], o->name, o->data_start, o->data_stop);
+        port_region_init(&port_regions[3 + 2 * i], o->name, o->bss_start, o->bss_stop);
+    }
+    for (i = 0; i < port_region_count; i++) {
+        total += (size_t)(port_regions[i].stop - port_regions[i].start);
     }
     if (port_trace) {
-        port_log("overlay: %d overlays snapshotted", port_overlay_count);
+        port_log("overlay: the EXE's and %d overlays' .data/.bss snapshotted (%zu bytes)", port_overlay_count, total);
     }
 }
+
+/* The console's reset (port/src/reset.c): every game unit's .data and .bss back to their startup contents, the EXE's
+ * and every overlay's (static locals included: they are in the same sections), and no overlay current in either
+ * tier, as after power-on (the slots' first words are 0 again: the arena is cleared too). */
+void port_overlay_reset(void) {
+    int i;
+    for (i = 0; i < port_region_count; i++) {
+        port_region_restore(&port_regions[i]);
+    }
+    for (i = 0; i < 3; i++) {
+        port_current[i] = NULL;
+        port_word0[i] = 0;
+    }
+}
+
+/* The bytes of a region that differ from its snapshot: their count; each run goes to the log as `<region>+offset` (the
+ * link map, build/port/dw2003.map, names the object there), the first 8 runs of a check only. */
+__attribute__((no_sanitize_address)) static size_t port_region_diff(const PortRegion *r, int is_bss, int *runs) {
+    const u8 *p = (const u8 *)r->start;
+    size_t n = (size_t)(r->stop - r->start), i = 0, count = 0;
+    while (i < n) {
+        size_t start;
+        if (p[i] == r->snapshot[i]) {
+            i++;
+            continue;
+        }
+        start = i;
+        while (i < n && p[i] != r->snapshot[i]) {
+            i++;
+        }
+        count += i - start;
+        if ((*runs)++ < 8) {
+            port_log("overlay: check: %s%s+0x%zX: 0x%zX byte(s) differ from startup", r->name,
+                     r == &port_regions[0] || r == &port_regions[1] ? "" : is_bss ? " .bss" : " .data", start,
+                     i - start);
+        }
+    }
+    return count;
+}
+
+/* The proof that a reset restored every game global (port/src/reset.c, DW3_PORT_RESET_CHECK): compares every game
+ * unit's .data and .bss with their startup contents, the EXE's and every overlay's. Returns the number of bytes that
+ * differ (0: all as at startup); *checked gets the number of bytes compared. */
+size_t port_overlay_check(size_t *checked) {
+    size_t bad = 0, total = 0;
+    int runs = 0, i;
+    for (i = 0; i < port_region_count; i++) {
+        total += (size_t)(port_regions[i].stop - port_regions[i].start);
+        bad += port_region_diff(&port_regions[i], i & 1, &runs);
+    }
+    if (checked != NULL) {
+        *checked = total;
+    }
+    return bad;
+}
+
 
 static const PortOverlay *port_overlay_find(int tier, s32 file) {
     int i;
@@ -112,8 +203,8 @@ void *port_overlay_load(int tier, s32 file, void *dst, const void *src, u32 size
     port_framelog_overlay_load(tier, file, o != NULL ? o->name : NULL, port_word0[tier], size);
     if (o != NULL) {
         size_t data = (size_t)(o->data_stop - o->data_start), bss = (size_t)(o->bss_stop - o->bss_start);
-        port_copy_raw(o->data_start, port_snapshots[o - port_overlays], data);
-        port_zero_raw(o->bss_start, bss);
+        port_region_restore(&port_regions[2 + 2 * (o - port_overlays)]); /* .data */
+        port_region_restore(&port_regions[3 + 2 * (o - port_overlays)]); /* .bss: zero (but ASan's ODR indicators) */
         port_current[tier] = o;
         port_log("overlay: tier %d, file 0x%X, %s (%d functions; .data %zu, .bss %zu bytes restored)", tier, file,
                  o->name, o->func_count, data, bss);

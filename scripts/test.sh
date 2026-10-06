@@ -87,7 +87,7 @@ for L in $LAYERS; do
             skip "tests/formats/run.sh does not exist yet (STATUS: Next)"
         fi ;;
     port)
-        layer port "the PC port replays new_game like the emulator (tests/port)"
+        layer port "the PC port replays the layer-2 scripts like the emulator (tests/port)"
         if ! { command -v cmake || [[ -x "$ROOT/tools/venv/bin/cmake" ]]; } >/dev/null; then
             skip "no cmake (on PATH or in tools/venv: scripts/setup.sh cmake)"
         elif ! { command -v ninja || [[ -x "$ROOT/tools/venv/bin/ninja" ]]; } >/dev/null; then
