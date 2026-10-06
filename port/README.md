@@ -47,6 +47,9 @@ non-PIE in both.
 | `src/framelog.c` | The per-frame log (`--log`) and the run's record (`--record`): `port_harness.h` |
 | `src/state.c` | The game-state probes (`port_state_*`), `port_state_read` (a PS1-address read), gamestate_data's PS1 image and hashes |
 | `src/sha1.c` | SHA-1 (our own): the disc check, the checkpoint hashes |
+| `src/disc.c` | The disc (`--disc`): the CUE/BIN, its SHA-1 check (with a stamp cache), LIBCD's sector source, `--cd-speed` |
+| `src/script.c` | The input script (`--script`): `tests/replay/run.lua`'s step engine in C, the pad through `psyq_pad_set` |
+| `src/json.c` | A small strict JSON reader (our own), for the scripts |
 | `include/port_harness.h` | The M1 harness's interfaces (disc, frame log and probes, script) |
 | `src/pump.c` | `port_wait` (the vsync and CD ticks, the frame cap, the watchdog), `port_halt`, `port_unimplemented` |
 | `src/asmdata.c` | Zero data the PS1 build keeps in asm (FIELDSTG's `.bss` block; weak LIBGS/LIBCD data) |
@@ -96,7 +99,10 @@ restored from the startup snapshot and its `.bss` zeroed (what the PS1's copy of
 (WSTAG260, FIELDSTG's data files) is copied into the slot buffer, exactly the PS1's memcpy. `OVERLAY_FN`/`LATE_CALL`
 call `port_overlay_resolve(tier, addr)`: a tag (an address in `0x80000000..0x80200000`) is looked up in the tier's
 current overlay's table (fatal if absent: static, still asm, or a data file is loaded); anything else is a host
-function pointer and comes back unchanged.
+function pointer and comes back unchanged. **The copy's time:** on the PS1 the copy is LIBC2's byte-loop `memcpy`
+(about 12 cycles a byte), so FIELDSTG's 0x19000 bytes take ~1.8 frames, and the emulator's checkpoints can see the
+state between the copy and the overlay's start-up (`new_game_field` does). `port_overlay_load` therefore runs
+`size * 12 / 677376` vsync ticks (`port_wait`) after a copy (FIELDSTG: 1; the smaller files: 0).
 
 **Game-state probes** (`state.c`): what `tests/replay/run.lua` reads from PS1 RAM, read from the host's objects:
 `overlay_module.stage`/`.file`, `gamestate_data.map`, `pad_random.index`, and the slot's first word (run.lua's
@@ -112,8 +118,11 @@ fields at 0x90 and 0x300 follow a pointer) and overlay data (e.g. `0x80099DD0`).
 fatal if one is not there): 0x275C bytes, the emulator's dump (`run.lua` `checkpoint`). The record has its SHA-1 and
 the SHA-1 with the volatile ranges zeroed (`gamestate_sha1_stable`), as `replay.py` computes them.
 
-**Pump**: `PLATFORM_WAIT()` -> `port_wait()` runs one vsync tick (`psyq_vsync_tick`) and one CD tick
-(`psyq_cd_tick`), counts a frame, and exits 0 at `--max-frames` (default 600). A watchdog (`--watchdog SEC`,
+**Pump**: a frame is one vsync tick (`psyq_vsync_tick`), from the game's `VSync()` or from `PLATFORM_WAIT()` ->
+`port_wait()`, or from LIBCD's `StGetNext` once per 5000 empty polls (the movie player spins without a wait hook).
+Each tick runs `port_frame` (`pump.c`): the CD tick (`psyq_cd_tick`), the frame log, the script's step, and the exit
+at `--max-frames` (default 600; none with `--script`). `DW3_PORT_CHECKPOINT_DIR=<dir>` writes each checkpoint's PS1
+image as `cpNN_<name>.bin`, named like `run.lua`'s dumps. A watchdog (`--watchdog SEC`,
 default 10) exits 4 when no `port_wait()` ran for that long: a loop that no hook reaches (see below).
 
 ## The per-frame log (`--log FILE`)

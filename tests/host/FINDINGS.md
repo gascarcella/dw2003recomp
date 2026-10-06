@@ -292,6 +292,20 @@ Not replayed by a golden (no case reaches these creators); found by the M0 agent
   0x00000008, 0 there in the emulator), and `FieldstgBackgroundView`'s byte pad put `get_size` at the PS1 offset, not
   the host's (`FieldstgBackground` has two pointers before it).
 
+## 10. `stplnmet` trims the name from index 19 of a `u16[12]` (agrees on the host by layout; session 16)
+
+- **Where:** `src/stplnmet/stplnmet_80083D70.c` (the name entry's confirm, key code 0x67): once the name has a
+  non-space character, `for (j = 19; j >= 0; j--)` walks `StplnmetNameEntry.name` (`u16[12]`, `include/stplnmet.h`)
+  from index 19 down, zeroing trailing spaces and stopping at the first non-space. Indexes 12..19 are the halves of
+  the four `s32` after the array (`name_cursor`, `length`, `key_column`, `key_row`).
+- **Original:** `name[19]` is the high half of `key_row` (0 in play), which is not a space: the loop ends at once with
+  step 100, and nothing is written. The trimming of the name's own trailing spaces never runs.
+- **Host:** the same fields follow `name` in the same order and sizes, so the host reads the same half-word and does the
+  same. Reported by UBSan (index 19 out of bounds for `u16[12]`) in the port's sanitizer run of `first_battle_save`'s
+  registration (T3, session 16); `new_game` does not reach it.
+- **For the port:** nothing to change while the layout after `name` stays as it is; a port that reorders the struct must
+  keep the PS1 behaviour (no trim, step 100).
+
 ## What the host does not replay (by design, not findings)
 
 - Stack leftovers: `replay.c` zeroes 64 KB of stack before every call, so a local the C reads uninitialised is 0 on the
