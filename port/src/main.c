@@ -7,6 +7,7 @@
 
 #include "port_harness.h"
 #include "port_runtime.h"
+#include "spu.h"
 #include "psyq.h"
 
 int port_trace;
@@ -148,6 +149,7 @@ int main(int argc, char **argv) {
         psyq_set_trace(1, stderr); /* else the shim decides by DW3_PORT_TRACE at its first call */
     }
     port_arena_init();
+    spu_init();
     port_overlay_init();
     if (speed != NULL && !port_disc_set_speed(speed)) {
         fprintf(stderr, "port: --cd-speed: unknown speed %s\n", speed);

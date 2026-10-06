@@ -67,6 +67,8 @@ for L in $LAYERS; do
         if command -v gcc >/dev/null; then
             echo "--- host-side replay of the goldens (tests/host)"
             "$PY" "$ROOT/tests/host/replay.py"; ran=$((ran + 1))
+            echo "--- the SPU core's unit goldens (tests/spu, ~2 s)"
+            "$ROOT/tests/spu/run.sh"; ran=$((ran + 1))
         else
             skip "no gcc for the host-side replay (tests/host)"
         fi ;;

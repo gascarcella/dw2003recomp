@@ -136,6 +136,9 @@ endif()
 # The software GPU runs every frame: optimised in every build (-O3: its span loops rely on inlining and on the
 # vectorised select loops; port/psyq/gpu.c, "Speed").
 set_property(SOURCE "${DW3_PORT_PSYQ_DIR}/gpu.c" APPEND PROPERTY COMPILE_OPTIONS -O3)
+# The SPU core renders every audio frame: -O2 in every build (about 4x the port's default; port/src/spu.c).
+file(GLOB DW3_SPU_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/spu*.c")
+set_property(SOURCE ${DW3_SPU_SRCS} APPEND PROPERTY COMPILE_OPTIONS -O2)
 # The ld script: the EXE's and each overlay's .data/.bss sections and the arena's symbols. The link map is checked
 # after every link: a game object's writable data outside those sections would survive the console's reset
 # (port/src/reset.c; port_gen.py sections).
