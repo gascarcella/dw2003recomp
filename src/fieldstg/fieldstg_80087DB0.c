@@ -4747,7 +4747,7 @@ void fieldstg_find_stage(void) {
         entry = fieldstg_stages_2d;
     }
     id = gamestate_data.funcs.get_map();
-    heap_funcs.bzero(&fieldstg_stage, 0x64); /* PC_PORT: the fields before return_pos (offsetof) */
+    heap_funcs.bzero(&fieldstg_stage, OFFSETOF(FieldstgStageState, return_pos)); /* the fields before return_pos */
     while (1) {
         if (entry->id == id) {
             fieldstg_stage.code_file = entry->file;
