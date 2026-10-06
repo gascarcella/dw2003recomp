@@ -284,6 +284,22 @@ version isn't 4 (for the title screen's load).
 4–0x26C3), stored in byte 0 (header and slot). The check is lenient: `checksum & ~stored` must be 0
 (STGMCARD), not `checksum == stored`. `memcard_check_checksum` (exact) exists but STGMCARD doesn't call it.
 
+**Unused tails**: both parts are written in 0x80-byte calls, so the bytes after the used part (header `0xD4`–`0xFF`,
+slot `0x26C4`–`0x26FF`) are whatever follows the game's buffers (`stgmcard_module.header`, 0x180 bytes, and `.save`,
+0x2780, from the heap, not cleared): stale RAM, never read back as data.
+
+### The card image (`.mcd`, the PC port's and PCSX-Redux's memory card files)
+A raw 128 KB dump of the card (the layout of psx-spx "Memory Card Data Format"): 16 blocks of 0x2000 bytes, each
+64 frames of 0x80. Block 0 is the directory: frame 0 `"MC"` (byte 0x7F: the XOR of bytes 0–0x7E, as in every
+directory frame), frames 1–15 one entry per data block (`0x00` allocation state: `0x51` first block of a file,
+`0x52` middle, `0x53` last, `0xA0` free; `0x04` file size in bytes, in the first block's entry only; `0x08` the next
+block − 1, `0xFFFF` at the end; `0x0A` the name, NUL-terminated, in the first block's entry only), frames 16–35 the
+broken-frame list (empty: `FFFFFFFF`, next `FFFF`), frame 63 a copy of frame 0. A new card from PCSX-Redux is exactly
+this with nothing else set (the port's `psyq_mcrd_format_image` writes the same bytes). After the save of
+`first_battle_save`: entries 1–4 are `51 / 0x8000 / next 1 / BESLES-03936DMW3-EUR`, `52 / next 2`, `52 / next 3`,
+`53 / FFFF`, and the file is blocks 1–4 (the table above, at 0x2000). The emulator's frame 63 then holds what its BIOS
+wrote to clear the card's new-card flag (OpenBIOS: a buffer of its own); the port leaves it as it was.
+
 ## Card game (`card.c`, CARDGAME, STCRD*; `AAA/DAT/CARD/`)
 | File (ID) | Layout | Read by |
 |---|---|---|
