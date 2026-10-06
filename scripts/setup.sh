@@ -3,7 +3,8 @@
 # Nothing here needs sudo or installs outside the repo.
 #
 # Usage: scripts/setup.sh [--disc /path/to/disc.bin] [step...]
-#   steps: binutils venv cmake mkpsxiso gcc objdiff ext redux link gamedata disc  (default: all); optional: psyq sdl3
+#   steps: binutils venv cmake mkpsxiso gcc objdiff ext redux link gamedata disc  (default: all); optional: psyq sdl3 imgui
+#   imgui: Dear ImGui at its pinned tag into tools/imgui, for the launcher (launcher/README.md; needs sdl3 too)
 #   sdl3:  SDL3 built from its pinned source tarball into tools/sdl3 (static), for the PC port's window
 #          (cmake -DDW3_PORT_SDL=ON; port/README.md "The window"); its backends follow the -dev headers present
 #   cmake: CMake and Ninja (mkpsxiso and the PC port build with them) pip-installed into tools/venv, only when either is
@@ -193,6 +194,27 @@ step_sdl3() {
     [[ -f "$prefix/lib/libSDL3.a" && -f "$prefix/lib/cmake/SDL3/SDL3Config.cmake" ]] || die "sdl3: install incomplete"
     echo "$SDL3_SHA256" > "$prefix/.sha256"
     log "sdl3: installed $SDL3_VER to $prefix"
+}
+
+# Dear ImGui (MIT) for the launcher (launcher/README.md; DECISIONS "Launcher and mods (session 18)"): the pinned
+# release tag cloned into tools/imgui/, its commit checked (the commit hash is the checksum, as for the ext step). The
+# launcher's CMake compiles its core files and the SDL3 + SDL_Renderer backends from there. Optional (not in the
+# default steps; the launcher needs sdl3 too): scripts/setup.sh sdl3 imgui
+IMGUI_VER=1.92.9b
+IMGUI_COMMIT=f1cc2ae15e53a861a874c3034aae6798fde194ab
+step_imgui() {
+    local dir="$INSTALL/imgui"
+    if [[ -f "$dir/imgui.cpp" && -d "$dir/.git" && "$(git -C "$dir" rev-parse HEAD)" == "$IMGUI_COMMIT" ]]; then
+        log "imgui: $IMGUI_VER already installed ($dir)"
+        return
+    fi
+    rm -rf "$dir"
+    log "imgui: cloning v$IMGUI_VER"
+    git -c advice.detachedHead=false clone -q --depth 1 --branch "v$IMGUI_VER" https://github.com/ocornut/imgui.git "$dir"
+    [[ "$(git -C "$dir" rev-parse HEAD)" == "$IMGUI_COMMIT" ]] || die "imgui: v$IMGUI_VER is not at $IMGUI_COMMIT"
+    [[ -f "$dir/backends/imgui_impl_sdl3.cpp" && -f "$dir/backends/imgui_impl_sdlrenderer3.cpp" ]] ||
+        die "imgui: the SDL3 backends are missing"
+    log "imgui: installed $IMGUI_VER (${IMGUI_COMMIT:0:12}) to $dir"
 }
 
 # CMake and Ninja from PyPI (official wheels), pinned, into the venv: only when the system has none (no sudo).
@@ -481,7 +503,7 @@ steps=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --disc) DISC_PATH="$2"; shift 2 ;;
-        -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
         *) steps+=("$1"); shift ;;
     esac
 done

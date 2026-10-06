@@ -2,6 +2,29 @@
 
 Newest first. One short entry per session: goal, result, next steps.
 
+## 2026-10-06: Session 19, path A: the launcher (local worktree `gascarcella/Launcher`, pull request #9)
+- **Asked:** build the launcher of `docs/LAUNCHER_MODS_PLAN.md` (4.1-4.4, 4.6, phase 3 of section 7) in four phases,
+  while path B (a parallel session) built the game side; the contract is the plan's 4.1-4.4.
+- **Decided at phase 1's stop** (DECISIONS "The launcher's open points (session 19, path A)"): `launcher/` as its own
+  CMake project; the per-user directory `dw2003`; the launcher's own `.cue` reader + `port/src/sha1.c`; one pull
+  request updated per phase.
+- **Result:** `launcher/` (README): the skeleton and the settings directory (phase 1), the disc and Play (2), settings
+  and controls (3), mods (4). `scripts/setup.sh imgui` pins Dear ImGui 1.92.9b by commit (THIRD_PARTY). CI builds it
+  and runs `--self-test` (217 checks, offscreen, no disc); its data-gated step adds the real disc and the real game.
+- **With path B:** schema 1 as path B settled it (scale 2, two cards with `null`, the `launcher` object); the interim
+  options (a translation of the settings into the game's old flags, for a game without `--config`) existed while #10
+  was unmerged and were deleted when it landed. Checked locally against #10's and #11's builds in scratch worktrees:
+  the game accepts the launcher's files (rebinds, chords, `fast_forward` with every option changed) and runs 300
+  frames from `dw2003 --config`.
+- **Found on the way:** CI's first launcher run failed on a relative self-test directory (a test bug: fixed); an SDL
+  drop event's text must stay valid until it is handled (`SDL_PushEvent` does not copy it).
+- **Not done:** Windows (the plan's section 6, after Linux); data mods (`kind: data` is listed, not usable); the
+  launcher does not run `--print-mods` (a mod in the manifests but missing from an older game is only logged by it).
+- **Also:** at the user's request, resolved #11's docs-only conflicts (a merge of `main`, no code changed); #11 is
+  merged, and #9 is rebased on it.
+- **Next:** the user's review of #9. When path B's phase 2 lands, 60 Hz works in the game (the settings screen's note
+  already says what an older game does).
+
 ## 2026-10-06: Session 19 (path B): the launcher plan's game side, phase 1 (local worktree, PRs #10 and the phase-1 PR)
 - **Asked:** build the game side of `docs/LAUNCHER_MODS_PLAN.md` (sections 4.1-4.5 and 5, phases 1, 2 and 4 of its
   section 7) while a parallel session (path A) builds the launcher; land `--config` early in its own pull request.
