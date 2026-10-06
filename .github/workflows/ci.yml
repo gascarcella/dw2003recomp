@@ -9,7 +9,23 @@
 #
 # When it runs (DECISIONS "CI only when it is needed"): on pull requests and on pushes to main, not on changes that
 # touch only documentation (paths-ignore: no step reads those files), and a newer push to a pull request cancels the
-# run of the older one. A branch without a pull request: `gh workflow run CI --ref <branch>`.
+# run of the older one. A branch without a pull request: `gh workflow run CI --ref <branch>`. release.yml calls this
+# workflow (workflow_call) before it builds a release.
+#
+# What runs (DECISIONS "CI per area"): scripts/ci_areas.sh sorts the changed files (a pull request's against its base,
+# a push to main's against the commit before it) into three areas, each implying the next:
+#   game      src/, include/, config/, configure.py, tools/ (but port_gen.py), tests/ (but the port's), scripts/
+#             (setup.sh pins every tool), .claude/hooks/, any file no rule names
+#             -> the toolchain smoke test, the byte-identical rebuild, all of scripts/test.sh; and everything below
+#   port      port/ (its runtime, Psy-Q shim, mods' manifests, CMake), tools/port_gen.py, tests/port, tests/spu,
+#             tests/xa, tests/saves, tests/host
+#             -> the probe, the SDL build and its input self-tests, scripts/test.sh --layer 1 --layer 3 --layer port
+#                (every test that compiles or runs port/; layer 2 is the emulator alone), the -m32 M1 test; and below
+#   launcher  launcher/ (the port's json.c/sha1.c it compiles are port/, which implies launcher)
+#             -> the launcher's build and self-test, the SDL game's build, the self-test with the disc and that game
+#   none      documentation, release.yml, scripts/package_appimage.sh, packaging/ (release.yml tests those)
+# ci.yml and scripts/ci_areas.sh themselves, manual runs, release tags (workflow_call) and a push whose base commit is
+# unknown run every area. The toolchain, the parse check and the cache run always (the cache is one key for all).
 name: CI
 on:
   push:
@@ -26,11 +42,16 @@ on:
       - "LICENSE"
       - ".gitignore"
   workflow_dispatch:
+  workflow_call:   # release.yml: the whole suite before a release is built (a tag's run: every area)
+
+permissions:
+  contents: read
 
 # One run per pull request (the newest push wins); pushes to main and manual runs are keyed by commit, so none of
-# them cancels another commit's run.
+# them cancels another commit's run. The workflow's name keeps release.yml's call (named Release) apart from main's run
+# of the same commit.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.sha }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -42,6 +63,26 @@ jobs:
       DW3_JOBS: "2"
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the areas need the base commit (the repository is a few MB)
+
+      - name: Which areas changed (scripts/ci_areas.sh)
+        id: areas
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # A pull request's checkout is its merge commit: its first parent is the base it is tested against.
+          if [[ "$EVENT" == pull_request ]] && git rev-parse -q --verify HEAD^2 >/dev/null; then
+            scripts/ci_areas.sh --diff HEAD^1 HEAD >> "$GITHUB_OUTPUT"
+          elif [[ "$EVENT" == push && "$GITHUB_REF" == refs/heads/* && ! "$BEFORE" =~ ^0*$ ]] &&
+               git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            scripts/ci_areas.sh --diff "$BEFORE" HEAD >> "$GITHUB_OUTPUT"
+          else
+            scripts/ci_areas.sh --all >> "$GITHUB_OUTPUT"
+          fi
+          { echo "### Areas"; echo; sed -n 's/^\([a-z]*\)=\(.*\)/- \1: \2/p' "$GITHUB_OUTPUT"; } >> "$GITHUB_STEP_SUMMARY"
+          cat "$GITHUB_OUTPUT"
 
       - name: Is the data checkout available?
         id: data
@@ -74,6 +115,8 @@ jobs:
             tools/imgui
           key: tools-${{ runner.os }}-${{ hashFiles('scripts/setup.sh', 'tools/requirements.txt') }}
 
+      # Every tool, whatever the areas: the cache is one key, and a run that saved only some tools would leave the
+      # others missing from it until setup.sh changes.
       - name: Toolchain
         run: scripts/setup.sh binutils mkpsxiso venv gcc objdiff ext redux sdl3 imgui
 
@@ -83,24 +126,32 @@ jobs:
           tools/venv/bin/python -m py_compile configure.py diff_settings.py tools/*.py tests/golden/*.py tests/golden/families/*.py tests/replay/*.py tests/host/*.py tests/holdouts/*.py tests/port/*.py
 
       - name: Toolchain smoke test
+        if: steps.areas.outputs.game == 'true'
         run: scripts/check_toolchain.sh
 
       # Disc-free: the probe compiles every game unit with the runner's gcc (Ubuntu 24.04: GCC 13) at -m64 with its own
       # INCLUDE_ASM/gte override headers (include/asm_generated/ is not needed), then nm checks for duplicate globals.
       # scripts/test.sh repeats it in the data-gated part.
       - name: Host-compile probe (every unit clean at -m64, no duplicate globals)
+        if: steps.areas.outputs.port == 'true'
         run: |
           tools/venv/bin/python tools/port_inventory.py probe -j "$DW3_JOBS"
           tools/venv/bin/python tools/port_inventory.py link -j "$DW3_JOBS"
 
-      # The PC port's window (-DDW3_PORT_SDL=ON, SDL3 from tools/sdl3): it keeps compiling, and its input self-test passes
-      # on SDL's offscreen driver (no display, no disc needed: injected key and virtual-gamepad events reach the pad, hotkeys
-      # never do, the pause stops and gives back the game);
-      # SDL's dummy audio driver takes the audio device's path (port/src/audio.c: open, queue, drops at --fps 0, close).
-      - name: PC port with the window (SDL3), input self-test
+      # The PC port's window (-DDW3_PORT_SDL=ON, SDL3 from tools/sdl3): it keeps compiling (the launcher's run with the
+      # game below needs it too).
+      - name: PC port with the window (SDL3)
+        if: steps.areas.outputs.port == 'true' || steps.areas.outputs.launcher == 'true'
         run: |
           cmake -S port -B build/port-sdl -G Ninja -DDW3_PORT_SDL=ON
           cmake --build build/port-sdl -j "$DW3_JOBS"
+
+      # Its input self-test passes on SDL's offscreen driver (no display, no disc needed: injected key and virtual-gamepad
+      # events reach the pad, hotkeys never do, the pause stops and gives back the game);
+      # SDL's dummy audio driver takes the audio device's path (port/src/audio.c: open, queue, drops at --fps 0, close).
+      - name: PC port, input self-test
+        if: steps.areas.outputs.port == 'true'
+        run: |
           SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=dummy build/port-sdl/dw2003 --input-test --fps 0
           # the same with rebound keys and pads, chord hotkeys and a mod's bindings (docs/LAUNCHER_MODS_PLAN.md 4.3)
           SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=dummy build/port-sdl/dw2003 --config tests/port/settings/rebound.json --input-test --fps 0
@@ -109,34 +160,41 @@ jobs:
       # driver (no display, no disc: the settings directory's lookup, settings.json round trips, every screen walked
       # with injected keys and a virtual gamepad).
       - name: Launcher, self-test
+        if: steps.areas.outputs.launcher == 'true'
         run: |
           cmake -S launcher -B build/launcher -G Ninja
           cmake --build build/launcher -j "$DW3_JOBS"
           SDL_VIDEO_DRIVER=offscreen build/launcher/dw2003-launcher --self-test build/launcher-test
 
       - name: Disc from the data checkout
-        if: steps.data.outputs.present == 'true'
+        if: steps.data.outputs.present == 'true' && (steps.areas.outputs.game == 'true' || steps.areas.outputs.port == 'true' || steps.areas.outputs.launcher == 'true')
         run: scripts/worktree_init.sh
 
       # The launcher end to end: the real disc's check, and the SDL game (built above) started from the launcher's
       # command for 300 frames (launcher/README.md "The self-test").
       - name: Launcher, self-test with the disc and the game
-        if: steps.data.outputs.present == 'true'
+        if: steps.data.outputs.present == 'true' && steps.areas.outputs.launcher == 'true'
         run: |
           DW3_SELFTEST_DISC="$PWD/iso/dw2003.cue" DW3_SELFTEST_GAME="$PWD/build/port-sdl/dw2003" \
             SDL_VIDEO_DRIVER=offscreen build/launcher/dw2003-launcher --self-test build/launcher-test
 
       - name: Byte-identical rebuild of every game file
-        if: steps.data.outputs.present == 'true'
+        if: steps.data.outputs.present == 'true' && steps.areas.outputs.game == 'true'
         run: scripts/build.sh --check
 
       # The layers 1-3 and the PC port's M1 test (layer "port": tests/port/run.py, the layer-2 scripts replayed by the port).
       - name: Reference tests
-        if: steps.data.outputs.present == 'true'
+        if: steps.data.outputs.present == 'true' && steps.areas.outputs.game == 'true'
         run: scripts/test.sh
+
+      # A change to the port alone: the layers that compile or run port/ (layer 1's host replays and the SPU and XA
+      # goldens, layer 3's save round trips, the port layer); layer 2 runs only the emulator.
+      - name: Reference tests, the port's layers
+        if: steps.data.outputs.present == 'true' && steps.areas.outputs.port == 'true' && steps.areas.outputs.game != 'true'
+        run: scripts/test.sh --layer 1 --layer 3 --layer port
 
       # The port's -m32 build must write the same log and record as the 64-bit one (the layout check; the 64-bit runs
       # repeat, ~1 s, its build is already there).
       - name: PC port M1 test, -m32 build
-        if: steps.data.outputs.present == 'true'
+        if: steps.data.outputs.present == 'true' && steps.areas.outputs.port == 'true'
         run: tools/venv/bin/python tests/port/run.py --m32
