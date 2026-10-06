@@ -147,6 +147,7 @@ void port_exit(int status, const char *reason) {
         port_video_close();
         port_audio_close();
         port_spu_trace_close();
+        port_video_quit();
     }
     port_log("exit %d after %ld frame(s): %s", status, port_frames, reason);
     fflush(NULL);

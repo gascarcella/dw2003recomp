@@ -66,7 +66,8 @@ void port_reset_state(void);
  * (`--scale N`: 320*N x 240*N, `--fullscreen`), fatal without SDL (port_video_available() 0) or when SDL fails.
  * port_input_frame (pump.c, once per vsync before the script's step, window mode only): SDL's events: the keyboard
  * and the gamepads to psyq_pad_set unless a script owns the pad, the window's close (port_exit 0); `test`
- * (`--input-test`) runs input.c's injection self-test. port_video_close: from port_exit (the present count). */
+ * (`--input-test`) runs input.c's injection self-test. port_video_close: from port_exit (the present count).
+ * port_video_quit: from port_exit after the audio's close, SDL torn down before exit() (docs/PLAYTEST.md). */
 extern int port_window; /* a window is open: pump.c paces the vsyncs to real time */
 extern long port_fps;   /* pump.c: the pace in window mode (`--fps`; 50, PAL; 0: unthrottled); headless: unthrottled */
 int port_video_available(void);
@@ -75,6 +76,7 @@ void port_video_open(int scale, int fullscreen);
 void port_video_frame(void);
 void port_video_toggle_fullscreen(void);
 void port_video_close(void);
+void port_video_quit(void);
 void port_input_init(int test);
 void port_input_frame(void);
 

@@ -2,6 +2,19 @@
 
 Newest first. One short entry per session: goal, result, next steps.
 
+## 2026-10-06: Session 17: the first desktop play-test of the PC port (local, branch `playtest-desktop-2026-10-06`, PR to `main`)
+- **Asked:** set up on the user's desktop (`tools/local.env`, `setup.sh`, SDL's `-dev` headers, `setup.sh sdl3`), build
+  `build/port-sdl`, `--input-test`, then the user plays (movie, title, new game, first battle, inn save, reset, load);
+  findings to `docs/PLAYTEST.md`, a PR; then a GitHub issue for the battle camera, merge after CI, update local `main`.
+- **Setup:** the disc linked from `DW3_DISC_BIN` (SHA-1 ok); the user installed the headers with `dnf`; SDL 3.4.18 with
+  wayland/x11/kmsdrm video and pipewire/pulseaudio/alsa audio, nothing turned off.
+- **Fixed:** the SDL build segfaulted after `port_exit` on Wayland and offscreen video (NVIDIA EGL 595.104.02 unloaded
+  by `atexit(SDL_Quit)` inside `exit()`); `port_video_quit` tears SDL down from `port_exit`. `src/` untouched.
+- **Played:** everything asked worked (49.99 fps, sound through PipeWire, the save and its load) except the battle's 3D
+  view: `GsSetRefView2` is a stub, so the camera sits at the world origin (finding 2, issue #7). One 63 ms audio
+  refill at the battle's start (minor).
+- **Next:** `GsSetRefView2` with a golden family and a battle VRAM check; a physical gamepad; a reset key in the window.
+
 ## 2026-10-06: Session 16: PC port M1, both layer-2 scripts in the port, M2, M3, M4's saves, M5's movies (cloud branch `claude/peaceful-allen-q3t9f9`, PR to `main`)
 - **Asked:** M1 proper with dedicated sub-agents owning disjoint files: LIBCD over the BIN, the scripted pad, the per-frame
   log, the headless runner and its test against `tests/replay/expected/new_game.json`, the findings on the boot path;
