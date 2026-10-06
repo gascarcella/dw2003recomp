@@ -25,7 +25,7 @@ Newest first. One short entry per session: goal, result, next steps.
 - **Next:** the user's review of #9. When path B's phase 2 lands, 60 Hz works in the game (the settings screen's note
   already says what an older game does).
 
-## 2026-10-06: Session 19 (path B): the launcher plan's game side, phases 1-2 (local worktree, PRs #10, #11, phase 2's)
+## 2026-10-06: Session 19 (path B): the launcher plan's game side, phases 1-3 (local worktree, PRs #10, #11, #14, phase 3's)
 - **Asked:** build the game side of `docs/LAUNCHER_MODS_PLAN.md` (sections 4.1-4.5 and 5, phases 1, 2 and 4 of its
   section 7) while a parallel session (path A) builds the launcher; land `--config` early in its own pull request.
 - **PR #10 (`gascarcella/mods-config`):** `--config FILE` and `--print-settings` (`port/src/settings.c`); the plan's 4.3
@@ -52,7 +52,13 @@ Newest first. One short entry per session: goal, result, next steps.
   port both time out at step 220 (a LEFT walk timed for 50 Hz).
 - **Found:** the LIBSND replay of the emulator's own 60 Hz trace differs where the PS1's CPU timing inside a frame
   matters (the vsync inside SsInit's loop; COMMON's DMA completing within its frame): not a port difference in a run.
-- **Next:** phase 3 (skip dialogues) on the user's go-ahead.
+- **Phase 3 (`gascarcella/mods-phase3`): skip dialogues.** The plan's reading held (and every wait in the disc's
+  text is a confirm wait); three `#ifdef PC_PORT` hooks, `build.sh --check` byte-identical. Run with the mod on,
+  `first_battle_save`'s route needs no press through its scenes; the Tamer Service and inn questions wait 300 frames
+  for a press; a talk closes cleanly (screenshots showed the greeting, then the second talk's question); the shared
+  checkpoints keep the emulator's stable hashes; the first battle needs 12 presses instead of 26
+  (`tests/port/mods.py`, the port's own expected record in `tests/port/mods/expected/`).
+- **Next:** battle animations (5.3) on the user's go-ahead; the battle camera (issue #7) is still open.
 
 ## 2026-10-06: CI only when it is needed (a short session on `ci/skip-unneeded-runs`, a pull request)
 - **Asked:** stop running CI when it is not needed (a docs update triggered a full run).

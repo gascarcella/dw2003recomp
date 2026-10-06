@@ -3,7 +3,7 @@
 _Planned in session 18 (2026-10-06, a discovery and planning session). **Implemented so far (session 19, path B):**
 `--config FILE` and the settings file, 4.3 (settled there); phase 1 of section 7 (rebindable input, hotkeys, the pause,
 `port/src/mods.c` and the first manifest, the pace split; 4.5 says what is built); phase 2 (fast-forward, 5.1; the
-60 Hz setting compared with the patched game in the emulator, 5.5). The user's
+60 Hz setting compared with the patched game in the emulator, 5.5); phase 4's skip dialogues (5.2). The user's
 decisions are in section 2 and in `docs/DECISIONS.md` "Launcher and mods (session 18)". The facts in section 3 come from
 five research agents: the measurements were run on the dev machine; everything about the game's code is from reading it
 (nothing in the game was changed or run with a mod); the Windows findings are small scratch experiments, not a build of
@@ -519,6 +519,34 @@ every 25-vsync off stretch 0.50 s from its first vsync (with the schedule reset 
 - **To verify first:** the PS1 build byte-identical; a dialog closes cleanly and the NPC is not triggered again; a
   choice reached with the mod on waits (stage 528's events, an inn); the replays unchanged with the mod off. Map titles
   print at once too (`fieldstg_80085590.c:1009`: harmless).
+
+**Built (phase 3, session 19):** the flag `port_mod_skip_dialogues` (`include/port.h`, set by `mods.c`'s
+`skip_dialogues`: toggle `F2` by default, hold unbound, `fast_forward_waits` off) and three `#ifdef PC_PORT` blocks:
+`message_window_update`'s RUN case calls `message_find_page_end` for a revealing window (`speed > 0`, not done); its
+DONE step 1 goes on by itself when the awaited button is 13 (confirm); `fightstg_message_step` step 3 goes on as a
+press would (without the press's sound). `scripts/build.sh --check` byte-identical. `fast_forward_waits` asks for
+fast-forward (fast_forward's speed and mute) while FIELDSTG is current and `fieldstg_stage.event_running`.
+**The "verify first" list, checked** (`tests/port/mods.py`, `tests/port/mods/`):
+- **Read and confirmed:** the RUN reveal (`message.c:884`), the wait (`:904`), `find_page_end`, the dialog's and the
+  box's own confirm handling (`message.c:1305`, `1608`) and auto-close on `is_done`, the battle's step 3. **All 58,067
+  waits in the disc's text tables use argument 2** (button 13: confirm; a scan of every language's text files): the
+  hook leaves any other wait to the player.
+- **Run:** `first_battle_save`'s route with the mod on and **no press through the scenes** (the intro to the
+  registration, the arrival scenes, the admin room scene and the walk to the first battle, the post-battle scene).
+  With the mod off the same script stops at the intro's first dialogue.
+- **Choices wait:** Tamer Service's "Download your partner Digimon now?" (`wstag210_choice_9_update`) and the inn's
+  save offer are still open after 300 idle frames; one press answers each.
+- **A talk closes cleanly and the NPC is not talked to again:** Tamer Service's greeting closes by itself, and the
+  question comes only with the next talk press (screenshots in the session; in the script: a press per talk).
+- **No game logic changes on this route:** the six checkpoints it shares with `first_battle_save` (the login movie,
+  the lobby, the battle's start, its end, the report, the lab) have the emulator's stable gamestate hashes, 1,700 to
+  2,500 frames sooner.
+- **The battle's messages:** with one CROSS every 102 frames the first battle takes 12 presses with the mod on and 26
+  with it off (1,156 and 2,555 frames).
+- **The replays unchanged with the mod off** (the bare binary's logs, records and WAVs byte-identical).
+- **Not covered (as planned):** the card game's, the status screen's and the other overlays' code-driven prompts.
+  `wstag210_menu_update` (Tamer Service's hint menu) has its own reveal and wait code: its text goes on by itself
+  through the hooked window, its menu waits. Map titles print at once (harmless).
 
 ### 5.3 Disable battle animations
 

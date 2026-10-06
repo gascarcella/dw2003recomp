@@ -14,6 +14,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "fieldstg.h"
 #include "json.h"
 #include "port_harness.h"
 #include "port_runtime.h"
@@ -73,7 +74,10 @@ static const ModOption ff_options[] = {
 };
 
 static struct {
-    int toggled, active;
+    int toggled;            /* the toggle binding */
+    int wanted;             /* the mod's own bindings (or the test pattern) ask for it */
+    int requested;          /* skip_dialogues' fast_forward_waits asks for it (a field event runs) */
+    int active;             /* applied */
     long base_pace;         /* the pace when it is off */
     long test_on, test_off; /* DW3_PORT_FAST_FORWARD */
     struct timespec t0;
@@ -88,8 +92,6 @@ static double ff_seconds(void) {
 static void ff_start(struct Mod *mod) {
     const char *test = getenv("DW3_PORT_FAST_FORWARD");
     (void)mod;
-    ff.base_pace = port_pace_get();
-    clock_gettime(CLOCK_MONOTONIC, &ff.t0);
     if (test != NULL && sscanf(test, "%ld:%ld", &ff.test_on, &ff.test_off) == 2 && ff.test_on > 0 && ff.test_off > 0) {
         port_log("fast-forward: test pattern %ld vsyncs on, %ld off", ff.test_on, ff.test_off);
     } else {
@@ -98,30 +100,65 @@ static void ff_start(struct Mod *mod) {
 }
 
 static void ff_frame(struct Mod *mod) {
-    int on, mult = ff_multiples[(int)mod->values[FF_SPEED].number];
     if (port_input_pressed(mod->values[FF_TOGGLE].action)) {
         ff.toggled = !ff.toggled;
     }
-    on = ff.toggled || port_input_held(mod->values[FF_HOLD].action);
+    ff.wanted = ff.toggled || port_input_held(mod->values[FF_HOLD].action);
     if (ff.test_on > 0) {
-        on |= port_frames % (ff.test_on + ff.test_off) < ff.test_on;
+        ff.wanted |= port_frames % (ff.test_on + ff.test_off) < ff.test_on;
     }
-    if (on == ff.active) {
-        return;
+}
+
+/* ---- skip_dialogues (5.2): while it is on (the toggle pressed once, or the hold binding held) the game's C hooks
+ * (port_mod_skip_dialogues, include/port.h) show every revealing message window's page at once and go on from its
+ * confirm waits and the battle's message waits by themselves; choices, menus, name entry and the other overlays'
+ * code-driven prompts are separate code and still wait for the player. With `fast_forward_waits` it also asks for
+ * fast-forward (fast_forward's speed and mute, its defaults when that mod is off) while FIELDSTG's event VM runs
+ * (fieldstg_stage.event_running: the scripted waits, walks and bubble animations); free walking is not sped up.
+ *
+ * DW3_PORT_SKIP_DIALOGUES=1 (a test hook, tests/port/mods.py; only while the mod is enabled): on from the start, as if
+ * the toggle had been pressed. */
+enum { SD_TOGGLE, SD_HOLD, SD_FF_WAITS };
+static const ModOption sd_options[] = {
+    { .id = "toggle", .type = MOD_BINDING, .def = "\"F2\"", .applies = "live" },
+    { .id = "hold", .type = MOD_BINDING, .def = "\"\"", .applies = "live" },
+    { .id = "fast_forward_waits", .type = MOD_BOOL, .def = "false", .applies = "live" },
+};
+int port_mod_skip_dialogues;
+static int sd_toggled;
+
+static void sd_start(struct Mod *mod) {
+    const char *test = getenv("DW3_PORT_SKIP_DIALOGUES");
+    (void)mod;
+    if (test != NULL && strcmp(test, "1") == 0) {
+        sd_toggled = 1;
+        port_log("skip dialogues: on from the start (DW3_PORT_SKIP_DIALOGUES)");
     }
-    ff.active = on;
-    port_pace_set(on ? (mult > 0 ? port_rate * mult : 0) : ff.base_pace);
-    port_video_set_present_cap(on ? 60 : 0);
-    port_audio_set_mute(on && mod->values[FF_MUTE].number != 0);
-    port_video_set_status(on ? (mult > 0 ? "fast-forward" : "fast-forward, unlimited") : "");
-    port_log("fast-forward: %s at frame %ld, %.3f s (pace %ld)", on ? "on" : "off", port_frames, ff_seconds(),
-             port_pace_get());
+}
+
+static void sd_frame(struct Mod *mod) {
+    const PortOverlay *field = port_overlay_current(1);
+    int on;
+    if (port_input_pressed(mod->values[SD_TOGGLE].action)) {
+        sd_toggled = !sd_toggled;
+    }
+    on = sd_toggled || port_input_held(mod->values[SD_HOLD].action);
+    if (on != port_mod_skip_dialogues) {
+        port_mod_skip_dialogues = on;
+        port_log("skip dialogues: %s at frame %ld", on ? "on" : "off", port_frames);
+    }
+    /* fieldstg_stage is FIELDSTG's: valid only while FIELDSTG is the tier-1 overlay */
+    ff.requested = on && mod->values[SD_FF_WAITS].number != 0 && field != NULL &&
+                   strcmp(field->name, "FIELDSTG") == 0 && fieldstg_stage.event_running != 0;
 }
 
 static Mod mods[] = {
     { .id = "fast_forward", .version = "0.1", .options = ff_options,
       .option_count = (int)(sizeof(ff_options) / sizeof(ff_options[0])), .start = ff_start, .frame = ff_frame },
+    { .id = "skip_dialogues", .version = "0.1", .options = sd_options,
+      .option_count = (int)(sizeof(sd_options) / sizeof(sd_options[0])), .start = sd_start, .frame = sd_frame },
 };
+enum { MOD_FAST_FORWARD, MOD_SKIP_DIALOGUES };
 #define MOD_COUNT ((int)(sizeof(mods) / sizeof(mods[0])))
 
 static int mod_enum_index(const ModOption *o, const char *id) {
@@ -232,6 +269,8 @@ void port_mods_settings(const PortJson *settings) {
 
 void port_mods_start(int active) {
     int m, k;
+    ff.base_pace = port_pace_get();
+    clock_gettime(CLOCK_MONOTONIC, &ff.t0);
     for (m = 0; m < MOD_COUNT; m++) {
         Mod *mod = &mods[m];
         if (!active) {
@@ -258,12 +297,43 @@ void port_mods_start(int active) {
     }
 }
 
+/* The window's title: the mods that are on. */
+static void mods_status(void) {
+    char status[64];
+    const Mod *f = &mods[MOD_FAST_FORWARD];
+    snprintf(status, sizeof(status), "%s%s%s",
+             ff.active ? (ff_multiples[(int)f->values[FF_SPEED].number] > 0 ? "fast-forward" : "fast-forward, unlimited")
+                       : "",
+             ff.active && port_mod_skip_dialogues ? ", " : "", port_mod_skip_dialogues ? "skip dialogues" : "");
+    port_video_set_status(status);
+}
+
+/* Fast-forward on or off: the mod's bindings, or skip_dialogues' request (with fast_forward's speed and mute). */
+static void ff_apply(void) {
+    const Mod *f = &mods[MOD_FAST_FORWARD];
+    int on = (f->enabled && ff.wanted) || ff.requested;
+    int mult = ff_multiples[(int)f->values[FF_SPEED].number];
+    if (on == ff.active) {
+        return;
+    }
+    ff.active = on;
+    port_pace_set(on ? (mult > 0 ? port_rate * mult : 0) : ff.base_pace);
+    port_video_set_present_cap(on ? 60 : 0);
+    port_audio_set_mute(on && f->values[FF_MUTE].number != 0);
+    port_log("fast-forward: %s at frame %ld, %.3f s (pace %ld)%s", on ? "on" : "off", port_frames, ff_seconds(),
+             port_pace_get(), ff.requested && !(f->enabled && ff.wanted) ? " (a cutscene's waits)" : "");
+}
+
 void port_mods_frame(void) {
-    int m;
+    int m, skip = port_mod_skip_dialogues, active = ff.active;
     for (m = 0; m < MOD_COUNT; m++) {
         if (mods[m].enabled && mods[m].frame != NULL) {
             mods[m].frame(&mods[m]);
         }
+    }
+    ff_apply();
+    if (skip != port_mod_skip_dialogues || active != ff.active) {
+        mods_status();
     }
 }
 

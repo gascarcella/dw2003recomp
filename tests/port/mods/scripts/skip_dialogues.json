@@ -1,0 +1,445 @@
+{
+ "name": "skip_dialogues",
+ "max_frames": 120000,
+ "comment": "The port's skip_dialogues mod (docs/LAUNCHER_MODS_PLAN.md 5.2), run by tests/port/mods.py with the mod on from the start: first_battle_save's route with no press through the scenes, one press for each choice after 300 idle frames. Port-only (the emulator has no mods).",
+ "steps": [
+  {
+   "type": "wait_stage",
+   "stage": 22,
+   "word0": "0x80083DC0",
+   "comment": "CNTY_SEL (overlay_files[22]) loaded: the country / language select"
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "START"
+   ],
+   "frames": 2,
+   "release": 18,
+   "until": {
+    "type": "wait_map",
+    "map": "0xE02"
+   },
+   "timeout": 1500,
+   "comment": "START until the opening movie's map: confirms the default choice 0 = English (cnty_sel_languages[0] = 2 = ENG), records_language 2, once the panels have slid in and the cursor is up (cnty_sel_update_menu step 7 is the only step that reads START, the fade-out steps ignore it); the EU game then goes to map 0xE02 = the opening movie"
+  },
+  {
+   "type": "wait_stage",
+   "stage": 14,
+   "comment": "STDWTITL loaded (map 0xE02, stdwtitl_movie_screen for movie 1)"
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "START"
+   ],
+   "frames": 30,
+   "release": 30,
+   "until": {
+    "type": "wait_map",
+    "map": "0xE00"
+   },
+   "timeout": 3000,
+   "comment": "START skips the movie (stdwtitl_update_movie checks pad pressed bit 3). On the dynarec core the player spins in StGetNext and samples the pad rarely (the STR stream never reaches its last frame), so a short tap can fall between two samples: hold 30 / release 30 until the title screen proper (map 0xE00). On -interpreter the movie decodes normally and the first press skips it"
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "START"
+   ],
+   "frames": 2,
+   "release": 18,
+   "repeat": 40,
+   "comment": "the logo slides in, shines and glows; START opens the New Game / Continue menu only at stdwtitl_menu step 2 (600 ticks there without START start the demo), every other step ignores it, so tap START for 800 frames instead of waiting a fixed time"
+  },
+  {
+   "type": "wait_frames",
+   "frames": 60,
+   "comment": "the menu blinks and the two choices slide out (steps 3-5: 12 + 15 + 6 ticks)"
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "UP"
+   ],
+   "frames": 4,
+   "comment": "cursor 0 = New Game (the menu opens on cursor 1 = Continue)"
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "CROSS"
+   ],
+   "frames": 4,
+   "release": 30,
+   "until": {
+    "type": "wait_stage",
+    "stage": 2
+   },
+   "timeout": 1500,
+   "comment": "confirm until FIELDSTG is loaded: physical CROSS is logical bit 13 (PAD_PRESSED(0xD)) for non-Japanese languages; stdwtitl_title_apply_choice case 1: gamestate_new_game, set_next_map(0x2D7)"
+  },
+  {
+   "type": "wait_map",
+   "map": "0x2D7",
+   "timeout": 200
+  },
+  {
+   "type": "wait_map",
+   "map": "0x500",
+   "timeout": 20000,
+   "comment": "no press: the intro's scenes (maps 0x2D7, 0x2D8) go on by themselves to the registration (STPLNMET, map 0x500); with the mod off the first dialogue waits forever"
+  },
+  {
+   "type": "checkpoint",
+   "name": "registration"
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "CROSS"
+   ],
+   "frames": 2,
+   "release": 8,
+   "until": {
+    "type": "wait_map",
+    "map": "0xE03"
+   },
+   "timeout": 15000,
+   "comment": "the registration needs presses (CROSS types the name; the default partner set): CROSS until the login movie's map (first_battle_save step 9)"
+  },
+  {
+   "type": "checkpoint",
+   "name": "login_movie",
+   "comment": "after the registration: the name, the partner set and the three Digimon records are in gamestate_data"
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "START"
+   ],
+   "frames": 400,
+   "release": 2,
+   "until": {
+    "type": "wait_map",
+    "map": "0x207"
+   },
+   "timeout": 3000,
+   "comment": "skip the login movie at once with one long START hold, as new_game did first. The dynarec core's STR playback is fragile: waiting 150 frames first, or tapping every 30 frames, made the emulated machine run off (reads from 0x17FF0500, a reset, then 'Unrecoverable error while running recompiler' at PC 0xFF050014), at speed 1 too"
+  },
+  {
+   "type": "wait_map",
+   "map": "0x203",
+   "timeout": 20000,
+   "comment": "no press: the arrival scenes in Asuka (map 0x207, WSTAG225) to the Main Lobby"
+  },
+  {
+   "type": "checkpoint",
+   "name": "asuka_lobby"
+  },
+  {
+   "type": "walk",
+   "x": 600,
+   "y": 440,
+   "comment": "Main Lobby (map 0x203, WSTAG210; positions from its attribute map, layer 0): down the ramp (the player can move once the arrival scene ends)"
+  },
+  {
+   "type": "walk",
+   "x": 545,
+   "y": 438
+  },
+  {
+   "type": "walk",
+   "x": 470,
+   "y": 355,
+   "comment": "up the stairs"
+  },
+  {
+   "type": "walk",
+   "x": 400,
+   "y": 330
+  },
+  {
+   "type": "walk",
+   "x": 359,
+   "y": 284,
+   "tol": 4,
+   "comment": "below the Tamer Service counter (actor 49 at (361, 221))"
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "UP",
+    "RIGHT"
+   ],
+   "frames": 3,
+   "comment": "face the counter (direction 5, as event 13 places the player)"
+  },
+  {
+   "type": "wait_frames",
+   "frames": 30,
+   "comment": "the facing press done (a talk press right after it is not taken)"
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "CROSS"
+   ],
+   "frames": 2,
+   "release": 8,
+   "comment": "one press: talk to Tamer Service; the greeting ('Welcome. Here you can look at hints ...') goes on and closes by itself, and the NPC is not talked to again"
+  },
+  {
+   "type": "wait_frames",
+   "frames": 120
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "CROSS"
+   ],
+   "frames": 2,
+   "release": 8,
+   "comment": "one press: talk again ('Then should I call out your partner Digimon?'), which goes on by itself to the question 'Download your partner Digimon now? Yes, please! / Not yet.' (wstag210_choice_9_update: code, not a control code)"
+  },
+  {
+   "type": "wait_frames",
+   "frames": 300,
+   "comment": "the question must wait: no answer is picked"
+  },
+  {
+   "type": "checkpoint",
+   "name": "tamer_choice",
+   "comment": "still in the Main Lobby (map 0x203): the choice waited"
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "CROSS"
+   ],
+   "frames": 2,
+   "release": 8,
+   "comment": "one press: 'Yes, please!' (the default) leads to the admin room"
+  },
+  {
+   "type": "wait_stage",
+   "stage": 6,
+   "timeout": 20000,
+   "comment": "no press: the admin room scene (map 0x204, WSTAG212), the walk to Asuka City (map 0x200) and its event, to the first battle (FIGHTSTG)"
+  },
+  {
+   "type": "checkpoint",
+   "name": "battle_start",
+   "comment": "FIGHTSTG loaded: the scripted first battle of the story (one enemy)"
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "CROSS"
+   ],
+   "frames": 2,
+   "release": 8,
+   "until": {
+    "type": "wait_stage",
+    "stage": 20
+   },
+   "timeout": 6000,
+   "comment": "CROSS on the battle's menus (Fight, the technique, the target); its messages go on by themselves"
+  },
+  {
+   "type": "checkpoint",
+   "name": "battle_won",
+   "comment": "STFGTREP (the battle report) loaded: HP/MP after the battle, records_battle_results; the experience is not added yet"
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "CROSS"
+   ],
+   "frames": 2,
+   "release": 8,
+   "until": {
+    "type": "wait_stage",
+    "stage": 2
+   },
+   "timeout": 3000,
+   "comment": "through the report"
+  },
+  {
+   "type": "checkpoint",
+   "name": "battle_end",
+   "comment": "back in FIELDSTG (map 0x200): the report has added the experience (stfgtrep_add_exp, level-ups and their stat draws)"
+  },
+  {
+   "type": "wait_map",
+   "map": "0x206",
+   "timeout": 20000,
+   "comment": "no press: the post-battle scene in Asuka City, which ends in the lab (map 0x206)"
+  },
+  {
+   "type": "checkpoint",
+   "name": "back_on_field"
+  },
+  {
+   "type": "walk",
+   "x": 150,
+   "y": 262,
+   "comment": "the lab (map 0x206, WSTAG220): down the stairs to the exit to Asuka City"
+  },
+  {
+   "type": "walk",
+   "x": 190,
+   "y": 300
+  },
+  {
+   "type": "walk",
+   "x": 230,
+   "y": 350
+  },
+  {
+   "type": "walk",
+   "x": 203,
+   "y": 387
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "CROSS"
+   ],
+   "frames": 2,
+   "release": 10,
+   "until": {
+    "type": "wait_map",
+    "map": "0x200"
+   },
+   "timeout": 600,
+   "comment": "an exit (FieldstgMapEvent type 1) is taken with CROSS while standing on it (fieldstg_map_events_update)"
+  },
+  {
+   "type": "walk",
+   "x": 1000,
+   "y": 530,
+   "comment": "Asuka City (map 0x200, WSTAG200), arriving at (1040, 512): along the lower street"
+  },
+  {
+   "type": "walk",
+   "x": 935,
+   "y": 558
+  },
+  {
+   "type": "walk",
+   "x": 830,
+   "y": 512
+  },
+  {
+   "type": "walk",
+   "x": 760,
+   "y": 505
+  },
+  {
+   "type": "walk",
+   "x": 740,
+   "y": 545
+  },
+  {
+   "type": "walk",
+   "x": 680,
+   "y": 545
+  },
+  {
+   "type": "walk",
+   "x": 672,
+   "y": 515,
+   "comment": "the foot of the stairs"
+  },
+  {
+   "type": "walk",
+   "x": 730,
+   "y": 440,
+   "comment": "up to the upper street"
+  },
+  {
+   "type": "walk",
+   "x": 700,
+   "y": 400
+  },
+  {
+   "type": "walk",
+   "x": 661,
+   "y": 372,
+   "comment": "the door to map 0x20A"
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "CROSS"
+   ],
+   "frames": 2,
+   "release": 10,
+   "until": {
+    "type": "wait_map",
+    "map": "0x20A"
+   },
+   "timeout": 600
+  },
+  {
+   "type": "walk",
+   "x": 240,
+   "y": 212,
+   "comment": "Asuka Inn (map 0x20A, WSTAG235): to the save attendant (actor 21 at (175, 192))"
+  },
+  {
+   "type": "walk",
+   "x": 207,
+   "y": 208,
+   "tol": 3
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "UP",
+    "LEFT"
+   ],
+   "frames": 3,
+   "comment": "face her (direction 3, as event 1200 places the player)"
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "CROSS"
+   ],
+   "frames": 2,
+   "release": 8,
+   "comment": "one press: talk to the save attendant (event 1200); her dialogue goes on by itself to the question"
+  },
+  {
+   "type": "wait_frames",
+   "frames": 300,
+   "comment": "the inn's question must wait"
+  },
+  {
+   "type": "checkpoint",
+   "name": "inn_choice",
+   "comment": "still in the inn (map 0x20A, FIELDSTG): the choice waited"
+  },
+  {
+   "type": "press",
+   "buttons": [
+    "CROSS"
+   ],
+   "frames": 2,
+   "release": 8,
+   "comment": "one press: accept"
+  },
+  {
+   "type": "wait_stage",
+   "stage": 12,
+   "timeout": 3000,
+   "comment": "no press: STGMCARD in save mode"
+  },
+  {
+   "type": "checkpoint",
+   "name": "save_screen"
+  }
+ ]
+}

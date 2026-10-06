@@ -2048,3 +2048,17 @@ stop. The game side (path B: `--config`, the settings reader, the mod runtime) i
   call, which differs at 60 Hz (SsInit's loop, COMMON's 297 KB DMA) and which the port does not model.
 - **`main_screen_pos` stays 1 in the port's 60 Hz mode;** the emulator's reference sets it to 0 as the patch is
   assumed to (not checked against the patch itself). It changes only the card game's layout and the PAL screen offset.
+
+## 2026-10-06: Skip dialogues (session 19, path B: the launcher plan's 5.2)
+- **The hooks act on the message window and the battle's message, not on the pad** (as planned): three `#ifdef
+  PC_PORT` blocks reading `port_mod_skip_dialogues`; the PS1 build is unchanged (`build.sh --check`). The wait goes on
+  by itself only for button 13 (confirm), which is every wait in the disc's text; any other wait stays the player's.
+- **A talk is a press:** with the mod on, an NPC's talk shows its text and closes; the next line of a talk list (Tamer
+  Service's greeting, then its question) needs the next talk press, as the game's own presses would have started it.
+  The test script says so step by step.
+- **The mod's expected results are the port's own** (`tests/port/mods/expected/`), checked against the emulator where
+  the mod must not change anything: the stable gamestate hashes of the checkpoints it shares with first_battle_save.
+  A script field asking for mods was not needed: `tests/port/mods.py` passes the settings, `--script-mods` and
+  `DW3_PORT_SKIP_DIALOGUES=1` (on from the start, as the fast-forward test hook).
+- **`fast_forward_waits` uses fast_forward's speed and mute**, its defaults when that mod is off, through one
+  fast-forward state in `mods.c` (a request ORed with the fast-forward mod's own bindings).

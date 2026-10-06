@@ -3,11 +3,58 @@
   "memcard1": null,
   "memcard2": null,
   "input": {
-    "keyboard": { "cross": ["K", "Space"], "start": "", "up": "W" },
-    "gamepad": { "cross": "east", "circle": ["south", "paddle1"], "l2": "lefty+" },
-    "hotkeys": { "pause": ["P", ["pad:guide", "pad:south"]], "fullscreen": [["Left Ctrl", "X"]] }
+    "keyboard": {
+      "cross": [
+        "K",
+        "Space"
+      ],
+      "start": "",
+      "up": "W"
+    },
+    "gamepad": {
+      "cross": "east",
+      "circle": [
+        "south",
+        "paddle1"
+      ],
+      "l2": "lefty+"
+    },
+    "hotkeys": {
+      "pause": [
+        "P",
+        [
+          "pad:guide",
+          "pad:south"
+        ]
+      ],
+      "fullscreen": [
+        [
+          "Left Ctrl",
+          "X"
+        ]
+      ]
+    }
   },
   "mods": {
-    "fast_forward": { "enabled": true, "hold": ["Tab", ["pad:leftstick", "pad:rightshoulder"]], "toggle": "F1" }
+    "fast_forward": {
+      "enabled": true,
+      "hold": [
+        "Tab",
+        [
+          "pad:leftstick",
+          "pad:rightshoulder"
+        ]
+      ],
+      "toggle": "F1"
+    },
+    "skip_dialogues": {
+      "enabled": true,
+      "toggle": [
+        [
+          "pad:guide",
+          "pad:north"
+        ]
+      ]
+    }
   }
 }

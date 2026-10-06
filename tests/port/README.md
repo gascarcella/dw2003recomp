@@ -94,6 +94,16 @@ emulator's cross-core view; `new_game`'s SPU trace against LIBSND's replay of it
 NTSC tick) and the emulator's calls (`sound.py`'s `port` check). The fast-forward test is in `settings.py`.
 `scripts/test.sh --layer port` runs it (~20 s built).
 
+## The mods with the mod on (`mods.py`; docs/LAUNCHER_MODS_PLAN.md 4.5, 5.2)
+A run with a mod on has its own expected results (the emulator has no mods; the random generator follows the frames),
+so `tests/port/mods.py` keeps the port's own record (`tests/port/mods/expected/`, `mods.py record` after a review) and
+checks what the mod must keep from the emulator's run. `skip_dialogues`: `tests/port/mods/scripts/skip_dialogues.json`
+(first_battle_save's route, no press through the scenes, one press per talk and per choice, each choice after 300
+idle frames) twice with the same log and record, its cross-core view as recorded, the choices still open, the six
+shared checkpoints with the emulator's stable hashes, the script stuck at the first dialogue with the mod off, the
+first battle with fewer presses with the mod on, `fast_forward_waits` with the same log. ~35 s; in
+`scripts/test.sh --layer port`.
+
 ## What it found (session 16)
 - **The overlay copy takes CPU time on the PS1.** The game copies FIELDSTG (0x19000 bytes) into its slot with LIBC2's
   byte-loop `memcpy`, about 1.8 frames, so the emulator samples FIELDSTG's stage with no stage file yet (`(2, -1)` in the

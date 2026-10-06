@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "id": "skip_dialogues",
+  "name": "Skip dialogues",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "Text appears at once and advances by itself. Choices, menus and name entry still wait for you.",
+  "options": [
+    { "id": "toggle", "name": "Toggle", "description": "Turn skipping on or off.", "type": "binding",
+      "default": "F2", "group": "Controls", "applies": "live" },
+    { "id": "hold", "name": "Hold", "description": "Skip while this is held.", "type": "binding",
+      "default": "", "group": "Controls", "applies": "live" },
+    { "id": "fast_forward_waits", "name": "Also fast-forward cutscene waits",
+      "description": "While skipping, a cutscene's pauses, walks and animations also run fast, at fast-forward's speed and with its mute setting (their defaults when fast-forward is off). Walking around yourself stays at normal speed.",
+      "type": "bool", "default": false, "applies": "live" }
+  ]
+}
