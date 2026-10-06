@@ -1,5 +1,41 @@
 [
  {
+  "where": "mdec/movieopn_f3_m3: DecDCToutSync read column",
+  "reason": "the MDEC's IDCT and colour conversion: PCSX-Redux's emulation rounds differently from psx-spx's (mdec.c), 4% (one byte by 4) of the pixel bytes differ by 1-3; the golden keeps a movie column as a SHA-1 (game data), so the whole column differs (tests/host/mdec_replay.py --results compares the bytes within the tolerance)"
+ },
+ {
+  "where": "mdec/moviee03_f100_m3: DecDCToutSync read column",
+  "reason": "the MDEC's IDCT and colour conversion: PCSX-Redux's emulation rounds differently from psx-spx's (mdec.c), 44% of the pixel bytes differ by 1-3; the golden keeps a movie column as a SHA-1 (game data), so the whole column differs (tests/host/mdec_replay.py --results compares the bytes within the tolerance)"
+ },
+ {
+  "where": "mdec/moviee03_f1383_m3: DecDCToutSync read column",
+  "reason": "the MDEC's IDCT and colour conversion: PCSX-Redux's emulation rounds differently from psx-spx's (mdec.c), 44% of the pixel bytes differ by 1-3; the golden keeps a movie column as a SHA-1 (game data), so the whole column differs (tests/host/mdec_replay.py --results compares the bytes within the tolerance)"
+ },
+ {
+  "where": "mdec/moviee03_f1480_m3: DecDCToutSync read column",
+  "reason": "the MDEC's IDCT and colour conversion: PCSX-Redux's emulation rounds differently from psx-spx's (mdec.c), 43% (and 2 bytes by 255: an out-of-range colour, as in rl_extreme) of the pixel bytes differ by 1-3; the golden keeps a movie column as a SHA-1 (game data), so the whole column differs (tests/host/mdec_replay.py --results compares the bytes within the tolerance)"
+ },
+ {
+  "where": "mdec/movied01_f397_m3: DecDCToutSync read column",
+  "reason": "the MDEC's IDCT and colour conversion: PCSX-Redux's emulation rounds differently from psx-spx's (mdec.c), 42% of the pixel bytes differ by 1-3; the golden keeps a movie column as a SHA-1 (game data), so the whole column differs (tests/host/mdec_replay.py --results compares the bytes within the tolerance)"
+ },
+ {
+  "where": "mdec/moviee03_f100_m0: DecDCToutSync read column",
+  "reason": "the MDEC's IDCT and colour conversion: PCSX-Redux's emulation rounds differently from psx-spx's (mdec.c), 15-bit: 8% of the 5-bit fields by 1, of the pixel bytes differ by 1-3; the golden keeps a movie column as a SHA-1 (game data), so the whole column differs (tests/host/mdec_replay.py --results compares the bytes within the tolerance)"
+ },
+ {
+  "where": "mdec/moviee03_f100_m2: DecDCToutSync read column",
+  "reason": "the MDEC's IDCT and colour conversion: PCSX-Redux's emulation rounds differently from psx-spx's (mdec.c), 15-bit: 8% of the 5-bit fields by 1, of the pixel bytes differ by 1-3; the golden keeps a movie column as a SHA-1 (game data), so the whole column differs (tests/host/mdec_replay.py --results compares the bytes within the tolerance)"
+ },
+ {
+  "where": "mdec/rl_pad: DecDCToutSync read column",
+  "reason": "0xFE00 before a block's DC: psx-spx's MDEC skips it (mdec.c follows), PCSX-Redux decodes it as a block (DC -512, then the end), so every later block shifts"
+ },
+ {
+  "where": "mdec/rl_extreme: DecDCToutSync read column",
+  "reason": "out-of-range values: mdec.c saturates the coefficients to 11 bits and clamps each colour to 0..255 (psx-spx); PCSX-Redux's colours wrap or come out at the other end of the range"
+ },
+ {
   "where": "gamestate_flags/get_flag_721f_",
   "reason": "gamestate_party_stat_levels[31]: index past the table (out-of-bounds read; FINDINGS.md 1)"
  },
