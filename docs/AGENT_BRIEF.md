@@ -7,7 +7,7 @@ DECISIONS entries named below.
 ## Setup (once, in your worktree)
 ```sh
 scripts/worktree_init.sh          # links tools/, iso/, extracted/ from the main checkout (~1 s)
-export DW3_JOBS=1                 # several agents share one machine (16 GB, 4 cores): one job each, always
+export DW3_JOBS=1                 # several agents share one machine (16 GB, 4 cores): one job each, unless your brief says otherwise
 scripts/build.sh                  # splat + ninja; must end "build passed" (makes build/expected/ for unit_diff)
 ```
 **Memory:** a from-scratch `scripts/build.sh --check` splits ~315 targets; run it with `DW3_JOBS=1`, only when

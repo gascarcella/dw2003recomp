@@ -1712,3 +1712,38 @@ The user's answers to `docs/PC_PORT_PLAN.md` section 4 (asked item by item; ever
 10. **Movies:** our own MDEC + XA decoder (so no FFmpeg), not before M5.
 11. **Frame rate:** PAL 50 Hz by default, 60 Hz as an option through `records_60hz`.
 - **Session 15's scope (user's choice): M0 plus an M1 skeleton**, not M0 alone.
+
+## 2026-10-05: M0 facts and the M1 skeleton's design (session 15, agents T0-T9)
+- **Hook macros live in `include/port.h`, included from `common.h`;** each is the exact PS1 code without `PC_PORT`. A
+  function in an overlay slot is a *tag* on the host (the PS1 address in the function pointer, a constant expression for
+  the static tables) and is only ever called through `OVERLAY_FN`/`LATE_CALL`, which resolve it in the current overlay.
+  `SLOT_PTR`/`HEAP_*` are constant expressions on both sides because the arena's buffers are link-time symbols.
+- **GCC 2.8.1 facts found while moving data to C** (all byte-identical in the end): a 4-byte `const` goes to `.sdata` at
+  `-G8` unless the section is named (`main.c`'s `MAIN_RODATA`); a `const` word must be defined after the functions whose
+  jump tables precede it in `.rodata` (source order); a C `.rodata` definition placed right before an `INCLUDE_ASM` whose
+  asm carries `.rodata` makes GCC omit the next `.rdata` directive, so the following functions' literals land in `.text`
+  (SHOCKTST: the word is typed `asciz` in the symbol file so splat migrates it into the holdout's asm instead); strings
+  followed by psylink's non-zero fill become `const u8[N]` arrays with the fill spelled out (the "stays INCLUDE_RODATA"
+  rule for the two cursor strings is superseded). The EXE matrix block `0x8004DC10` is C at the start of `message.c`'s
+  `.data` (owner still a guess). FIELDSTG's zero block stays asm: psylink's "IN" fill sits inside one `.bss` run, which GNU
+  ld cannot reproduce without a FILL facility in `configure.py`.
+- **Method slots keep word-sized parameters** (`cardgame_board_open_dialog`, `set_dialog_answer`, `stdwtitl_menu_get_result`,
+  `gfx_set_clip_*`): narrowing a slot's parameter types changes the callers' bytes, so the assignments carry explicit
+  casts; the host calls an `s16`-parameter function through an `s32` pointer (UB that GCC's callee re-extension tolerates).
+  `CardgameGame.opponents` is a pointer field (byte-identical retype). `object_create`'s `child_count` is `data_size / 4`
+  on the PS1 and `data_size / sizeof(void *)` on the host; a data block mixing `s32` and pointers is still a port hazard
+  (FINDINGS 9c).
+- **The probe is a gate:** `tools/port_inventory.py probe` (`-m64`, `-Werror` on pointer/int casts, implicit declarations,
+  incompatible pointer types; `-fpermissive` only on GCC 14+ so the gate is the same on CI's GCC 13) and `link` run first
+  in `scripts/test.sh` and as a disc-free CI step. They need no `include/asm_generated/`.
+- **The port runtime (`port/`):** the arena mirrors the PS1 layout from `0x80082CB0` (slots at the PS1 distances, a 4 MB
+  heap) in one 16 MB-aligned non-PIE `.bss` block; PS1-style addresses are base + offset. Overlay data isolation is a
+  generated GNU ld script (`.dw3.data/.bss.<ovl>` inserted before `.data`/`.bss`); the snapshot is taken before
+  `game_main`. The address tables are generated at build time from the symbol files filtered by `nm` of the objects, and
+  the build fails if a tag site in the C does not resolve. `src/main/main.c` is compiled with `-Dmain=game_main`.
+  Loops the game ends only by a CD interrupt carry `PLATFORM_WAIT()`; the runtime's watchdog (exit 4) catches the ones
+  that do not. LIBC2/LIBAPI are the host libc (a definition in the executable would interpose on every shared library).
+- **Agents on this machine:** 32 cores and 125 GB allow 5 worktree agents at once with `DW3_JOBS=6`
+  (`scripts/build.sh --check` takes 22 s on ~12 cores, 110 MB peak per process); `docs/AGENT_BRIEF.md`'s `DW3_JOBS=1` is
+  the shared-4-core default, overridden per brief.
+
