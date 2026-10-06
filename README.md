@@ -93,7 +93,7 @@ useful report has:
 
 Please check the [open issues](https://github.com/gascarcella/dw2003recomp/issues) first, and never attach the game's
 files or a disc image. Questions about the code are welcome as issues too. Planned work is tracked in the
-[project board](https://github.com/users/gascarcella/projects).
+[project board](https://github.com/users/gascarcella/projects/1).
 
 ## Development
 
@@ -225,7 +225,7 @@ See [`port/README.md`](port/README.md), [`launcher/README.md`](launcher/README.m
 | [`docs/THIRD_PARTY.md`](docs/THIRD_PARTY.md) | Everything borrowed from other projects |
 | [`tests/README.md`](tests/README.md) | The reference tests |
 
-Planned work lives in the [project board](https://github.com/users/gascarcella/projects), problems in
+Planned work lives in the [project board](https://github.com/users/gascarcella/projects/1), problems in
 [issues](https://github.com/gascarcella/dw2003recomp/issues).
 
 ## Contributing
