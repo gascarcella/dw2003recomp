@@ -13,7 +13,7 @@ CC=${CC:-gcc}
 EXTRA=${EXTRA:-}   # extra compiler flags, e.g. EXTRA="-O2 -fsanitize=address,undefined"
 OUT=build/port_psyq
 CFLAGS=(-m64 -std=gnu99 -fsigned-char -fwrapv -fno-strict-aliasing -DPC_PORT -DNON_MATCHING -Wall -Wextra -Werror
-        -Ibuild/port_inventory/include -Iinclude -Iinclude/asm_generated -I. -Iport/psyq)
+        -Ibuild/port_inventory/include -Iinclude -Iinclude/asm_generated -I. -Iport/psyq -Iport/include)
 
 if [ ! -d build/port_inventory/include ]; then
     echo "check: build/port_inventory/include is missing: run tools/venv/bin/python tools/port_inventory.py probe" >&2

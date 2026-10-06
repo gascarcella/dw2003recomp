@@ -69,6 +69,8 @@ for L in $LAYERS; do
             "$PY" "$ROOT/tests/host/replay.py"; ran=$((ran + 1))
             echo "--- the SPU core's unit goldens (tests/spu, ~2 s)"
             "$ROOT/tests/spu/run.sh"; ran=$((ran + 1))
+            echo "--- the XA decoder's unit goldens (tests/xa, ~1 s)"
+            "$ROOT/tests/xa/run.sh"; ran=$((ran + 1))
         else
             skip "no gcc for the host-side replay (tests/host)"
         fi ;;
