@@ -80,7 +80,7 @@ docker run --rm --user "$(id -u):$(id -g)" -e HOME=/work/.home -e "DW3_VERSION=$
     -v "$WORK/src:/work" -v "$disc:/disc/dw2003.bin:ro" -w /work "$IMAGE" bash -c '
 set -euxo pipefail
 mkdir -p "$HOME"; git config --global --add safe.directory "*"
-scripts/setup.sh venv mkpsxiso imgui sdl3-desktop appimage llvm-mingw sdl3-windows
+scripts/setup.sh venv mkpsxiso imgui sdl3-desktop appimage llvm-mingw sdl3-windows dxc
 scripts/worktree_init.sh
 test -f iso/dw2003.cue
 cmake -S port -B build/port -G Ninja -DCMAKE_BUILD_TYPE=Release

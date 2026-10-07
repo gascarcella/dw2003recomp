@@ -266,6 +266,11 @@ Settings settings_from_json(const Json &doc, std::vector<std::string> *w) {
             warn(w, "video.refresh: expected 50 or 60; using 50");
             s.refresh = 50;
         }
+        read_string(video, "video", "renderer", &s.renderer, w);
+        if (s.renderer != "software" && s.renderer != "gpu") {
+            warn(w, "video.renderer: expected \"software\" or \"gpu\"; using \"software\"");
+            s.renderer = "software";
+        }
     }
     if (const Json *audio = section(doc, "audio", w)) {
         read_bool(audio, "audio", "mute", &s.mute, w);
@@ -303,6 +308,7 @@ void settings_to_json(const Settings &s, Json *doc) {
     video.set("scale", Json::number(s.scale));
     video.set("fullscreen", Json::boolean(s.fullscreen));
     video.set("refresh", Json::number(s.refresh));
+    video.set("renderer", Json::string(s.renderer));
     doc->member("audio").set("mute", Json::boolean(s.mute));
     for (int i = 0; i < 2; i++) {
         const MemoryCard &c = s.memcard[i];

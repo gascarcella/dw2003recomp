@@ -56,6 +56,8 @@ The `-m32` build is the layout check: pointers are 4 bytes there, as on the PS1,
 | `src/pump.c` | `port_wait` (the vsync and CD ticks, the frame cap, the watchdog), `port_halt`, `port_unimplemented` |
 | `src/reset.c` | The console's reset (the script's `reset` step): `port_reset_request` (longjmp to `main()`), `port_reset_state`, `DW3_PORT_RESET_CHECK` |
 | `src/video.c` | The video output: the display area of the VRAM as 32-bit pixels, `--screenshot`, the SDL3 window (below) |
+| `src/render_gpu.c` | The hardware renderer (SDL_GPU; SDL build only): the device, the present through it, `--gpu-screenshot` (below) |
+| `shaders/*.hlsl` | Its shaders, compiled to SPIR-V by DXC at build time and embedded (`cmake/embed.cmake`) |
 | `src/input.c` | The window's input: keyboard and gamepads to the pad (rebindable), the hotkeys, the window's close, `--input-test` (below) |
 | `src/mods.c` | The built-in mods' registry, their settings and hotkeys, `port_mods_frame` (manifests: `mods/<id>/mod.json`) |
 | `src/battle_scan.c` | The battle scripts' command lengths (battle_animations' cut; `tests/port/battle.py` checks it on the disc) |
@@ -85,11 +87,12 @@ gamepads. It is optional: the default build has no SDL and stays headless (the t
 (`scripts/setup.sh` `SDL3_VER`/`SDL3_SHA256`) and built from its release tarball into `tools/sdl3/` as a static library,
 so the binary needs nothing beside it; SDL loads X11/Wayland/ALSA/PulseAudio/... with `dlopen` at run time.
 ```sh
-scripts/setup.sh sdl3                     # ~70 s with 2 jobs; again: "already installed"
+scripts/setup.sh sdl3 dxc                 # ~70 s with 2 jobs; again: "already installed"
 cmake -S port -B build/port-sdl -G Ninja -DDW3_PORT_SDL=ON && cmake --build build/port-sdl
 build/port-sdl/dw2003 --disc iso/dw2003.cue --window            # 640x480, 50 vsyncs per second (PAL)
 build/port-sdl/dw2003 --disc iso/dw2003.cue --scale 3 --fullscreen
 build/port-sdl/dw2003 --disc iso/dw2003.cue --script tests/replay/scripts/new_game.json --window   # watch a replay
+build/port-sdl/dw2003 --disc iso/dw2003.cue --window --renderer gpu   # the window through the hardware renderer
 SDL_VIDEO_DRIVER=offscreen build/port-sdl/dw2003 --input-test --fps 0   # no display: the input self-test (exit 0)
 ```
 SDL's backends follow the `-dev` headers present when `setup.sh sdl3` runs: missing optional ones are turned off one by
@@ -109,6 +112,18 @@ drawn at 4:3, nearest-neighbour, as tall as an integer multiple of its lines fit
 the window is smaller than the image). `--scale N` opens a 320N x 240N window (default 2; with an even N a 240-line and
 a 480-line display come out the same size), `--fullscreen` (F11 toggles). `--screenshot FRAME:PATH` (repeatable; any
 build, also headless) writes the image of vsync FRAME as a binary PPM: the texture's pixels, independent of the window.
+**The renderer** (issue #31; docs/PORT.md "Rendering"): `--renderer software` (the default) presents through
+SDL_Renderer; `--renderer gpu` (or `video.renderer: "gpu"`) through the hardware renderer, `src/render_gpu.c` on SDL_GPU
+(Vulkan). It is opened before any SDL_Renderer (on Wayland a window that had an OpenGL renderer cannot be claimed by
+Vulkan); when it cannot present (no Vulkan driver, NVIDIA on the offscreen driver, a shader that does not load) the run
+logs `renderer: gpu unavailable (<why>); software` and uses SDL_Renderer. In phase 1 it shows the same image, pixel for
+pixel. Its shaders need DXC at build time (`scripts/setup.sh dxc`, or `-DDW3_DXC=<path>`): configuring the SDL build
+without it fails with that hint. `--gpu-screenshot FRAME[@WxH]:PATH` (repeatable) writes the hardware renderer's picture
+of vsync FRAME as a PPM: the image itself, or with `@WxH` its present into a W x H output, letterboxed as the window
+would be; a run that has no device opens one for it (headless too: `SDL_VIDEO_DRIVER=offscreen`), and logs the shot as
+skipped when none opens. `--screenshot` and the debug channel's screenshot stay the software image.
+`DW3_PORT_PRESENT_READBACK=FRAME:PATH` reads SDL_Renderer's output back (`tests/port/render_gpu.py` compares the two
+present paths). `VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json` picks Mesa's software Vulkan driver.
 `--debug SOCKET` (any build) opens the debug channel on a Unix socket (`src/debug.c`'s header comment is the protocol;
 `tools/mcp/` drives it): pause, step, wait, the pad, memory by host or PS1 address, screenshots, the hash, reset, quit,
 each between two vsyncs; it turns the watchdog and the default frame cap off; `--debug-hold` starts the game paused at

@@ -134,6 +134,19 @@ checks that the socket path fits `sun_path` (108 bytes). Then it runs `tools/mcp
 lookup and the server's tools against `fake_game.py`, offline; skipped with a message when the `mcp` package is not
 installed). Needs `build/port/dw2003` (`run.py` builds it) and the disc. In `scripts/test.sh --layer port`.
 
+## The hardware renderer (`render_gpu.py`; docs/PORT.md "Rendering", issue #31)
+`tests/port/render_gpu.py` builds `build/port-sdl` (needs `tools/sdl3` and `tools/dxc`; skipped without them) and runs it
+on SDL's offscreen driver. **Everywhere** (CI too): `--window --renderer gpu --input-test` with a Vulkan loader that finds
+no driver must log the fallback and pass on SDL_Renderer; a bad `--renderer` or `--gpu-screenshot`, and
+`--gpu-screenshot` in the headless build, exit 64. **With a GPU device and the disc** (locally; the reason is printed
+when skipped): `new_game` replayed with `--screenshot` and `--gpu-screenshot` at five vsyncs (CNTY_SEL's 320x576 screen,
+the title, the field): the hardware picture must be the software image byte for byte, and its present into 960x720,
+1366x768, 1920x1080, 1280x1024, 1000x700 and 300x200 must be the test's reference (video.c's 4:3 rectangle, an integer
+nearest mapping) pixel for pixel; where the device can present to the offscreen driver's window (lavapipe can, NVIDIA
+cannot) the input self-test also runs with the window through SDL_GPU. **With the disc:** SDL_Renderer's own present
+(a 960x720 window, read back with `DW3_PORT_PRESENT_READBACK`) must be the same reference, so both present paths agree.
+`--lavapipe` uses Mesa's software Vulkan driver. ~15 s. In `scripts/test.sh --layer port`.
+
 ## The crash report (`crash.py`; docs/PORT.md "Crash report")
 `tests/port/crash.py` runs the headless build three times (~3 s): with `DW3_PORT_CRASH_AT=30` it must die of SIGSEGV
 (status -11), name its report on the last stderr line, and the report must carry the build of `--version`, the

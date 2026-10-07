@@ -244,7 +244,15 @@ PS1 or the emulator) are listed in `port/psyq/README.md` "Behaviour assumed".
   pixels. `--screenshot` writes it as a PPM in any build.
 - **Window** (SDL3, static, pinned in `scripts/setup.sh`): the image at 4:3, nearest-neighbour, integer-scaled;
   fullscreen toggle. SDL selects X11/Wayland and the audio backend at run time.
-- There is **no hardware renderer**; the software GPU is the only one.
+- **Hardware renderer** (`port/src/render_gpu.c`, issue #31; DECISIONS "The hardware renderer"): SDL_GPU on Vulkan,
+  only in the SDL build, chosen by `--renderer gpu` or `video.renderer` (default `software`). Its shaders
+  (`port/shaders/*.hlsl`) are compiled to SPIR-V at build time by the pinned DXC (`scripts/setup.sh dxc`) and embedded
+  in the binary. **Phase 1, now:** it opens the device and the window's swapchain, and presents the same software image
+  pixel for pixel (an integer nearest mapping into video.c's 4:3 rectangle, equal to SDL_Renderer's output); when no
+  device can present (no Vulkan driver; NVIDIA on SDL's offscreen driver) the run logs why and uses SDL_Renderer.
+  `--gpu-screenshot FRAME[@WxH]:PATH` writes its picture (headless too). **Next** (the plan on issue #31): the
+  rasteriser of the software GPU's command stream into a 1024x512 VRAM target with an exactness test at scale 1, then
+  internal resolutions up to 8x. The software GPU stays the reference and the default; every existing test uses it.
 
 ## GTE
 `port/psyq/gte.c` is the geometry coprocessor in software: the 64 registers with their read/write rules, every
@@ -298,6 +306,7 @@ mods); without `--config` the binary depends on nothing on the machine. Built-in
 | 60 Hz | The port's 60 Hz mode against the NTSC-patched game in the emulator | `tests/port/hz60.py` |
 | Settings, mods, input | Settings round trip; mods keep the emulator's stable hashes; the battle-script scanner on every script on the disc; `--input-test` | `tests/port/settings.py`, `mods.py`, `battle.py`, `dw2003 --input-test` |
 | Debug channel | One `--debug` run to CNTY_SEL: step and pad advance the frame exactly, the state map and the host symbol read the same, poke/peek, screenshot, hash, quit status; `tools/mcp`'s offline self-test | `tests/port/debug.py` (the `port` layer), `tools/mcp/selftest.py` |
+| Hardware renderer | Its picture of the software image byte for byte, its present at six output sizes against the reference, SDL_Renderer's present against the same reference; the fallback without a device (CI); the pictures need a GPU device (local, or lavapipe) | `tests/port/render_gpu.py` (the `port` layer) |
 | Crash report | A forced NULL write dies of SIGSEGV with a report whose pc symbolizes to the hook's function; a fatal error's report; `--version` | `tests/port/crash.py` (the `port` layer) |
 | Holdouts | A `NON_MATCHING` PS1 image (the holdouts' WIP C) replayed in the emulator without divergence | `tests/holdouts/run.sh` |
 

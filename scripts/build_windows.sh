@@ -11,7 +11,8 @@
 #                     (iso/dw2003.cue) the game's crash report under Wine (tests/port/crash.py --wine) and its
 #                     layer-2 replays under Wine (tests/port/run.py --exe ... --wine: the log and the record must
 #                     equal the Linux build's). The same gate as CI's windows job; each Wine run under `timeout`.
-# Needs: scripts/setup.sh llvm-mingw sdl3-windows (and imgui for the launcher); cmake and ninja (tools/venv's when the
+# Needs: scripts/setup.sh llvm-mingw sdl3-windows dxc (and imgui for the launcher; dxc: the hardware renderer's
+# shaders, compiled on this host); cmake and ninja (tools/venv's when the
 # system has none). Exit 0 when everything asked for built (and the test passed), else 1 with a summary: which objects
 # did not compile and whether the link failed. The game links since the overlay sections stopped needing a linker
 # script (DECISIONS "Overlay sections by renaming"); tests/port/run.py --exe build/port-win/dw2003.exe --wine replays
@@ -44,6 +45,7 @@ llvm="$(tool llvm-mingw)"
 [[ -x "$llvm/bin/x86_64-w64-mingw32-clang" ]] || die "no llvm-mingw at $llvm: scripts/setup.sh llvm-mingw"
 sdl="$(tool sdl3-windows)"
 [[ -f "$sdl/lib/cmake/SDL3/SDL3Config.cmake" ]] || die "no SDL3 for Windows at $sdl: scripts/setup.sh sdl3-windows"
+[[ -x "$(tool dxc)/bin/dxc" ]] || die "no DXC for the hardware renderer's shaders: scripts/setup.sh dxc"
 PATH="$PATH:$(tool venv)/bin"
 for t in cmake ninja; do
     command -v "$t" >/dev/null || die "no $t on PATH (scripts/setup.sh cmake)"

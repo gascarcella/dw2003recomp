@@ -837,6 +837,25 @@ void App::draw_settings() {
         s.refresh = 60;
         dirty_ = true;
     }
+    ImGui::TextDisabled("Renderer");
+    ImGui::SameLine(label_w);
+    if (ImGui::RadioButton("Software", s.renderer == "software")) {
+        s.renderer = "software";
+        dirty_ = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("GPU (experimental)", s.renderer == "gpu")) {
+        s.renderer = "gpu";
+        dirty_ = true;
+    }
+    if (s.renderer == "gpu") {
+        ImGui::Indent(label_w);
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextDisabled("SDL_GPU (Vulkan). For now it shows the same picture as Software; higher internal "
+                            "resolutions come later. Without a usable GPU the game falls back to Software.");
+        ImGui::PopTextWrapPos();
+        ImGui::Unindent(label_w);
+    }
     if (s.refresh == 60) {
         ImGui::Indent(label_w);
         ImGui::PushTextWrapPos(0);

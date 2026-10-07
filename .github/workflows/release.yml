@@ -83,11 +83,12 @@ jobs:
             tools/imgui
             tools/sdl3-desktop
             tools/appimage
+            tools/dxc
           key: tools-release-${{ runner.os }}-${{ steps.pins.outputs.hash }}
 
       # mkpsxiso: worktree_init.sh extracts the disc (the port's sound check reads the EXE from extracted/).
       - name: Release tools
-        run: scripts/setup.sh venv mkpsxiso imgui sdl3-desktop appimage
+        run: scripts/setup.sh venv mkpsxiso imgui sdl3-desktop appimage dxc
 
       - name: Disc from the data checkout
         run: |
@@ -158,10 +159,11 @@ jobs:
             tools/imgui
             tools/llvm-mingw
             tools/sdl3-windows
+            tools/dxc
           key: tools-windows-${{ runner.os }}-${{ hashFiles('scripts/setup.sh', 'tools/requirements.txt') }}
 
       - name: Windows toolchain
-        run: scripts/setup.sh venv mkpsxiso imgui llvm-mingw sdl3-windows
+        run: scripts/setup.sh venv mkpsxiso imgui llvm-mingw sdl3-windows dxc
 
       - name: Wine prefix
         run: |

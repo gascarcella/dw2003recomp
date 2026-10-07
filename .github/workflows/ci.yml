@@ -279,6 +279,14 @@ jobs:
           SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=dummy build/port-sdl/dw2003 --input-test --fps 0
           SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=dummy build/port-sdl/dw2003 --config tests/port/settings/rebound.json --input-test --fps 0
 
+      # The hardware renderer (issue #31): CI compiles it (the build above) and checks the fallback (--renderer gpu
+      # without a GPU device falls back to SDL_Renderer and passes the input self-test); with the disc, SDL_Renderer's
+      # present against the reference that the hardware renderer's present must equal (tests/port/render_gpu.py; its
+      # pictures through a device run locally).
+      - name: PC port, the hardware renderer's fallback
+        if: needs.areas.outputs.port == 'true'
+        run: tools/venv/bin/python tests/port/render_gpu.py
+
       - name: Launcher, self-test
         run: |
           cmake -S launcher -B build/launcher -G Ninja
@@ -323,7 +331,7 @@ jobs:
       # mkpsxiso: the disc's extraction (the replays' sound check reads the EXE's sound bank table from extracted/).
       - uses: ./.github/actions/setup
         with:
-          tools: venv cmake mkpsxiso imgui llvm-mingw sdl3-windows
+          tools: venv cmake mkpsxiso imgui llvm-mingw sdl3-windows dxc
           apt: wine wine64
           cache: windows
           disc: ${{ needs.areas.outputs.port }}

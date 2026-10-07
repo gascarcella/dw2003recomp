@@ -15,7 +15,7 @@
 #                and, when iso/dw2003.cue exists, the disc (the bundled game runs 300 frames from the launcher)
 #   --shared-libstdcxx  a local test build on a system without the static libstdc++ (Fedora: libstdc++-static): the
 #                launcher then needs the system's libstdc++, so this AppImage is not one to publish
-# Needs: scripts/setup.sh sdl3-desktop imgui appimage; cmake, ninja, gcc/g++ (with libstdc++.a), binutils, python3.
+# Needs: scripts/setup.sh sdl3-desktop imgui appimage dxc; cmake, ninja, gcc/g++ (with libstdc++.a), binutils, python3.
 # Outputs: <out>/dw2003-<version>-x86_64.AppImage, <out>/dw2003-<version>-x86_64.debug (the game's debug info, which
 # symbolizes crash reports: scripts/symbolize.py, docs/PORT.md "Crash report"), <out>/SHA256SUMS; build trees and logs
 # under build/release/.
@@ -65,6 +65,7 @@ debug="dw2003-$version-x86_64.debug"
 [[ -n "$sdl" ]] || { sdl="$(tool sdl3-desktop)"; [[ -d "$sdl" ]] || sdl="$(tool sdl3)"; }
 [[ -f "$sdl/lib/libSDL3.a" && -f "$sdl/lib/cmake/SDL3/SDL3Config.cmake" ]] ||
     die "no SDL3 at $sdl: scripts/setup.sh sdl3-desktop (or --sdl3 DIR)"
+[[ -x "$(tool dxc)/bin/dxc" ]] || die "no DXC for the hardware renderer's shaders: scripts/setup.sh dxc"
 PATH="$PATH:$(tool venv)/bin"   # cmake/ninja from tools/venv when the system has none (scripts/setup.sh cmake)
 for t in cmake ninja gcc g++ strip ldd nm objdump objcopy; do
     command -v "$t" >/dev/null || die "no $t on PATH"
