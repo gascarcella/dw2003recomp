@@ -828,7 +828,7 @@ void soundtst_update(SoundTest *obj, SoundTestData *data) {
             data->list[i] = message_create_window(0x1000, 1, 0x30, i * 16 + 0x46);
         }
         data->cursor = message_create_window(0x1000, 1, 0x20, 0x46);
-        data->cursor->copy_text(data->cursor, soundtst_cursor_text);
+        data->cursor->copy_text(data->cursor, (u8 *)soundtst_cursor_text);
         obj->base.next_state(obj);
         break;
     case OBJECT_STATE_RUN:

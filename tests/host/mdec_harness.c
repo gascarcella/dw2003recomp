@@ -17,8 +17,14 @@
 
 #define BUF_SIZE 0x40000
 
-u8 port_heap_start[1];
-u8 port_heap_end[1];
+/* The arena is the whole tag window here (include/port.h): what the linked shim's tags and walks refer to (unused). */
+u8 port_arena[PORT_ARENA_SIZE];
+const u8 *port_tag_base = port_arena;
+u32 port_tag_span = PORT_ARENA_SIZE;
+
+u32 port_ptr_to_u32(const void *p) {
+    return (u32)((const u8 *)p - port_arena) >> PORT_TAG_SHIFT;
+}
 
 void port_unimplemented(const char *fn) {
     fprintf(stderr, "unimplemented: %s\n", fn);

@@ -203,3 +203,15 @@ jobs:
       - name: PC port M1 test, -m32 build
         if: steps.data.outputs.present == 'true' && steps.areas.outputs.port == 'true'
         run: tools/venv/bin/python tests/port/run.py --m32
+
+      # A crash of the port in any step above leaves its report (docs/PORT.md "Crash report") in the current
+      # directory or under build/: readable from the run's artifacts, with the stack as exe+offset addresses.
+      - name: Crash reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-reports
+          path: |
+            crash-*.txt
+            build/**/crash-*.txt
+          if-no-files-found: ignore

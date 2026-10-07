@@ -11,8 +11,9 @@
  *   D HEX_ENV x y w h       SetDefDrawEnv(DRAWENV with these bytes, x, y, w, h)           -> the DRAWENV's bytes
  *   V HEX_DRMOVE x y w h dx dy  SetDrawMove(DR_MOVE with these bytes, RECT, dx, dy)       -> the DR_MOVE's bytes
  *   B                       BreakDraw                                                     -> 0 for NULL, else 1
- * The ordering-table walk resolves 24-bit tags inside a 16 MB-aligned arena, like the port's (docs/PORT.md "Ordering tables on 64-bit"): a
- * list at the PS1 address A sits at arena + (A & 0xFFFFFF), so the golden's tags work unchanged. */
+ * The ordering-table walk resolves 24-bit tags as PS1-style byte offsets in the arena (psyq_set_arena): a list at the
+ * PS1 address A sits at port_arena + (A & 0xFFFFFF), so the golden's tags work unchanged (docs/PORT.md "Ordering
+ * tables on 64-bit" has the port's own scheme, word offsets in the tag window). */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,17 +22,24 @@
 #include "psyq_internal.h"
 #include "psyq/libgpu.h"
 
-#define ARENA_SIZE (1u << 24)
+#define ARENA_SIZE PORT_ARENA_SIZE
 
-u8 port_heap_start[1];
-u8 port_heap_end[1];
+/* The arena is the whole tag window here (include/port.h), and tags are PS1-style byte offsets in it (the goldens'
+ * lists are placed as they are), which psyq_set_arena below tells the shim; the port's own tags are word offsets. */
+u8 port_arena[PORT_ARENA_SIZE];
+const u8 *port_tag_base = port_arena;
+u32 port_tag_span = PORT_ARENA_SIZE;
+
+u32 port_ptr_to_u32(const void *p) {
+    return (u32)((const u8 *)p - port_arena);
+}
 
 void port_unimplemented(const char *fn) {
     fprintf(stderr, "unimplemented: %s\n", fn);
     exit(3);
 }
 
-static u8 *arena;
+static u8 *arena = port_arena;
 
 static int unhex(const char *s, u8 *out, int max) {
     int n = 0;
@@ -70,14 +78,6 @@ int main(void) {
     static char line[1 << 22];
     static u8 buf[1 << 21];
 
-    {
-        u8 *block = malloc(2 * ARENA_SIZE);
-
-        if (block == NULL) {
-            return 2;
-        }
-        arena = (u8 *)(((uintptr_t)block + ARENA_SIZE - 1) & ~(uintptr_t)(ARENA_SIZE - 1));
-    }
     memset(arena, 0, ARENA_SIZE);
     psyq_set_arena(arena, ARENA_SIZE);
     psyq_gpu_reset();

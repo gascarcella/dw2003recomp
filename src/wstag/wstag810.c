@@ -365,22 +365,22 @@ WstagTwoSpriteObject *wstag810_two_sprite_create(s32 x, s32 y, s32 frame) {
     return obj;
 }
 
-s32 wstag810_event_9000_start(void) {
+Object *wstag810_event_9000_start(void) {
     if (gamestate_data.unk_26E4 != 0) {
         fieldstg_attr.set_file(7, 0x06ED0003);
         fieldstg_stage.map_events = wstag810_map_events;
         gamestate_data.unk_26E4 = 0;
     }
-    return 0;
+    return NULL;
 }
 
-s32 wstag810_event_9001_start(void) {
+Object *wstag810_event_9001_start(void) {
     if (gamestate_data.unk_26E4 == 0) {
         fieldstg_attr.set_file(7, 0x06ED0004);
         fieldstg_stage.map_events = wstag810_map_events2;
         gamestate_data.unk_26E4 = 0x20;
     }
-    return 0;
+    return NULL;
 }
 
 void wstag810_event_990_end(void) {

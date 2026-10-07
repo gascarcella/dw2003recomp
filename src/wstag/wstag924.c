@@ -163,6 +163,6 @@ FieldstgMapEvent wstag924_map_events[3] = {
 };
 WstagFadeFuncs wstag924_funcs = { wstag924_setup, wstag924_fade_start, wstag924_fade_update };
 FieldstgEventDef wstag924_events[3] = {
-    { 1602, NULL, 0x01580001, (s32 (*)(void))wstag924_event_1602_start, NULL },
-    { 1604, NULL, 0x01580002, (s32 (*)(void))wstag924_event_1604_start, NULL }, { -1, NULL, 0, NULL, NULL },
+    { 1602, NULL, 0x01580001, (Object *(*)(void))wstag924_event_1602_start, NULL },
+    { 1604, NULL, 0x01580002, (Object *(*)(void))wstag924_event_1604_start, NULL }, { -1, NULL, 0, NULL, NULL },
 };

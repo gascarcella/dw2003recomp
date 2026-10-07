@@ -4,9 +4,10 @@
  * the GPU; LoadImage, MoveImage, ClearImage(2) draw into its VRAM; psyq_gpu_vram/psyq_gpu_display are the video
  * output (psyq.h).
  *
- * Tags (docs/PORT.md "Ordering tables on 64-bit"): a tag's low 24 bits are an offset inside the 16 MB window the ordering table lives in, so
- * the walk resolves `tag & 0xFFFFFF` against `ot & ~0xFFFFFF` and follows it only inside the window psyq_set_arena
- * gave (by default the heap, port_heap_start..port_heap_end). */
+ * Tags (docs/PORT.md "Ordering tables on 64-bit"): a tag's low 24 bits are a pointer's word offset in the tag window
+ * (PTR_TO_U32: port_tag_base, the game's static data and the arena), so the walk resolves `tag & 0xFFFFFF` as
+ * port_tag_base + 4 * tag and follows it only inside the window. A harness's window (psyq_set_arena) holds PS1 lists
+ * as they are: a tag is then a byte offset from the window's base, as on the PS1 (its port_ptr_to_u32 agrees). */
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,9 +31,12 @@ static long psyq_gpu_dump_frame = -1, psyq_gpu_frame = 1;
 static u32 psyq_gpu_terminator = 0xFFFFFF; /* what BreakDraw hands out: an empty list */
 static PsyqDisplay psyq_gpu_disp;          /* the video output (psyq.h): PutDispEnv's area, SetDispMask */
 
-void psyq_set_arena(const void *base, unsigned long size) {
+static unsigned psyq_gpu_tag_shift = PORT_TAG_SHIFT; /* 0 in a harness's window: PS1-style byte offsets */
+
+void psyq_set_arena(const void *base, size_t size) {
     psyq_gpu_lo = (const u8 *)base;
     psyq_gpu_hi = (const u8 *)base + size;
+    psyq_gpu_tag_shift = 0;
 }
 
 u32 psyq_gpu_take_hash(u32 *count) {
@@ -59,8 +63,8 @@ void psyq_gpu_reset(void) {
 
 static void psyq_gpu_window(const u8 **lo, const u8 **hi) {
     if (psyq_gpu_lo == NULL) {
-        *lo = port_heap_start;
-        *hi = port_heap_end;
+        *lo = port_tag_base;
+        *hi = port_tag_base + port_tag_span;
     } else {
         *lo = psyq_gpu_lo;
         *hi = psyq_gpu_hi;
@@ -97,8 +101,11 @@ static void psyq_gpu_hash_words(const u32 *w, u32 n) {
 /* One primitive's words as the GPU reads them. A textured polygon's (POLY_FT3/FT4/GT3/GT4) third and fourth texture
  * coordinate words carry padding in their high half (pad1/pad2), which the GPU ignores and the game never writes: it
  * holds whatever the packet buffer held before, which differs between the -m32 and -m64 builds (their heaps differ;
- * session 16, FIELDSTG's actor sprites in new_game), so it is hashed as 0. Words: the command and color, then per
- * vertex [its color, gouraud only, not the first] its position and its texture coordinates. */
+ * session 16, FIELDSTG's actor sprites in new_game), so it is hashed as 0. The same for the CLUT (the first texture
+ * coordinate word's high half) of a 15-bit textured polygon (tpage depth 2, the second vertex's word): the GPU reads
+ * no CLUT then and the game leaves the field (FIELDSTG's fade before a battle: stale DR_TPAGE tags, which differ
+ * between builds since tags are offsets in each build's tag window). Words: the command and color, then per vertex
+ * [its color, gouraud only, not the first] its position and its texture coordinates. */
 static void psyq_gpu_hash_prim(const u32 *w, u32 len) {
     u32 code = w[0] >> 24;
     u32 copy[16];
@@ -120,6 +127,9 @@ static void psyq_gpu_hash_prim(const u32 *w, u32 len) {
     for (i = 2; i < verts; i++) {
         copy[2 + i * per] &= 0xFFFF;
     }
+    if (((copy[2 + per] >> 23) & 3) >= 2) { /* the tpage's texture depth: 2 (and 3) = 15-bit direct color */
+        copy[2] &= 0xFFFF;
+    }
     psyq_gpu_hash_words(copy, len);
 }
 
@@ -127,7 +137,6 @@ static void psyq_gpu_hash_prim(const u32 *w, u32 len) {
  * words (the `len` words after its tag). */
 static void psyq_gpu_walk(const u32 *p, const char *who) {
     const u32 *start = p;
-    uintptr_t base = (uintptr_t)p & ~(uintptr_t)0xFFFFFF;
     const u8 *lo;
     const u8 *hi;
     u32 prims = 0;
@@ -148,7 +157,7 @@ static void psyq_gpu_walk(const u32 *p, const char *who) {
         if (next == 0xFFFFFF) {
             break;
         }
-        q = (const u32 *)(base + next);
+        q = (const u32 *)(lo + ((uintptr_t)next << psyq_gpu_tag_shift));
         if ((const u8 *)q < lo || (const u8 *)q + 4 > hi) {
             PSYQ_TRACE("%s: tag %06x at %u points outside the walkable window; stopped", who, next, PSYQ_PTR(p));
             break;

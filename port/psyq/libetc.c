@@ -15,7 +15,7 @@ int VSyncCallback(void (*f)(void)) {
 
     PSYQ_TRACE("VSyncCallback %u", PSYQ_PTR(f));
     psyq_vsync_handler = f;
-    return (int)(unsigned long)prev;
+    return (int)(uintptr_t)prev;
 }
 
 /* The interrupt: one vsync has happened. */

@@ -69,15 +69,18 @@ if(DW3_PORT_SANITIZE)
     list(APPEND DW3_COMMON_FLAGS -fsanitize=address,undefined -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address,undefined)
 endif()
-# Non-PIE (ELF): the 16 MB-aligned arena wants a fixed load (port/src/arena.c). PE has no such flag (ASLR relocates
-# the image); the Windows build's arena is a later arrangement (the project board's "Windows 1"). The Windows cross
-# build (cmake/windows-x86_64.cmake) still links with the ld script and checks the map below, which lld for PE cannot
-# do: "Windows 2" replaces them. Until then that build compiles every object and fails at the link.
+# Non-PIE on ELF, for the ld script's sake only: the arena needs no fixed load address any more (port/src/arena.c,
+# DECISIONS "The arena assumes no alignment and no link address"), but the .dw3.* sections the script INSERTs BEFORE
+# .data land inside GNU_RELRO in a PIE link with -z now (Ubuntu's defaults: GNU ld 2.42 ends the RELRO range after
+# them), so the loader makes the game's whole .data read-only and its first write faults (CI, 2026-10-07). "Windows 2"
+# replaces the script and lifts this. PE has no such flag (ASLR relocates the image). The Windows cross build
+# (cmake/windows-x86_64.cmake) still links with the ld script and checks the map below, which lld for PE cannot do:
+# until "Windows 2" that build compiles every object and fails at the link.
 if(NOT WIN32)
     list(APPEND DW3_COMMON_FLAGS -fno-pie)
     add_link_options(-no-pie)
 endif()
-# -m32: everything compiled and linked 32-bit (the arena is 16 MB-aligned and non-PIE there too; nm reads both).
+# -m32: everything compiled and linked 32-bit (nm reads both).
 if(DW3_PORT_M32)
     if(WIN32)
         message(FATAL_ERROR "DW3_PORT_M32: the Windows build is x86_64 only")
@@ -121,6 +124,7 @@ add_custom_command(OUTPUT "${DW3_GEN}/overlay_tables.c"
 # objects and config/symbol_addrs.txt; the pointer test compiles the defining units at -m64 (port_gen.py state).
 add_custom_command(OUTPUT "${DW3_GEN}/port_state_tables.c"
                    COMMAND "${DW3_PYTHON}" "${DW3_PORT_GEN}" state --nm "${CMAKE_NM}" --cc "${CMAKE_C_COMPILER}"
+                           "--cflags=$<$<BOOL:${DW3_PORT_M32}>:-m32>"
                            --gen-include "${DW3_GEN}/include" --objects "${DW3_GEN}/game_objects.rsp"
                            --out "${DW3_GEN}/port_state_tables.c"
                    DEPENDS $<TARGET_OBJECTS:dw3_game> "${DW3_PORT_GEN}" "${DW3_ROOT}/config/symbol_addrs.txt"

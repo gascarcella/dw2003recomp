@@ -30,6 +30,8 @@ typedef struct PortRegion {
     u8 *snapshot;
 } PortRegion;
 
+static void port_tag_window_init(void);
+
 static const PortOverlay *port_current[3]; /* per tier (index 1, 2) */
 static u32 port_word0[3];                  /* per tier: the first word of the file last loaded */
 /* [0] the EXE's .data, [1] its .bss, then [2 + 2 * i] overlay i's .data and [3 + 2 * i] its .bss */
@@ -89,6 +91,27 @@ void port_overlay_init(void) {
     if (port_trace) {
         port_log("overlay: the EXE's and %d overlays' .data/.bss snapshotted (%zu bytes)", port_overlay_count, total);
     }
+    port_tag_window_init();
+}
+
+/* The tag window (include/port.h, port/src/arena.c): every region above and the arena, so that a static ordering
+ * table or primitive (FIGHTSTG's cursor OT) tags like a heap one. */
+static void port_tag_window_init(void) {
+    const u8 *lo = port_arena, *hi = port_arena + PORT_ARENA_SIZE;
+    int i;
+    for (i = 0; i < port_region_count; i++) {
+        const PortRegion *r = &port_regions[i];
+        if (r->stop == r->start) {
+            continue;
+        }
+        if ((const u8 *)r->start < lo) {
+            lo = (const u8 *)r->start;
+        }
+        if ((const u8 *)r->stop > hi) {
+            hi = (const u8 *)r->stop;
+        }
+    }
+    port_tag_window_set(lo, hi);
 }
 
 /* The console's reset (port/src/reset.c): every game unit's .data and .bss back to their startup contents, the EXE's

@@ -72,7 +72,8 @@
 #define S32_TO_PTR(type, v) ((type)(v))
 
 /* PTR_TO_U32(p): the pointer's bits, for the 24-bit ordering-table tags (gfx_compact_ot's `(u32)q & mask`, libgpu.h's
- * setaddr). PS1: (u32)(p). Host: the low 32 bits; the arena is 16 MB-aligned, so the low 24 bits are the offset. */
+ * setaddr). PS1: (u32)(p). Host: the pointer's word offset in the tag window (port_ptr_to_u32: the game's static data
+ * and the arena), which the shim's DrawOTag resolves against the window's base; anything else is a fatal error. */
 #define PTR_TO_U32(p) ((u32)(p))
 
 /* --- Things at fixed addresses ---
@@ -139,7 +140,12 @@
 #define PTR_ADD(type, ofs, base) ((type)((char *)(base) + (ofs)))
 #define PTR_TO_S32(p) port_ptr_to_s32(p)
 #define S32_TO_PTR(type, v) ((type)port_s32_to_ptr(v))
-#define PTR_TO_U32(p) ((u32)(uintptr_t)(p))
+/* A pointer becomes its word offset in the tag window; a tag already (addPrim's setaddr(p, getaddr(ot))) is kept. The
+ * branch is chosen at compile time by the argument's type (5: a pointer, __builtin_classify_type); the other is never
+ * evaluated. */
+#define PTR_TO_U32(p)                                                                                       \
+    __builtin_choose_expr(__builtin_classify_type(p) == 5, port_ptr_to_u32((const void *)(uintptr_t)(p)), \
+                          (u32)(uintptr_t)(p))
 
 #define SLOT_FUNC(type, addr) ((type)(uintptr_t)(addr))
 #define WSTAG_ENTRY(addr) SLOT_FUNC(void *(*)(), addr)
@@ -182,18 +188,39 @@ void port_cdload_wait_read(s32 id);
 void *port_overlay_load(int tier, s32 file, void *dst, const void *src, u32 size);
 void (*port_overlay_resolve(int tier, uintptr_t addr))(void);
 
-/* The memory arena (16 MB-aligned, docs/PORT.md "Memory arena"). These are link-time symbols (arrays), so that their addresses
- * are constant expressions: records.c's D_8005CB50 and FIELDSTG's script table are static initializers.
+/* The memory arena (docs/PORT.md "Memory arena"): one static block, port_arena (port/src/arena.c), that stands for the
+ * PS1's RAM from the tier-1 slot up, at the PS1's distances: slot 1, slot 2, then the heap (larger than the PS1's;
+ * tools/port_gen.py has the same numbers and arena.c checks them). The regions are macros on port_arena, so that their
+ * addresses stay constant expressions: records.c's D_8005CB50 and FIELDSTG's script table are static initializers.
+ * No alignment is assumed (PE allows none past 8 KB): an arena pointer's PS1-style address is PORT_SLOT1_BASE + its
+ * offset, and an ordering-table tag is an offset in the tag window (below).
  * port_slot1/port_slot2: the buffers that stand for the two slots' data (SLOT_PTR).
  * port_heap_start/port_heap_end: the heap region's bounds (0x800AB800/0x801FF000 on the PS1; it may be larger). */
-extern u8 port_slot1[];
-extern u8 port_slot2[];
-extern u8 port_heap_start[];
-extern u8 port_heap_end[];
+#define PORT_SLOT2_OFS (PORT_SLOT2_BASE - PORT_SLOT1_BASE)
+#define PORT_HEAP_OFS (PORT_HEAP_START_ADDR - PORT_SLOT1_BASE)
+#define PORT_HEAP_SIZE (4u << 20)
+#define PORT_ARENA_SIZE (PORT_HEAP_OFS + PORT_HEAP_SIZE)
+extern u8 port_arena[PORT_ARENA_SIZE];
+#define port_slot1 (port_arena)
+#define port_slot2 (port_arena + PORT_SLOT2_OFS)
+#define port_heap_start (port_arena + PORT_HEAP_OFS)
+#define port_heap_end (port_arena + PORT_ARENA_SIZE)
 
 /* NULL <-> 0; an arena pointer <-> its PS1-style address; anything else is a fatal error. */
 s32 port_ptr_to_s32(const void *p);
 void *port_s32_to_ptr(s32 v);
+
+/* The tag window: the game's whole writable memory on the host, the units' .data/.bss (static ordering tables and
+ * primitives: FIGHTSTG's cursor OT) and the arena, which port_overlay_init measures and port_tag_window_set records.
+ * A 24-bit ordering-table tag is a word offset from port_tag_base (entries and primitives are word-aligned), so the
+ * window may span up to 64 MB (it is a few MB: one image's data; a sanitizer build's redzones make it 27 MB), and
+ * the shim's DrawOTag follows tags inside the window only.
+ * port_ptr_to_u32: a pointer in the window -> its word offset (PTR_TO_U32); anything else is a fatal error. */
+#define PORT_TAG_SHIFT 2
+extern const u8 *port_tag_base;
+extern u32 port_tag_span;
+void port_tag_window_set(const void *lo, const void *hi);
+u32 port_ptr_to_u32(const void *p);
 
 /* The byte at the PS1 address `addr` (0x1FC00000..0x1FC80000) of the BIOS ROM. */
 void *port_bios_ptr(u32 addr);
