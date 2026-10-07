@@ -8,6 +8,8 @@ reach what PCSX-Redux reached in `tests/replay/expected/new_game.json`.
 tests/port/run.py                     # build/port, two runs, compare (~1 s once built; a build from scratch ~1 min)
 tests/port/run.py --m32 --sanitize    # also the -m32 build (same log and record) and an ASan/UBSan build (no report)
 tests/port/run.py --cd-speed instant  # the port's CD without seek or transfer time (the default is realistic)
+tests/port/run.py --exe build/port-win/dw2003.exe --wine   # the Windows build (scripts/build_windows.sh) under Wine, headless;
+                                      # its log, record and SPU trace must be the Linux build's (build/port is still built)
 scripts/test.sh --layer port          # the same as the plain run, skipped when cmake/ninja/gcc/the disc are missing
 ```
 It needs the disc (`iso/dw2003.cue`), the host gcc, CMake and Ninja (on PATH, or in `tools/venv`: `scripts/setup.sh

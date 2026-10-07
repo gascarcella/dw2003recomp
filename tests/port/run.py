@@ -2,6 +2,7 @@
 """The PC port's test: the port replays the layer-2 scripts and must reach what the emulator reached.
 
 Usage: tests/port/run.py [SCRIPT ...] [--m32] [--sanitize] [--cd-speed instant|realistic] [--out DIR] [-j N]
+       tests/port/run.py [SCRIPT ...] --exe build/port-win/dw2003.exe --wine     # the Windows build, under Wine
 
 Builds the port if needed (cmake -S port -B build/port -G Ninja; cmake --build), and for each script (default: every
 tests/replay/scripts/<name>.json with a tests/replay/expected/<name>.json; or the names given) runs
@@ -20,6 +21,11 @@ same LIBSND calls (the segments between them are reported: docs/SOUND.md section
   --sanitize  also build build/port-san (-DDW3_PORT_SANITIZE=ON), run it once, and fail on any ASan/UBSan report
               (its log and record must equal the plain build's too)
   --cd-speed  the port's CD timing (default: the port's, realistic)
+  --exe PATH  run this binary instead of building build/port (build/port is still built: the sound replay compiles
+              against its generated headers); --m32 and --sanitize do not apply to it
+  --wine      run the binary (--exe, a Windows build: scripts/build_windows.sh) through `wine`, headless (SDL's
+              dummy video and audio drivers, the prefix in build/wine-prefix/); its log and record must equal the
+              Linux build's, which is what tests/replay/expected/ holds
   --out DIR   where the logs, records and checkpoint dumps go (default build/port-test/)
 Needs only the disc, the host gcc, CMake and Ninja (on PATH, or in tools/venv: scripts/setup.sh cmake) and the venv.
 Exit codes: 0 pass, 1 fail, 2 something missing. tests/port/README.md says what is compared and why.
@@ -59,6 +65,10 @@ class Missing(Exception):
     """Something the test needs is not there (exit 2)."""
 
 
+RUNNER = []          # the command prefix of a run (--wine: ["wine"])
+RUNNER_ENV = {}      # its environment additions (--wine: the prefix, no debug output, SDL's dummy drivers)
+
+
 def tool_env():
     """The environment for cmake/ninja: the system's first, then tools/venv/bin (scripts/setup.sh cmake)."""
     env = dict(os.environ)
@@ -96,11 +106,11 @@ def run_port(binary, script, out_dir, label, cd_speed, env=None):
     dumps.mkdir()
     log, record, err = out_dir / f"{label}.log", out_dir / f"{label}.json", out_dir / f"{label}.stderr"
     spu = out_dir / f"{label}.spu.trace"
-    cmd = [str(binary), "--disc", str(DISC), "--script", str(script), "--log", str(log), "--record", str(record),
-           "--spu-trace", str(spu)]
+    cmd = [*RUNNER, str(binary), "--disc", str(DISC), "--script", str(script), "--log", str(log), "--record",
+           str(record), "--spu-trace", str(spu)]
     if cd_speed:
         cmd += ["--cd-speed", cd_speed]
-    run_env = dict(env or os.environ, DW3_PORT_CHECKPOINT_DIR=str(dumps))
+    run_env = dict(env or os.environ, DW3_PORT_CHECKPOINT_DIR=str(dumps), **RUNNER_ENV)
     with open(err, "w") as f:
         proc = subprocess.run(cmd, cwd=ROOT, env=run_env, stdout=f, stderr=subprocess.STDOUT, timeout=RUN_TIMEOUT)
     err_text = err.read_text(errors="replace")
@@ -154,7 +164,9 @@ def check_script(name, args, env, out):
     failures = []
     print(f"port test: {script.relative_to(ROOT)} vs {expected_path.relative_to(ROOT)} (cross-core view)")
     try:
-        binary = build("build/port", [], args.jobs, env)
+        binary = Path(args.exe).resolve() if args.exe else build("build/port", [], args.jobs, env)
+        if args.exe:
+            print(f"  binary: {binary}{' under wine' if args.wine else ''}")
         run1 = run_port(binary, script, out, "run1", args.cd_speed)
         run2 = run_port(binary, script, out, "run2", args.cd_speed)
         rec = run1[2]
@@ -211,8 +223,8 @@ def check_script(name, args, env, out):
 def audio_renders(binary, out):
     """Whether the port's audio output renders the SPU (port/src/audio.c past its M3 step-0 stub, which refuses --wav):
     LIBSND's replay of a run is exact only if the run rendered 882 samples a vsync, as the replay does."""
-    proc = subprocess.run([str(binary), "--max-frames", "1", "--wav", str(out / "audio_probe.wav")], cwd=ROOT,
-                          capture_output=True, text=True, timeout=120)
+    proc = subprocess.run([*RUNNER, str(binary), "--max-frames", "1", "--wav", str(out / "audio_probe.wav")], cwd=ROOT,
+                          env=dict(os.environ, **RUNNER_ENV), capture_output=True, text=True, timeout=120)
     return proc.returncode == 0
 
 
@@ -223,6 +235,8 @@ def main():
     ap.add_argument("--sanitize", action="store_true", help="also an ASan/UBSan build; no report allowed")
     ap.add_argument("--cd-speed", choices=("instant", "realistic"), help="the port's CD timing")
     ap.add_argument("--out", help="output directory (default build/port-test/)")
+    ap.add_argument("--exe", help="run this binary instead of build/port/dw2003 (no --m32/--sanitize for it)")
+    ap.add_argument("--wine", action="store_true", help="run --exe through wine (a Windows build), headless")
     ap.add_argument("-j", "--jobs", type=int, default=int(os.environ.get("DW3_JOBS", "0")) or None,
                     help="build jobs (default: $DW3_JOBS, else Ninja's)")
     args = ap.parse_args()
@@ -231,6 +245,20 @@ def main():
         if not DISC.exists():
             raise Missing(f"no disc image ({DISC.relative_to(ROOT)}; scripts/setup.sh disc)")
         env = tool_env()
+        if args.exe and not Path(args.exe).is_file():
+            raise Missing(f"no binary at {args.exe}")
+        if args.wine:
+            if not args.exe:
+                raise Missing("--wine needs --exe (the Windows build: scripts/build_windows.sh)")
+            if shutil.which("wine") is None:
+                raise Missing("no wine on PATH")
+            prefix = ROOT / "build/wine-prefix"
+            prefix.mkdir(parents=True, exist_ok=True)
+            RUNNER[:] = ["wine"]
+            RUNNER_ENV.update(WINEPREFIX=str(prefix), WINEDEBUG="-all", SDL_VIDEO_DRIVER="dummy",
+                              SDL_AUDIO_DRIVER="dummy")
+        if args.exe and (args.m32 or args.sanitize):
+            raise Missing("--m32 and --sanitize build their own binaries: not with --exe")
     except Missing as e:
         print(f"port test: {e}", file=sys.stderr)
         return 2

@@ -10,9 +10,9 @@
 #                     build/launcher-win/selftest/, the prefix in build/wine-prefix/
 # Needs: scripts/setup.sh llvm-mingw sdl3-windows (and imgui for the launcher); cmake and ninja (tools/venv's when the
 # system has none). Exit 0 when everything asked for built (and the test passed), else 1 with a summary: which objects
-# did not compile and whether the link failed. Until the project board's Windows 2 and 4 are done the game does NOT
-# link (the GNU ld script lld cannot take, the POSIX calls of port/src); every one of the game's 388 units compiles,
-# which this script reports as the measure.
+# did not compile and whether the link failed. The game links since the overlay sections stopped needing a linker
+# script (DECISIONS "Overlay sections by renaming"); tests/port/run.py --exe build/port-win/dw2003.exe --wine replays
+# the layer-2 scripts with it under Wine.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -67,7 +67,7 @@ if [[ $configure_only -eq 0 ]]; then
         log "game: did not link. $units of 388 units compiled ($units_failed failed); $objs objects in all"
         [[ -z "$runtime_failed" ]] || log "game: runtime and shim files that do not compile: $runtime_failed"
         if grep -q '^FAILED: dw2003.exe' "$port_dir.build.log"; then
-            log "game: the link itself failed (the ld script and the map check: the board's Windows 2)"
+            log "game: the link itself failed"
         fi
         log "game: the errors by kind:"
         grep -oE 'error: [^[]*' "$port_dir.build.log" | sed -E 's/ \(aka[^)]*\)//; s/ +$//' | sort | uniq -c | sort -rn |

@@ -24,15 +24,16 @@ formats are in `port/README.md`; the shim's per-function behaviour is in `port/p
 | `port/src/` | The runtime: `main.c` (options, setup), `arena.c`, `overlay.c`, `pump.c`, `reset.c`, `disc.c`, `memcard.c`, `video.c`, `input.c`, `audio.c` and `spu*.c`, `script.c`, `framelog.c`, `state.c`, `settings.c`, `mods.c` |
 | `port/psyq/` | The Psy-Q shim: one file per library, plus the hardware models `gpu.c`, `gte.c`, `mdec.c`, `xa.c` |
 | `port/CMakeLists.txt` | The port's own CMake project; builds out of tree into `build/port*/` |
-| `tools/port_gen.py` | Generators CMake runs: the unit list, the override headers, the ld script, the overlay and state tables |
+| `tools/port_gen.py` | Generators CMake runs: the unit list, the override headers, the overlay and state tables; the units' compile launcher (the overlay sections) |
 | `tools/port_inventory.py` | The inventory of what the game C needs from the PS1 (`counts`), the host-compile gate (`probe`, `link`, `structs`, `object-sizes`) |
 
 ## Compiling the game C for the host
 - **Flags:** C99 with GNU extensions (`gnu99`: unprototyped `f()` declarations are common in the game C and C23 would
   read them as `(void)`), `-fsigned-char` (the code relies on signed `char`), `-fwrapv`, `-fno-strict-aliasing`.
-  On ELF `-fno-pie`/`-no-pie` still: not for the arena (nothing depends on the link address any more, see "Memory
-  arena") but for the ld script, whose `INSERT BEFORE .data` sections land inside GNU_RELRO in a PIE link with
-  `-z now` (Ubuntu's defaults) and come out read-only; "Windows 2" replaces the script and lifts this.
+  On ELF `-fno-pie`/`-no-pie`, for the debug channel alone: it, the MCP server and `tests/port/mods.py` resolve host
+  symbols with `nm`'s link-time addresses of `build/port/dw2003`, which a PIE would relocate at load (Ubuntu's GCC
+  links PIE by default). Nothing else needs it: the arena needs no link address (see "Memory arena") and the
+  overlay sections are orphan sections the linker places after `.data`/`.bss`, outside GNU_RELRO (see "Overlays").
 - **`INCLUDE_ASM`** is empty on the host. No game function is left in asm except the 8 holdouts, and with
   `NON_MATCHING` their WIP C is compiled instead: the WIP C is the port's code. `tests/holdouts/run.sh` validates it
   by running a `NON_MATCHING` PS1 image through the replays (see "Testing").
@@ -136,11 +137,15 @@ convention's module prefixes leave no duplicate global). The overlay manager (`p
 PS1's copy into the slot:
 
 - **Data reset:** on the PS1 every load also resets the overlay's `.data`/`.bss`, because the file contains them.
-  The units are compiled with `-fdata-sections`, and a generated GNU ld script puts each overlay's (and the EXE's)
-  writable sections into `.dw3.data.<ovl>`/`.dw3.bss.<ovl>` with start/stop symbols. The manager snapshots them at
-  startup and restores them when `OVERLAY_COPY` loads a file, under the same "a different stage/file" condition the
-  game checks. A post-link check (`port_gen.py sections`) fails the build if any writable game section lies outside
-  those ranges.
+  Each unit is compiled through `port_gen.py rename` (CMake's compiler launcher), which renames the object's
+  `.data`/`.bss` sections into its overlay's with GNU objcopy: on ELF `dw3_data_<ovl>`/`dw3_bss_<ovl>`, orphan
+  output sections whose `__start_`/`__stop_` symbols GNU ld makes by itself; on PE the chunk groups
+  `.dw3data$<ovl>_1`/`.dw3bss$<ovl>_1` of the `.dw3data`/`.dw3bss` sections, which lld sorts by their `$` suffix
+  between generated empty marker chunks (`_0`, `_2`) carrying the same symbols (`port_gen.py markers`). No linker
+  script (DECISIONS "Overlay sections by renaming, no linker script"). The manager snapshots the ranges at startup
+  and restores them when `OVERLAY_COPY` loads a file, under the same "a different stage/file" condition the game
+  checks. A post-link check (`port_gen.py sections`) fails the build if a writable section of a game object was
+  not renamed.
 - **Current overlay per tier:** a code file becomes its tier's current overlay; a data file (no table) is copied into
   the slot buffer, exactly as the PS1's `memcpy` would.
 - **Address tables:** generated after compilation from `config/<overlay>.symbols.txt` and
@@ -329,14 +334,15 @@ on failure: `crash-*.txt` of the checkout and of `build/`).
 - **State probes:** `port_state_read` (a script's `wait_mem`) maps only layout-identical data and an explicit field
   table; other pointer-bearing objects and overlay data read as unmapped.
 - **BIOS:** a stand-in string, not the user's BIOS.
-- **Linux only, Windows in progress:** the ld script (`INSERT`, `-T`) that collects the per-overlay sections is a
-  GNU ld/ELF feature; a Windows (PE) or macOS build needs another arrangement for them (the Windows track on the
-  project board). The arena no longer needs anything of the linker. The SDL window is 64-bit only. The Windows cross
-  toolchain is in place (DECISIONS "Windows: cross-built from Linux"): `scripts/setup.sh llvm-mingw sdl3-windows`, the
-  CMake toolchain file `cmake/windows-x86_64.cmake`, `scripts/build_windows.sh [--launcher] [--test]` (the game into
-  `build/port-win`, the launcher into `build/launcher-win`, the launcher's self-test under Wine) and
-  `tools/port_inventory.py probe --target windows` (the units through llvm-mingw's clang). Every unit compiles for
-  Windows; the launcher links and passes its self-test under Wine. The runtime's operating-system calls are in one
+- **Windows, in progress (tested under Wine only):** the Windows cross build is in place (DECISIONS "Windows:
+  cross-built from Linux"): `scripts/setup.sh llvm-mingw sdl3-windows`, the CMake toolchain file
+  `cmake/windows-x86_64.cmake`, `scripts/build_windows.sh [--launcher] [--test]` (the game into `build/port-win`,
+  the launcher into `build/launcher-win`, the launcher's self-test under Wine) and `tools/port_inventory.py probe
+  --target windows` (the units through llvm-mingw's clang). `dw2003.exe` links (the overlay sections need no linker
+  script, see "Overlays") and, run under Wine headless (`tests/port/run.py --exe build/port-win/dw2003.exe --wine`),
+  replays `new_game` and `first_battle_save` with the frame log, the record and the SPU trace byte for byte equal to
+  the Linux build's. Nothing has run on real Windows yet (the board's Windows 9); the SDL window is 64-bit only; macOS
+  is not planned. The launcher links and passes its self-test under Wine. The runtime's operating-system calls are in one
   file with a POSIX and a Windows half, `port/src/platform.c` (`port/include/platform.h`: paths with drive letters
   and `\`, a replacing rename for the memory cards and the stamp cache, the per-user cache directory, positional
   reads of the disc image, a monotonic clock and a high-resolution sleep for the pace, the watchdog as a thread), the
@@ -344,8 +350,7 @@ on failure: `crash-*.txt` of the checkout and of `build/`).
   on Windows (UCRT has no line buffering), the console reset's `setjmp` takes no SEH frame on mingw (`port_setjmp`),
   and `--debug` is refused there (the channel is a Unix socket). The Windows executable is a GUI-subsystem program
   (no console window behind it when the launcher starts it; stderr still reaches the launcher's pipe) with a manifest
-  (`port/windows/`: the UTF-8 code page, long paths, per-monitor DPI). Every object compiles for Windows; the game
-  does not link yet: the ld script (the project board's Windows 2). The crash report's exception handler and
+  (`port/windows/`: the UTF-8 code page, long paths, per-monitor DPI). The crash report's exception handler and
   minidump are Windows 8 (a fatal stop, a halt and an unimplemented part already write the report on Windows, a
   crash does not).
 - **`long` on Windows (LLP64) was audited (2026-10-07):** `long` is 32-bit there, 64-bit on Linux x86_64. The game's
