@@ -171,12 +171,22 @@ At configure time:
   file under `src/` is not one of them). WSTAG260 is data-only and has no unit.
 - `include/include_asm.h` (empty `INCLUDE_ASM`/`INCLUDE_RODATA`) and `include/psyq/gtemac.h` (every `gte_*` macro
   translated from its MIPS sequence into calls of the software GTE, `port/psyq/gte.c`), first on the include path with the real headers' guards, as `tools/port_inventory.py probe` does.
-- `overlays.ld`: a GNU ld script (`-T`, `INSERT BEFORE .data`/`.bss`) that puts the EXE's (`src/main/`) and each
-  overlay's `.data`/`.bss` input sections (the units are compiled with `-fdata-sections`, matched by path
-  `*src/<dir>/*.c.o`; plus any object's `.data.dw3.<ovl>`/`.bss.dw3.<ovl>`) into `.dw3.data.<ovl>`/`.dw3.bss.<ovl>`
-  (`<ovl>` = `main` for the EXE) with `__start_dw3_*`/`__stop_dw3_*` symbols, and defines `port_slot1`, `port_slot2`,
-  `port_heap_start`, `port_heap_end` inside `port_arena`.
+- `unit_overlays.txt`: `<source path>\t<overlay>` per unit (`MAIN` for the EXE's), what the compile launcher reads.
 - `include/port_arena_gen.h`: the arena's sizes.
+- `dw3_markers.c` (PE only, `port_gen.py markers`): the `__start_dw3_*`/`__stop_dw3_*` symbols of the EXE's and each
+  overlay's `.data`/`.bss` as empty labelled chunks in the groups `.dw3data$<ovl>_0`/`_2` and `.dw3bss$<ovl>_0`/`_2`.
+
+Each unit is compiled through `port_gen.py rename` (CMake's `C_COMPILER_LAUNCHER` on the units; a launcher of the
+user's such as ccache runs after it): the compile, then GNU objcopy renames the object's writable sections
+(`.data*`, `.bss*`; not `.data.rel.ro*`, const after relocation) into the overlay's: on ELF `dw3_data_<ovl>` and
+`dw3_bss_<ovl>` (`<ovl>` = `main` for the EXE), orphan output sections with C-identifier names, for which GNU ld
+makes `__start_`/`__stop_` by itself and which it places after `.data`/`.bss`, outside GNU_RELRO (a PIE link with
+`-z now` is fine); on PE `.dw3data$<ovl>_1` and `.dw3bss$<ovl>_1`, chunk groups of the two output sections
+`.dw3data` and `.dw3bss` that lld sorts by their `$` suffix, so that they lie between the markers above (two output
+sections in all, not one per overlay). No linker script (lld for PE takes none; DECISIONS "Overlay sections by
+renaming, no linker script"). The host's GNU objcopy and objdump do the renaming for both formats: they read COFF
+(Fedora's and Ubuntu's binutils have the `x86_64-pe` target; CMake checks `objcopy --info`), and llvm-objcopy cannot
+rename COFF sections. `port/src/asmdata.c` names its FIELDSTG section explicitly the same way.
 
 At build time, after the units are compiled:
 - `overlay_tables.c`: per overlay `{ tier, file ID, name, [{ PS1 address, host function }], section bounds }`.
@@ -194,10 +204,10 @@ At build time, after the units are compiled:
   at `-m64` (to assembly, ~1 s) in every build, so the `-m32` build's table is the same, and it fails if a
   pointer-free object's size differs between the two.
 
-After the link (`port_gen.py sections`, POST_BUILD): the link map (`build/port/dw2003.map`, `-Wl,-Map`) must show every
-writable input section of a game object (`.data*`, `.bss*`, `COMMON` of the units in CMake's `dw3_game.dir`) inside a
-`.dw3.*` output section, the ranges the console's reset restores; one outside fails the build (`-v` lists the
-runtime's and the shim's own writable data, which reset themselves).
+After the link (`port_gen.py sections`, POST_BUILD): every writable section of a game object (`.data*`, `.bss*`,
+`COMMON` of the units in CMake's `dw3_game.dir`, read with `objdump -h`) must be a renamed one, i.e. inside the
+ranges the console's reset restores; one left out fails the build (`-v` lists the other writable sections, such as
+ASan's `asan_globals`). The link map (`build/port/dw2003.map`, `-Wl,-Map`) is written for reading.
 
 ## The runtime
 **Arena** (docs/PORT.md "Memory arena"): one static block, `port_arena`, mirroring the PS1 from
@@ -336,13 +346,13 @@ at 24-85 ms (mean 57) with no refill and no drop, and the disk file holds the WA
   4-byte block alignment (now 8 under `PC_PORT`, `src/main/heap.c` `HEAP_ALIGN`), FIELDSTG's NULL map-event list and
   `FieldstgBackgroundView`'s byte pad. The disc is read through `--disc` (`src/disc.c`, SHA-1 checked).
 - The BIOS is a stand-in: `BIOS_PTR` serves a 256-byte region at `0x1FC00100` holding a version string.
-- Windows/macOS: the ld script (`INSERT`, `-T`) that collects the per-overlay sections is GNU ld/ELF; PE needs
-  another arrangement for them (the Windows track on the project board). The arena needs nothing of the linker
-  since 2026-10-07 (no alignment, no link-time symbols; `-no-pie` stays only because the script's inserted sections
-  would fall into a PIE link's RELRO), and `port_gen.py state` reads symbol sizes
-  from a compile of the units, not from `nm -S` (COFF has none). The runtime's system calls are platform-split
-  (`port/src/platform.c`; `docs/PORT.md` "Known limitations"): every file of `port/src/` compiles for Windows;
-  `--debug` is refused there, and the watchdog's and a crash's report are the board's Windows 8.
+- Windows: `dw2003.exe` links (`scripts/build_windows.sh`) and replays both layer-2 scripts under Wine with the
+  Linux build's log, record and SPU trace byte for byte (`tests/port/run.py --exe build/port-win/dw2003.exe --wine`);
+  nothing has run on real Windows yet (the board's Windows 9). The arena needs nothing of the linker (no alignment,
+  no link-time symbols), the overlay sections need no linker script (above), `port_gen.py state` reads symbol sizes
+  from a compile of the units, not from `nm -S` (COFF has none), and the runtime's system calls are platform-split
+  (`port/src/platform.c`; `docs/PORT.md` "Known limitations"); `--debug` is refused there, and the watchdog's and a
+  crash's report are the board's Windows 8. macOS is not planned.
 - The snapshot copies with plain byte loops in `no_sanitize_address` functions (ASan's redzones between globals
   are inside the ranges); so a sanitizer build's overlay-load log lines show other section sizes (ASan's redzones)
   than a normal build's: compare logs only between builds of the same kind.

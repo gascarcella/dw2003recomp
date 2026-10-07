@@ -4,8 +4,8 @@
  *  - D_800812F8, D_80081358: LIBGS's matrices (psyq/libgs/bss; gfx.c saves/restores them);
  *  - D_80081454: LIBCD's StCdIntrFlag (psyq/libcd/bss; STDWTITL's movie player polls and clears it);
  *  - FIELDSTG's .bss at 0x8009B8EC..0x8009BA04, which stays asm on the PS1 because of psylink's fill
- *    (config/fieldstg.yaml), in FIELDSTG's host .bss (the section name is what tools/port_gen.py ldscript collects),
- *    so a reload of FIELDSTG resets them as the PS1's copy of the file did. */
+ *    (config/fieldstg.yaml), in FIELDSTG's host .data (as zeros; the section tools/port_gen.py `rename` gives its
+ *    units' .data), so a reload of FIELDSTG resets them as the PS1's copy of the file did. */
 #include "port_runtime.h"
 
 #include "fieldstg.h"
@@ -13,7 +13,14 @@
 #include "psyq/libgte.h"
 
 #define WEAK __attribute__((weak))
-#define FIELDSTG_BSS __attribute__((section(".bss.dw3.fieldstg")))
+/* FIELDSTG's .data section (the names tools/port_gen.py `rename` gives the units' sections: game_section), not its
+ * .bss: GCC gives a zero-initialised variable in a section not named .bss* a PROGBITS section, and GNU ld would then
+ * make a second, PROGBITS dw3_bss_fieldstg beside the units' NOBITS one. 280 bytes of zeros in the file. */
+#ifdef _WIN32
+#define FIELDSTG_BSS __attribute__((section(".dw3data$fieldstg_1")))
+#else
+#define FIELDSTG_BSS __attribute__((section("dw3_data_fieldstg")))
+#endif
 
 WEAK MATRIX D_800812F8;
 WEAK MATRIX D_80081358;

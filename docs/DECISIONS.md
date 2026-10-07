@@ -232,11 +232,26 @@ do none of that (COFF aligns sections to 8 KB at most, ASLR moves the image, lld
 regions are macros on `port_arena` (`include/port.h`), a tag is a pointer's word offset in the tag window (the units'
 data regions and the arena, measured at startup, up to 64 MB so that ASan's redzones fit; `port_ptr_to_u32`, resolved
 against `port_tag_base` by the shim),
-the last `s32` that carried half a host pointer is a pointer. The ELF link stays non-PIE for now, for the ld script
-alone: its `INSERT BEFORE .data` sections fall inside GNU_RELRO in a PIE link with `-z now` (Ubuntu's defaults) and
-the game's data comes out read-only; Windows 2 replaces the script. The symbol sizes of `port_gen.py state` come from compiling the units (asm comments printing `sizeof`), not
+the last `s32` that carried half a host pointer is a pointer. (The ELF link stayed non-PIE one day longer, for the
+ld script alone: its `INSERT BEFORE .data` sections fell inside GNU_RELRO in a PIE link with `-z now`, Ubuntu's
+defaults, and the game's data came out read-only; "Overlay sections by renaming" below replaced the script.) The symbol sizes of `port_gen.py state` come from compiling the units (asm comments printing `sizeof`), not
 from `nm -S`, which COFF cannot give. The Windows track on the project board builds on this. The tag window also
 fixed a silent drop: a static ordering table (FIGHTSTG's cursor) lay outside the old walkable window.
+
+## Overlay sections by renaming, no linker script
+_Decided: 2026-10-07_
+
+The overlay manager needs each overlay's (and the EXE's) writable data in its own bracketed range, to snapshot at
+startup and restore on a load. That was a generated GNU ld script (`-T`, `INSERT BEFORE .data`) collecting the units'
+sections by object path, which lld for PE cannot take, and which put the game's data inside GNU_RELRO in a PIE link
+with `-z now` (CI's Ubuntu). Now each unit's object has its `.data`/`.bss` sections renamed right after the compile
+(`port_gen.py rename`, the units' CMake compiler launcher, with the host's GNU objcopy, which reads COFF too): on ELF
+into `dw3_data_<ovl>`/`dw3_bss_<ovl>`, orphan sections for which GNU ld makes the `__start_`/`__stop_` symbols
+itself and which it places after `.data`/`.bss`, outside RELRO, so the ELF link is PIE or not as the toolchain
+likes; on PE into `$`-sorted chunk groups of two output sections, `.dw3data` and `.dw3bss`, between generated
+empty marker chunks that carry the same symbols (one section per overlay would be 600 PE sections). The post-link
+check reads the objects (`objdump -h`), not a link map, so it is the same on both. Not `#pragma clang section`:
+GCC has none, and one path for both compilers is worth the objcopy pass.
 
 # Launcher and mods
 
@@ -299,7 +314,7 @@ one pinned release tarball that `scripts/setup.sh llvm-mingw` unpacks into `tool
 sudo, the same build on CI, Fedora and Ubuntu), with SDL3 cross-built the same way (`sdl3-windows`) and one CMake
 toolchain file (`cmake/windows-x86_64.cmake`) for both projects. Not GCC mingw-w64: there is no pinned project-local
 build of it short of compiling GCC, and lld writes the PDBs the crash minidumps need. lld takes no linker script, so
-the port's ld script has to go (the board's Windows 2). Everything links statically (no DLL beside the executables),
+the port's ld script went ("Overlay sections by renaming, no linker script"). Everything links statically (no DLL beside the executables),
 x86_64 only, Windows 10 or newer. It is tested on Linux: Wine for the automated runs (the replays must give the Linux
 build's logs and record hashes; CI), Proton for the play-test by hand; real Windows comes from testers afterwards
 (#37).

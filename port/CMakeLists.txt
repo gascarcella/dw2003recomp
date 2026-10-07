@@ -3,9 +3,10 @@
 #
 #   cmake -S port -B build/port -G Ninja && cmake --build build/port && build/port/dw2003 --max-frames 60
 #
-# tools/port_gen.py generates, under build/port/gen/: the unit list (configure time), the override headers and the
-# ld script (configure time), and the overlay address tables (build time, from nm of the compiled units). The PS1
-# build (configure.py, build.ninja) is untouched. port/README.md has the details.
+# tools/port_gen.py generates, under build/port/gen/: the unit list and the override headers (configure time), and
+# the overlay address tables (build time, from nm of the compiled units); it is also the units' compile launcher
+# (`rename`: each unit's .data/.bss renamed into its overlay's section, no linker script). The PS1 build
+# (configure.py, build.ninja) is untouched. port/README.md has the details.
 cmake_minimum_required(VERSION 3.20)
 project(dw2003port C)
 
@@ -28,7 +29,7 @@ else()
     find_program(DW3_PYTHON NAMES python3 python REQUIRED)
 endif()
 
-# ---- Configure-time generation: the unit list, the override headers, the ld script, the arena's layout.
+# ---- Configure-time generation: the unit list, the override headers, the arena's layout.
 function(dw3_generate)
     execute_process(COMMAND "${DW3_PYTHON}" "${DW3_PORT_GEN}" ${ARGN} RESULT_VARIABLE r OUTPUT_VARIABLE out
                     ERROR_VARIABLE err)
@@ -40,7 +41,6 @@ function(dw3_generate)
 endfunction()
 dw3_generate(units --out "${DW3_GEN}/units.cmake")
 dw3_generate(overrides --out "${DW3_GEN}/include")
-dw3_generate(ldscript --out "${DW3_GEN}/overlays.ld")
 dw3_generate(arena-header --out "${DW3_GEN}/include/port_arena_gen.h")
 include("${DW3_GEN}/units.cmake")
 foreach(override IN LISTS DW3_PORT_UNIT_OVERRIDES)
@@ -55,6 +55,16 @@ foreach(override IN LISTS DW3_PORT_UNIT_OVERRIDES)
     list(INSERT DW3_GAME_UNITS ${i} "${path}")
     message(STATUS "unit override: ${unit} <- ${path}")
 endforeach()
+# The unit -> overlay map of the compile launcher (port_gen.py rename): `<source path>\t<overlay>` lines.
+set(DW3_UNIT_OVERLAYS "")
+math(EXPR DW3_LAST_UNIT "${DW3_GAME_UNIT_COUNT} - 1")
+foreach(i RANGE ${DW3_LAST_UNIT})
+    list(GET DW3_GAME_UNITS ${i} unit)
+    list(GET DW3_GAME_UNIT_OVERLAYS ${i} overlay)
+    get_filename_component(unit "${unit}" ABSOLUTE)
+    string(APPEND DW3_UNIT_OVERLAYS "${unit}\t${overlay}\n")
+endforeach()
+file(WRITE "${DW3_GEN}/unit_overlays.txt" "${DW3_UNIT_OVERLAYS}")
 file(GLOB DW3_CONFIG_DEPS "${DW3_ROOT}/config/*.symbols.txt" "${DW3_ROOT}/config/wstag/*.symbols.txt")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
              "${DW3_PORT_GEN}" "${DW3_ROOT}/config/wstag.txt" "${DW3_ROOT}/config/wstag_c.txt"
@@ -69,17 +79,9 @@ if(DW3_PORT_SANITIZE)
     list(APPEND DW3_COMMON_FLAGS -fsanitize=address,undefined -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address,undefined)
 endif()
-# Non-PIE on ELF, for the ld script's sake only: the arena needs no fixed load address any more (port/src/arena.c,
-# DECISIONS "The arena assumes no alignment and no link address"), but the .dw3.* sections the script INSERTs BEFORE
-# .data land inside GNU_RELRO in a PIE link with -z now (Ubuntu's defaults: GNU ld 2.42 ends the RELRO range after
-# them), so the loader makes the game's whole .data read-only and its first write faults (CI, 2026-10-07). "Windows 2"
-# replaces the script and lifts this. PE has no such flag (ASLR relocates the image). The Windows cross build
-# (cmake/windows-x86_64.cmake) still links with the ld script and checks the map below, which lld for PE cannot do:
-# until "Windows 2" that build compiles every object and fails at the link.
-if(NOT WIN32)
-    list(APPEND DW3_COMMON_FLAGS -fno-pie)
-    add_link_options(-no-pie)
-endif()
+# PIE or not is the toolchain's choice: nothing depends on the link address (port/src/arena.c, DECISIONS "The arena
+# assumes no alignment and no link address"), and the overlay sections are orphan sections the linker places after
+# .data/.bss, outside GNU_RELRO (DECISIONS "Overlay sections by renaming, no linker script").
 # -m32: everything compiled and linked 32-bit (nm reads both).
 if(DW3_PORT_M32)
     if(WIN32)
@@ -89,9 +91,32 @@ if(DW3_PORT_M32)
     add_link_options(-m32)
 endif()
 
-# ---- The game's units: one object library, each overlay's data in its own sections (-fdata-sections) for the ld
-# script to collect. The game's own main() becomes game_main (port/src/main.c has the host's).
+# ---- The game's units: one object library. Each unit is compiled through port_gen.py rename (C_COMPILER_LAUNCHER),
+# which renames the object's .data/.bss sections into its overlay's (ELF: dw3_data_<ovl>/dw3_bss_<ovl>, whose
+# __start_/__stop_ symbols GNU ld makes by itself; PE: the .dw3data$<ovl>_1/.dw3bss$<ovl>_1 chunk groups between the
+# generated markers), so that the overlay manager can snapshot and restore them (port/src/overlay.c) with no linker
+# script. GNU objcopy and objdump do the renaming on both formats (llvm-objcopy cannot rename COFF sections); a
+# launcher of the user's (ccache) still runs, after the rename's. The game's own main() becomes game_main
+# (port/src/main.c has the host's).
+find_program(DW3_OBJCOPY NAMES objcopy NO_CMAKE_FIND_ROOT_PATH)
+find_program(DW3_OBJDUMP NAMES objdump NO_CMAKE_FIND_ROOT_PATH)
+if(NOT DW3_OBJCOPY OR NOT DW3_OBJDUMP)
+    message(FATAL_ERROR "GNU objcopy and objdump (binutils) are needed on the host: the units' section renaming")
+endif()
+if(WIN32)
+    execute_process(COMMAND "${DW3_OBJCOPY}" --info OUTPUT_VARIABLE DW3_OBJCOPY_INFO ERROR_QUIET)
+    if(NOT DW3_OBJCOPY_INFO MATCHES "pe-x86-64")
+        message(FATAL_ERROR "${DW3_OBJCOPY} cannot read PE objects (x86_64-pe is not among its targets): the units' "
+                            "section renaming needs a host binutils with it (Fedora's and Ubuntu's have it)")
+    endif()
+endif()
 add_library(dw3_game OBJECT ${DW3_GAME_UNITS})
+set(DW3_RENAME_LAUNCHER "${DW3_PYTHON}" "${DW3_PORT_GEN}" rename --objcopy "${DW3_OBJCOPY}" --objdump "${DW3_OBJDUMP}"
+    --units "${DW3_GEN}/unit_overlays.txt" --)
+if(CMAKE_C_COMPILER_LAUNCHER)
+    list(APPEND DW3_RENAME_LAUNCHER ${CMAKE_C_COMPILER_LAUNCHER})
+endif()
+set_target_properties(dw3_game PROPERTIES C_COMPILER_LAUNCHER "${DW3_RENAME_LAUNCHER}")
 set_target_properties(dw3_game PROPERTIES C_STANDARD 99 C_EXTENSIONS ON C_STANDARD_REQUIRED ON)
 target_compile_definitions(dw3_game PRIVATE ${DW3_GAME_DEFINES})
 target_include_directories(dw3_game BEFORE PRIVATE ${DW3_GAME_INCLUDES})
@@ -150,13 +175,17 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT CMAKE_C_FLAGS_RELEASE MATCHES "(^
     string(APPEND CMAKE_C_FLAGS_RELEASE " -g")
 endif()
 
-# ---- The binary: the runtime, the tables, the shim, the units.
+# ---- The binary: the runtime, the tables, the shim, the units (and on PE the overlay sections' bracket symbols).
 file(GLOB DW3_RUNTIME_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
+set(DW3_PLATFORM_SRCS "")
+if(WIN32)
+    dw3_generate(markers --out "${DW3_GEN}/dw3_markers.c")
+    list(APPEND DW3_PLATFORM_SRCS "${DW3_GEN}/dw3_markers.c")
+endif()
 add_executable(dw2003 ${DW3_RUNTIME_SRCS} "${DW3_GEN}/overlay_tables.c" "${DW3_GEN}/port_state_tables.c"
-               "${DW3_GEN}/port_version.c" ${DW3_PSYQ_SRCS} $<TARGET_OBJECTS:dw3_game>)
+               "${DW3_GEN}/port_version.c" ${DW3_PLATFORM_SRCS} ${DW3_PSYQ_SRCS} $<TARGET_OBJECTS:dw3_game>)
 add_dependencies(dw2003 dw3_version)
-set_target_properties(dw2003 PROPERTIES C_STANDARD 99 C_EXTENSIONS ON C_STANDARD_REQUIRED ON
-                      LINK_DEPENDS "${DW3_GEN}/overlays.ld")
+set_target_properties(dw2003 PROPERTIES C_STANDARD 99 C_EXTENSIONS ON C_STANDARD_REQUIRED ON)
 target_compile_definitions(dw2003 PRIVATE ${DW3_GAME_DEFINES})
 target_include_directories(dw2003 BEFORE PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${DW3_PORT_PSYQ_DIR}"
                            ${DW3_GAME_INCLUDES})
@@ -172,12 +201,12 @@ set_property(SOURCE "${DW3_PORT_PSYQ_DIR}/gpu.c" APPEND PROPERTY COMPILE_OPTIONS
 # The SPU core renders every audio frame: -O2 in every build (about 4x the port's default; port/src/spu.c).
 file(GLOB DW3_SPU_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/spu*.c")
 set_property(SOURCE ${DW3_SPU_SRCS} APPEND PROPERTY COMPILE_OPTIONS -O2)
-# The ld script: the EXE's and each overlay's .data/.bss sections and the arena's symbols. The link map is checked
-# after every link: a game object's writable data outside those sections would survive the console's reset
-# (port/src/reset.c; port_gen.py sections).
-target_link_options(dw2003 PRIVATE "-Wl,-T,${DW3_GEN}/overlays.ld" "-Wl,-Map,${CMAKE_BINARY_DIR}/dw2003.map")
+# The link map, for reading. After every link the game's objects are checked: a writable section the compile launcher
+# did not rename would survive the console's reset (port/src/reset.c; port_gen.py sections).
+target_link_options(dw2003 PRIVATE "-Wl,-Map,${CMAKE_BINARY_DIR}/dw2003.map")
 add_custom_command(TARGET dw2003 POST_BUILD
-                   COMMAND "${DW3_PYTHON}" "${DW3_PORT_GEN}" sections --map "${CMAKE_BINARY_DIR}/dw2003.map"
+                   COMMAND "${DW3_PYTHON}" "${DW3_PORT_GEN}" sections --objdump "${DW3_OBJDUMP}"
+                           --objects "${DW3_GEN}/game_objects.rsp"
                    COMMENT "port_gen.py sections (the game's data is all in the reset's ranges)" VERBATIM)
 # The built-in mods' manifests (port/mods/<id>/mod.json; docs/LAUNCHER.md "Mod manifest") beside the binary, where the
 # launcher lists them: copied on every build (a few small files).
