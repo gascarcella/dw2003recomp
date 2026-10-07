@@ -340,7 +340,9 @@ at 24-85 ms (mean 57) with no refill and no drop, and the disk file holds the WA
   another arrangement for them (the Windows track on the project board). The arena needs nothing of the linker
   since 2026-10-07 (no alignment, no link-time symbols; `-no-pie` stays only because the script's inserted sections
   would fall into a PIE link's RELRO), and `port_gen.py state` reads symbol sizes
-  from a compile of the units, not from `nm -S` (COFF has none).
+  from a compile of the units, not from `nm -S` (COFF has none). The runtime's system calls are platform-split
+  (`port/src/platform.c`; `docs/PORT.md` "Known limitations"): every file of `port/src/` compiles for Windows;
+  `--debug` is refused there, and the watchdog's and a crash's report are the board's Windows 8.
 - The snapshot copies with plain byte loops in `no_sanitize_address` functions (ASan's redzones between globals
   are inside the ranges); so a sanitizer build's overlay-load log lines show other section sizes (ASan's redzones)
   than a normal build's: compare logs only between builds of the same kind.

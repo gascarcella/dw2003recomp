@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "platform.h"
 #include "port_harness.h"
 #include "port_runtime.h"
 #include "psyq.h"
@@ -21,8 +22,9 @@ typedef struct PortMemcard {
 
 static PortMemcard *port_memcards[2];
 
-/* Writes the image to its file (whole: 128 KB through a temporary file and a rename, so that a crash leaves the old
- * card or the new one, never half of each). */
+/* Writes the image to its file (whole: 128 KB through a temporary file and a replacing rename (port_file_replace:
+ * Windows's rename refuses an existing target), so that a crash leaves the old card or the new one, never half of
+ * each). */
 static void port_memcard_written(int slot) {
     PortMemcard *card = port_memcards[slot];
     char *tmp;
@@ -40,7 +42,7 @@ static void port_memcard_written(int slot) {
     if (f == NULL || fwrite(card->image, 1, PORT_MEMCARD_SIZE, f) != PORT_MEMCARD_SIZE || fclose(f) != 0) {
         port_fatal("memcard %d: cannot write %s: %s", slot + 1, tmp, strerror(errno));
     }
-    if (rename(tmp, card->path) != 0) {
+    if (port_file_replace(tmp, card->path) != 0) {
         port_fatal("memcard %d: cannot rename %s to %s: %s", slot + 1, tmp, card->path, strerror(errno));
     }
     free(tmp);

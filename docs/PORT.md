@@ -336,8 +336,18 @@ on failure: `crash-*.txt` of the checkout and of `build/`).
   CMake toolchain file `cmake/windows-x86_64.cmake`, `scripts/build_windows.sh [--launcher] [--test]` (the game into
   `build/port-win`, the launcher into `build/launcher-win`, the launcher's self-test under Wine) and
   `tools/port_inventory.py probe --target windows` (the units through llvm-mingw's clang). Every unit compiles for
-  Windows; the launcher links and passes its self-test under Wine; the game does not link yet (the ld script and the
-  POSIX calls of `port/src/`): the project board's Windows 2 and 4.
+  Windows; the launcher links and passes its self-test under Wine. The runtime's operating-system calls are in one
+  file with a POSIX and a Windows half, `port/src/platform.c` (`port/include/platform.h`: paths with drive letters
+  and `\`, a replacing rename for the memory cards and the stamp cache, the per-user cache directory, positional
+  reads of the disc image, a monotonic clock and a high-resolution sleep for the pace, the watchdog as a thread), the
+  frame log, the record and the SPU trace are written in binary mode (the same bytes on both), stderr is unbuffered
+  on Windows (UCRT has no line buffering), the console reset's `setjmp` takes no SEH frame on mingw (`port_setjmp`),
+  and `--debug` is refused there (the channel is a Unix socket). The Windows executable is a GUI-subsystem program
+  (no console window behind it when the launcher starts it; stderr still reaches the launcher's pipe) with a manifest
+  (`port/windows/`: the UTF-8 code page, long paths, per-monitor DPI). Every object compiles for Windows; the game
+  does not link yet: the ld script (the project board's Windows 2). The crash report's exception handler and
+  minidump are Windows 8 (a fatal stop, a halt and an unimplemented part already write the report on Windows, a
+  crash does not).
 - **`long` on Windows (LLP64) was audited (2026-10-07):** `long` is 32-bit there, 64-bit on Linux x86_64. The game's
   structs and headers use the sized types (`s32`, `u32`, `s64`); the `long`s left are Psy-Q prototypes (`CdRead2`,
   `MemCardInit`) and counters and option values in `port/src` (`port_frames`, `port_max_frames`, the pace, the step

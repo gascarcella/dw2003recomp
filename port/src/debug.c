@@ -59,6 +59,30 @@
  *   channel share that state. While paused the channel keeps answering peek/poke/screenshot/status/hash; step runs
  *   frames from there. A client that disconnects drops its pending op, frees the pad and resumes the game, so a dead
  *   tool never leaves the game held. */
+#ifdef _WIN32
+/* The Windows build has no channel yet (a Unix socket, poll and /proc/self/maps are POSIX): --debug is refused; the
+ * pump's hooks are no-ops (port_debug_active stays 0, so none is reached). */
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "port_harness.h"
+
+int port_debug_active;
+int port_debug_pad_owned;
+
+void port_debug_open(const char *path) {
+    fprintf(stderr, "port: --debug %s: the debug channel is not available on Windows\n", path);
+    exit(64);
+}
+void port_debug_frame(void) {
+}
+void port_debug_poll_paused(void) {
+}
+void port_debug_resumed(void) {
+}
+void port_debug_close(void) {
+}
+#else
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -834,3 +858,4 @@ void port_debug_resumed(void) {
         debug_reset();
     }
 }
+#endif /* _WIN32 */

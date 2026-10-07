@@ -13,12 +13,12 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #include "battle_scan.h"
 #include "fieldstg.h"
 #include "gamestate.h"
 #include "json.h"
+#include "platform.h"
 #include "port_harness.h"
 #include "port_runtime.h"
 #include "settings.h"
@@ -87,13 +87,11 @@ static struct {
     int active;             /* applied */
     long base_pace;         /* the pace when it is off */
     long test_on, test_off; /* DW3_PORT_FAST_FORWARD */
-    struct timespec t0;
+    long long t0;           /* port_clock_ns at the start */
 } ff;
 
 static double ff_seconds(void) {
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    return (double)(now.tv_sec - ff.t0.tv_sec) + (double)(now.tv_nsec - ff.t0.tv_nsec) / 1e9;
+    return (double)(port_clock_ns() - ff.t0) / 1e9;
 }
 
 static void ff_start(struct Mod *mod) {
@@ -607,7 +605,7 @@ void port_mods_settings(const PortJson *settings) {
 void port_mods_start(int active) {
     int m, k;
     ff.base_pace = port_pace_get();
-    clock_gettime(CLOCK_MONOTONIC, &ff.t0);
+    ff.t0 = port_clock_ns();
     for (m = 0; m < MOD_COUNT; m++) {
         Mod *mod = &mods[m];
         if (!active) {
