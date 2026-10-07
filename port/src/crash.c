@@ -15,21 +15,33 @@
  * line on stderr names it: `port: crash report: PATH`.
  *
  * DW3_PORT_CRASH_AT=VSYNC (tests/port/crash.py): a NULL write at that vsync, from port_crash_test_write, so that a
- * report's top frame symbolizes to a known function. */
+ * report's top frame symbolizes to a known function.
+ *
+ * Windows (the Windows build, port/src/platform.c): the report for a fatal stop, a halt and an unimplemented part is
+ * the same file (the stack from CaptureStackBackTrace, addresses relative to the image base, which a PDB resolves);
+ * the exception handler and the minidump for a crash are the project board's Windows 8, so a crash there ends the
+ * process without a report for now. */
+#ifndef _WIN32
 #define _GNU_SOURCE
-#include <errno.h>
 #include <execinfo.h>
-#include <fcntl.h>
 #include <link.h>
 #include <signal.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
 #include <sys/utsname.h>
-#include <time.h>
 #include <ucontext.h>
 #include <unistd.h>
+#else
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <io.h>
+#include <sys/stat.h>
+#endif
+#include <errno.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
+#include "platform.h"
 #include "port_harness.h"
 #include "port_runtime.h"
 #include "psyq.h"
@@ -46,11 +58,15 @@ static char crash_text[CRASH_TEXT];
 static size_t crash_len;
 static char crash_path[CRASH_PATH + 64];
 static long crash_test_at = -1;
-static volatile sig_atomic_t crash_reporting;
+static volatile int crash_reporting;
 
 /* The main executable's load address (0 for a non-PIE binary) and its PT_LOAD range: a stack address inside it is
  * reported as exe+offset, which addr2line resolves against the unstripped build. */
 static uintptr_t crash_exe_base, crash_exe_lo, crash_exe_hi;
+
+#ifndef _WIN32
+static void crash_install_handlers(void);
+#endif
 
 /* The last lines of port_log, oldest first from crash_log_next. */
 static char crash_log[CRASH_LOG_LINES][CRASH_LOG_LINE];
@@ -134,6 +150,7 @@ static void crash_stamp(time_t t, char out[16]) {
 
 /* ---- the report ---- */
 
+#ifndef _WIN32
 static const char *crash_signal_name(int sig) {
     switch (sig) {
     case SIGSEGV: return "SIGSEGV";
@@ -145,6 +162,7 @@ static const char *crash_signal_name(int sig) {
     default: return "signal";
     }
 }
+#endif
 
 static void crash_write_context(const char *kind, int status) {
     const PortOverlay *o1 = port_overlay_current(1), *o2 = port_overlay_current(2);
@@ -190,6 +208,7 @@ static void crash_write_context(const char *kind, int status) {
     }
 }
 
+#ifndef _WIN32
 static void crash_write_registers(const ucontext_t *uc) {
 #if defined(__x86_64__)
     cw_str("pc: ");
@@ -214,10 +233,16 @@ static void crash_write_registers(const ucontext_t *uc) {
     cw_str("pc: (no registers on this architecture)\n");
 #endif
 }
+#endif
 
 static void crash_write_stack(void) {
     void *frames[CRASH_FRAMES];
-    int n = backtrace(frames, CRASH_FRAMES), i;
+    int i;
+#ifdef _WIN32
+    int n = (int)CaptureStackBackTrace(0, CRASH_FRAMES, frames, NULL);
+#else
+    int n = backtrace(frames, CRASH_FRAMES);
+#endif
     cw_str("\nstack (return addresses; frame 0 is the reporter):\n");
     for (i = 0; i < n; i++) {
         cw_str("  #");
@@ -241,7 +266,11 @@ static void crash_write_file(void) {
     memcpy(crash_path + n, "crash-", 6);
     memcpy(crash_path + n + 6, stamp, 15);
     memcpy(crash_path + n + 21, ".txt", 5);
+#ifdef _WIN32
+    fd = _open(crash_path, _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT, _S_IREAD | _S_IWRITE);
+#else
     fd = open(crash_path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+#endif
     if (fd < 0) {
         static const char msg[] = "port: crash report: could not be written\n";
         if (write(2, msg, sizeof(msg) - 1) < 0) {
@@ -250,7 +279,11 @@ static void crash_write_file(void) {
         return;
     }
     while (off < crash_len) {
+#ifdef _WIN32
+        int w = _write(fd, crash_text + off, (unsigned)(crash_len - off));
+#else
         ssize_t w = write(fd, crash_text + off, crash_len - off);
+#endif
         if (w < 0) {
             if (errno == EINTR) {
                 continue;
@@ -259,7 +292,11 @@ static void crash_write_file(void) {
         }
         off += (size_t)w;
     }
+#ifdef _WIN32
+    _close(fd);
+#else
     close(fd);
+#endif
     {
         static const char head[] = "port: crash report: ";
         if (write(2, head, sizeof(head) - 1) < 0 || write(2, crash_path, strlen(crash_path)) < 0 ||
@@ -269,6 +306,7 @@ static void crash_write_file(void) {
     }
 }
 
+#ifndef _WIN32
 static void crash_handler(int sig, siginfo_t *info, void *ctx) {
     if (crash_reporting) {
         return; /* a second fault while reporting: the default action takes over (SA_RESETHAND) */
@@ -323,15 +361,42 @@ static int crash_phdr(struct dl_phdr_info *info, size_t size, void *data) {
     }
     return 1;
 }
+#endif
+
+/* The platform line and the executable's address range; the signal handlers (POSIX). */
+static void crash_init_platform(void) {
+#ifdef _WIN32
+    typedef LONG(WINAPI * RtlGetVersionFn)(PRTL_OSVERSIONINFOW);
+    HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+    RtlGetVersionFn get_version = ntdll != NULL ? (RtlGetVersionFn)(void *)GetProcAddress(ntdll, "RtlGetVersion") : NULL;
+    RTL_OSVERSIONINFOW v;
+    const IMAGE_DOS_HEADER *dos = (const IMAGE_DOS_HEADER *)GetModuleHandleW(NULL);
+    const IMAGE_NT_HEADERS *nt = (const IMAGE_NT_HEADERS *)((const char *)dos + dos->e_lfanew);
+    memset(&v, 0, sizeof(v));
+    v.dwOSVersionInfoSize = sizeof(v);
+    if (get_version != NULL && get_version(&v) == 0) {
+        snprintf(crash_platform, sizeof(crash_platform), "Windows %lu.%lu.%lu x86_64", (unsigned long)v.dwMajorVersion,
+                 (unsigned long)v.dwMinorVersion, (unsigned long)v.dwBuildNumber);
+    } else {
+        strcpy(crash_platform, "Windows x86_64");
+    }
+    crash_exe_base = (uintptr_t)dos;
+    crash_exe_lo = crash_exe_base;
+    crash_exe_hi = crash_exe_base + nt->OptionalHeader.SizeOfImage;
+#else
+    struct utsname u;
+    void *frames[4];
+    if (uname(&u) == 0) {
+        snprintf(crash_platform, sizeof(crash_platform), "%s %s %s", u.sysname, u.release, u.machine);
+    } else {
+        strcpy(crash_platform, "unknown");
+    }
+    dl_iterate_phdr(crash_phdr, NULL);
+    backtrace(frames, 4); /* primes libgcc's unwinder: the handler's call then loads nothing */
+#endif
+}
 
 void port_crash_init(const char *dir) {
-    static const int sigs[] = { SIGSEGV, SIGBUS, SIGFPE, SIGILL, SIGABRT };
-    static char alt_stack[64 * 1024];
-    struct utsname u;
-    stack_t ss;
-    struct sigaction sa;
-    void *frames[4];
-    size_t i;
     const char *env;
 
     if (dir == NULL || *dir == '\0') {
@@ -341,16 +406,26 @@ void port_crash_init(const char *dir) {
         port_fatal("--crash-dir: the path is too long");
     }
     strcpy(crash_dir, dir);
-    if (mkdir(crash_dir, 0755) != 0 && errno != EEXIST) {
+    if (port_make_dirs(crash_dir) != 0) {
         port_fatal("--crash-dir %s: cannot create: %s", crash_dir, strerror(errno));
     }
-    if (uname(&u) == 0) {
-        snprintf(crash_platform, sizeof(crash_platform), "%s %s %s", u.sysname, u.release, u.machine);
-    } else {
-        strcpy(crash_platform, "unknown");
+    crash_init_platform();
+    env = getenv("DW3_PORT_CRASH_AT");
+    if (env != NULL && *env != '\0') {
+        crash_test_at = strtol(env, NULL, 10);
     }
-    dl_iterate_phdr(crash_phdr, NULL);
-    backtrace(frames, 4); /* primes libgcc's unwinder: the handler's call then loads nothing */
+#ifndef _WIN32
+    crash_install_handlers();
+#endif
+}
+
+#ifndef _WIN32
+static void crash_install_handlers(void) {
+    static const int sigs[] = { SIGSEGV, SIGBUS, SIGFPE, SIGILL, SIGABRT };
+    static char alt_stack[64 * 1024];
+    stack_t ss;
+    struct sigaction sa;
+    size_t i;
 
     ss.ss_sp = alt_stack;
     ss.ss_size = sizeof(alt_stack);
@@ -365,10 +440,6 @@ void port_crash_init(const char *dir) {
     for (i = 0; i < sizeof(sigs) / sizeof(sigs[0]); i++) {
         sigaction(sigs[i], &sa, NULL);
     }
-    env = getenv("DW3_PORT_CRASH_AT");
-    if (env != NULL && *env != '\0') {
-        crash_test_at = strtol(env, NULL, 10);
-    }
 }
 
 void port_crash_watchdog_install(void) {
@@ -379,6 +450,11 @@ void port_crash_watchdog_install(void) {
     sigemptyset(&sa.sa_mask);
     sigaction(SIGALRM, &sa, NULL);
 }
+#else
+void port_crash_watchdog_install(void) {
+    /* the Windows watchdog is platform.c's thread (no report yet: Windows 8) */
+}
+#endif
 
 void port_crash_log_line(const char *line) {
     size_t n = strlen(line);

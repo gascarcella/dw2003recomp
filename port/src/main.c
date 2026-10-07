@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "platform.h"
 #include "port_harness.h"
 #include "port_runtime.h"
 #include "records.h"
@@ -272,7 +273,7 @@ int main(int argc, char **argv) {
                         "(port/README.md \"The window\")\n");
         return 64;
     }
-    setvbuf(stderr, NULL, _IOLBF, 0);
+    port_file_line_buffered(stderr); /* a line at a time to the launcher's pipe (unbuffered on Windows) */
     port_crash_init(crash_dir);
     port_log("version %s (%s)", port_version, port_commit);
     if (port_trace) {
@@ -334,7 +335,7 @@ int main(int argc, char **argv) {
     }
     port_pump_init();
     port_log("start: max-frames %ld, watchdog %d s, %ld Hz", port_max_frames, port_watchdog_sec, port_rate);
-    if (setjmp(port_reset_jmp) != 0) {
+    if (port_setjmp(port_reset_jmp) != 0) {
         port_reset_state(); /* the script's reset step (port_reset_request) */
     }
     game_main();

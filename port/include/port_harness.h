@@ -62,6 +62,14 @@ void port_memcard_open(int slot, const char *path);
 extern jmp_buf port_reset_jmp;
 void port_reset_request(void) __attribute__((noreturn));
 void port_reset_state(void);
+/* port_setjmp: setjmp, except on mingw-w64 x64, where setjmp(buf) is _setjmp(buf, <frame>) and the longjmp then
+ * unwinds the frames in between through SEH; with a NULL frame it restores the registers and jumps, as glibc's does,
+ * which is what the reset wants (nothing on the host stack needs unwinding: reset.c). */
+#if defined(_WIN32) && defined(__x86_64__)
+#define port_setjmp(buf) _setjmp((buf), NULL)
+#else
+#define port_setjmp(buf) setjmp(buf)
+#endif
 
 /* ---- video.c, input.c: the window and the screenshots (M2; the window only with -DDW3_PORT_SDL=ON: SDL3) ----
  * video.c converts the display area of the VRAM (psyq.h "The video output") into 32-bit pixels at the display's size;

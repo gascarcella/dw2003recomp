@@ -4,11 +4,12 @@
  * VSync() or port_wait() ran it; the frame cap ends the run with status 0.
  *
  * The watchdog: a loop that no PLATFORM_WAIT reaches (cdload_load_file's `do cdload_update() while (loading)`, which
- * only a CD interrupt ends on the PS1) would spin forever once the shim cannot complete a read; SIGALRM ends it with
- * status 4 after a crash report (crash.c: the registers say where it spins), instead of hanging the acceptance run.
+ * only a CD interrupt ends on the PS1) would spin forever once the shim cannot complete a read; the watchdog
+ * (platform.c: SIGALRM on POSIX, a thread on Windows) ends it with status 4 after a crash report (crash.c: the
+ * registers say where it spins), instead of hanging the acceptance run.
  *
  * The window (video.c, input.c; `--window`): each vsync also polls SDL's events (the pad, unless a script owns it),
- * presents the display, and waits for the vsync's time against CLOCK_MONOTONIC. Two rates (docs/LAUNCHER.md
+ * presents the display, and waits for the vsync's time against the monotonic clock (platform.c). Two rates (docs/LAUNCHER.md
  * "Fast-forward"): the **nominal rate** port_rate (50, PAL; `--fps N` sets it to N): the vsyncs per second the game is made for,
  * which the audio's samples per vsync follow; and the **pace** (port_pace_set; `--fps`, fast-forward): the vsyncs per
  * second of the wall clock (0: as fast as it runs). Every change of the pace starts the schedule over, so going back
@@ -20,13 +21,10 @@
  * keeps polling its events (the hotkeys, fullscreen, the close) and presenting the last image, the debug channel its
  * socket, the audio device is paused, the watchdog re-armed; the pause key again (or the channel's resume/step) goes
  * on with the next vsync, the schedule started over. Nothing of it reaches the game, the log or the record. */
-#include <errno.h>
-#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <unistd.h>
 
+#include "platform.h"
 #include "port_harness.h"
 #include "port_runtime.h"
 #include "psyq.h"
@@ -39,7 +37,7 @@ long port_rate = 50;        /* the nominal rate (vsyncs per second): the audio's
 static long pump_pace = 50; /* the pace (vsyncs per second of the wall clock); 0: unthrottled */
 static int pump_pace_restart;
 static int pump_pause_wanted; /* the game is to be held (is held) between two vsyncs: the pause key, the channel */
-static volatile sig_atomic_t port_watchdog_armed;
+static int port_watchdog_armed;
 static void port_frame(void);
 static void port_pace(void);
 static void port_pause(void);
@@ -48,8 +46,7 @@ void port_pump_init(void) {
     psyq_set_vsync_pre_hook(port_audio_frame); /* the SPU's samples of the frame, before the game's handler */
     psyq_set_vsync_hook(port_frame);
     if (port_watchdog_sec > 0) {
-        port_crash_watchdog_install(); /* SIGALRM writes the crash report (the registers show where it spins), exits 4 */
-        alarm((unsigned)port_watchdog_sec);
+        port_watchdog_start(port_watchdog_sec);
         port_watchdog_armed = 1;
     }
     /* the last call before game_main: the game's data must still be as snapshotted (nothing in the setup wrote it),
@@ -63,7 +60,7 @@ void port_pump_reset(void) {
     psyq_set_vsync_pre_hook(port_audio_frame);
     psyq_set_vsync_hook(port_frame);
     if (port_watchdog_armed) {
-        alarm((unsigned)port_watchdog_sec);
+        port_watchdog_kick();
     }
 }
 
@@ -73,7 +70,7 @@ void port_pump_reset(void) {
 static void port_frame(void) {
     int cd;
     if (port_watchdog_armed) {
-        alarm((unsigned)port_watchdog_sec); /* re-arm: progress */
+        port_watchdog_kick(); /* re-arm: progress */
     }
     cd = psyq_cd_tick();
     port_frames++;
@@ -134,7 +131,6 @@ long port_pace_get(void) {
  * exits). The channel's reset, asked for while paused, runs once the loop is left (port_debug_resumed): the longjmp
  * must not skip the audio's and the window's un-pause. */
 static void port_pause(void) {
-    struct timespec tick = { 0, 20000000L }; /* 50 polls a second */
     port_log("pause at frame %ld", port_frames);
     port_video_set_paused(1);
     port_audio_pause(1);
@@ -154,9 +150,9 @@ static void port_pause(void) {
             }
         }
         if (port_watchdog_armed) {
-            alarm((unsigned)port_watchdog_sec);
+            port_watchdog_kick();
         }
-        nanosleep(&tick, NULL);
+        port_sleep_ms(20); /* 50 polls a second */
     }
     port_audio_pause(0);
     port_video_set_paused(0);
@@ -171,10 +167,9 @@ static void port_pause(void) {
  * breakpoint, a slow host) starts over from now instead of hurrying to catch up, and so does a change of the pace (or
  * the end of a pause). */
 static void port_pace(void) {
-    static struct timespec start;
+    static long long start;
     static long long n;
-    struct timespec now, due;
-    long long t, ns;
+    long long now, t, ns;
     if (pump_pace_restart) {
         pump_pace_restart = 0;
         n = 0;
@@ -182,23 +177,19 @@ static void port_pace(void) {
     if (pump_pace <= 0) {
         return;
     }
-    clock_gettime(CLOCK_MONOTONIC, &now);
+    now = port_clock_ns();
     if (n == 0) {
         start = now;
     }
     n++;
     ns = n * 1000000000LL / pump_pace;
-    t = (long long)(now.tv_sec - start.tv_sec) * 1000000000LL + (now.tv_nsec - start.tv_nsec);
+    t = now - start;
     if (t > ns + 100000000LL) {
         start = now;
         n = 0;
         return;
     }
-    due.tv_sec = start.tv_sec + (time_t)((start.tv_nsec + ns) / 1000000000LL);
-    due.tv_nsec = (long)((start.tv_nsec + ns) % 1000000000LL);
-    while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &due, NULL) == EINTR) {
-        /* the watchdog's SIGALRM, or another signal: wait on */
-    }
+    port_sleep_until_ns(start + ns);
 }
 
 void port_wait(void) {

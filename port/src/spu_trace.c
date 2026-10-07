@@ -82,7 +82,7 @@ static void trace_call(const char *line) {
 }
 
 void port_spu_trace_open(const char *path) {
-    trace_file = fopen(path, "w");
+    trace_file = fopen(path, "wb"); /* "b": the same bytes on Windows */
     if (trace_file == NULL) {
         port_fatal("--spu-trace %s: cannot write it", path);
     }

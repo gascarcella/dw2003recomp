@@ -187,6 +187,14 @@ if(DW3_PORT_ALLOW_UNRESOLVED)
     target_link_options(dw2003 PRIVATE "-Wl,--unresolved-symbols=ignore-all")
 endif()
 target_link_libraries(dw2003 PRIVATE m)
+# Windows: a GUI-subsystem executable (no console window behind the game when the launcher starts it; stderr still
+# reaches a redirected handle, the launcher's pipe) with the manifest resource (port/windows/: the UTF-8 code page for
+# the narrow fopen paths, long paths, per-monitor DPI awareness), compiled by the toolchain's windres.
+if(WIN32)
+    enable_language(RC)
+    target_sources(dw2003 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/windows/dw2003.rc")
+    set_target_properties(dw2003 PROPERTIES WIN32_EXECUTABLE ON)
+endif()
 
 # ---- The window (DW3_PORT_SDL): SDL3, found as a CMake package: SDL3_DIR or CMAKE_PREFIX_PATH when given (a system
 # SDL3, e.g. -DSDL3_DIR=/usr/lib/x86_64-linux-gnu/cmake/SDL3), else the pinned build in tools/sdl3 (this checkout's,

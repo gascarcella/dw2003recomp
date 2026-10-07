@@ -20,6 +20,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "platform.h"
 #include "port_harness.h"
 #include "port_runtime.h"
 #include "settings.h"
@@ -45,23 +46,23 @@ static char *settings_strdup(const char *s) {
     return d;
 }
 
-/* `dir` + "/" + `path`, or `path` when it is absolute. */
+/* `dir` + "/" + `path`, or `path` when it is absolute (port_path_is_absolute: "/x" on both, "C:\x" on Windows). */
 static char *settings_join(const char *dir, const char *path) {
     char *out;
-    if (path[0] == '/' || dir == NULL) {
+    if (port_path_is_absolute(path) || dir == NULL) {
         return settings_strdup(path);
     }
     out = malloc(strlen(dir) + strlen(path) + 2);
     if (out == NULL) {
         port_fatal("settings: out of memory");
     }
-    sprintf(out, "%s%s%s", dir, dir[0] != '\0' && dir[strlen(dir) - 1] == '/' ? "" : "/", path);
+    sprintf(out, "%s%s%s", dir, dir[0] != '\0' && port_path_is_sep(dir[strlen(dir) - 1]) ? "" : "/", path);
     return out;
 }
 
 char *port_settings_abspath(const char *path) {
     char cwd[4096];
-    if (path[0] == '/') {
+    if (port_path_is_absolute(path)) {
         return settings_strdup(path);
     }
     if (getcwd(cwd, sizeof(cwd)) == NULL) {
@@ -150,7 +151,10 @@ void port_settings_load(const char *path) {
 
     s->file = port_settings_abspath(path);
     s->dir = settings_strdup(s->file);
-    slash = strrchr(s->dir, '/');
+    slash = (char *)port_path_last_sep(s->dir);
+    if (slash == NULL) {
+        port_settings_fail(NULL, "not a path: %s", s->file);
+    }
     slash[slash == s->dir ? 1 : 0] = '\0';
     s->window = 1;
     s->scale = 2;

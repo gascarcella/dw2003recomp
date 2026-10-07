@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "platform.h"
 #include "port_harness.h"
 #include "port_runtime.h"
 #include "psyq.h"
@@ -83,15 +84,15 @@ static void port_logf(const char *fmt, ...) {
 
 void port_framelog_open(const char *log_path, const char *record_path) {
     if (log_path != NULL) {
-        port_log_file = fopen(log_path, "w");
+        port_log_file = fopen(log_path, "wb"); /* "b": the same bytes on Windows (no CRLF) */
         if (port_log_file == NULL) {
             port_fatal("framelog: --log %s: cannot open", log_path);
         }
-        setvbuf(port_log_file, NULL, _IOLBF, 0);
+        port_file_line_buffered(port_log_file); /* a crashed run's log ends at its last line */
         port_logf("# dw2003 port frame log 1 (port/README.md)");
     }
     if (record_path != NULL) {
-        FILE *f = fopen(record_path, "w"); /* fail now rather than at exit */
+        FILE *f = fopen(record_path, "wb"); /* fail now rather than at exit */
         if (f == NULL) {
             port_fatal("framelog: --record %s: cannot open", record_path);
         }
@@ -207,7 +208,7 @@ static void port_json_buttons(FILE *f, u16 buttons) {
 }
 
 static void port_write_record(int status, const char *reason) {
-    FILE *f = fopen(port_record_path, "w");
+    FILE *f = fopen(port_record_path, "wb");
     size_t i;
     if (f == NULL) {
         port_log("framelog: --record %s: cannot write", port_record_path);

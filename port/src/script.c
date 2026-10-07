@@ -24,6 +24,7 @@
 
 #include "json.h"
 #include "port_harness.h"
+#include "platform.h"
 #include "port_runtime.h"
 #include "psyq.h"
 
@@ -342,7 +343,7 @@ void port_script_load(const char *path) {
         script_name = strdup(name->string);
     } else {
         /* replay.py: the file's stem */
-        const char *base = strrchr(path, '/') != NULL ? strrchr(path, '/') + 1 : path;
+        const char *base = port_path_last_sep(path) != NULL ? port_path_last_sep(path) + 1 : path;
         const char *dot = strrchr(base, '.');
         script_name = strndup(base, dot != NULL && dot != base ? (size_t)(dot - base) : strlen(base));
     }
