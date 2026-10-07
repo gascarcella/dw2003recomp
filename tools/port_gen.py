@@ -39,12 +39,12 @@ SLOT1_BASE, SLOT2_BASE, HEAP_START, HEAP_END = 0x80082CB0, 0x800A5DE0, 0x800AB80
 # The arena's regions (port/src/arena.c, docs/PORT.md "Memory arena") mirror the PS1's layout: slot 1, slot 2 and the heap are
 # contiguous at the PS1's distances, so a pointer's PS1-style address is SLOT1_BASE + its offset into the arena (a
 # sector-rounded copy that runs past a slot's end lands where it does on the PS1: in the next region). The heap is
-# larger than the PS1's (64-bit structs); the whole arena stays under 16 MB (PTR_TO_U32's 24-bit offsets are arena
-# offsets). include/port.h holds the same numbers (its macros on port_arena); arena.c ties the two with _Static_asserts.
+# larger than the PS1's (64-bit structs); the whole arena fits the tag window (PTR_TO_U32's 24-bit word offsets in the
+# game's data and the arena). include/port.h holds the same numbers (its macros on port_arena); arena.c ties the two.
 SLOT1_SIZE = SLOT2_BASE - SLOT1_BASE   # 0x23130
 SLOT2_SIZE = HEAP_START - SLOT2_BASE   # 0x5A20
 HEAP_SIZE = 4 << 20
-TAG_LIMIT = 1 << 24   # a 24-bit ordering-table tag
+TAG_LIMIT = 0xFFFFFF << 2   # a 24-bit ordering-table tag of words (include/port.h PORT_TAG_SHIFT)
 assert SLOT1_SIZE + SLOT2_SIZE + HEAP_SIZE < TAG_LIMIT
 
 TIER1 = ["FIELDSTG", "FIGHTSTG", "CARDGAME", "CNTY_SEL", "SHOCKTST", "SOUNDTST", "STAGSLCT", "STCRDABM", "STCRDDEK",

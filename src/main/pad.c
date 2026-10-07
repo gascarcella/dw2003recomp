@@ -30,7 +30,7 @@ void pad_init(s32 multitap, u8 repeat) {
     s32 port;
     s32 slot;
 
-    heap_funcs.bzero(&pad_state, (unsigned long)&((PadState *)0)->init);
+    heap_funcs.bzero(&pad_state, OFFSETOF(PadState, init));
     heap_funcs.memset(pad_state.actuators[0], 0xFF, sizeof(pad_state.actuators));
     for (port = 0; port < 2; port++) {
         for (slot = 0; slot < 4; slot++) {

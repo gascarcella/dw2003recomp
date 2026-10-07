@@ -200,12 +200,14 @@ writable input section of a game object (`.data*`, `.bss*`, `COMMON` of the unit
 runtime's and the shim's own writable data, which reset themselves).
 
 ## The runtime
-**Arena** (docs/PORT.md "Memory arena"): one static block, `port_arena`, smaller than 16 MB, mirroring the PS1 from
+**Arena** (docs/PORT.md "Memory arena"): one static block, `port_arena`, mirroring the PS1 from
 `0x80082CB0` up: slot 1 (`0x23130` bytes), slot 2 (`0x5A20`), then the heap (4 MB, larger than the PS1's
 1.3 MB because 64-bit structs are bigger); `port_slot1`, `port_slot2`, `port_heap_start` and `port_heap_end` are
-macros on it (`include/port.h`). A pointer's PS1-style address (`PTR_TO_S32`) is `0x80082CB0 + offset`; an
-ordering-table tag is the offset (`PTR_TO_U32`), and the shim's `DrawOTag` walks them from `port_arena`. No alignment
-or link address is assumed (the binary may be PIE): the arrangement a PE build can use as it is.
+macros on it (`include/port.h`). A pointer's PS1-style address (`PTR_TO_S32`) is `0x80082CB0 + offset`. An
+ordering-table tag (`PTR_TO_U32`) is a pointer's word offset in the **tag window**, the units' `.data`/`.bss` regions
+plus the arena (about 6 MB, 27 MB under ASan; measured by `port_overlay_init`, under 64 MB by a startup check), since
+a few ordering tables are static (`fightstg_cursor_ot`); the shim's `DrawOTag` walks tags from `port_tag_base`. No alignment or link
+address is assumed (the binary may be PIE): the arrangement a PE build can use as it is.
 
 **Overlay manager** (2.5): every overlay is linked in. `OVERLAY_COPY` (the game's two `memcpy` sites) calls
 `port_overlay_load(tier, file, ...)`: a file with a table becomes the tier's current overlay and gets its `.data` and
@@ -267,7 +269,7 @@ far (an event between two ticks carries the last tick's number, as the emulator'
 | Line | Meaning |
 |---|---|
 | `# dw2003 port frame log 1 (port/README.md)` | The header (the format's version) |
-| `F <frame> st <stage> fl <file> map 0x<map> prims <n> hash <8 hex>` | Every frame: `overlay_module.stage`/`.file`, `gamestate_data.map`, and the primitive stream of the frame (`psyq_gpu_take_hash`: the primitives DrawOTag walked since the previous frame, their FNV-1a hash) |
+| `F <frame> st <stage> fl <file> map 0x<map> prims <n> hash <8 hex>` | Every frame: `overlay_module.stage`/`.file`, `gamestate_data.map`, and the primitive stream of the frame (`psyq_gpu_take_hash`: the primitives DrawOTag walked since the previous frame, their FNV-1a hash over the words the GPU reads: a textured polygon's padding halves and, for a 15-bit texture, its unused CLUT field are hashed as 0, since the game leaves them to stale packet-buffer bytes that differ between builds) |
 | `S <frame> stage <stage> file <file>` | An overlay-sequence entry: `(stage, file)` changed (frame 1 always) |
 | `M <frame> map 0x<map>` | A map-sequence entry: the map changed (frame 1 always) |
 | `L <frame> tier <t> file 0x<id> <name> word0 0x<8 hex> size 0x<n>` | A file copied into a slot (`port_overlay_load`): the overlay's name, or `(data)`; its first word; its size |

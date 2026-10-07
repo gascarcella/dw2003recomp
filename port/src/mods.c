@@ -273,7 +273,8 @@ static void gs_start(struct Mod *mod) {
 void port_global_save_open(void) {
     s32 map = gamestate_data.field_map, inn = gs_inn_map(map);
     gs_opened_from = map;
-    gamestate_data.funcs.set_next_map(inn != 0 ? inn : 0xC00, -1);
+    /* through a prototyped pointer: clang's -Wdeprecated-non-prototype is an error in port/src */
+    ((void (*)(s32, s32))gamestate_data.funcs.set_next_map)(inn != 0 ? inn : 0xC00, -1);
     port_log("global save: frame %ld: the save screen from map 0x%X%s", port_frames, map,
              inn != 0 ? " (an inn's map)" : "");
 }

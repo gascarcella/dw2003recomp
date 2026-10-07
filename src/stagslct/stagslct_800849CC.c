@@ -556,7 +556,7 @@ void stagslct_update(Object *obj, StageSelectData *data) {
         switch (sel->base.step) {
         case 0:
             data->title->copy_text(data->title, "\x83\x58\x83\x65\x81\x5B\x83\x57\x83\x5A\x83\x8C\x83\x4E\x83\x67");
-            data->cursor->copy_text(data->cursor, stagslct_cursor_text);
+            data->cursor->copy_text(data->cursor, (u8 *)stagslct_cursor_text);
             obj->next_step(obj);
             break;
         case 1:
