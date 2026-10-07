@@ -10,9 +10,9 @@
 #                     build/launcher-win/selftest/, the prefix in build/wine-prefix/
 # Needs: scripts/setup.sh llvm-mingw sdl3-windows (and imgui for the launcher); cmake and ninja (tools/venv's when the
 # system has none). Exit 0 when everything asked for built (and the test passed), else 1 with a summary: which objects
-# did not compile and whether the link failed. Until the project board's Windows 1, 2 and 4 are done the game does
-# NOT link (the arena's 16 MB alignment, the GNU ld script lld cannot take, the POSIX calls of port/src and the
-# LLP64 casts of port/psyq); every one of the game's 388 units compiles, which this script reports as the measure.
+# did not compile and whether the link failed. Until the project board's Windows 2 and 4 are done the game does NOT
+# link (the GNU ld script lld cannot take, the POSIX calls of port/src); every one of the game's 388 units compiles,
+# which this script reports as the measure.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

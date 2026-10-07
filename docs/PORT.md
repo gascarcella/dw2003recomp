@@ -64,7 +64,7 @@ formats are in `port/README.md`; the shim's per-function behaviour is in `port/p
 | `HEAP_START/END/SIZE_FROM/ADDR` | The heap's bounds (`heap.c`, `records.c`) and FIELDSTG's `free_above` constant | The arena's heap region |
 | `PTR_ADD(type, ofs, base)` | Offset-table resolves, written on the PS1 as `ofs + (s32)base` | Pointer arithmetic |
 | `PTR_TO_S32` / `S32_TO_PTR` | A pointer kept in an `s32` field or argument | The pointer's PS1-style address in the arena, and back (fatal outside the arena) |
-| `PTR_TO_U32(p)` | The 24-bit ordering-table tags (`setaddr`, `gfx_compact_ot`) | The low 32 bits; the low 24 are the arena offset |
+| `PTR_TO_U32(p)` | The 24-bit ordering-table tags (`setaddr`, `gfx_compact_ot`) | The pointer's word offset in the tag window (the game's data and the arena; fatal outside it) |
 | `BIOS_PTR(type, addr)` | STAGSLCT's read of the BIOS version string | A 256-byte stand-in region (`arena.c`) |
 
 `tools/port_inventory.py counts` lists every use of every macro, and every fixed PS1 address left in the C (all are
