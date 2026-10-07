@@ -25,6 +25,23 @@ maintainer downloads it, tests it and presses Publish. Windows comes later (the 
 A failed run creates no release. To retry after a fix, delete the tag (`git push --delete origin v0.1.0; git tag -d
 v0.1.0`), tag the fixed commit and push again.
 
+## A local release
+
+release.yml takes about half an hour; `scripts/release_local.sh` makes the same draft in about 6 minutes (cold) on
+the maintainer's machine:
+
+```sh
+scripts/release_local.sh v0.2.0                 # origin/main; --commit REF for another pushed commit
+scripts/release_local.sh v0.2.0 --build-only    # the AppImage only: no tag, no release
+```
+
+It builds in a Docker `ubuntu:24.04` container (the runner's base, so the same glibc floor) with the appimage job's
+own steps: the tools, the disc, the game's Release build through the port's M1 test, `package_appimage.sh --test`.
+Then it pushes the tag, cancels the release.yml run the tag starts and creates the same draft with the local
+AppImage. It does **not** run the whole CI: check that `main`'s CI is green for that commit first. Needs `docker`,
+`gh` and the disc (`iso/dw2003.bin` or `DW3_DISC_BIN`); the container's tools stay in `build/release-local/`.
+Step 4 above (test, then Publish) is unchanged.
+
 ## Trying a branch's AppImage
 
 ```sh

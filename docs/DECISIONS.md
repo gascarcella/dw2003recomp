@@ -263,7 +263,8 @@ Players get one Linux x86_64 AppImage (the launcher, the game, the mods' manifes
 tag `vX.Y.Z` runs `release.yml`: the whole CI, the port's test on the Release build, the AppImage and its smoke test,
 then a **draft** GitHub release. Publishing a release (binaries built from the decompiled code, no game data) is the
 owner's explicit decision each time. Built on `ubuntu-24.04`; both programs depend only on the C library. Windows
-comes later.
+comes later. The owner may build the same draft locally instead (`scripts/release_local.sh`, 2026-10-06: Docker
+`ubuntu:24.04`, the appimage job's steps, release.yml's run cancelled), after `main`'s CI is green: ~6 min, not ~30.
 
 ## Mods extend the save in the slot's unused tail, never in its checksummed bytes
 _Decided: 2026-10-06_
