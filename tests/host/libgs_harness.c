@@ -10,6 +10,10 @@
  *   F <fn> <regs> <a0> <a1> <a2>            a LIBGTE function; each argument is a hex buffer, or "=N" (the same buffer
  *                                           as argument N), or "#V" (the number V) -> each distinct buffer argument
  *                                           after the call, the 64 registers, v0
+ *   L <regs> <id> <light> <first>           GsSetFlatLight(id, &light), the 16-byte GsF_LIGHT given in hex; first = 1
+ *                                           starts a case: both light matrices back to GsInitGraph's zero (the oracle
+ *                                           restores them after each case) -> D_800812F8, D_80081318, the 64
+ *                                           registers, v0
  * The view buffer is unpacked into host structs (its PS1 pointers become host pointers when they point into it) and
  * packed back in the PS1's layout, so the host's pointer size does not matter. */
 #include <stdio.h>
@@ -20,7 +24,7 @@
 #include "psyq/libgs.h"
 
 /* port/psyq/libgs.c and libgte.c: what the game does not call (no header declares them). */
-extern MATRIX D_80081358, D_80081338, D_80081398;
+extern MATRIX D_80081358, D_80081338, D_80081398, D_800812F8, D_80081318;
 extern u32 D_800812D8;
 void GsGetLw(GsCOORDINATE2 *coord, MATRIX *m);
 MATRIX *MulMatrix(MATRIX *m0, MATRIX *m1);
@@ -241,6 +245,22 @@ int main(void) {
                     put_hex(bufs[i], (size_t)size[i], " ");
                 }
             }
+            put_regs();
+            printf("%08x\n", (u32)v0);
+        } else if (strcmp(argv[0], "L") == 0 && argc == 5 && hex_bytes(argv[1], regs, sizeof(regs)) == 256 &&
+                   hex_bytes(argv[3], bufs[0], sizeof(bufs[0])) == 16) {
+            GsF_LIGHT light;
+            s32 v0;
+
+            if (atoi(argv[4]) != 0) {
+                memset(&D_800812F8, 0, sizeof(MATRIX));
+                memset(&D_80081318, 0, sizeof(MATRIX));
+            }
+            memcpy(&light, bufs[0], 16); /* s32 vx, vy, vz; u8 r, g, b: the PS1's layout is the host's */
+            load_regs(regs);
+            v0 = GsSetFlatLight((s32)(u32)strtoul(argv[2], NULL, 0), &light);
+            put_hex(&D_800812F8, sizeof(MATRIX), " ");
+            put_hex(&D_80081318, sizeof(MATRIX), " ");
             put_regs();
             printf("%08x\n", (u32)v0);
         } else {

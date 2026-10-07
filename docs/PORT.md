@@ -195,7 +195,7 @@ root: `game.py` is the plain client (no MCP dependency; `Game.spawn`, one method
 |---|---|---|
 | LIBGPU | 24 functions, ordering tables, environments, VRAM transfers | Real; drives the software GPU (`libgpu.c`, `gpu.c`) |
 | LIBGTE | `rsin`/`rcos`, rotation/scale matrices, geometry set-up | Real, on the software GTE (`libgte.c`, `gte.c`) |
-| LIBGS | TIM info, the world-screen and light matrices FIGHTSTG uses | `GsGetTimInfo` real; owns the matrices `D_80081358`/`D_800812F8`; the rest records (see "Known limitations") |
+| LIBGS | TIM info, the GTE set-up, the world-screen and light matrices FIGHTSTG uses | `GsGetTimInfo`, `GsSetProjection`, `GsSetRefView2`, `GsGetLw`, `GsSetFlatLight` real (the matrices and the GTE's H and LCM as the PS1's, the layer-1 family `libgs_view`); `GsInitGraph`/`GsInit3D` do the PS1's GTE and matrix set-up and skip its draw environments (the game draws with its own) |
 | LIBETC | `VSync`, `VSyncCallback`, `SetVideoMode`, `ResetCallback` | Real, on the pump |
 | LIBCD | `cdload`'s interrupt-driven sector reads, movie streaming (`St*`, `CdRead2`) | Real command model over the disc image, timed in ticks; XA sectors to the XA decoder (`libcd.c`, `xa.c`) |
 | LIBPRESS | MDEC movie decoding (STDWTITL) | Real (`libpress.c`, `mdec.c`) |
@@ -281,9 +281,6 @@ Play-tests on a desktop (window, gamepads, audio device, real time) cover what t
 findings are filed as issues.
 
 ## Known limitations
-- **Battle lighting:** LIBGS's GTE set-up is real for the camera (`GsSetRefView2`, `GsSetProjection`'s H; issue #7)
-  but not for the lights: NCS lights with a zero colour matrix (`GsSetFlatLight`'s colours are recorded, not loaded;
-  issue #19).
 - **Pads:** one digital pad on port 0; no analog mode, no rumble (`PadSetAct` is accepted and ignored), no second
   port or multitap.
 - **No reset key** in the window (the console reset exists only as a script step).
