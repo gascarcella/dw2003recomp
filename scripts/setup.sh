@@ -4,7 +4,10 @@
 #
 # Usage: scripts/setup.sh [--disc /path/to/disc.bin] [step...]
 #   steps: binutils venv cmake mkpsxiso gcc objdiff ext redux link gamedata disc  (default: all)
-#          optional: psyq sdl3 imgui sdl3-desktop appimage
+#          optional: psyq sdl3 imgui sdl3-desktop appimage llvm-mingw sdl3-windows
+#   llvm-mingw: the pinned llvm-mingw release (clang + lld, UCRT) into tools/llvm-mingw: the Windows cross toolchain
+#          (cmake/windows-x86_64.cmake, scripts/build_windows.sh; DECISIONS "Windows")
+#   sdl3-windows: SDL3 cross-built static for Windows into tools/sdl3-windows (needs llvm-mingw)
 #   imgui: Dear ImGui at its pinned tag into tools/imgui, for the launcher (launcher/README.md; needs sdl3 too)
 #   sdl3:  SDL3 built from its pinned source tarball into tools/sdl3 (static), for the PC port's window
 #          (cmake -DDW3_PORT_SDL=ON; port/README.md "The window"); its backends follow the -dev headers present
@@ -177,6 +180,22 @@ sdl3_missing_drivers() {
     done
 }
 
+# sdl3_fetch NAME DIR: the pinned SDL3 source tarball (downloaded into tools/src once, SHA-256 checked) unpacked into DIR.
+sdl3_fetch() {
+    local name="$1" dir="$2" tarball="$SRC/SDL3-$SDL3_VER.tar.gz"
+    mkdir -p "$SRC"
+    if [[ ! -f "$tarball" ]] || ! echo "$SDL3_SHA256  $tarball" | sha256sum -c --quiet - 2>/dev/null; then
+        log "$name: downloading $SDL3_VER"
+        curl -sSfL -o "$tarball.part" \
+            "https://github.com/libsdl-org/SDL/releases/download/release-$SDL3_VER/SDL3-$SDL3_VER.tar.gz"
+        mv "$tarball.part" "$tarball"
+    fi
+    echo "$SDL3_SHA256  $tarball" | sha256sum -c --quiet - || die "$name: checksum mismatch"
+    rm -rf "$dir"
+    mkdir -p "$dir"
+    tar -C "$dir" --strip-components=1 -xzf "$tarball"
+}
+
 # sdl3_build NAME PREFIX DESKTOP(0|1)
 sdl3_build() {
     local name="$1" prefix="$2" desktop="$3" tarball="$SRC/SDL3-$SDL3_VER.tar.gz" dir="$SRC/SDL3-$SDL3_VER-$1"
@@ -186,17 +205,8 @@ sdl3_build() {
         return
     fi
     command -v cmake >/dev/null && command -v ninja >/dev/null || step_cmake
-    mkdir -p "$SRC"
-    if [[ ! -f "$tarball" ]] || ! echo "$SDL3_SHA256  $tarball" | sha256sum -c --quiet - 2>/dev/null; then
-        log "$name: downloading $SDL3_VER"
-        curl -sSfL -o "$tarball.part" \
-            "https://github.com/libsdl-org/SDL/releases/download/release-$SDL3_VER/SDL3-$SDL3_VER.tar.gz"
-        mv "$tarball.part" "$tarball"
-    fi
-    echo "$SDL3_SHA256  $tarball" | sha256sum -c --quiet - || die "$name: checksum mismatch"
-    rm -rf "$dir" "$prefix"
-    mkdir -p "$dir"
-    tar -C "$dir" --strip-components=1 -xzf "$tarball"
+    sdl3_fetch "$name" "$dir"
+    rm -rf "$prefix"
     log "$name: configuring (static; no tests, examples or camera)"
     # SDL stops at an optional dependency whose headers are missing (an X11 extension, ...) and names the option
     # that turns it off; so does a host with neither X11 nor Wayland headers (SDL_UNIX_CONSOLE_BUILD: offscreen and
@@ -239,6 +249,69 @@ sdl3_build() {
 }
 step_sdl3() { sdl3_build sdl3 "$INSTALL/sdl3" 0; }
 step_sdl3-desktop() { sdl3_build sdl3-desktop "$INSTALL/sdl3-desktop" 1; }
+
+# llvm-mingw (Apache-2.0 with LLVM exceptions; mingw-w64 runtime under its own permissive licences): clang, lld and the
+# UCRT mingw-w64 sysroot, the Windows cross toolchain (DECISIONS "Windows"; cmake/windows-x86_64.cmake is the CMake
+# toolchain file, scripts/build_windows.sh builds the game and the launcher with it). One pinned release tarball for
+# Linux x86_64, SHA-256 checked, unpacked into tools/llvm-mingw. Self-contained: no system package, the same build
+# here and on CI. Optional (not in the default steps): scripts/setup.sh llvm-mingw
+LLVM_MINGW_VER=20260922
+LLVM_MINGW_NAME=llvm-mingw-$LLVM_MINGW_VER-ucrt-ubuntu-22.04-x86_64
+LLVM_MINGW_SHA256=bb7bb7654b33d5aa8712acb837c963b2e0c56352560c76105270a3268c665c21
+step_llvm-mingw() {
+    local dir="$INSTALL/llvm-mingw" tarball="$SRC/$LLVM_MINGW_NAME.tar.xz" unpack="$SRC/$LLVM_MINGW_NAME"
+    if [[ -x "$dir/bin/x86_64-w64-mingw32-clang" && -f "$dir/.sha256" && "$(cat "$dir/.sha256")" == "$LLVM_MINGW_SHA256" ]]; then
+        log "llvm-mingw: $LLVM_MINGW_VER already installed ($dir)"
+        return
+    fi
+    [[ "$(uname -s)-$(uname -m)" == Linux-x86_64 ]] || die "llvm-mingw: the pinned tarball is a Linux x86_64 build"
+    mkdir -p "$SRC"
+    if [[ ! -f "$tarball" ]] || ! echo "$LLVM_MINGW_SHA256  $tarball" | sha256sum -c --quiet - 2>/dev/null; then
+        log "llvm-mingw: downloading $LLVM_MINGW_VER (~80 MB)"
+        curl -sSfL -o "$tarball.part" \
+            "https://github.com/mstorsjo/llvm-mingw/releases/download/$LLVM_MINGW_VER/$LLVM_MINGW_NAME.tar.xz"
+        mv "$tarball.part" "$tarball"
+    fi
+    echo "$LLVM_MINGW_SHA256  $tarball" | sha256sum -c --quiet - || die "llvm-mingw: checksum mismatch"
+    rm -rf "$dir" "$unpack"
+    mkdir -p "$unpack"
+    log "llvm-mingw: unpacking"
+    tar -C "$unpack" --strip-components=1 -xJf "$tarball"
+    [[ -x "$unpack/bin/x86_64-w64-mingw32-clang" ]] || die "llvm-mingw: no x86_64-w64-mingw32-clang in the tarball"
+    mv "$unpack" "$dir"
+    "$dir/bin/x86_64-w64-mingw32-clang" --version >/dev/null || die "llvm-mingw: the compiler does not run"
+    echo "$LLVM_MINGW_SHA256" > "$dir/.sha256"
+    log "llvm-mingw: installed $LLVM_MINGW_VER to $dir ($("$dir/bin/x86_64-w64-mingw32-clang" --version | head -1))"
+}
+
+# sdl3-windows: the same pinned SDL3, cross-built static for Windows x86_64 with llvm-mingw (the toolchain file) into
+# tools/sdl3-windows, the drivers SDL picks for Windows by default (Windows video, WASAPI/DirectSound audio, XInput,
+# raw input...). Optional: scripts/setup.sh llvm-mingw sdl3-windows
+step_sdl3-windows() {
+    local name=sdl3-windows prefix="$INSTALL/sdl3-windows" dir="$SRC/SDL3-$SDL3_VER-sdl3-windows"
+    if [[ -f "$prefix/lib/libSDL3.a" && -f "$prefix/.sha256" && "$(cat "$prefix/.sha256")" == "$SDL3_SHA256" ]]; then
+        log "$name: $SDL3_VER already installed ($prefix)"
+        return
+    fi
+    [[ -x "$INSTALL/llvm-mingw/bin/x86_64-w64-mingw32-clang" ]] || step_llvm-mingw
+    command -v cmake >/dev/null && command -v ninja >/dev/null || step_cmake
+    sdl3_fetch "$name" "$dir"
+    rm -rf "$prefix"
+    log "$name: configuring (static, Windows x86_64; no tests, examples or camera)"
+    DW3_LLVM_MINGW="$INSTALL/llvm-mingw" cmake -S "$dir" -B "$dir/build" -G Ninja \
+        -DCMAKE_TOOLCHAIN_FILE="$ROOT/cmake/windows-x86_64.cmake" -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_INSTALL_LIBDIR=lib \
+        -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF -DSDL_CAMERA=OFF \
+        >"$dir/configure.log" 2>&1 || die "$name: configure failed (see $dir/configure.log)"
+    grep -E '^--   (Video|Audio|Joystick) drivers:' "$dir/configure.log" | sed "s/^-- */  $name: /" || true
+    log "$name: building with $JOBS jobs"
+    cmake --build "$dir/build" -j"$JOBS" >"$dir/build.log" 2>&1 || die "$name: build failed (see $dir/build.log)"
+    cmake --install "$dir/build" >/dev/null
+    rm -rf "$dir"
+    [[ -f "$prefix/lib/libSDL3.a" && -f "$prefix/lib/cmake/SDL3/SDL3Config.cmake" ]] || die "$name: install incomplete"
+    echo "$SDL3_SHA256" > "$prefix/.sha256"
+    log "$name: installed $SDL3_VER to $prefix"
+}
 
 # The AppImage tools for the release (scripts/package_appimage.sh; DECISIONS "Releases: tagged drafts, published by hand"): appimagetool (MIT) and the
 # static type-2 runtime (MIT, with musl, libfuse 3 (LGPL-2.1), squashfuse, zstd and zlib linked in: the AppImage needs

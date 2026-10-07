@@ -55,7 +55,9 @@ The plan's milestones (`docs/PORT.md`):
 - **Debug channel and MCP server:** `dw2003 --debug SOCKET` lets a tool pause, step, press, read and write memory and
   take screenshots between two vsyncs; `tools/mcp/` (registered by `.mcp.json`) is the MCP server over it, with symbol
   names from `nm` and the config tables (`docs/PORT.md`; gate: `tests/port/debug.py`).
-- **Platforms:** Linux x86_64 only. Windows is planned; macOS is not.
+- **Platforms:** Linux x86_64. Windows is in progress (the board's Windows track, [#37](https://github.com/gascarcella/dw2003recomp/issues/37)):
+  the cross toolchain (llvm-mingw, SDL3 for Windows, `scripts/build_windows.sh`) compiles every unit and the launcher,
+  which passes its self-test under Wine; the game does not link yet. macOS is not planned.
 - **Play-tested** on a desktop (Wayland, NVIDIA, PipeWire) through the first battle, a save and its load:
   picture, sound and timing were right except for the battle camera, fixed since
   ([#7](https://github.com/gascarcella/dw2003recomp/issues/7)); the battle has not been play-tested again.

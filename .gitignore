@@ -46,6 +46,8 @@ tools/sdl3
 tools/sdl3-desktop
 tools/imgui
 tools/appimage
+tools/llvm-mingw
+tools/sdl3-windows
 tools/local.env
 
 # --- Copyrighted SDK files (Psy-Q etc.): user-supplied only ---

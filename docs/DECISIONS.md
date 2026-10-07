@@ -266,6 +266,19 @@ owner's explicit decision each time. Built on `ubuntu-24.04`; both programs depe
 comes later. The owner may build the same draft locally instead (`scripts/release_local.sh`, 2026-10-06: Docker
 `ubuntu:24.04`, the appimage job's steps, release.yml's run cancelled), after `main`'s CI is green: ~6 min, not ~30.
 
+## Windows: cross-built from Linux with llvm-mingw, tested under Wine and Proton
+_Decided: 2026-10-07_
+
+The Windows build of the game and the launcher is cross-compiled from Linux with **llvm-mingw** (clang + lld, UCRT),
+one pinned release tarball that `scripts/setup.sh llvm-mingw` unpacks into `tools/llvm-mingw` (no system package, no
+sudo, the same build on CI, Fedora and Ubuntu), with SDL3 cross-built the same way (`sdl3-windows`) and one CMake
+toolchain file (`cmake/windows-x86_64.cmake`) for both projects. Not GCC mingw-w64: there is no pinned project-local
+build of it short of compiling GCC, and lld writes the PDBs the crash minidumps need. lld takes no linker script, so
+the port's ld script has to go (the board's Windows 2). Everything links statically (no DLL beside the executables),
+x86_64 only, Windows 10 or newer. It is tested on Linux: Wine for the automated runs (the replays must give the Linux
+build's logs and record hashes; CI), Proton for the play-test by hand; real Windows comes from testers afterwards
+(#37).
+
 ## Mods extend the save in the slot's unused tail, never in its checksummed bytes
 _Decided: 2026-10-06_
 

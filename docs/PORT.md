@@ -292,8 +292,15 @@ findings are filed as issues.
 - **State probes:** `port_state_read` (a script's `wait_mem`) maps only layout-identical data and an explicit field
   table; other pointer-bearing objects and overlay data read as unmapped.
 - **BIOS:** a stand-in string, not the user's BIOS.
-- **Linux only:** the ld script (`INSERT`, `-T`) and the 16 MB-aligned `.bss` are GNU ld/ELF features; a Windows
-  (PE) or macOS build needs another arrangement for the arena and for the per-overlay sections. The SDL window is
-  64-bit only.
+- **Linux only, Windows in progress:** the ld script (`INSERT`, `-T`) and the 16 MB-aligned `.bss` are GNU ld/ELF
+  features; a Windows (PE) or macOS build needs another arrangement for the arena and for the per-overlay sections.
+  The SDL window is 64-bit only. The Windows cross toolchain is in place (DECISIONS "Windows: cross-built from Linux"):
+  `scripts/setup.sh llvm-mingw sdl3-windows`, the CMake toolchain file `cmake/windows-x86_64.cmake`,
+  `scripts/build_windows.sh [--launcher] [--test]` (the game into `build/port-win`, the launcher into
+  `build/launcher-win`, the launcher's self-test under Wine) and `tools/port_inventory.py probe --target windows`
+  (the units through llvm-mingw's clang). Every unit compiles for Windows; the launcher links and passes its
+  self-test under Wine; the game does not link yet (the arena's alignment, the ld script, the POSIX calls of
+  `port/src/` and the `unsigned long` pointer casts of `port/psyq/`, which is 32-bit there): the project board's
+  Windows 1, 2 and 4.
 - **Sanitizer builds** see other section sizes (ASan's redzones), so logs compare only between builds of the same
   kind.
