@@ -223,6 +223,10 @@ void port_halt(const char *file, int line) {
     port_exit(2, "PLATFORM_HALT");
 }
 
+void port_cdload_wait_read(s32 id) {
+    port_log("cdload: frame %ld: file 0x%X freed while the CD reads into it: waiting for the read", port_frames, id);
+}
+
 void port_unimplemented(const char *fn) {
     port_log("unimplemented: %s", fn);
     port_exit(3, fn);

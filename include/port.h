@@ -168,6 +168,9 @@
 void port_wait(void);
 /* Reports an endless loop the game entered on purpose and stops. */
 void port_halt(const char *file, int line) __attribute__((noreturn));
+/* Logs that cdload is about to free file `id` while the CD is still reading into its buffer, and waits for the read
+ * (src/main/cdload.c, cdload_wait_read). */
+void port_cdload_wait_read(s32 id);
 
 /* The overlay manager. `tier` is 1 or 2.
  * port_overlay_load: `file` (a file ID) becomes the tier's current overlay, with its .data/.bss as at load time; the
