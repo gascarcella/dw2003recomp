@@ -7,8 +7,8 @@
 #   --launcher        also the launcher into build/launcher-win (dw2003-launcher.exe and its PDB)
 #   --configure-only  stop after configuring
 #   --test            after the launcher: its --self-test under Wine (wine on PATH; SDL's offscreen video) in
-#                     build/launcher-win/selftest/, the prefix in build/wine-prefix/; the game's crash report under
-#                     Wine (tests/port/crash.py --wine); and when the disc is there (iso/dw2003.cue) the game's
+#                     build/launcher-win/selftest/, the prefix in build/wine-prefix/; and when the disc is there
+#                     (iso/dw2003.cue) the game's crash report under Wine (tests/port/crash.py --wine) and its
 #                     layer-2 replays under Wine (tests/port/run.py --exe ... --wine: the log and the record must
 #                     equal the Linux build's). The same gate as CI's windows job; each Wine run under `timeout`.
 # Needs: scripts/setup.sh llvm-mingw sdl3-windows (and imgui for the launcher); cmake and ninja (tools/venv's when the
@@ -120,20 +120,17 @@ if [[ $launcher -eq 1 ]]; then
     fi
 fi
 
-# ---- The game's crash report under Wine (no disc needed: tests/port/crash.py --wine).
-if [[ $test -eq 1 && $configure_only -eq 0 && -x "$port_dir/dw2003.exe" ]]; then
-    log "game: the crash report under wine (tests/port/crash.py --wine)"
-    if timeout 600 "$(tool venv)/bin/python" "$ROOT/tests/port/crash.py" --wine --exe "$port_dir/dw2003.exe"; then
-        log "game: the crash report under wine passed"
-    else
-        status=1
-        log "game: the crash report under wine FAILED"
-    fi
-fi
-
-# ---- The game's replays under Wine (the disc needed).
+# ---- The game under Wine, with the disc: the crash report (tests/port/crash.py --wine: its crash run boots the game)
+# and the layer-2 replays.
 if [[ $test -eq 1 && $configure_only -eq 0 && -x "$port_dir/dw2003.exe" ]]; then
     if [[ -f "$ROOT/iso/dw2003.cue" ]]; then
+        log "game: the crash report under wine (tests/port/crash.py --wine)"
+        if timeout 600 "$(tool venv)/bin/python" "$ROOT/tests/port/crash.py" --wine --exe "$port_dir/dw2003.exe"; then
+            log "game: the crash report under wine passed"
+        else
+            status=1
+            log "game: the crash report under wine FAILED"
+        fi
         log "game: the layer-2 replays under wine (tests/port/run.py --exe $port_dir/dw2003.exe --wine)"
         if timeout 1800 "$(tool venv)/bin/python" "$ROOT/tests/port/run.py" --exe "$port_dir/dw2003.exe" --wine -j "$JOBS"; then
             log "game: the replays under wine match the Linux build's"
@@ -142,7 +139,7 @@ if [[ $test -eq 1 && $configure_only -eq 0 && -x "$port_dir/dw2003.exe" ]]; then
             log "game: the replays under wine FAILED"
         fi
     else
-        log "game: no disc (iso/dw2003.cue): the replays under wine skipped"
+        log "game: no disc (iso/dw2003.cue): the crash report and the replays under wine skipped"
     fi
 fi
 

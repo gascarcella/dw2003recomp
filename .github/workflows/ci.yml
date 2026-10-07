@@ -311,24 +311,26 @@ jobs:
 
       # The Windows game replays the layer-2 scripts under Wine: its frame log and record must equal the Linux build's
       # (tests/port/run.py builds build/port for the sound replay, so the host gcc runs here too).
+      # The crash report on Windows (docs/PORT.md "Crash report"): a forced access violation in a run on the disc
+      # writes the report and the minidump under Wine, with the exception's exit code.
+      - name: The Windows crash report under Wine
+        if: steps.data.outputs.present == 'true' && steps.areas.outputs.port == 'true'
+        timeout-minutes: 10
+        run: tools/venv/bin/python tests/port/crash.py --wine --exe build/port-win/dw2003.exe
+
       - name: The Windows game under Wine, the layer-2 replays
         if: steps.data.outputs.present == 'true' && steps.areas.outputs.port == 'true'
         timeout-minutes: 30
         run: tools/venv/bin/python tests/port/run.py new_game first_battle_save --exe build/port-win/dw2003.exe --wine
-
-      # The crash report on Windows (docs/PORT.md "Crash report"): a forced access violation under Wine writes the
-      # report and the minidump with the right exit code, no disc needed.
-      - name: The Windows crash report under Wine
-        if: (steps.areas.outputs.port == 'true' || steps.areas.outputs.launcher == 'true')
-        timeout-minutes: 10
-        run: tools/venv/bin/python tests/port/crash.py --wine --exe build/port-win/dw2003.exe
 
       - name: Crash reports
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: crash-reports-windows
+          # Not build/**: the Wine prefix's dosdevices/z: links to /, which the glob cannot walk.
           path: |
             crash-*.txt
-            build/**/crash-*.txt
+            build/port-test/**/crash-*.txt
+            build/launcher-win/selftest/**/crash-*.txt
           if-no-files-found: ignore
