@@ -484,55 +484,47 @@ ShockTest *shocktst_create_editor(s32 count) {
 
 char *shocktst_data_path = "sim:C:\\DEVELOP\\DLSKDATA.TXT";
 
-/* Converts the text table (unk_54) into unk_50 and writes it to the PC as DLSKDATA.BIN. The text: the number of
+/* Converts the text file (text) into the table (table) and writes it to the PC as DLSKDATA.BIN. The text: the number of
  * steps on the first line, then lines of tab-separated fields up to a '/'; lines whose third field is 1 hold a
  * step: four values, motor 0's time and level, motor 1's time and level. The table: the count, the offsets of the
  * types (s32 each), of the time pairs and of the level pairs, then those arrays. */
-#ifdef NON_MATCHING
-/* 89%: register allocation; the original keeps times + 2 and levels + 2 as extra pointers (loop givs): each step
- * copies a reduced register R into times (times = R; store at R - 1; R += 2), i.e. RTL `tmp = times + 2; times = tmp`
- * back to back (loop.c's basic_induction_var follows a register source into the previous insn). Not found (wip-10):
- * u8 or ShockStep pointers, post/pre-increment, times[-1], (times += 2)[-1], an index k, a next-pointer local.
- * last-rest (final): the rest follows from those two givs. With them the original has no saved register left for
- * the hoisted "\t" high part and the constant 9, so reload rematerializes them at each use (the lui a3 / li a3,9
- * before each strcspn and test); ours keeps them in s8/s7. loop.c only makes the givs when the RTL has
- * `next = times + 2; times = next` back to back with next used afterwards (`nt = times + 1; times = nt;
- * nt[-1].unk_1 = vals[2];` does it: "giv at 348 combined with giv at 340"), but then rejects them as not worth
- * while (-496 vs 115): next is a user variable, so it pays copy_cost (strength_reduce: !replaceable &&
- * REG_USERVAR_P). The original's next was a compiler temporary; every expression form tried (pre/post-increment
- * values, assignment values, casts, statement order) collapses into a single `times += 2` in cse. */
 void shocktst_convert_table(ShockLoader *obj) {
-    u8 vals[4];
+    u8 *p = obj->text;
+    s32 *hdr = obj->table; /* the header, a word at a time */
     s32 count;
-    u8 *p;
-    s32 *hdr;
     s32 *types;
-    ShockStep *times;
-    ShockStep *levels;
+    u8 *times;
+    u8 *levels;
     s32 type;
-    s32 len;
-    s32 n;
+    u8 vals[4];
     s32 i;
+    s32 n;
     s32 fd;
+    s32 k;
+    u8 *t;
+    u8 *l;
+    u8 *next_t;
+    u8 *next_l;
 
-    p = obj->text;
-    hdr = obj->table;
     count = atoi(p);
     while (*p != '\n') {
         p++;
     }
-    *hdr = count;
-    hdr++;
-    *hdr = 0x10;
-    hdr++;
+    *hdr++ = count;
+    *hdr++ = 0x10;
     *hdr = hdr[-1] + count * 4;
     hdr++;
     *hdr = hdr[-1] + count * 2;
-    levels = times = (ShockStep *)(types = obj->table);
     p++;
+    types = obj->table;
+    /* FAKE: times holds the table's start until t and l are copied from it (the US decomp's SHOCKTST_convertText
+     * shape); copying t and l from obj->table instead gives other registers (98.78%). */
+    times = (u8 *)types;
     types = (s32 *)((u8 *)types + types[1]);
-    levels = (ShockStep *)((u8 *)levels + ((s32 *)levels)[3]);
-    times = (ShockStep *)((u8 *)times + ((s32 *)times)[2]);
+    l = t = times;
+    times = t += ((s32 *)t)[2];
+    levels = l += ((s32 *)l)[3];
+    k = 1;
     while (*p != '/') {
         p += strcspn(p, "\t");
         while (*p == '\t') {
@@ -542,9 +534,9 @@ void shocktst_convert_table(ShockLoader *obj) {
         while (*p == '\t') {
             p++;
         }
-        len = strcspn(p, "\t");
+        n = strcspn(p, "\t");
         type = atoi(p);
-        p += len;
+        p += n;
         while (*p == '\t') {
             p++;
         }
@@ -557,15 +549,22 @@ void shocktst_convert_table(ShockLoader *obj) {
                     p++;
                 }
             }
+            /* FAKE: each pair's second byte is written through the next pair's pointer, computed from the arrays'
+             * starts with an index k from 1, and l steps before t: this gives loop.c the original's two extra givs
+             * (t + 2 and l + 2), which a plain `t += 2` or a next-pointer local doesn't (89%). */
+            next_t = &times[k * 2];
+            next_l = &levels[k * 2];
             *types++ = type;
-            times->time = vals[0];
-            times->level = vals[2];
-            times++;
-            levels->time = vals[1];
-            levels->level = vals[3];
-            levels++;
+            t[0] = vals[0];
+            next_t[-1] = vals[2];
+            l[0] = vals[1];
+            next_l[-1] = vals[3];
+            k++;
+            l = next_l;
+            t = next_t;
         } else {
-            p += strcspn(p, "\n");
+            n = strcspn(p, "\n");
+            p += n;
             while (*p == '\n') {
                 p++;
             }
@@ -577,9 +576,6 @@ void shocktst_convert_table(ShockLoader *obj) {
         close(fd);
     }
 }
-#else
-INCLUDE_ASM("asm/shocktst/nonmatchings/shocktst_80082DA0", shocktst_convert_table);
-#endif
 
 void shocktst_update_loader(ShockLoader *obj, ShockLoaderData *data) {
     s32 fd;
