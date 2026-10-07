@@ -23,6 +23,15 @@ with no press through the scenes and one press per NPC talk and per choice, each
 battle_animations: first_battle_save itself with the mod on, `hit_reaction` on and off: the emulator's
 cross-core view (the battle's rules run before its animations), and the first battle's three actions cut, the last
 one keeping its KO reaction. tests/port/battle.py checks the scripts on the disc that the cut relies on.
+global_save (scripts/global_save.json): first_battle_save's route to the lab after the first battle (map 0x206, not
+an inn's map), the field menu's SAVE entry, STGMCARD's save, Back to the field, a reset and Continue:
+  - the slot (gamestate_data's first 0x26C4 bytes, the volatile ranges aside) is the same at `saved_anywhere`,
+    `back_after_save` and `loaded_anywhere`, on map 0x206; the load resumes the map as a return to it (map_is_new 0,
+    prev_map 0xC00) and the card's slot tail carries the mod's record ("GSAV" at slot offset 0x26C4);
+  - with `restore_map_state` off the load is the game's own (map_is_new 1);
+  - with the mod off the menu has no SAVE entry: the script's SAVE press opens STATUS instead and its wait for
+    STGMCARD times out.
+tests/saves/run.py loads the card the mod writes in the emulator (the PS1 game ignores the record).
 Exit codes: 0 pass, 1 fail, 2 something missing.
 """
 import argparse
@@ -183,6 +192,71 @@ def battle_animations(binary, out):
                   f"(emulator, the mod off: {e['battle_won']['frame'] - e['battle_start']['frame']})")
 
 
+GS_SCRIPT = MODS / "scripts/global_save.json"
+GS_FIELDS = {"map": 0x26C4, "prev_map": 0x26CC, "map_is_new": 0x26D8, "field_last_map": 0x26DC}
+
+
+def gs_field(dump, name):
+    return int.from_bytes(dump[GS_FIELDS[name]:GS_FIELDS[name] + 4], "little", signed=True)
+
+
+def gs_stable_slot(dump):
+    """gamestate_data's slot bytes (4..0x26C4) with layer 2's volatile ranges zeroed."""
+    from replay import VOLATILE_RANGES
+    stable = bytearray(dump)
+    for lo, hi in VOLATILE_RANGES:
+        stable[lo:hi] = bytes(hi - lo)
+    return bytes(stable[4:0x26C4])
+
+
+def global_save(binary, out):
+    """global_save: a save from the field menu on a map that is not an inn's, Back, a reset and its load (the docstring)."""
+    print("mods: global_save (tests/port/mods/scripts/global_save.json, a save from the lab and its load)")
+    runs = {}
+    for label, restore in (("gs_on", True), ("gs_norestore", False)):
+        cfg = out / f"{label}.settings.json"
+        cfg.write_text(json.dumps({"schema": 1, "disc": {"path": str(DISC)}, "video": {"window": False},
+                                   "memcard1": f"{label}_1.mcd", "memcard2": None,
+                                   "mods": {"global_save": {"enabled": True, "restore_map_state": restore}}}))
+        (out / f"{label}_1.mcd").unlink(missing_ok=True)
+        dumps = out / f"{label}_dumps"
+        dumps.mkdir()
+        rc, _, rec, err = run_port(binary, out, label, GS_SCRIPT, cfg, True, {"DW3_PORT_CHECKPOINT_DIR": str(dumps)})
+        if rc != 0 or rec is None:
+            print("    " + "\n    ".join(err.splitlines()[-5:]))
+        d = {f.name.split("_", 1)[1][:-4]: f.read_bytes() for f in dumps.glob("cp*.bin")}
+        runs[label] = (rc, rec, d, err)
+    rc, rec, d, err = runs["gs_on"]
+    cps = {c["name"]: c for c in rec["checkpoints"]} if rec else {}
+    names = ("menu_open", "saved_anywhere", "back_after_save", "loaded_anywhere", "loaded_settled")
+    check(rc == 0 and all(n in d for n in names), f"the run completes with its checkpoints (exit {rc})")
+    if not all(n in d for n in names):
+        return
+    check(cps["saved_anywhere"]["stage"] == 12 and cps["saved_anywhere"]["map"] == 0xC00 and
+          all(cps[n]["map"] == 0x206 and cps[n]["stage"] == 2 for n in ("menu_open", "back_after_save", "loaded_anywhere")),
+          "SAVE on the lab (map 0x206) opens STGMCARD as map 0xC00; Back and the load return to the lab")
+    check(gs_stable_slot(d["saved_anywhere"]) == gs_stable_slot(d["loaded_anywhere"]) ==
+          gs_stable_slot(d["back_after_save"]) == gs_stable_slot(d["menu_open"]),
+          "the slot's bytes are the same when the menu opened, saved, back on the field and loaded")
+    # loaded_anywhere is taken as FIELDSTG loads, before its fieldstg_update_main sets map_is_new; loaded_settled after
+    check(gs_field(d["loaded_settled"], "map_is_new") == 0 and gs_field(d["loaded_settled"], "prev_map") == 0xC00 and
+          gs_field(d["loaded_settled"], "field_last_map") == 0x206 and
+          "the map's state restored (map 0x206" in err and "the map's state saved with the slot (map 0x206" in err,
+          "the load resumes the lab as a return to it (map_is_new 0 once FIELDSTG runs; the record saved and restored)")
+    card = (out / "gs_on_1.mcd").read_bytes()
+    check(card[0x2000 + 0x300 + 0x26C4:][:5] == b"GSAV\x01",
+          "the card's slot 1 tail (block 1, file offset 0x300 + 0x26C4) carries the record, version 1")
+    rc2, rec2, d2, err2 = runs["gs_norestore"]
+    check(rc2 == 0 and "loaded_settled" in d2 and gs_field(d2["loaded_settled"], "map_is_new") == 1 and
+          gs_stable_slot(d2["loaded_anywhere"]) == gs_stable_slot(d["saved_anywhere"]) and
+          "not restored (restore_map_state off)" in err2,
+          f"restore_map_state off: the same slot, the map entered fresh (map_is_new 1) (exit {rc2})")
+    rc3, _, rec3, err3 = run_port(binary, out, "gs_off", GS_SCRIPT)
+    check(rc3 == 5 and rec3 is not None and "wait_stage) timed out" in err3 and
+          all(c["name"] != "saved_anywhere" for c in rec3["checkpoints"]) and rec3["map_sequence"][-1]["map"] == 0x1000,
+          f"with the mod off the menu has no SAVE: the press opens STATUS (map 0x1000) and the wait for STGMCARD times out (exit {rc3})")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("mode", nargs="?", default="check", choices=("check", "record"))
@@ -203,6 +277,7 @@ def main():
     binary = build("build/port", [], args.jobs, env)
     skip_dialogues(binary, out, args.mode == "record")
     battle_animations(binary, out)
+    global_save(binary, out)
     print(f"mods test: {'FAIL (' + str(len(FAILURES)) + ')' if FAILURES else 'pass'}")
     return 1 if FAILURES else 0
 

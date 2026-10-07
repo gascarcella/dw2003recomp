@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "id": "global_save",
+  "name": "Save anywhere",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "The field menu (START) ends with a SAVE entry that opens the save screen from any map, not only at an inn. The save also records the map's state (the floor, the layer, what happened on this visit) in a part of the save file the game never reads, so a load with this mod on resumes the map as it was; a PlayStation or an emulator still loads the save, at the same spot but as a fresh entry to the map.",
+  "options": [
+    { "id": "restore_map_state", "name": "Restore the map's state on load",
+      "description": "After loading a save made with this mod, put back the map's floor, layer and visit flags recorded with it. Off: the map starts fresh at the saved spot, as on a PlayStation.",
+      "type": "bool", "default": true, "applies": "live" }
+  ]
+}

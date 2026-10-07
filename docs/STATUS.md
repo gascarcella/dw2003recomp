@@ -6,7 +6,7 @@ Every game file of the EU disc (SLES-03936) rebuilds byte-identical from this re
 code compiles from matching C; only 8 functions remain as assembly. The PC port, built from the same C, runs on
 Linux: it boots the user's disc, plays the movies, the music and the effects, draws through a software GPU in an SDL3
 window, and saves to memory-card images that an emulator can also read. A launcher and the first built-in mods
-(fast-forward, a 60 Hz mode, skip dialogues, disable battle animations) are done. A Linux AppImage release pipeline is
+(fast-forward, a 60 Hz mode, skip dialogues, disable battle animations, save anywhere) are done. A Linux AppImage release pipeline is
 ready; the release itself is still to be published.
 
 ## Decompilation
@@ -33,7 +33,7 @@ ready; the release itself is still to be published.
   and `first_battle_save` (registration, the first battle, a save and reload, shops and menus) reach 14 of the 19 tier-1
   overlays. The SPU write traces (`tests/sound/`, `docs/SOUND.md`) belong to this layer.
 - **Layer 3, formats and saves:** file table, text, stage table and flag-range checks; save round trips between the
-  port and the emulator.
+  port and the emulator, and the emulator's load of a save the port made off an inn (the save-anywhere mod).
 - **The port's tests:** both layer-2 scripts replayed in the port against the emulator's checkpoints (also at `-m32` and
   under ASan/UBSan), the sound replayed on the emulator's timeline, the SPU core's and XA decoder's unit goldens, the
   settings, the mods, the 60 Hz mode against the patched game in the emulator.
@@ -63,7 +63,8 @@ The plan's milestones (`docs/PORT.md`):
 - **Game side:** `dw2003 --config FILE` (the settings file, schema 1), rebindable input, hotkeys, a pause key, the mod
   registry with manifests in `port/mods/`.
 - **Mods:** fast-forward (hold `Tab`, 4x), the 60 Hz mode (checked against the patched game in the emulator), skip
-  dialogues (`F2`), disable battle animations. With mods off, the binary's
+  dialogues (`F2`), disable battle animations, save anywhere (a SAVE entry in the field menu; the save carries the
+  map's state in the slot's unused tail, and still loads on a PS1). With mods off, the binary's
   logs, records and audio are unchanged.
 - **Release:** `scripts/package_appimage.sh` builds one Linux AppImage; a tag `vX.Y.Z` produces a draft release
   (`docs/RELEASE.md`). Publishing it is a maintainer decision.

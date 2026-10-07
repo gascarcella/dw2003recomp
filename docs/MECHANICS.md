@@ -709,6 +709,11 @@ patterns x the right sum, sum ^ 1, 0, 0xFF):
   (0 before), and the bytes from 0x26C4 on (map, next/prev map, entry, `map_is_new`, `field_last_map`, depth, meter count)
   are not saved. The load returns to the saved field map (`field_map`, 0x20A), not to 0xC01. A new file on an empty card
   is created after a "Create new data?" prompt; after "Saved." STGMCARD waits for CROSS, and Back (TRIANGLE) leaves it.
+- [C] A loaded map is a fresh entry (`fieldstg_update_main`: `field_last_map` differs, so `map_is_new` = 1): the type-0 map
+  flags (`gamestate_flags.map_flags`) are cleared, `player_depth` is 4, `attr_layer` is the stage's initial layer, `player_height`
+  0x3000, `meter_random_count` 16, and the spot target is re-drawn; a return from STGMCARD to the same map keeps them all. The
+  port's save-anywhere mod carries them in the slot's unused tail (file bytes 0x26C4..0x26EB of the slot, outside the checksum;
+  `docs/LAUNCHER.md` "Save anywhere"). [T] by `tests/port/mods.py` and the emulator's load of such a card in `tests/saves/run.py`.
 
 Code map: `memcard_get_checksum`, `memcard_check_checksum`, `memcard_funcs`, `memcard_read/_write`, STGMCARD (`src/stgmcard/stgmcard_80082CD0.c` `StgmcardSaveData`, `StgmcardSaveHeader`),
 `GamestateData` first 0x26C4 bytes.
