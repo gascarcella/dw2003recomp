@@ -36,6 +36,8 @@ typedef struct ModOption {
     ModType type;
     const char *def;            /* the default, as JSON text (the settings' grammar for a binding) */
     double min, max, step;      /* int, float */
+    double slider_max;          /* int, float with input_toggle: the slider's top (below max); 0: none */
+    const char *input_toggle;   /* the bool option that allows values above slider_max; NULL: none */
     const char *const *values;  /* enum: the value ids, NULL-terminated */
     const char *applies;        /* "live" or "restart" */
 } ModOption;
@@ -413,6 +415,47 @@ s32 port_party_xp_share(s32 slot, s32 took_part, s32 exp) {
     return gain;
 }
 
+/* ---- xp_boost (docs/LAUNCHER.md "XP boost"): while enabled, port_mod_xp_boost makes STFGTREP's report pass a won
+ * battle's experience (one fighter's split share), each form's experience (after the game's 10 or 50 cap) and the money
+ * (item 0x142's fifth included) through port_xp_boost, which multiplies them by `exp`, `form_exp` and `bits` (in tenths,
+ * rounded down, at most 9,999,999). Above 5x (the sliders' top) a value needs `manual` (mod_resolve caps it without).
+ * The launcher's presets (Boost, Turbo, Ultra: the manifest's `presets`) only fill in the three values. */
+enum { XB_EXP, XB_FORM_EXP, XB_BITS, XB_MANUAL };
+static const ModOption xb_options[] = {
+    { .id = "exp", .type = MOD_FLOAT, .def = "2", .min = 1, .max = 10, .step = 0.1, .slider_max = 5,
+      .input_toggle = "manual", .applies = "live" },
+    { .id = "form_exp", .type = MOD_FLOAT, .def = "2", .min = 1, .max = 10, .step = 0.1, .slider_max = 5,
+      .input_toggle = "manual", .applies = "live" },
+    { .id = "bits", .type = MOD_FLOAT, .def = "2", .min = 1, .max = 10, .step = 0.1, .slider_max = 5,
+      .input_toggle = "manual", .applies = "live" },
+    { .id = "manual", .type = MOD_BOOL, .def = "false", .applies = "live" },
+};
+static const char *const xb_names[] = { "experience", "form experience", "bits" };
+int port_mod_xp_boost;
+static s32 xb_tenths[3];
+
+static void xb_start(struct Mod *mod) {
+    int k;
+    port_mod_xp_boost = 1;
+    for (k = 0; k < 3; k++) {
+        xb_tenths[k] = (s32)(mod->values[XB_EXP + k].number * 10 + 0.5);
+    }
+    port_log("xp boost: experience %d.%dx, form experience %d.%dx, bits %d.%dx", (int)xb_tenths[0] / 10,
+             (int)xb_tenths[0] % 10, (int)xb_tenths[1] / 10, (int)xb_tenths[1] % 10, (int)xb_tenths[2] / 10,
+             (int)xb_tenths[2] % 10);
+}
+
+s32 port_xp_boost(s32 kind, s32 amount) {
+    long long r;
+    if (kind < 0 || kind > 2 || amount <= 0) {
+        return amount;
+    }
+    r = (long long)amount * xb_tenths[kind] / 10;
+    r = r > 9999999 ? 9999999 : r;
+    port_log("xp boost: frame %ld: %s %d -> %lld", port_frames, xb_names[kind], (int)amount, r);
+    return (s32)r;
+}
+
 static Mod mods[] = {
     { .id = "fast_forward", .version = "0.1", .options = ff_options,
       .option_count = (int)(sizeof(ff_options) / sizeof(ff_options[0])), .start = ff_start, .frame = ff_frame },
@@ -426,6 +469,8 @@ static Mod mods[] = {
       .option_count = (int)(sizeof(pl_options) / sizeof(pl_options[0])), .start = pl_start },
     { .id = "party_xp", .version = "0.1", .options = px_options,
       .option_count = (int)(sizeof(px_options) / sizeof(px_options[0])), .start = px_start },
+    { .id = "xp_boost", .version = "0.1", .options = xb_options,
+      .option_count = (int)(sizeof(xb_options) / sizeof(xb_options[0])), .start = xb_start },
 };
 enum { MOD_FAST_FORWARD, MOD_SKIP_DIALOGUES };
 #define MOD_COUNT ((int)(sizeof(mods) / sizeof(mods[0])))
@@ -481,6 +526,27 @@ static void mod_value(const ModOption *o, const PortJson *j, const char *where, 
     }
 }
 
+/* An option with an input_toggle that is off is capped at its slider's top ("Mod manifest": `slider_max`). */
+static void mod_resolve(Mod *mod) {
+    int k, t;
+    for (k = 0; k < mod->option_count; k++) {
+        const ModOption *o = &mod->options[k];
+        if (o->input_toggle == NULL) {
+            continue;
+        }
+        for (t = 0; t < mod->option_count && strcmp(mod->options[t].id, o->input_toggle) != 0; t++) {
+        }
+        if (t == mod->option_count || mod->options[t].type != MOD_BOOL) {
+            port_fatal("mods: %s.%s: input_toggle %s is not a bool option", mod->id, o->id, o->input_toggle);
+        }
+        if (mod->values[t].number == 0 && mod->values[k].number > o->slider_max) {
+            port_log("settings: mods.%s.%s: %g is above %g without %s, %g used", mod->id, o->id, mod->values[k].number,
+                     o->slider_max, o->input_toggle, o->slider_max);
+            mod->values[k].number = o->slider_max;
+        }
+    }
+}
+
 void port_mods_settings(const PortJson *settings) {
     int m, k;
     size_t i;
@@ -526,6 +592,7 @@ void port_mods_settings(const PortJson *settings) {
             }
             mod_value(&mod->options[k], &s->items[i], where, &mod->values[k]);
         }
+        mod_resolve(mod);
     }
     for (i = 0; settings != NULL && i < settings->count; i++) {
         for (m = 0; m < MOD_COUNT && strcmp(mods[m].id, settings->keys[i]) != 0; m++) {
@@ -676,6 +743,9 @@ void port_mods_print_registry(FILE *f) {
                     o->id, mod_type_names[o->type], o->def, o->applies);
             if (o->type == MOD_INT || o->type == MOD_FLOAT) {
                 fprintf(f, ", \"min\": %.17g, \"max\": %.17g, \"step\": %.17g", o->min, o->max, o->step);
+            }
+            if (o->input_toggle != NULL) {
+                fprintf(f, ", \"slider_max\": %.17g, \"input_toggle\": \"%s\"", o->slider_max, o->input_toggle);
             }
             if (o->type == MOD_ENUM) {
                 fputs(", \"values\": [", f);

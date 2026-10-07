@@ -891,6 +891,11 @@ void stfgtrep_main_run(StfgtrepMain *obj, StfgtrepMainData *data) {
         if (rec->equipment[4] == 0x142 || rec->equipment[5] == 0x142) {
             money += stfgtrep_rewards[records_battle_results.battle].money / 5;
         }
+#ifdef PC_PORT
+        if (port_mod_xp_boost != 0) {
+            money = port_xp_boost(PORT_XP_BOOST_BITS, money);
+        }
+#endif
         data->messages->set_text(data->messages, cdload_module.files.get_file(records_language + 0x55), 10);
         data->messages->set_line_number(data->messages, 1, money);
         data->messages->set_speed(data->messages, 6);
@@ -1024,6 +1029,11 @@ void stfgtrep_main_update(StfgtrepMain *obj, StfgtrepMainData *data) {
                 exp = stfgtrep_rewards[records_battle_results.battle].exp / 3;
                 break;
             }
+#ifdef PC_PORT
+            if (port_mod_xp_boost != 0) {
+                exp = port_xp_boost(PORT_XP_BOOST_EXP, exp);
+            }
+#endif
             for (i = 0; i < obj->member_count; i++) {
                 if (records_battle_results.members[i].took_part != 0) {
                     m = stfgtrep_member_create(obj, i, exp);
@@ -1450,6 +1460,11 @@ s32 stfgtrep_get_technique_exp(s32 digimon, s32 tech, s32 exp, s32 n) {
     } else if (e > 50) {
         e = 50;
     }
+#ifdef PC_PORT
+    if (port_mod_xp_boost != 0) {
+        e = port_xp_boost(PORT_XP_BOOST_FORM_EXP, e);
+    }
+#endif
     return e;
 }
 

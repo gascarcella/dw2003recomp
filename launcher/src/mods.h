@@ -26,10 +26,21 @@ struct ModOption {
     Json def;             // the default, as the manifest writes it
     bool has_min = false, has_max = false;
     double min = 0, max = 0, step = 0; // int and float
+    // slider_max and input_toggle (int and float, together): a slider from min to slider_max while the bool option
+    // `input_toggle` is off (a value above it counts as slider_max), a typed number from min to max while it is on.
+    bool has_slider_max = false;
+    double slider_max = 0;
+    std::string input_toggle;
     std::vector<Value> values;         // enum
 
     // Whether `v` is a valid value of this option (a binding in the settings' grammar, an enum id, a number in range...).
     bool valid(const Json &v, std::string *err) const;
+};
+
+// A preset (the manifest's `presets`): a button that sets some options' values at once. Only the launcher knows them.
+struct ModPreset {
+    std::string id, name, description;
+    std::vector<std::pair<std::string, Json>> values; // option id -> value, in the manifest's order
 };
 
 struct ModManifest {
@@ -37,6 +48,7 @@ struct ModManifest {
     std::string id, name, version, description, kind;
     int requires_port = 0;
     std::vector<ModOption> options;
+    std::vector<ModPreset> presets;
     std::string error; // why it cannot be used ("" = fine); the mod is listed, not editable
 
     const ModOption *option(const std::string &id) const;
@@ -62,6 +74,13 @@ public:
     void set(const ModManifest &m, const ModOption &o, const Json &v);
     void reset(const std::string &mod, const std::string &option);
     bool is_set(const std::string &mod, const std::string &option) const;
+    // Whether the option's input_toggle is on (false without one).
+    bool typed(const ModManifest &m, const ModOption &o) const;
+    // The value the game uses: value(), capped at slider_max while the input_toggle is off.
+    Json effective(const ModManifest &m, const ModOption &o) const;
+    // A preset's values: whether every one is the effective value, and setting them all.
+    bool preset_active(const ModManifest &m, const ModPreset &p) const;
+    void apply_preset(const ModManifest &m, const ModPreset &p);
 
 private:
     const Json *mod(const std::string &id) const;

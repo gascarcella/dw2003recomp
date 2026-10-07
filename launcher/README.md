@@ -143,7 +143,8 @@ with **the launcher itself as the game's stand-in** (`DW3_LAUNCHER_FAKE_GAME=mod
 `--config`, one that rejects the file, one that crashes, one that fails after 250 lines), then opens the window, walks
 every screen with injected key events and a virtual gamepad, plays with the stand-in (a file of the BIN's size stands
 for the verified disc), rebinds a key through the prompt and checks the file, drops a wrong file on the window, renders the mods screen over test manifests (path B's `fast_forward`, the documented
-example, one with every option type, three unusable ones) and rebinds a mod's key through the prompt, and saves a picture of each screen in
+example, one with every option type, one with presets and a slider whose toggle makes it a typed number, three
+unusable ones; the presets' and toggles' manifest errors) and rebinds a mod's key through the prompt, and saves a picture of each screen in
 `DIR/launcher-self-test/screens/`.
 
 Optional, with the data: `DW3_SELFTEST_DISC=iso/dw2003.cue` also checks the real disc;

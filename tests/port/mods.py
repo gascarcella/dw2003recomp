@@ -42,7 +42,11 @@ preset_language (no script of its own):
 party_xp: first_battle_save's route to back_on_field (the first battle: party member 0 fights alone, 4 experience),
 the mod on with its defaults (share 50) and with share 100, and off: the checkpoints up to battle_won have the
 emulator's stable hashes (the mod acts in the report only); from battle_won to battle_end member 0 gains 4 in every
-run and members 1 and 2 gain 2, 4 and 0. Catch-up and knocked-out members are not reached by this battle.
+run and members 1 and 2 gain 2, 4 and 0, and the money 50. Catch-up and knocked-out members are not reached by this battle.
+xp_boost: the same route with the mod on: exp 3 and bits 2.5 (12 experience for member 0, 125 bits instead of 50);
+exp and bits 10 with `manual` and party_xp's default share (40, 20, 20 and 500 bits); and 10 without `manual`
+(capped at the sliders' 5x: 20 and 250 bits). Each run logs two boosts (the experience and the bits); the first battle
+gives no form experience (member 0 fights as its own form), so `form_exp` is not reached by a scripted run.
 Exit codes: 0 pass, 1 fail, 2 something missing.
 """
 import argparse
@@ -338,6 +342,7 @@ def preset_language(binary, out):
 
 
 PX_GAINS = {"px_on": (4, 2, 2), "px_full": (4, 4, 4), "px_off": (4, 0, 0)}
+FIRST_BATTLE_MONEY = 50  # stfgtrep_rewards[records_battle_results.battle].money of the first battle
 
 
 def px_party_exp(dump):
@@ -347,16 +352,19 @@ def px_party_exp(dump):
     return [(d, int.from_bytes(dump[0x780 + d * 0x3DC:0x784 + d * 0x3DC], "little", signed=True)) for d in party]
 
 
-def party_xp(binary, out):
-    """party_xp: the first battle's report with the mod on (share 50, share 100) and off (the docstring)."""
-    print("mods: party_xp (first_battle_save to back_on_field: the first battle, one member of three fights)")
+def gs_money(dump):
+    return int.from_bytes(dump[0x6C:0x70], "little", signed=True)
+
+
+def first_battle_runs(binary, out, runs):
+    """first_battle_save's route to back_on_field once per (label, mods) of `runs` (mods None: off). Yields (label,
+    mods, the party's exp gains and the money gain from battle_won to battle_end, stderr) for the runs that reach
+    back_on_field with battle_start and battle_won at the emulator's stable hashes (the mods act in the report only)."""
     fbs = json.loads((SCRIPTS / "first_battle_save.json").read_text())["steps"]
     j = next(k for k, s in enumerate(fbs) if s.get("type") == "checkpoint" and s.get("name") == "back_on_field")
-    script = derived(out, "party_xp", fbs[:j + 1])
+    script = derived(out, "first_battle", fbs[:j + 1])
     emu = {c["name"]: c for c in json.loads(FBS_EXPECTED.read_text())["checkpoints"]}
-    for label, mods in (("px_on", {"party_xp": {"enabled": True}}),
-                        ("px_full", {"party_xp": {"enabled": True, "share": 100, "catch_up": True}}),
-                        ("px_off", None)):
+    for label, mods in runs:
         dumps = out / f"{label}_dumps"
         dumps.mkdir()
         cfg = settings(out, label, mods) if mods else None
@@ -373,10 +381,40 @@ def party_xp(binary, out):
               f"{label}: battle_start and battle_won have the emulator's stable hashes")
         won, end = px_party_exp(d["battle_won"]), px_party_exp(d["battle_end"])
         gains = tuple(e[1] - w[1] for w, e in zip(won, end))
+        yield label, mods, won, gains, gs_money(d["battle_end"]) - gs_money(d["battle_won"]), err
+
+
+def party_xp(binary, out):
+    """party_xp: the first battle's report with the mod on (share 50, share 100) and off (the docstring)."""
+    print("mods: party_xp (first_battle_save to back_on_field: the first battle, one member of three fights)")
+    runs = (("px_on", {"party_xp": {"enabled": True}}),
+            ("px_full", {"party_xp": {"enabled": True, "share": 100, "catch_up": True}}),
+            ("px_off", None))
+    for label, mods, won, gains, money, err in first_battle_runs(binary, out, runs):
         shares = err.count("party xp: frame")
         check(gains == PX_GAINS[label] and shares == (3 if mods else 0),
               f"{label}: the party (Digimon {', '.join(str(w[0]) for w in won)}) gains {gains}, "
               f"want {PX_GAINS[label]}; {shares} share(s) logged")
+        check(money == FIRST_BATTLE_MONEY, f"{label}: the money gain {money}, want {FIRST_BATTLE_MONEY}")
+
+
+# label -> (the party's exp gains, the money gain)
+XB_WANT = {"xb_on": ((12, 0, 0), 125), "xb_party": ((40, 20, 20), 500), "xb_capped": ((20, 0, 0), 250)}
+
+
+def xp_boost(binary, out):
+    """xp_boost: the first battle's report with the mod on (the docstring)."""
+    print("mods: xp_boost (first_battle_save to back_on_field: the first battle, 4 experience and 50 bits)")
+    runs = (("xb_on", {"xp_boost": {"enabled": True, "exp": 3, "bits": 2.5}}),
+            ("xb_party", {"xp_boost": {"enabled": True, "exp": 10, "bits": 10, "manual": True},
+                          "party_xp": {"enabled": True}}),
+            ("xb_capped", {"xp_boost": {"enabled": True, "exp": 10, "bits": 10}}))
+    for label, mods, won, gains, money, err in first_battle_runs(binary, out, runs):
+        want = XB_WANT[label]
+        boosts = [line.split(": ", 2)[2] for line in err.splitlines() if "xp boost: frame" in line]
+        check((gains, money) == want and len(boosts) == 2,
+              f"{label}: the party gains {gains} and {money} bits, want {want[0]} and {want[1]} "
+              f"({'; '.join(boosts)})")
 
 
 def main():
@@ -402,6 +440,7 @@ def main():
     global_save(binary, out)
     preset_language(binary, out)
     party_xp(binary, out)
+    xp_boost(binary, out)
     print(f"mods test: {'FAIL (' + str(len(FAILURES)) + ')' if FAILURES else 'pass'}")
     return 1 if FAILURES else 0
 

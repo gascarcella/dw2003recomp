@@ -6,7 +6,7 @@ Every game file of the EU disc (SLES-03936) rebuilds byte-identical from this re
 code compiles from matching C; only 8 functions remain as assembly. The PC port, built from the same C, runs on
 Linux: it boots the user's disc, plays the movies, the music and the effects, draws through a software GPU in an SDL3
 window, and saves to memory-card images that an emulator can also read. A launcher and the first built-in mods
-(fast-forward, a 60 Hz mode, skip dialogues, disable battle animations, save anywhere, a preset language, party experience) are done. A Linux AppImage release pipeline is
+(fast-forward, a 60 Hz mode, skip dialogues, disable battle animations, save anywhere, a preset language, party experience, XP boost) are done. A Linux AppImage release pipeline is
 ready; the release itself is still to be published.
 
 ## Decompilation
@@ -69,8 +69,9 @@ The plan's milestones (`docs/PORT.md`):
   dialogues (`F2`), disable battle animations, save anywhere (a SAVE entry in the field menu; the save carries the
   map's state in the slot's unused tail, and still loads on a PS1), a preset language (skips the language select
   screen; also the disc's USA and Japanese text, which the screen never offers), party experience (members that did
-  not fight get a share of the battle's experience; optional catch-up bonus). With mods off, the binary's logs,
-  records and audio are unchanged.
+  not fight get a share of the battle's experience; optional catch-up bonus), XP boost (a battle's experience, form
+  experience and Bits multiplied, up to 5x on sliders or 10x typed; presets Boost, Turbo, Ultra). With mods off, the
+  binary's logs, records and audio are unchanged.
 - **Release:** `scripts/package_appimage.sh` builds one Linux AppImage; a tag `vX.Y.Z` produces a draft release
   (`docs/RELEASE.md`). Publishing it is a maintainer decision.
 

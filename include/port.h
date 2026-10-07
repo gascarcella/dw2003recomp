@@ -231,6 +231,12 @@ extern s32 port_preset_language;
 extern int port_mod_party_xp;
 void port_party_xp_knocked_out(s32 slot, s32 knocked_out);
 s32 port_party_xp_share(s32 slot, s32 took_part, s32 exp);
+/* port_mod_xp_boost: xp_boost is on ("XP boost"): STFGTREP's report passes each of a won battle's rewards through
+ * port_xp_boost: the experience once it is split among the fighters (before party_xp's shares and item 0x141's
+ * fifth), a form's experience once stfgtrep_get_technique_exp has capped it, and the money with item 0x142's fifth. */
+extern int port_mod_xp_boost;
+enum { PORT_XP_BOOST_EXP, PORT_XP_BOOST_FORM_EXP, PORT_XP_BOOST_BITS };
+s32 port_xp_boost(s32 kind, s32 amount);
 
 #endif /* PC_PORT */
 

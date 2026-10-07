@@ -6,8 +6,9 @@ Usage: tests/port/settings.py [--out DIR] [-j N] [--no-sdl]
 Builds the headless port if needed (tests/port/run.py's build), then checks, with `--print-settings`:
   - the round trip: a file's effective settings, printed and loaded again from another directory, print the same;
   - the mods: every port/mods/<id>/mod.json equal to the game's registry (--print-mods) and copied beside the binary,
-    the values read and resolved (defaults filled in), unknown mods and options logged, mods off under --script
-    unless --script-mods;
+    the manifests' presets valid for the game's options, the values read and resolved (defaults filled in; a value
+    above an option's slider_max capped while its input_toggle is off), unknown mods and options logged, mods off
+    under --script unless --script-mods;
   - the defaults (every key absent), relative paths resolved against the file's directory, null memory cards;
   - the command line overriding the file (--disc, --scale, --memcard1 none, --watchdog);
   - the errors: exit 64 with the key named (no schema, a newer schema, a wrong type, out of range, not JSON, a missing
@@ -60,7 +61,36 @@ def printed(binary, config, *extra):
 
 MODS = ROOT / "port/mods"
 REBOUND = ROOT / "tests/port/settings/rebound.json"
-OPTION_KEYS = {"id", "name", "description", "type", "default", "group", "applies", "min", "max", "step", "values"}
+OPTION_KEYS = {"id", "name", "description", "type", "default", "group", "applies", "min", "max", "step", "values",
+               "slider_max", "input_toggle"}
+PRESET_KEYS = {"id", "name", "description", "values"}
+
+
+def presets_problems(presets, options):
+    """A manifest's presets ("Mod manifest"): known keys, unique ids, and values the game accepts for each option (a
+    value above a slider's top only with its input_toggle set by the same preset)."""
+    problems, ids = [], set()
+    for p in presets:
+        where = f"preset {p.get('id')}"
+        if set(p) - PRESET_KEYS or not p.get("id") or not p.get("name") or p["id"] in ids:
+            problems.append(f"{where}: keys {sorted(p)}, a unique id and a name")
+        ids.add(p.get("id"))
+        values = p.get("values") or {}
+        if not values:
+            problems.append(f"{where}: no values")
+        for k, v in values.items():
+            o = options.get(k)
+            if o is None or o["type"] in ("binding", "enum"):
+                ok = o is not None and o["type"] == "enum" and v in o["values"]
+            elif o["type"] == "bool":
+                ok = isinstance(v, bool)
+            else:
+                ok = (isinstance(v, (int, float)) and not isinstance(v, bool) and o["min"] <= v <= o["max"]
+                      and (o["type"] == "float" or v == int(v))
+                      and (v <= o.get("slider_max", v) or values.get(o["input_toggle"]) is True))
+            if not ok:
+                problems.append(f"{where}: {k} = {v!r} is not a value of the game's option")
+    return problems
 
 
 def mods_check(binary):
@@ -97,7 +127,7 @@ def mods_check(binary):
                     problems.append(f"{where}: unknown keys {sorted(set(mo) - OPTION_KEYS)}")
                 if not mo.get("name") or not mo.get("description"):
                     problems.append(f"{where}: no name or description")
-                for key in ("type", "default", "min", "max", "step"):
+                for key in ("type", "default", "min", "max", "step", "slider_max", "input_toggle"):
                     if mo.get(key) != ro.get(key):
                         problems.append(f"{where}: {key} {mo.get(key)!r}, the game's {ro.get(key)!r}")
                 if mo.get("applies", "restart") != ro["applies"]:
@@ -106,6 +136,7 @@ def mods_check(binary):
                     values = mo.get("values", [])
                     if [v.get("id") for v in values] != ro["values"] or not all(v.get("label") for v in values):
                         problems.append(f"{where}: values {values}, the game's ids {ro['values']} (each with a label)")
+            problems += presets_problems(man.get("presets", []), {o["id"]: o for o in reg["options"]})
         check(not problems, f"{path.relative_to(ROOT)}: {'; '.join(problems) or 'equals the registry'}")
         copy = binary.parent / "mods" / path.parent.name / "mod.json"
         check(copy.exists() and copy.read_bytes() == path.read_bytes(), f"its copy beside the binary ({copy.parent})")
@@ -242,6 +273,13 @@ def main():
     check("mods.fast_forward.turbo: unknown option, ignored" in err, "an unknown option: logged and ignored")
     _, s, _ = printed(binary, a / "settings.json")
     check(s["mods"]["fast_forward"]["enabled"] is False, "a mod absent from the settings is off")
+    for manual, want in ((False, 5), (True, 8.5)):
+        _, s, err = printed(binary, write(out / f"capped_{manual}.json", {"schema": 1, "mods": {
+            "xp_boost": {"enabled": True, "exp": 8.5, "bits": 3, "manual": manual}}}))
+        xb = s["mods"]["xp_boost"]
+        check(xb["exp"] == want and xb["bits"] == 3 and ("mods.xp_boost.exp: 8.5 is above 5 without manual" in err)
+              != manual, f"input_toggle {'on: a value up to max' if manual else 'off: capped at slider_max'} "
+              f"(exp {xb['exp']})")
 
     print("settings: errors (exit 64, the key named)")
     bad = {

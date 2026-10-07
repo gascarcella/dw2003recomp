@@ -424,6 +424,21 @@ static const char EVERY_TYPE_MANIFEST[] = R"({
 }
 )";
 
+// A slider capped below its range, typed past it with a toggle, and presets (the shape of xp_boost's manifest).
+static const char PRESETS_MANIFEST[] = R"({
+  "schema": 1, "id": "presets", "name": "Presets", "kind": "builtin",
+  "presets": [
+    { "id": "low", "name": "Low", "values": { "rate": 2 } },
+    { "id": "high", "name": "High", "description": "Typed.", "values": { "rate": 8, "typed": true } }
+  ],
+  "options": [
+    { "id": "rate", "name": "Rate", "type": "float", "min": 1, "max": 10, "step": 0.1, "slider_max": 5,
+      "input_toggle": "typed", "default": 1 },
+    { "id": "typed", "name": "Typed", "type": "bool", "default": false }
+  ]
+}
+)";
+
 static void write_mod(const std::string &mods, const std::string &id, const std::string &text) {
     path_make_dir(path_join(mods, id), nullptr);
     write(path_join(path_join(mods, id), "mod.json"), text);
@@ -437,6 +452,7 @@ static std::string make_game_dir(const std::string &root) {
     write_mod(mods, "fast_forward", FAST_FORWARD_MANIFEST);
     write_mod(mods, "skip_dialogues", SKIP_DIALOGUES_MANIFEST);
     write_mod(mods, "every_type", EVERY_TYPE_MANIFEST);
+    write_mod(mods, "presets", PRESETS_MANIFEST);
     write_mod(mods, "broken", "{ \"schema\": 1, ");
     write_mod(mods, "elsewhere", R"({"schema": 1, "id": "other", "name": "Wrong id", "kind": "builtin"})");
     write_mod(mods, "textures", R"({"schema": 1, "id": "textures", "name": "Texture pack", "kind": "data"})");
@@ -446,7 +462,7 @@ static std::string make_game_dir(const std::string &root) {
 static void test_mods(const std::string &root) {
     const std::string game = make_game_dir(root);
     std::vector<ModManifest> mods = mods_scan(path_join(path_dir(game), "mods"));
-    check(mods.size() == 6, "six manifests found: " + std::to_string(mods.size()));
+    check(mods.size() == 7, "seven manifests found: " + std::to_string(mods.size()));
     auto find = [&](const std::string &id) -> const ModManifest * {
         for (const ModManifest &m : mods) {
             if (m.id == id) {
@@ -506,6 +522,54 @@ static void test_mods(const std::string &root) {
     check(every->option("chord")->valid(Json::parse(R"([["pad:guide", "pad:south"], "F9"])", nullptr), &err) &&
               mod_binding(v, *every, *every->option("chord")).size() == 2,
           "a binding option's default chord");
+
+    // slider_max, input_toggle and presets.
+    const ModManifest *pr = find("presets");
+    check(pr != nullptr && pr->error.empty() && pr->presets.size() == 2 && pr->option("rate")->has_slider_max &&
+              pr->option("rate")->slider_max == 5 && pr->option("rate")->input_toggle == "typed",
+          "slider_max, input_toggle and presets read: " + (pr != nullptr ? pr->error : std::string("missing")));
+    if (pr != nullptr && pr->error.empty()) {
+        const ModOption &rate = *pr->option("rate");
+        doc = Json::object();
+        check(!v.preset_active(*pr, pr->presets[0]) && !v.typed(*pr, rate), "no preset in place at the defaults");
+        v.apply_preset(*pr, pr->presets[0]);
+        check(v.preset_active(*pr, pr->presets[0]) && !v.preset_active(*pr, pr->presets[1]) &&
+                  doc == Json::parse(R"({"mods": {"presets": {"rate": 2}}})", nullptr),
+              "a preset writes its values: " + doc.dump());
+        v.apply_preset(*pr, pr->presets[1]);
+        check(v.typed(*pr, rate) && v.effective(*pr, rate) == Json::number(8) && v.preset_active(*pr, pr->presets[1]),
+              "a typed value above the slider's top, with the toggle on");
+        v.set(*pr, *pr->option("typed"), Json::boolean(false));
+        check(v.effective(*pr, rate) == Json::number(5) && v.value(*pr, rate) == Json::number(8),
+              "the toggle off: the value counts as the slider's top, and stays in the file");
+    }
+    auto load_text = [&](const std::string &id, const std::string &text) {
+        write_mod(path_join(root, "bad"), id, text);
+        return mod_manifest_load(path_join(path_join(root, "bad"), id)).error;
+    };
+    const std::string head = R"({"schema": 1, "id": "x", "name": "X", "kind": "builtin", )";
+    const std::string rate = R"({"id": "r", "name": "R", "type": "int", "min": 1, "max": 10, "default": 1)";
+    check(load_text("x", head + R"("options": [)" + rate + R"(, "slider_max": 5}]})").find("together") !=
+              std::string::npos,
+          "slider_max without input_toggle");
+    check(load_text("x", head + R"("options": [)" + rate + R"(, "slider_max": 5, "input_toggle": "r"}]})")
+                  .find("not a bool") != std::string::npos,
+          "an input_toggle that is not a bool option");
+    check(load_text("x", head + R"("options": [)" + rate + R"(, "slider_max": 11, "input_toggle": "t"},)" +
+                    R"({"id": "t", "name": "T", "type": "bool", "default": false}]})")
+                  .find("at most max") != std::string::npos,
+          "a slider_max above max");
+    const std::string capped = R"("options": [)" + rate + R"(, "slider_max": 5, "input_toggle": "t"},)" +
+                               R"({"id": "t", "name": "T", "type": "bool", "default": false}]})";
+    check(load_text("x", head + R"("presets": [{"id": "p", "name": "P", "values": {"r": 8}}], )" + capped)
+                  .find("above slider_max") != std::string::npos,
+          "a preset above a slider's top without its toggle");
+    check(load_text("x", head + R"("presets": [{"id": "p", "name": "P", "values": {"q": 2}}], )" + capped)
+                  .find("not an option") != std::string::npos,
+          "a preset of an unknown option");
+    check(load_text("x", head + R"("presets": [{"id": "p", "name": "P", "values": {"r": 11}}], )" + capped)
+                  .find("out of range") != std::string::npos,
+          "a preset value out of range");
 }
 
 // ---- the disc check
@@ -925,7 +989,7 @@ static void test_mods_window(SDL_Window *window, const std::string &root) {
     AppOptions options;
     options.game = make_game_dir(path_join(root, "modsui-game"));
     App app(window, SDL_GetRenderer(window), location, options);
-    check(app.mods().size() == 6 && app.mods_dir() == path_join(path_dir(options.game), "mods"),
+    check(app.mods().size() == 7 && app.mods_dir() == path_join(path_dir(options.game), "mods"),
           "the launcher finds the mods beside the game");
     app.set_screen(Screen::Mods);
     app.select_mod("fast_forward");
@@ -954,6 +1018,19 @@ static void test_mods_window(SDL_Window *window, const std::string &root) {
     app.select_mod("broken");
     pump(app, 3);
     png = path_join(shots, "13-Mods-broken.png");
+    app.frame(png.c_str());
+    // The presets' buttons and the slider (up to slider_max), then a typed value past it (the toggle on).
+    app.select_mod("presets");
+    pump(app, 3);
+    png = path_join(shots, "14-Mods-presets.png");
+    app.frame(png.c_str());
+    for (const ModManifest &m : app.mods()) {
+        if (m.id == "presets" && m.presets.size() == 2) {
+            ModValues(&app.settings().doc).apply_preset(m, m.presets[1]);
+        }
+    }
+    pump(app, 3);
+    png = path_join(shots, "15-Mods-presets-typed.png");
     app.frame(png.c_str());
     check(app.last_error().empty(), "no error in the status bar: " + app.last_error());
 }

@@ -110,7 +110,7 @@ static bool parse_option(const Json &j, ModOption *o, std::string *err) {
     }
     o->restart = applies == "restart";
     if (o->type == ModOption::Type::Int || o->type == ModOption::Type::Float) {
-        for (const char *k : { "min", "max", "step" }) {
+        for (const char *k : { "min", "max", "step", "slider_max" }) {
             const Json *v = j.find(k);
             if (v == nullptr) {
                 continue;
@@ -120,7 +120,9 @@ static bool parse_option(const Json &j, ModOption *o, std::string *err) {
                 return false;
             }
             double x = v->as_number(0);
-            if (k[1] == 'i') {
+            if (k[0] == 's' && k[1] == 'l') {
+                o->slider_max = x, o->has_slider_max = true;
+            } else if (k[1] == 'i') {
                 o->min = x, o->has_min = true;
             } else if (k[1] == 'a') {
                 o->max = x, o->has_max = true;
@@ -130,6 +132,17 @@ static bool parse_option(const Json &j, ModOption *o, std::string *err) {
         }
         if (o->has_min && o->has_max && o->min > o->max) {
             *err = where + "min is above max";
+            return false;
+        }
+        if (!get_string(j, "input_toggle", false, &o->input_toggle, err, where)) {
+            return false;
+        }
+        if (o->has_slider_max != !o->input_toggle.empty()) {
+            *err = where + "slider_max and input_toggle go together";
+            return false;
+        }
+        if (o->has_slider_max && (!o->has_min || !o->has_max || o->slider_max <= o->min || o->slider_max > o->max)) {
+            *err = where + "slider_max: needs min and max, above min and at most max";
             return false;
         }
     }
@@ -228,6 +241,69 @@ ModManifest mod_manifest_load(const std::string &dir) {
             }
             m.options.push_back(o);
         }
+    }
+    for (const ModOption &o : m.options) {
+        const ModOption *t = o.input_toggle.empty() ? nullptr : m.option(o.input_toggle);
+        if (!o.input_toggle.empty() && (t == nullptr || t->type != ModOption::Type::Bool)) {
+            m.error = "mod.json: options[" + o.id + "].input_toggle: \"" + o.input_toggle + "\" is not a bool option";
+            return m;
+        }
+    }
+    const Json *presets = j.find("presets");
+    if (presets != nullptr && !presets->is_array()) {
+        m.error = "mod.json: presets: expected a list";
+        return m;
+    }
+    static const std::vector<Json> no_presets;
+    for (const Json &pj : presets != nullptr ? presets->items() : no_presets) {
+        ModPreset p;
+        if (!pj.is_object() || !get_string(pj, "id", true, &p.id, &err, "presets[].") ||
+            !get_string(pj, "name", true, &p.name, &err, "presets[].") ||
+            !get_string(pj, "description", false, &p.description, &err, "presets[].")) {
+            m.error = "mod.json: " + (err.empty() ? std::string("presets: an entry is not an object") : err);
+            return m;
+        }
+        const std::string where = "mod.json: presets[" + p.id + "].";
+        const Json *vals = pj.find("values");
+        if (vals == nullptr || !vals->is_object() || vals->members().empty()) {
+            m.error = where + "values: expected an object of option values";
+            return m;
+        }
+        for (const ModPreset &q : m.presets) {
+            if (q.id == p.id) {
+                m.error = where + "id: used twice";
+                return m;
+            }
+        }
+        for (const auto &kv : vals->members()) {
+            const ModOption *o = m.option(kv.first);
+            std::string why;
+            if (o == nullptr || o->type == ModOption::Type::Binding) {
+                m.error = where + "values." + kv.first + ": not an option (bindings cannot be preset)";
+                return m;
+            }
+            if (!o->valid(kv.second, &why)) {
+                m.error = where + "values." + kv.first + ": " + why;
+                return m;
+            }
+            p.values.emplace_back(kv.first, kv.second);
+        }
+        // A value above a slider's top only with its toggle switched on by the same preset.
+        for (const auto &kv : p.values) {
+            const ModOption *o = m.option(kv.first);
+            if (!o->has_slider_max || kv.second.as_number(0) <= o->slider_max) {
+                continue;
+            }
+            bool on = false;
+            for (const auto &t : p.values) {
+                on |= t.first == o->input_toggle && t.second.as_bool(false);
+            }
+            if (!on) {
+                m.error = where + "values." + kv.first + ": above slider_max without " + o->input_toggle + ": true";
+                return m;
+            }
+        }
+        m.presets.push_back(p);
     }
     if (m.kind != "builtin") {
         m.error = "kind \"" + m.kind + "\": only built-in mods are supported for now";
@@ -361,6 +437,37 @@ void ModValues::reset(const std::string &mod_id, const std::string &option) {
 bool ModValues::is_set(const std::string &mod_id, const std::string &option) const {
     const Json *mj = mod(mod_id);
     return mj != nullptr && mj->find(option) != nullptr;
+}
+
+bool ModValues::typed(const ModManifest &m, const ModOption &o) const {
+    const ModOption *t = o.input_toggle.empty() ? nullptr : m.option(o.input_toggle);
+    return t != nullptr && value(m, *t).as_bool(false);
+}
+
+Json ModValues::effective(const ModManifest &m, const ModOption &o) const {
+    Json v = value(m, o);
+    if (o.has_slider_max && !typed(m, o) && v.as_number(0) > o.slider_max) {
+        return Json::number(o.slider_max);
+    }
+    return v;
+}
+
+bool ModValues::preset_active(const ModManifest &m, const ModPreset &p) const {
+    for (const auto &kv : p.values) {
+        const ModOption *o = m.option(kv.first);
+        if (o == nullptr || !(effective(m, *o) == kv.second)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void ModValues::apply_preset(const ModManifest &m, const ModPreset &p) {
+    for (const auto &kv : p.values) {
+        if (const ModOption *o = m.option(kv.first)) {
+            set(m, *o, kv.second);
+        }
+    }
 }
 
 Binding mod_binding(const ModValues &v, const ModManifest &m, const ModOption &o) {

@@ -389,7 +389,7 @@ a big exp award gives several levels in one call and returns 1; cap level 99; wi
   `digimon[0].record.stats.values[2]` (HP, `gamestate_data` + 0x788: 150 -> 93);
   the report (STFGTREP) then adds the prize money (`money`, + 0x6C) and `digimon[0].record.exp` (+ 0x780), no level-up. The outcome and the stable hashes are the same on both CPU cores although
   the battle takes a different number of frames.
-- **Who gets a battle's experience** [C] (`stfgtrep_main_update`, step 1 of its init; the party mod of issue #28 hooks here):
+- **Who gets a battle's experience** [C] (`stfgtrep_main_update`, step 1 of its init; the party mod of issue #28 hooks here, and the XP boost mod multiplies the three rewards):
   - The amount is per battle, not per enemy: `stfgtrep_rewards[records_battle_results.battle]` = `{tech_exp, exp, money}`
     (335 rows, STFGTREP `.data`), `battle` copied from `records_state.battle` (set by `fieldstg_start_battle`) when the battle is
     won (`wfightmn` result step). Enemy levels and the party's levels play no part.

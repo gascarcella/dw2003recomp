@@ -165,6 +165,7 @@ live in the settings file, never in the manifest.
 | `kind` | yes | `builtin` (the only kind supported; `data` is reserved for data-override mods) |
 | `requires_port` | no | Integer: the game's mod interface the mod needs (`PORT_MODS_API` in `port/src/mods.c`, 1 now) |
 | `options` | no | A list of options |
+| `presets` | no | A list of presets: `{ "id", "name", "description" (optional), "values": { "<option id>": value } }`. The launcher shows a button per preset (pressed while all its values are in place) that sets those values; the game never sees a preset, only the values |
 
 **An option:** `id` (not `enabled`, unique in the mod), `name`, `description` (the launcher's tooltip), `type`,
 `default`, and optionally `group` (a heading on the mod's page; ungrouped options come first) and `applies` (`live` or
@@ -173,11 +174,16 @@ live in the settings file, never in the manifest.
 | Type | Extra keys | Value in the settings |
 |---|---|---|
 | `bool` | | `true`/`false` |
-| `int`, `float` | `min`, `max`, `step` | A number in range (an integer for `int`) |
+| `int`, `float` | `min`, `max`, `step`; `slider_max` with `input_toggle` | A number in range (an integer for `int`) |
 | `enum` | `values`: `[{ "id", "label" }]` | One of the value ids |
 | `binding` | | The binding grammar of "Input bindings"; the default written the same way |
 
-There is no `string` or `path` type. Example:
+There is no `string` or `path` type. An `int` or `float` with `min` and `max` is a slider, without them a number field.
+**`slider_max` and `input_toggle`** (together, on an `int` or `float` with `min` and `max`): `input_toggle` names a
+`bool` option of the same mod; while it is off the option is a slider from `min` to `slider_max` (above `min`, at most
+`max`), and a larger value in the settings counts as `slider_max` (the game logs it and uses `slider_max`; the file
+keeps the value); while it is on the option is a typed number from `min` to `max`. A preset's value above
+`slider_max` must come with the toggle set to `true` in the same preset. Example:
 
 ```json
 {
@@ -194,8 +200,8 @@ There is no `string` or `path` type. Example:
 ```
 
 The built-in mods use the same schema as later data mods, so one renderer in the launcher serves both. A manifest the
-launcher cannot use (not JSON, another schema, an `id` that is not its directory's name, a bad option, a `kind` other
-than `builtin`) is listed with the reason and cannot be switched on.
+launcher cannot use (not JSON, another schema, an `id` that is not its directory's name, a bad option or preset, a
+`kind` other than `builtin`) is listed with the reason and cannot be switched on.
 
 ## Mod runtime
 
@@ -359,6 +365,28 @@ draws, a new form, and item 0x141's fifth more. Form experience still goes only 
 the three party members gain (the Digimon at the lab have no panel). The money, the item and the battle are
 unchanged. `tests/port/mods.py` runs the first story battle (one fighter of three) with the mod on and off; catch-up
 and knocked-out members are not reached by a scripted run.
+
+### XP boost
+
+`xp_boost`. Options: `exp`, `form_exp`, `bits` (float 1-10, step 0.1, default 2; sliders up to 5, `slider_max` with
+`input_toggle: manual`), `manual` (bool, default false: values above 5x count as 5x). Presets (launcher only): Boost
+(all 2x, the defaults), Turbo (all 3x), Ultra (all 5x). No hotkey: it acts whenever enabled (`port_mod_xp_boost`).
+
+A won battle's rewards come from one row of `stfgtrep_rewards` (`docs/MECHANICS.md` section 6, "Who gets a battle's
+experience"). With the mod on, STFGTREP's report passes each through `port_xp_boost` (`port/src/mods.c`), which
+multiplies it by the option's value (in tenths, rounded down, at most 9,999,999):
+
+- **`exp`**: one fighter's split share, in `stfgtrep_main_update` before the members' panels are created; party_xp's
+  shares for the members that did not fight come from the boosted share, and item 0x141's fifth comes on top.
+- **`form_exp`**: a chosen form's experience, at the end of `stfgtrep_get_technique_exp`, after the game's cap (10 a
+  battle below the form's threshold level, 50 past it), so a boosted form still gains more than the cap.
+- **`bits`**: the money in `stfgtrep_main_run`'s step 20, item 0x142's fifth included; `gamestate_data.money` still
+  stops at 9,999,999.
+
+The report shows, counts and adds the boosted amounts as the game's own (the panels, the level-ups, the message).
+The item won and the battle are unchanged. `tests/port/mods.py` runs the first story battle (4 experience, 50 bits)
+with the mod on, with `manual` and party_xp, and capped without `manual`; that battle gives no form experience, so
+`form_exp` is not reached by a scripted run.
 
 ## 50/60 Hz
 
