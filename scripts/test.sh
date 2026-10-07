@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # Runs the host-compile probe, then every reference-test layer that is available here (tests/README.md), and exits
-# non-zero on the first failure. Headless; DW3_JOBS=1 by default (cloud sessions, shared machines).
-# Usage: scripts/test.sh [--build] [--layer 1|2|3|port]... [--no-probe]
+# non-zero on the first failure. Headless; DW3_JOBS=1 by default (cloud sessions, shared machines): the layers that can
+# run their pieces at once (layer 2's replays, the mods) do so with DW3_JOBS > 1 (CI: 4, the runner's cores).
+# Usage: scripts/test.sh [--build] [--layer 1|2|3|port|mods]... [--m32] [--no-probe]
 #   --build     run scripts/build.sh first (the matching build must stay byte-identical; tests never change it)
-#   --layer N   run only that layer (repeatable); the probe still runs. "port": the PC port's M1 test (tests/port)
+#   --layer N   run only that layer (repeatable); the probe still runs. "port": the PC port's M1 test and its checks
+#               (tests/port); "mods": the mods that change the game (tests/port/mods.py, the longest: CI's own job)
+#   --m32       the port layer's M1 test also on the -m32 build (tests/port/run.py --m32; needs gcc-multilib)
 #   --no-probe  skip the host-compile probe (tools/port_inventory.py probe + link: every unit compiles at -m64 with no
 #               pointer/int cast, implicit declaration or incompatible pointer type, and no global is defined twice)
 set -euo pipefail
@@ -13,16 +16,18 @@ export DW3_JOBS="${DW3_JOBS:-1}"
 BUILD=0
 PROBE=1
 LAYERS=""
+M32=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --build) BUILD=1; shift ;;
         --layer) LAYERS="$LAYERS $2"; shift 2 ;;
+        --m32) M32=(--m32); shift ;;
         --no-probe) PROBE=0; shift ;;
-        -h|--help) sed -n '2,8p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
         *) echo "unknown argument: $1" >&2; exit 2 ;;
     esac
 done
-[[ -z "$LAYERS" ]] && LAYERS="1 2 3 port"
+[[ -z "$LAYERS" ]] && LAYERS="1 2 3 port mods"
 PY="$ROOT/tools/venv/bin/python"
 [[ -x "$PY" ]] || PY=python3
 
@@ -97,8 +102,12 @@ for L in $LAYERS; do
         if [[ $rc -eq 2 ]]; then skip "save round trips: needs the emulator, the disc, cmake/ninja and gcc (above)"
         elif [[ $rc -ne 0 ]]; then exit 1
         else ran=$((ran + 1)); fi ;;
-    port)
-        layer port "the PC port replays the layer-2 scripts like the emulator (tests/port)"
+    port|mods)
+        if [[ "$L" == port ]]; then
+            layer port "the PC port replays the layer-2 scripts like the emulator (tests/port)"
+        else
+            layer mods "the mods that change the game, run with the mod on (tests/port/mods.py)"
+        fi
         if ! { command -v cmake || [[ -x "$ROOT/tools/venv/bin/cmake" ]]; } >/dev/null; then
             skip "no cmake (on PATH or in tools/venv: scripts/setup.sh cmake)"
         elif ! { command -v ninja || [[ -x "$ROOT/tools/venv/bin/ninja" ]]; } >/dev/null; then
@@ -107,12 +116,13 @@ for L in $LAYERS; do
             skip "no gcc for the port"
         elif [[ ! -f "$ROOT/iso/dw2003.cue" ]]; then
             skip "no disc image (iso/dw2003.cue; scripts/setup.sh disc or gamedata)"
+        elif [[ "$L" == mods ]]; then
+            "$PY" "$ROOT/tests/port/mods.py"; ran=$((ran + 1))   # DW3_JOBS mods at once, each its own process
         else
-            "$PY" "$ROOT/tests/port/run.py"; ran=$((ran + 1))
+            "$PY" "$ROOT/tests/port/run.py" "${M32[@]}"; ran=$((ran + 1))   # --m32: the -m32 build's log and record too
             "$PY" "$ROOT/tests/port/settings.py"   # --config, the launcher's contract (docs/LAUNCHER.md "Settings file")
             "$PY" "$ROOT/tests/port/hz60.py"       # the 60 Hz mode against the patched game's records
             "$PY" "$ROOT/tests/port/battle.py"     # the battle scripts on the disc, for battle_animations
-            "$PY" "$ROOT/tests/port/mods.py"       # the mods that change the game, run with the mod on
             "$PY" "$ROOT/tests/port/vram.py"       # the first battle's textures in VRAM against the emulator's
             "$PY" "$ROOT/tests/port/debug.py"      # the debug channel (--debug) and tools/mcp's offline self-test
             "$PY" "$ROOT/tests/port/crash.py"      # the crash report (DW3_PORT_CRASH_AT, a fatal error, --version)

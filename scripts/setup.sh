@@ -3,8 +3,11 @@
 # Nothing here needs sudo or installs outside the repo.
 #
 # Usage: scripts/setup.sh [--disc /path/to/disc.bin] [step...]
+#        scripts/setup.sh --pins      print the pinned versions, tags, hashes and URLs (CI's tool-cache key)
 #   steps: binutils venv cmake mkpsxiso gcc objdiff ext redux link gamedata disc  (default: all)
-#          optional: psyq sdl3 imgui sdl3-desktop appimage llvm-mingw sdl3-windows
+#          optional: psyq sdl3 imgui sdl3-desktop appimage llvm-mingw sdl3-windows ccache
+#   ccache: the pinned static ccache binary into tools/ccache (CI's host builds of the port and the launcher:
+#          .github/actions/setup; no apt package, the runners' mirror stalls)
 #   llvm-mingw: the pinned llvm-mingw release (clang + lld, UCRT) into tools/llvm-mingw: the Windows cross toolchain
 #          (cmake/windows-x86_64.cmake, scripts/build_windows.sh; DECISIONS "Windows")
 #   sdl3-windows: SDL3 cross-built static for Windows into tools/sdl3-windows (needs llvm-mingw)
@@ -28,6 +31,7 @@ TOOLS="$ROOT/tools"          # tracked files of this checkout
 INSTALL="$MAIN/tools"        # built/installed tools, shared across worktrees
 SRC="$INSTALL/src"
 JOBS="${DW3_JOBS:-$(nproc)}"   # DW3_JOBS: fewer on a shared machine (as scripts/build.sh)
+PINS_BEFORE="$(compgen -A variable)"   # `--pins`: every variable defined from here to the steps is a pin (below)
 
 BINUTILS_VER=2.47
 BINUTILS_SHA256=154ab23b60070e8f27013c22977f1129425d67d1e8acd6e13010e617811e4cff
@@ -369,6 +373,33 @@ step_appimage() {
 # release tag cloned into tools/imgui/, its commit checked (the commit hash is the checksum, as for the ext step). The
 # launcher's CMake compiles its core files and the SDL3 + SDL_Renderer backends from there. Optional (not in the
 # default steps; the launcher needs sdl3 too): scripts/setup.sh sdl3 imgui
+# ccache (GPL-3.0, a build tool only: nothing of it ships), the static Linux x86_64 build of its release.
+CCACHE_VER=4.14.1
+CCACHE_SHA256=fa1443c9fbea879c9bff6619d1284eda3102992e91831b9f6e546879972195cc
+
+step_ccache() {
+    local dir="$INSTALL/ccache" name="ccache-$CCACHE_VER-linux-x86_64-musl-static" tarball
+    tarball="$SRC/$name.tar.xz"
+    if [[ -x "$dir/ccache" && -f "$dir/.sha256" && "$(cat "$dir/.sha256")" == "$CCACHE_SHA256" ]]; then
+        log "ccache: $CCACHE_VER already installed ($dir)"
+        return
+    fi
+    [[ "$(uname -s)-$(uname -m)" == Linux-x86_64 ]] || die "ccache: the pinned tarball is a Linux x86_64 build"
+    mkdir -p "$SRC"
+    if [[ ! -f "$tarball" ]] || ! echo "$CCACHE_SHA256  $tarball" | sha256sum -c --quiet - 2>/dev/null; then
+        log "ccache: downloading $CCACHE_VER"
+        fetch "https://github.com/ccache/ccache/releases/download/v$CCACHE_VER/$name.tar.xz" "$tarball.part"
+        mv "$tarball.part" "$tarball"
+    fi
+    echo "$CCACHE_SHA256  $tarball" | sha256sum -c --quiet - || die "ccache: checksum mismatch"
+    rm -rf "$dir"
+    mkdir -p "$dir"
+    tar -C "$dir" --strip-components=1 -xJf "$tarball" "$name/ccache"
+    "$dir/ccache" --version >/dev/null || die "ccache: the binary does not run"
+    echo "$CCACHE_SHA256" > "$dir/.sha256"
+    log "ccache: installed $("$dir/ccache" --version | head -1) to $dir"
+}
+
 IMGUI_VER=1.92.9b
 IMGUI_COMMIT=f1cc2ae15e53a861a874c3034aae6798fde194ab
 step_imgui() {
@@ -667,13 +698,26 @@ step_link() {
     done
 }
 
+# The pins: every variable this script defined after PINS_BEFORE (versions, tags, SHA-256s, URLs, package lists), as
+# `declare -p` lines. CI hashes them with tools/requirements.txt into its tool caches' key (.github/actions/setup), so
+# a change to this script's logic alone keeps the caches valid; only what the tools are built from changes the key.
+pins() {
+    local v
+    for v in $(comm -13 <(sort <<< "$PINS_BEFORE") <(compgen -A variable | sort)); do
+        [[ "$v" =~ ^[A-Z][A-Z0-9_]*$ ]] || continue
+        case "$v" in PINS_BEFORE|REDUX_UBUNTU|DISC_PATH|FUNCNAME) continue ;; esac   # REDUX_UBUNTU: the machine's mirror
+        declare -p "$v"
+    done
+}
+
 DISC_PATH=""
 steps=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --disc) DISC_PATH="$2"; shift 2 ;;
+        --pins) pins; exit 0 ;;
         --sdl3-desktop-apt) echo $SDL3_DESKTOP_APT; exit 0 ;;   # what release.yml installs before sdl3-desktop
-        -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
         *) steps+=("$1"); shift ;;
     esac
 done

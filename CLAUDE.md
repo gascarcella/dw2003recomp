@@ -75,7 +75,7 @@ tools/venv/bin/python tools/progress.py --readme   # README progress table (code
 tools/venv/bin/python configure.py   # re-split + regenerate build.ninja/objdiff.json (ninja does this itself on config changes)
 scripts/check_toolchain.sh  # smoke test: every old-gcc through maspsx/as, m2c, objdiff, asm-differ, permuter
 scripts/setup.sh redux && scripts/check_emulator.sh [--bios retail]   # PCSX-Redux (data checkout or pinned download); boots the disc headlessly to CNTY_SEL (~16 s)
-scripts/test.sh [--layer N]   # reference tests (tests/README.md): goldens regenerated in the emulator + host replay, pad-script replays, formats; ~2 min
+scripts/test.sh [--layer 1|2|3|port|mods] [--m32]   # reference tests (tests/README.md): goldens regenerated in the emulator + host replay, pad-script replays, formats, the port's M1 test and checks, the mods; DW3_JOBS=N runs replays and mods N at a time
 tests/golden/oracle.py gen|check|list [families] [--bios retail]   # layer-1 goldens: one boot calls the game's functions (DECISIONS "Layer-1 goldens: calls on the running game")
 tests/host/replay.py [families] [--findings]   # the goldens through the C compiled with gcc -m64; mismatches = tests/host/FINDINGS.md
 tests/replay/replay.py run tests/replay/scripts/<name>.json [--record] [--repeat 2]   # layer-2 script; `check` replays them all

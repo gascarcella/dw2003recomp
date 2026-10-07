@@ -18,7 +18,9 @@ each layer is in `docs/STATUS.md`.
   `tests/` and `tools/`, never in `src/`, `include/` or `config/`. A test that needs a change in `src/` has found a bug;
   prove it with a golden and ask before touching the source.
 - **One entry point:** `scripts/test.sh` runs every layer that is available on this machine (emulator and disc present,
-  host compiler present) and exits non-zero on the first failure. It runs headless with `DW3_JOBS=1`, as cloud sessions do.
+  host compiler present) and exits non-zero on the first failure. It runs headless with `DW3_JOBS=1`, as cloud sessions do;
+  with `DW3_JOBS=N` the layer-2 replays and the mods' tests run N at a time (CI: 4). `--layer` picks layers (`1`, `2`, `3`,
+  `port`, `mods`), `--m32` adds the port's -m32 build to the M1 test.
   Before the layers it runs the PC port's host-compile gate (`tools/port_inventory.py probe` and `link`, ~5 s: every unit
   compiles at `-m64` with no pointer/int cast, implicit declaration or incompatible pointer type, and no global is defined
   twice; `--no-probe` skips it). The gate needs only the host gcc and nm (no disc, not even `include/asm_generated/`), so
@@ -299,6 +301,8 @@ byte-identical; `--m32` adds the 32-bit build (same log and record: the layout c
 report). Frames, `random_index` and the full hash are not compared, as between the emulator's two cores (`tests/port/README.md`).
 It needs the disc, the host gcc, CMake and Ninja (on PATH, or `scripts/setup.sh cmake` puts them in the venv) and the
 venv: no emulator. `scripts/test.sh` skips it when one is missing; CI runs it, and `--m32`, with the data checkout.
+The mods' tests (`tests/port/mods.py`, the longest of the port's checks: ~4 min one after another) are their own layer,
+`mods`: each mod's test runs in its own process (`--only MOD`), `DW3_JOBS` at a time, in CI's own `port-mods` job.
 
 ## Coverage (not a test)
 
