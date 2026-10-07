@@ -17,10 +17,18 @@
  * DW3_PORT_CRASH_AT=VSYNC (tests/port/crash.py): a NULL write at that vsync, from port_crash_test_write, so that a
  * report's top frame symbolizes to a known function.
  *
- * Windows (the Windows build, port/src/platform.c): the report for a fatal stop, a halt and an unimplemented part is
- * the same file (the stack from CaptureStackBackTrace, addresses relative to the image base, which a PDB resolves);
- * the exception handler and the minidump for a crash are the project board's Windows 8, so a crash there ends the
- * process without a report for now. */
+ * Windows (the Windows build, port/src/platform.c): the same report. A crash is an unhandled SEH exception
+ * (SetUnhandledExceptionFilter): the filter writes the text (the exception code and address, rip/rsp from the CONTEXT,
+ * the stack walked from that CONTEXT with RtlVirtualUnwind, so frame 0 is the faulting instruction), then a minidump
+ * beside it, crash-<stamp>.dmp (MiniDumpWriteDump from dbghelp.dll, loaded only then, written by a helper thread so
+ * the dump sees the crashing thread's stack as it was; WinDbg or Visual Studio open it with the build's PDB), appends
+ * the dump's line to the text and ends the process with the exception code as its exit status (0xC0000005 for an
+ * access violation, what Windows itself reports for an unhandled exception; the launcher names the codes). abort()
+ * (SIGABRT; also UCRT's invalid-parameter and pure-call handlers, which abort after setting the reason) writes a
+ * report of kind `abort` and exits 3, UCRT's status for abort. The watchdog's thread (platform.c) suspends the main
+ * thread and reports its registers and stack (port_crash_watchdog_fire), as SIGALRM's handler does on POSIX.
+ * Addresses are relative to the image base (exe+0x...): scripts/symbolize.py resolves them with llvm-symbolizer and
+ * the PDB. */
 #ifndef _WIN32
 #define _GNU_SOURCE
 #include <execinfo.h>
@@ -32,7 +40,9 @@
 #else
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <dbghelp.h>
 #include <io.h>
+#include <signal.h>
 #include <sys/stat.h>
 #endif
 #include <errno.h>
@@ -64,8 +74,11 @@ static volatile int crash_reporting;
  * reported as exe+offset, which addr2line resolves against the unstripped build. */
 static uintptr_t crash_exe_base, crash_exe_lo, crash_exe_hi;
 
-#ifndef _WIN32
 static void crash_install_handlers(void);
+#ifdef _WIN32
+static char crash_dump_path[CRASH_PATH + 64];
+static HANDLE crash_main_thread;       /* for the watchdog's report: the thread the game runs on */
+static const char *crash_abort_reason; /* set by the invalid-parameter and pure-call handlers before they abort */
 #endif
 
 /* The last lines of port_log, oldest first from crash_log_next. */
@@ -235,15 +248,11 @@ static void crash_write_registers(const ucontext_t *uc) {
 }
 #endif
 
-static void crash_write_stack(void) {
-    void *frames[CRASH_FRAMES];
+static void crash_write_frames(void *const *frames, int n, const char *what) {
     int i;
-#ifdef _WIN32
-    int n = (int)CaptureStackBackTrace(0, CRASH_FRAMES, frames, NULL);
-#else
-    int n = backtrace(frames, CRASH_FRAMES);
-#endif
-    cw_str("\nstack (return addresses; frame 0 is the reporter):\n");
+    cw_str("\nstack (");
+    cw_str(what);
+    cw_str("):\n");
     for (i = 0; i < n; i++) {
         cw_str("  #");
         cw_dec(i);
@@ -252,6 +261,49 @@ static void crash_write_stack(void) {
         cw_str("\n");
     }
 }
+
+static void crash_write_stack(void) {
+    void *frames[CRASH_FRAMES];
+#ifdef _WIN32
+    int n = (int)CaptureStackBackTrace(0, CRASH_FRAMES, frames, NULL);
+#else
+    int n = backtrace(frames, CRASH_FRAMES);
+#endif
+    crash_write_frames(frames, n, "return addresses; frame 0 is the reporter");
+}
+
+#ifdef _WIN32
+/* The registers and the stack of a CONTEXT (the exception's, or a suspended thread's): frame 0 is the instruction
+ * the context points at, the others return addresses, unwound with the image's .pdata as the system does. */
+static void crash_write_context_regs_and_stack(const CONTEXT *ctx) {
+    void *frames[CRASH_FRAMES];
+    CONTEXT c = *ctx;
+    int n = 0;
+    cw_str("pc: ");
+    cw_addr((uintptr_t)c.Rip);
+    cw_str("\nsp: ");
+    cw_hex((unsigned long long)c.Rsp, 1);
+    cw_str("\n");
+    while (n < CRASH_FRAMES && c.Rip != 0) {
+        DWORD64 base = 0, establisher = 0;
+        PRUNTIME_FUNCTION rf;
+        PVOID handler = NULL;
+        frames[n++] = (void *)(uintptr_t)c.Rip;
+        rf = RtlLookupFunctionEntry(c.Rip, &base, NULL);
+        if (rf == NULL) {
+            /* a leaf function (no unwind data): the return address is at the top of the stack */
+            if (IsBadReadPtr((const void *)(uintptr_t)c.Rsp, 8)) {
+                break;
+            }
+            c.Rip = *(const DWORD64 *)(uintptr_t)c.Rsp;
+            c.Rsp += 8;
+        } else {
+            RtlVirtualUnwind(UNW_FLAG_NHANDLER, base, c.Rip, rf, &c, &handler, &establisher, NULL);
+        }
+    }
+    crash_write_frames(frames, n, "frame 0 is the faulting instruction, then return addresses");
+}
+#endif
 
 /* Writes crash_text to a new file in crash_dir, names it on stderr. */
 static void crash_write_file(void) {
@@ -266,6 +318,10 @@ static void crash_write_file(void) {
     memcpy(crash_path + n, "crash-", 6);
     memcpy(crash_path + n + 6, stamp, 15);
     memcpy(crash_path + n + 21, ".txt", 5);
+#ifdef _WIN32
+    memcpy(crash_dump_path, crash_path, n + 21);
+    memcpy(crash_dump_path + n + 21, ".dmp", 5);
+#endif
 #ifdef _WIN32
     fd = _open(crash_path, _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT, _S_IREAD | _S_IWRITE);
 #else
@@ -414,9 +470,7 @@ void port_crash_init(const char *dir) {
     if (env != NULL && *env != '\0') {
         crash_test_at = strtol(env, NULL, 10);
     }
-#ifndef _WIN32
     crash_install_handlers();
-#endif
 }
 
 #ifndef _WIN32
@@ -451,8 +505,219 @@ void port_crash_watchdog_install(void) {
     sigaction(SIGALRM, &sa, NULL);
 }
 #else
+
+static const char *crash_exception_name(DWORD code) {
+    switch (code) {
+    case EXCEPTION_ACCESS_VIOLATION: return "EXCEPTION_ACCESS_VIOLATION";
+    case EXCEPTION_IN_PAGE_ERROR: return "EXCEPTION_IN_PAGE_ERROR";
+    case EXCEPTION_ILLEGAL_INSTRUCTION: return "EXCEPTION_ILLEGAL_INSTRUCTION";
+    case EXCEPTION_PRIV_INSTRUCTION: return "EXCEPTION_PRIV_INSTRUCTION";
+    case EXCEPTION_STACK_OVERFLOW: return "EXCEPTION_STACK_OVERFLOW";
+    case EXCEPTION_INT_DIVIDE_BY_ZERO: return "EXCEPTION_INT_DIVIDE_BY_ZERO";
+    case EXCEPTION_INT_OVERFLOW: return "EXCEPTION_INT_OVERFLOW";
+    case EXCEPTION_FLT_DIVIDE_BY_ZERO: return "EXCEPTION_FLT_DIVIDE_BY_ZERO";
+    case EXCEPTION_FLT_INVALID_OPERATION: return "EXCEPTION_FLT_INVALID_OPERATION";
+    case EXCEPTION_ARRAY_BOUNDS_EXCEEDED: return "EXCEPTION_ARRAY_BOUNDS_EXCEEDED";
+    case EXCEPTION_DATATYPE_MISALIGNMENT: return "EXCEPTION_DATATYPE_MISALIGNMENT";
+    case EXCEPTION_NONCONTINUABLE_EXCEPTION: return "EXCEPTION_NONCONTINUABLE_EXCEPTION";
+    case EXCEPTION_BREAKPOINT: return "EXCEPTION_BREAKPOINT";
+    case 0xC0000409: return "STATUS_STACK_BUFFER_OVERRUN";
+    default: return "exception";
+    }
+}
+
+/* The minidump, written by a helper thread: the crashing thread's stack is then dumped as the exception left it
+ * (and a stack overflow has no room left for dbghelp). */
+typedef BOOL(WINAPI *MiniDumpWriteDumpFn)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE, PMINIDUMP_EXCEPTION_INFORMATION,
+                                           PMINIDUMP_USER_STREAM_INFORMATION, PMINIDUMP_CALLBACK_INFORMATION);
+static struct {
+    EXCEPTION_POINTERS *ep;
+    DWORD thread_id;
+    DWORD error; /* 0 when written */
+} crash_dump;
+
+static DWORD WINAPI crash_dump_thread(LPVOID arg) {
+    HMODULE dbghelp = LoadLibraryW(L"dbghelp.dll");
+    MiniDumpWriteDumpFn write_dump =
+        dbghelp != NULL ? (MiniDumpWriteDumpFn)(void *)GetProcAddress(dbghelp, "MiniDumpWriteDump") : NULL;
+    HANDLE file;
+    MINIDUMP_EXCEPTION_INFORMATION mei;
+    (void)arg;
+    if (write_dump == NULL) {
+        crash_dump.error = GetLastError() != 0 ? GetLastError() : ERROR_MOD_NOT_FOUND;
+        return 0;
+    }
+    file = CreateFileA(crash_dump_path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (file == INVALID_HANDLE_VALUE) {
+        crash_dump.error = GetLastError();
+        return 0;
+    }
+    mei.ThreadId = crash_dump.thread_id;
+    mei.ExceptionPointers = crash_dump.ep;
+    mei.ClientPointers = FALSE;
+    /* the threads' stacks, the loaded modules, the writable data of the image (the game's data, the arena) and
+     * what pointers on the stacks point at: a few MB, enough to see the game's state in a debugger */
+    if (!write_dump(GetCurrentProcess(), GetCurrentProcessId(), file,
+                    (MINIDUMP_TYPE)(MiniDumpNormal | MiniDumpWithDataSegs | MiniDumpWithIndirectlyReferencedMemory),
+                    crash_dump.ep != NULL ? &mei : NULL, NULL, NULL)) {
+        crash_dump.error = GetLastError();
+    }
+    CloseHandle(file);
+    return 0;
+}
+
+/* Writes the minidump beside the text report and appends its line to the text. */
+static void crash_write_minidump(EXCEPTION_POINTERS *ep) {
+    HANDLE t;
+    int fd;
+    crash_dump.ep = ep;
+    crash_dump.thread_id = GetCurrentThreadId();
+    crash_dump.error = 0;
+    t = CreateThread(NULL, 0, crash_dump_thread, NULL, 0, NULL);
+    if (t == NULL) {
+        crash_dump.error = GetLastError();
+    } else {
+        WaitForSingleObject(t, 30000);
+        CloseHandle(t);
+    }
+    crash_len = 0;
+    crash_text[0] = '\0';
+    if (crash_dump.error == 0) {
+        cw_str("minidump: ");
+        cw_str(crash_dump_path);
+    } else {
+        cw_str("minidump: not written (error ");
+        cw_dec(crash_dump.error);
+        cw_str(")");
+        DeleteFileA(crash_dump_path);
+    }
+    cw_str("\n");
+    fd = _open(crash_path, _O_WRONLY | _O_APPEND | _O_BINARY | _O_NOINHERIT);
+    if (fd >= 0) {
+        if (_write(fd, crash_text, (unsigned)crash_len) < 0) {
+            /* nothing to do */
+        }
+        _close(fd);
+    }
+    {
+        static const char head[] = "port: minidump: ";
+        const char *what = crash_dump.error == 0 ? crash_dump_path : "not written";
+        if (_write(2, head, sizeof(head) - 1) < 0 || _write(2, what, (unsigned)strlen(what)) < 0 ||
+            _write(2, "\n", 1) < 0) {
+            /* nothing to do */
+        }
+    }
+}
+
+static LONG WINAPI crash_exception_filter(EXCEPTION_POINTERS *ep) {
+    const EXCEPTION_RECORD *er = ep->ExceptionRecord;
+    DWORD code = er->ExceptionCode;
+    if (crash_reporting) {
+        return EXCEPTION_CONTINUE_SEARCH; /* a second fault while reporting: the system ends the process */
+    }
+    crash_reporting = 1;
+    crash_len = 0;
+    crash_text[0] = '\0';
+    crash_write_context("crash", (int)code);
+    cw_str("\nexception: ");
+    cw_str(crash_exception_name(code));
+    cw_str(" (");
+    cw_hex(code, 8);
+    cw_str(")\nfault address: ");
+    if ((code == EXCEPTION_ACCESS_VIOLATION || code == EXCEPTION_IN_PAGE_ERROR) && er->NumberParameters >= 2) {
+        cw_hex((unsigned long long)er->ExceptionInformation[1], 1);
+        cw_str("\naccess: ");
+        cw_str(er->ExceptionInformation[0] == 0 ? "read" : er->ExceptionInformation[0] == 1 ? "write" : "execute");
+    } else {
+        cw_hex((unsigned long long)(uintptr_t)er->ExceptionAddress, 1);
+    }
+    cw_str("\n");
+    crash_write_context_regs_and_stack(ep->ContextRecord);
+    crash_write_file();
+    crash_write_minidump(ep);
+    /* the exception code as the exit status: what Windows reports for an unhandled exception */
+    TerminateProcess(GetCurrentProcess(), code);
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
+/* abort() (UCRT raises SIGABRT first, then would exit 3): a report of kind `abort`, then exit 3 ourselves. */
+static void crash_abort_handler(int sig) {
+    (void)sig;
+    if (!crash_reporting) {
+        crash_reporting = 1;
+        crash_len = 0;
+        crash_text[0] = '\0';
+        crash_write_context("abort", 3);
+        cw_str("\nreason: ");
+        cw_str(crash_abort_reason != NULL ? crash_abort_reason : "abort()");
+        cw_str("\n");
+        crash_write_stack();
+        crash_write_file();
+    }
+    _exit(3);
+}
+
+static void __cdecl crash_invalid_parameter(const wchar_t *expr, const wchar_t *func, const wchar_t *file,
+                                            unsigned line, uintptr_t reserved) {
+    (void)expr;
+    (void)func;
+    (void)file;
+    (void)line;
+    (void)reserved;
+    crash_abort_reason = "the C runtime rejected a parameter (invalid parameter handler)";
+    abort();
+}
+
+static void __cdecl crash_purecall(void) {
+    crash_abort_reason = "a pure virtual call";
+    abort();
+}
+
+static void crash_install_handlers(void) {
+    SetErrorMode(SetErrorMode(0) | SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+    SetUnhandledExceptionFilter(crash_exception_filter);
+    _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+    signal(SIGABRT, crash_abort_handler);
+    _set_invalid_parameter_handler(crash_invalid_parameter);
+    _set_purecall_handler(crash_purecall);
+}
+
+/* The watchdog (platform.c's thread) reports the main thread: its registers and stack while it spins. Installed on
+ * the main thread (port_watchdog_start runs there), fired from the watchdog's thread. */
 void port_crash_watchdog_install(void) {
-    /* the Windows watchdog is platform.c's thread (no report yet: Windows 8) */
+    if (crash_main_thread == NULL) {
+        DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &crash_main_thread, 0, FALSE,
+                        DUPLICATE_SAME_ACCESS);
+    }
+}
+
+void port_crash_watchdog_fire(void) {
+    static const char msg[] = "port: watchdog: no port_wait() for the watchdog's time: the game spins in a loop "
+                              "without a PLATFORM_WAIT hook (cdload_load_file?); exiting 4\n";
+    CONTEXT ctx;
+    int have_ctx = 0;
+    if (!crash_reporting) {
+        crash_reporting = 1;
+        if (crash_main_thread != NULL && SuspendThread(crash_main_thread) != (DWORD)-1) {
+            memset(&ctx, 0, sizeof(ctx));
+            ctx.ContextFlags = CONTEXT_CONTROL | CONTEXT_INTEGER;
+            have_ctx = GetThreadContext(crash_main_thread, &ctx) != 0;
+        }
+        crash_len = 0;
+        crash_text[0] = '\0';
+        crash_write_context("watchdog", 4);
+        cw_str("\nsignal: watchdog (the main thread, suspended)\n");
+        if (have_ctx) {
+            crash_write_context_regs_and_stack(&ctx);
+        } else {
+            cw_str("pc: (the main thread's context is not available)\n");
+        }
+        crash_write_file();
+    }
+    if (_write(2, msg, sizeof(msg) - 1) < 0) {
+        /* nothing to do */
+    }
+    _exit(4);
 }
 #endif
 

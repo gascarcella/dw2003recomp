@@ -107,7 +107,8 @@ void port_exit(int status, const char *reason) __attribute__((noreturn)); /* log
 
 /* ---- The crash report (crash.c; docs/PORT.md "Crash report") */
 void port_crash_init(const char *dir);        /* the handlers; the report goes to `dir` (NULL: the current directory) */
-void port_crash_watchdog_install(void);       /* SIGALRM reports too (pump.c arms the alarm) */
+void port_crash_watchdog_install(void);       /* POSIX: SIGALRM reports too; Windows: records the main thread */
+void port_crash_watchdog_fire(void);          /* Windows: the watchdog thread's call: the report, then exit 4 */
 void port_crash_log_line(const char *line);   /* port_log's lines, for the report's tail */
 /* A report for a stop that is not a signal (port_fatal, port_halt, port_unimplemented): `kind` and `detail` go in it. */
 void port_crash_report(const char *kind, int status, const char *detail);

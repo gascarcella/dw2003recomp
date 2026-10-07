@@ -137,8 +137,10 @@ convention's module prefixes leave no duplicate global). The overlay manager (`p
 PS1's copy into the slot:
 
 - **Data reset:** on the PS1 every load also resets the overlay's `.data`/`.bss`, because the file contains them.
-  Each unit is compiled through `port_gen.py rename` (CMake's compiler launcher), which renames the object's
-  `.data`/`.bss` sections into its overlay's with GNU objcopy: on ELF `dw3_data_<ovl>`/`dw3_bss_<ovl>`, orphan
+  Each unit is compiled through `port_gen.py rename` (CMake's compiler launcher), which puts the object's
+  `.data`/`.bss` sections into its overlay's (ELF: GNU objcopy renames them after the compile; PE: the overlay's
+  `#pragma clang section` forced into the compile, since objcopy breaks COFF COMDATs and with them the unwind
+  tables, `port/README.md`): on ELF `dw3_data_<ovl>`/`dw3_bss_<ovl>`, orphan
   output sections whose `__start_`/`__stop_` symbols GNU ld makes by itself; on PE the chunk groups
   `.dw3data$<ovl>_1`/`.dw3bss$<ovl>_1` of the `.dw3data`/`.dw3bss` sections, which lld sorts by their `$` suffix
   between generated empty marker chunks (`_0`, `_2`) carrying the same symbols (`port_gen.py markers`). No linker
@@ -322,6 +324,24 @@ the frame log or the record. Test hook: `DW3_PORT_CRASH_AT=VSYNC` writes through
 (`tests/port/crash.py`). A crash in CI leaves its report in the run's `crash-reports` artifact (`ci.yml`'s last step,
 on failure: `crash-*.txt` of the checkout and of `build/`).
 
+**On Windows** the report is the same file. A crash is an unhandled SEH exception (`SetUnhandledExceptionFilter`):
+the filter writes the text with `exception:` (the code's name and value, `EXCEPTION_ACCESS_VIOLATION (0xc0000005)`),
+`fault address:` and `access:` (read, write or execute, for an access violation), `pc:` and `sp:` from the exception's
+context, and the stack walked from that context with `RtlVirtualUnwind` over the image's unwind tables (frame 0 is the
+faulting instruction, the rest return addresses, through the game's frames to `main`: the units keep their `.pdata`,
+`port/README.md` "Overlays"). Then a helper thread writes `crash-<stamp>.dmp` beside it with `MiniDumpWriteDump`
+(dbghelp.dll, loaded only then; `MiniDumpNormal | MiniDumpWithDataSegs | MiniDumpWithIndirectlyReferencedMemory`: the
+threads' stacks and contexts, the module list, the exception record, the image's writable data and what the stacks
+point at; a few MB on Windows, 22 KB under Wine, whose dbghelp writes the stacks and the records but ignores the data
+flags), the text gets a `minidump:` line, stderr `port: minidump: PATH`, and the process ends with the exception code
+as its exit status (what Windows reports for an unhandled exception; the launcher names the codes; `wine` itself
+exits with the low byte, 5). `abort()` (and UCRT's invalid-parameter and pure-call handlers, which abort after setting
+the reason) writes a report of kind `abort` and exits 3, UCRT's status for abort. The watchdog's thread suspends the
+main thread and reports its registers and stack. The `.dmp` opens in WinDbg or Visual Studio with the build's PDB
+(`dw2003.pdb` beside the exe; the release's symbols zip); `scripts/symbolize.py REPORT --binary dw2003.exe` resolves a
+report's `exe+0x...` addresses with llvm-symbolizer (llvm-mingw's) and that PDB (`--pdb` when it is elsewhere). A
+stack overflow gets the text (the filter runs on what the guard page leaves) and perhaps no dump.
+
 ## Known limitations
 - **Pads:** one digital pad on port 0; no analog mode, no rumble (`PadSetAct` is accepted and ignored), no second
   port or multitap.
@@ -350,9 +370,8 @@ on failure: `crash-*.txt` of the checkout and of `build/`).
   on Windows (UCRT has no line buffering), the console reset's `setjmp` takes no SEH frame on mingw (`port_setjmp`),
   and `--debug` is refused there (the channel is a Unix socket). The Windows executable is a GUI-subsystem program
   (no console window behind it when the launcher starts it; stderr still reaches the launcher's pipe) with a manifest
-  (`port/windows/`: the UTF-8 code page, long paths, per-monitor DPI). The crash report's exception handler and
-  minidump are Windows 8 (a fatal stop, a halt and an unimplemented part already write the report on Windows, a
-  crash does not).
+  (`port/windows/`: the UTF-8 code page, long paths, per-monitor DPI). A crash writes the same report as on Linux
+  plus a minidump ("Crash report" above; `tests/port/crash.py --wine` checks both under Wine).
 - **`long` on Windows (LLP64) was audited (2026-10-07):** `long` is 32-bit there, 64-bit on Linux x86_64. The game's
   structs and headers use the sized types (`s32`, `u32`, `s64`); the `long`s left are Psy-Q prototypes (`CdRead2`,
   `MemCardInit`) and counters and option values in `port/src` (`port_frames`, `port_max_frames`, the pace, the step

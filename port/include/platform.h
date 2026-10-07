@@ -46,8 +46,8 @@ void port_sleep_until_ns(long long when);  /* an absolute time of port_clock_ns;
 void port_sleep_ms(int ms);
 
 /* ---- The watchdog (pump.c): the run ends with status 4 after `sec` seconds without a kick. POSIX: SIGALRM, whose
- * handler is the crash report's (port_crash_watchdog_install); Windows: a thread that watches a deadline (the report
- * is the board's Windows 8). port_watchdog_kick re-arms it. */
+ * handler is the crash report's (port_crash_watchdog_install); Windows: a thread that watches a deadline and calls
+ * the report's port_crash_watchdog_fire (the main thread's registers and stack). port_watchdog_kick re-arms it. */
 void port_watchdog_start(int sec);
 void port_watchdog_kick(void);
 
