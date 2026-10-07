@@ -353,3 +353,16 @@ slot's unused tail (slot offset 0x26C4, 0x3C bytes of stale buffer the game writ
 never looks at), under its own magic, version and checksum. The slot's 0x26C4 bytes and the header stay exactly the
 game's, so every card the port writes still loads on a PS1 or an emulator (as a fresh entry to the map), and a card
 from either still loads in the port. A mod that needs more than the tail would need a sidecar file, not a changed slot.
+
+## The hardware renderer: SDL_GPU beside the software GPU
+_Decided: 2026-10-07_ (issue #31, where the plan and its measurements are)
+
+The hardware renderer uses SDL_GPU directly (Vulkan now, D3D12 later on Windows), one backend, no OpenGL. It is a
+second consumer of the software GPU's decoded command stream, never a replacement: `port/psyq/gpu.c` stays the
+reference and the default renderer, and CI, the frame hash, `--screenshot`, the replays and every existing test keep
+using it. The renderer's own tests run where a GPU device exists and say so when they skip; CI compiles it and checks
+the fallback. Its shaders are HLSL compiled to SPIR-V at build time by the pinned DXC (`scripts/setup.sh dxc`; it also
+writes DXIL for D3D12) and embedded; DXC writes the same bytes on every machine, so nothing compiled is committed.
+Blending is done in the shader from a copy of the target, not by the fixed-function blender: on this machine NVIDIA's
+blender gets the PS1's (B+F)/2 wrong for a quarter of the values, stacked halvings drift on every device, and the
+PS1's dither after the blend cannot be expressed at all.

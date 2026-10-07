@@ -63,7 +63,7 @@ static void remove_tree(const std::string &path) {
 static const char SAMPLE_SETTINGS[] = R"({
   "schema": 1,
   "disc": { "path": "/games/dw2003.cue", "sha1": "457cb233349ba841e03b33d8060f8fbcadd45cb3" },
-  "video": { "window": true, "scale": 4, "fullscreen": true, "refresh": 60 },
+  "video": { "window": true, "scale": 4, "fullscreen": true, "refresh": 60, "renderer": "gpu" },
   "audio": { "mute": true },
   "memcard1": "cards/card1.mcd",
   "memcard2": null,
@@ -183,7 +183,8 @@ static void test_settings_file(const std::string &root) {
     s.load(sample);
     const Settings &v = s.values;
     check(s.state() == SettingsFile::State::Loaded && s.messages().empty(), "the sample loads without a warning");
-    check(v.disc_path == "/games/dw2003.cue" && v.scale == 4 && v.fullscreen && v.refresh == 60 && v.mute &&
+    check(v.disc_path == "/games/dw2003.cue" && v.scale == 4 && v.fullscreen && v.refresh == 60 &&
+              v.renderer == "gpu" && v.mute &&
               v.memcard[0].present && v.memcard[0].path == "cards/card1.mcd" && !v.memcard[1].present,
           "the sample's values");
     s.values.scale = 2;
@@ -198,11 +199,12 @@ static void test_settings_file(const std::string &root) {
     const std::string bad = path_join(root, "bad");
     path_make_dir(bad, nullptr);
     write(path_join(bad, SETTINGS_FILE),
-          R"({"schema":1,"video":{"scale":99,"refresh":55,"fullscreen":"yes"},"audio":3,"memcard1":7,"memcard2":""})");
+          R"({"schema":1,"video":{"scale":99,"refresh":55,"fullscreen":"yes","renderer":"vulkan"},"audio":3,)"
+          R"("memcard1":7,"memcard2":""})");
     SettingsFile b;
     b.load(bad);
-    check(b.state() == SettingsFile::State::Loaded && b.messages().size() == 6, "six warnings for six bad values");
-    check(b.values.scale == 2 && b.values.refresh == 50 && !b.values.fullscreen &&
+    check(b.state() == SettingsFile::State::Loaded && b.messages().size() == 7, "seven warnings for seven bad values");
+    check(b.values.scale == 2 && b.values.refresh == 50 && !b.values.fullscreen && b.values.renderer == "software" &&
               b.values.memcard[0].path == "card1.mcd" && b.values.memcard[1].path == "card2.mcd",
           "bad values fall back to the defaults");
 

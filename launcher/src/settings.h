@@ -63,6 +63,7 @@ struct Settings {
     int scale = 2;         // the window: 320*scale x 240*scale (1..16)
     bool fullscreen = false;
     int refresh = 50; // 50 (PAL) or 60 (the game's own 60 Hz mode; docs/LAUNCHER.md "50/60 Hz")
+    std::string renderer = "software"; // "software" or "gpu" (the hardware renderer; docs/LAUNCHER.md "Members")
     bool mute = false;
     MemoryCard memcard[2] = { { true, "card1.mcd" }, { true, "card2.mcd" } };
     std::string last_dir; // launcher.last_dir: where the file dialog opens (the launcher's own state)

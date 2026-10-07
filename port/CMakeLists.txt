@@ -258,4 +258,52 @@ if(DW3_PORT_SDL)
     message(STATUS "SDL3 ${SDL3_VERSION}: ${SDL3_DIR}")
     target_link_libraries(dw2003 PRIVATE SDL3::SDL3)
     target_compile_definitions(dw2003 PRIVATE DW3_PORT_SDL)
+
+    # The hardware renderer's shaders (port/src/render_gpu.c; issue #31): port/shaders/<name>.<vert|frag>.hlsl compiled
+    # by DXC to SPIR-V for SDL_GPU's Vulkan backend at build time, then embedded as C arrays (port/cmake/embed.cmake)
+    # under gen/shaders/<name>_<stage>_spv.h. DXC is the pinned one (scripts/setup.sh dxc: tools/dxc of this checkout
+    # or the main one) unless DW3_DXC names another; it writes the same SPIR-V on every machine, so nothing compiled
+    # is committed. The headless build needs neither.
+    set(DW3_DXC "" CACHE FILEPATH "DXC for the hardware renderer's shaders (default: tools/dxc/bin/dxc)")
+    if(NOT DW3_DXC)
+        foreach(root IN ITEMS "${DW3_ROOT}" "${DW3_MAIN_ROOT}")
+            if(root AND EXISTS "${root}/tools/dxc/bin/dxc")
+                set(DW3_DXC "${root}/tools/dxc/bin/dxc" CACHE FILEPATH "" FORCE)
+                break()
+            endif()
+        endforeach()
+    endif()
+    if(NOT DW3_DXC OR NOT EXISTS "${DW3_DXC}")
+        message(FATAL_ERROR "DW3_PORT_SDL: no DXC for the hardware renderer's shaders: scripts/setup.sh dxc "
+                            "(or -DDW3_DXC=<path to dxc>)")
+    endif()
+    message(STATUS "DXC: ${DW3_DXC}")
+    file(GLOB DW3_SHADERS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.hlsl")
+    set(DW3_SHADER_HEADERS "")
+    foreach(src IN LISTS DW3_SHADERS)
+        get_filename_component(name "${src}" NAME_WLE)   # present.frag
+        if(name MATCHES "\\.vert$")
+            set(profile vs_6_0)
+        elseif(name MATCHES "\\.frag$")
+            set(profile ps_6_0)
+        else()
+            message(FATAL_ERROR "${src}: a shader is <name>.vert.hlsl or <name>.frag.hlsl")
+        endif()
+        string(REPLACE "." "_" id "${name}")
+        set(spv "${DW3_GEN}/shaders/${name}.spv")
+        set(header "${DW3_GEN}/shaders/${id}_spv.h")
+        add_custom_command(OUTPUT "${spv}"
+                           COMMAND "${CMAKE_COMMAND}" -E make_directory "${DW3_GEN}/shaders"
+                           COMMAND "${DW3_DXC}" -T ${profile} -E main -spirv -fspv-target-env=vulkan1.0 -WX
+                                   -Fo "${spv}" "${src}"
+                           DEPENDS "${src}" COMMENT "dxc ${name}.hlsl -> SPIR-V" VERBATIM)
+        add_custom_command(OUTPUT "${header}"
+                           COMMAND "${CMAKE_COMMAND}" -DIN=${spv} -DOUT=${header} -DNAME=${id}_spv
+                                   -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed.cmake"
+                           DEPENDS "${spv}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed.cmake" VERBATIM)
+        list(APPEND DW3_SHADER_HEADERS "${header}")
+    endforeach()
+    add_custom_target(dw3_shaders DEPENDS ${DW3_SHADER_HEADERS})
+    add_dependencies(dw2003 dw3_shaders)
+    target_include_directories(dw2003 PRIVATE "${DW3_GEN}/shaders")
 endif()

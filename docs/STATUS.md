@@ -52,6 +52,10 @@ The plan's milestones (`docs/PORT.md`):
 - **M4 (saves):** memory cards as `.mcd` images; saves move both ways between the port and the emulator.
 - **M5 (full game):** the movies (our MDEC and XA decoder) are done; the rest of the game beyond the first battle has
   not been checked against the emulator.
+- **Hardware renderer** ([#31](https://github.com/gascarcella/dw2003recomp/issues/31), the plan there): phase 1 of 3 is
+  done. `--renderer gpu` (`video.renderer`, the launcher's Renderer choice) presents through SDL_GPU on Vulkan with the
+  same picture as the software path, pixel for pixel, and falls back to it without a usable device. The rasteriser of
+  the software GPU's commands (phase 2) and internal resolutions (phase 3) are next; the software GPU stays the default.
 - **Debug channel and MCP server:** `dw2003 --debug SOCKET` lets a tool pause, step, press, read and write memory and
   take screenshots between two vsyncs; `tools/mcp/` (registered by `.mcp.json`) is the MCP server over it, with symbol
   names from `nm` and the config tables (`docs/PORT.md`; gate: `tests/port/debug.py`).

@@ -48,6 +48,7 @@ static void usage(const char *argv0) {
             "          [--script JSON]\n"
             "          [--log FILE] [--record FILE] [--max-frames N] [--watchdog SEC] [--trace]\n"
             "          [--window] [--scale N] [--fullscreen] [--fps N] [--input-test] [--screenshot FRAME:PATH]\n"
+            "          [--renderer software|gpu] [--gpu-screenshot FRAME[@WxH]:PATH]\n"
             "          [--spu-trace FILE] [--wav FILE] [--mute] [--debug SOCKET] [--debug-hold] [--crash-dir DIR]\n"
             "          [--version]\n"
             "  --config JSON    the settings file (docs/LAUNCHER.md; what the launcher starts the game\n"
@@ -82,6 +83,11 @@ static void usage(const char *argv0) {
             "  --input-test     the window's input self-test: injected key and gamepad events (implies --window);\n"
             "                   exit 0 = passed, 6 = failed\n"
             "  --screenshot F:P write the display at vsync F to P (binary PPM); repeatable; any build\n"
+            "  --renderer R     the window's renderer: software (default: SDL_Renderer) or gpu (SDL_GPU, the\n"
+            "                   hardware renderer; software when no device can present; overrides video.renderer)\n"
+            "  --gpu-screenshot F[@WxH]:P  the hardware renderer's picture of vsync F to P (binary PPM): the image, or\n"
+            "                   with @WxH its present into a W x H output; repeatable; a build with -DDW3_PORT_SDL=ON;\n"
+            "                   skipped (logged) when no GPU device opens\n"
             "  --spu-trace FILE every SPU write and DMA block, per vsync (tests/sound's trace format)\n"
             "  --wav FILE       the audio output as a 44.1 kHz stereo WAV (any build, headless too)\n"
             "  --mute           no audio device in window mode\n"
@@ -115,7 +121,7 @@ int main(int argc, char **argv) {
     int mute = 0, debug_hold = 0;
     int memcard_given[2] = { 0, 0 };
     int disc_check = 1, max_frames_given = 0;
-    int window = 0, scale = 2, fullscreen = 0, input_test = 0;
+    int window = 0, scale = 2, fullscreen = 0, input_test = 0, gpu = 0, gpu_shots = 0;
     const char *config = NULL;
     int print_settings = 0, print_mods = 0, script_mods = 0;
     long fps = -1;
@@ -133,6 +139,7 @@ int main(int argc, char **argv) {
         window = port_settings.window;
         scale = port_settings.scale;
         fullscreen = port_settings.fullscreen;
+        gpu = port_settings.gpu;
         mute = port_settings.mute;
         port_watchdog_sec = port_settings.watchdog;
         for (i = 0; i < 2; i++) {
@@ -221,6 +228,18 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "port: --screenshot: FRAME:PATH (FRAME >= 1; at most 64): %s\n", argv[i]);
                 return 64;
             }
+        } else if (strcmp(argv[i], "--renderer") == 0 && i + 1 < argc) {
+            if (strcmp(argv[i + 1], "software") != 0 && strcmp(argv[i + 1], "gpu") != 0) {
+                fprintf(stderr, "port: --renderer: software or gpu\n");
+                return 64;
+            }
+            gpu = argv[++i][0] == 'g';
+        } else if (strcmp(argv[i], "--gpu-screenshot") == 0 && i + 1 < argc) {
+            if (!port_video_gpu_screenshot_add(argv[++i])) {
+                fprintf(stderr, "port: --gpu-screenshot: FRAME[@WxH]:PATH (FRAME >= 1; at most 64): %s\n", argv[i]);
+                return 64;
+            }
+            gpu_shots = 1;
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             usage(argv[0]);
             return 0;
@@ -262,12 +281,18 @@ int main(int argc, char **argv) {
         eff.mute = mute;
         eff.watchdog = port_watchdog_sec;
         eff.refresh = refresh;
+        eff.gpu = gpu;
         for (i = 0; i < 2; i++) {
             eff.memcard[i] = memcard_given[i] > 0 && memcard[i] != NULL ? port_settings_abspath(memcard[i]) : NULL;
         }
         port_settings_print(stdout, &eff);
         return 0;
     }
+    if (gpu_shots && !port_video_available()) {
+        fprintf(stderr, "port: --gpu-screenshot: this build has no GPU renderer: configure with -DDW3_PORT_SDL=ON\n");
+        return 64;
+    }
+    port_video_set_renderer(gpu ? "gpu" : "software");
     if (window && !port_video_available()) {
         fprintf(stderr, "port: --window: this build has no window: configure with -DDW3_PORT_SDL=ON "
                         "(port/README.md \"The window\")\n");

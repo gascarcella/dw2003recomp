@@ -9,7 +9,17 @@
  *   pump.c paces the vsyncs to real time (50 Hz) in window mode.
  * - Screenshots (`--screenshot FRAME:PATH`, any build): the image of vsync FRAME as a binary PPM (P6), exactly the
  *   pixels the window's texture gets. They depend on nothing but the VRAM and the display area (no host state), so
- *   two runs, or a window and a headless run, give the same bytes.
+ *   two runs, or a window and a headless run, give the same bytes. The debug channel's screenshot is the same image.
+ *
+ * The renderer (`--renderer software|gpu`, video.renderer; issue #31): `software` presents through SDL_Renderer as
+ * above; `gpu` through the hardware renderer (render_gpu.c, SDL_GPU), opened before any SDL_Renderer (a window that
+ * had one cannot be claimed by Vulkan on Wayland). When it cannot open (no device, no presentable surface: NVIDIA
+ * on the offscreen driver, a shader) the run logs why and falls back to SDL_Renderer. Phase 1 presents the same
+ * software image through it, pixel for pixel. `--gpu-screenshot FRAME[@WxH]:PATH` (SDL build) writes the hardware renderer's
+ * picture of vsync FRAME: the image itself, or with @WxH its present into a W x H output (the window's layout); a
+ * run without a device opens one for it (headless too), and skips the shot with a log line when there is none.
+ * `DW3_PORT_PRESENT_READBACK=FRAME:PATH` reads SDL_Renderer's output of vsync FRAME back into a PPM (the comparison
+ * of the two present paths: tests/port/render_gpu.py).
  *
  * The conversion (psx-spx "GPU Display Control", "24bit RGB"): a 15-bit display reads one VRAM pixel per screen pixel
  * (bits 0-4 red, 5-9 green, 10-14 blue; bit 15, the mask bit, is not shown); a 24-bit display (`rgb24`, the movies)
@@ -28,6 +38,8 @@
 
 #ifdef DW3_PORT_SDL
 #include <SDL3/SDL.h>
+
+#include "render_gpu.h"
 #endif
 
 #define VIDEO_MAX_W 640 /* screen pixels: the GPU's widest mode */
@@ -43,6 +55,13 @@ static struct {
 } video_shots[VIDEO_MAX_SHOTS];
 static int video_shot_count;
 static long video_converted_frame = -1; /* the frame video_pixels was converted at (the debug channel's screenshot) */
+static int video_gpu_wanted;            /* --renderer gpu / video.renderer "gpu" */
+static struct {
+    long frame;
+    int w, h; /* the output's size; 0: the image's own */
+    char *path;
+} video_gpu_shots[VIDEO_MAX_SHOTS];
+static int video_gpu_shot_count;
 
 static u32 video_rgb15(u16 c) {
     u32 r = c & 31, g = (c >> 5) & 31, b = (c >> 10) & 31;
@@ -107,22 +126,63 @@ int port_video_screenshot_add(const char *spec) {
     return 1;
 }
 
-/* video_pixels to `path` as a binary PPM; 0 when the file cannot be written. */
-static int video_try_ppm(const char *path) {
+/* `pix` (w x h, 0xFFRRGGBB) to `path` as a binary PPM; 0 when the file cannot be written. */
+static int video_ppm(const char *path, const u32 *pix, int w, int h) {
     FILE *f = fopen(path, "wb");
     int i;
     if (f == NULL) {
         return 0;
     }
-    fprintf(f, "P6\n%d %d\n255\n", video_w, video_h);
-    for (i = 0; i < video_w * video_h; i++) {
-        u8 rgb[3] = { (u8)(video_pixels[i] >> 16), (u8)(video_pixels[i] >> 8), (u8)video_pixels[i] };
+    fprintf(f, "P6\n%d %d\n255\n", w, h);
+    for (i = 0; i < w * h; i++) {
+        u8 rgb[3] = { (u8)(pix[i] >> 16), (u8)(pix[i] >> 8), (u8)pix[i] };
         fwrite(rgb, 1, 3, f);
     }
-    if (fclose(f) != 0) {
+    return fclose(f) == 0;
+}
+
+/* video_pixels to `path`; 0 when the file cannot be written. */
+static int video_try_ppm(const char *path) {
+    if (!video_ppm(path, video_pixels, video_w, video_h)) {
         return 0;
     }
     port_log("screenshot: frame %ld, %dx%d -> %s", port_frames, video_w, video_h, path);
+    return 1;
+}
+
+int port_video_set_renderer(const char *name) {
+    if (strcmp(name, "software") == 0 || strcmp(name, "gpu") == 0) {
+        video_gpu_wanted = name[0] == 'g';
+        return 1;
+    }
+    return 0;
+}
+
+int port_video_gpu_screenshot_add(const char *spec) {
+    char *end;
+    long frame = strtol(spec, &end, 0);
+    long w = 0, h = 0;
+    if (end == spec || frame <= 0 || video_gpu_shot_count == VIDEO_MAX_SHOTS) {
+        return 0;
+    }
+    if (*end == '@') {
+        w = strtol(end + 1, &end, 10);
+        if (*end != 'x') {
+            return 0;
+        }
+        h = strtol(end + 1, &end, 10);
+        if (w < 1 || h < 1 || w > 8192 || h > 8192) {
+            return 0;
+        }
+    }
+    if (*end != ':' || end[1] == '\0') {
+        return 0;
+    }
+    video_gpu_shots[video_gpu_shot_count].frame = frame;
+    video_gpu_shots[video_gpu_shot_count].w = (int)w;
+    video_gpu_shots[video_gpu_shot_count].h = (int)h;
+    video_gpu_shots[video_gpu_shot_count].path = strdup(end + 1);
+    video_gpu_shot_count++;
     return 1;
 }
 
@@ -148,6 +208,7 @@ static SDL_Texture *video_texture;
 static int video_tex_w, video_tex_h;
 static Uint64 video_start_ns;
 static long video_presents;
+static int video_gpu; /* the window presents through the hardware renderer */
 
 int port_video_available(void) {
     return 1;
@@ -163,15 +224,25 @@ void port_video_open(int scale, int fullscreen) {
     if (video_window == NULL) {
         port_fatal("SDL_CreateWindow: %s", SDL_GetError());
     }
-    video_renderer = SDL_CreateRenderer(video_window, NULL);
-    if (video_renderer == NULL) {
-        port_fatal("SDL_CreateRenderer: %s", SDL_GetError());
+    if (video_gpu_wanted) {
+        char why[256];
+        video_gpu = render_gpu_open(video_window, why, sizeof(why));
+        if (!video_gpu) {
+            port_log("renderer: gpu unavailable (%s); software", why);
+        }
+    }
+    if (!video_gpu) {
+        video_renderer = SDL_CreateRenderer(video_window, NULL);
+        if (video_renderer == NULL) {
+            port_fatal("SDL_CreateRenderer: %s", SDL_GetError());
+        }
     }
     port_window = 1;
     video_start_ns = SDL_GetTicksNS();
-    port_log("window: SDL %d.%d.%d, video driver %s, renderer %s, %dx%d%s", SDL_VERSIONNUM_MAJOR(SDL_GetVersion()),
+    port_log("window: SDL %d.%d.%d, video driver %s, renderer %s%s%s, %dx%d%s", SDL_VERSIONNUM_MAJOR(SDL_GetVersion()),
              SDL_VERSIONNUM_MINOR(SDL_GetVersion()), SDL_VERSIONNUM_MICRO(SDL_GetVersion()),
-             SDL_GetCurrentVideoDriver(), SDL_GetRendererName(video_renderer), 320 * scale, 240 * scale,
+             SDL_GetCurrentVideoDriver(), video_gpu ? "gpu (" : SDL_GetRendererName(video_renderer),
+             video_gpu ? render_gpu_describe() : "", video_gpu ? ")" : "", 320 * scale, 240 * scale,
              fullscreen ? " (fullscreen)" : "");
 }
 
@@ -203,9 +274,53 @@ static void video_dest(int ow, int oh, SDL_FRect *dst) {
     dst->y = (float)(int)((oh - dh) / 2);
 }
 
+/* video_dest in whole pixels (the hardware renderer's rectangle: its present maps pixels with integers). */
+static void video_dest_rect(int ow, int oh, int rect[4]) {
+    SDL_FRect d;
+    video_dest(ow, oh, &d);
+    rect[0] = (int)d.x;
+    rect[1] = (int)d.y;
+    rect[2] = (int)(d.w + 0.5f);
+    rect[3] = (int)(d.h + 0.5f);
+}
+
+/* DW3_PORT_PRESENT_READBACK=FRAME:PATH: SDL_Renderer's output of vsync FRAME (what the window shows) as a PPM. */
+static void video_readback(void) {
+    static long frame = -1;
+    static const char *path;
+    SDL_Surface *shot, *rgb;
+    if (frame < 0) {
+        const char *env = getenv("DW3_PORT_PRESENT_READBACK");
+        char *end;
+        frame = 0;
+        if (env != NULL && (frame = strtol(env, &end, 0)) > 0 && *end == ':') {
+            path = end + 1;
+        } else {
+            frame = 0;
+        }
+    }
+    if (frame == 0 || frame != port_frames) {
+        return;
+    }
+    shot = SDL_RenderReadPixels(video_renderer, NULL);
+    rgb = shot != NULL ? SDL_ConvertSurface(shot, SDL_PIXELFORMAT_XRGB8888) : NULL;
+    if (rgb == NULL || rgb->pitch != rgb->w * 4 || !video_ppm(path, (const u32 *)rgb->pixels, rgb->w, rgb->h)) {
+        port_fatal("DW3_PORT_PRESENT_READBACK: cannot read back or write %s: %s", path, SDL_GetError());
+    }
+    port_log("present readback: frame %ld, %dx%d -> %s", port_frames, rgb->w, rgb->h, path);
+    SDL_DestroySurface(rgb);
+    SDL_DestroySurface(shot);
+}
+
 static void video_present(void) {
     SDL_FRect dst;
     int ow, oh;
+    if (video_gpu) {
+        if (render_gpu_present(video_pixels, video_w, video_h, video_dest_rect)) {
+            video_presents++;
+        }
+        return;
+    }
     if (video_texture == NULL || video_tex_w != video_w || video_tex_h != video_h) {
         if (video_texture != NULL) {
             SDL_DestroyTexture(video_texture);
@@ -226,6 +341,7 @@ static void video_present(void) {
         video_dest(ow, oh, &dst);
         SDL_RenderTexture(video_renderer, video_texture, NULL, &dst);
     }
+    video_readback();
     SDL_RenderPresent(video_renderer);
     video_presents++;
 }
@@ -270,6 +386,7 @@ void port_video_close(void) {
  * drivers; driver 595.104.02) an SDL_Quit inside exit() unloads libnvidia-eglcore and the process then jumps into the
  * unloaded code (SIGSEGV after the run's "exit" line, seen in play-testing). X11 (GLX) was not affected. */
 void port_video_quit(void) {
+    render_gpu_close(); /* the device too: destroyed before SDL_Quit, its claim before the window */
     if (video_texture != NULL) {
         SDL_DestroyTexture(video_texture);
         video_texture = NULL;
@@ -284,9 +401,52 @@ void port_video_quit(void) {
     }
     SDL_Quit();
 }
+
+/* The hardware renderer's screenshots due at this vsync (video_pixels converted). A run whose window does not
+ * present through the renderer opens a device for them (headless: the video subsystem first); without one they are
+ * skipped with a log line. */
+static void video_gpu_shots_due(void) {
+    static int tried;
+    int i;
+    for (i = 0; i < video_gpu_shot_count; i++) {
+        int w, h;
+        u32 *buf;
+        if (video_gpu_shots[i].frame != port_frames) {
+            continue;
+        }
+        if (!render_gpu_active() && !tried) {
+            char why[256];
+            tried = 1;
+            if (!SDL_WasInit(SDL_INIT_VIDEO) && !SDL_InitSubSystem(SDL_INIT_VIDEO)) {
+                snprintf(why, sizeof(why), "SDL_InitSubSystem: %s", SDL_GetError());
+            } else if (render_gpu_open(NULL, why, sizeof(why))) {
+                port_log("renderer: gpu for the screenshots (%s)", render_gpu_describe());
+            }
+            if (!render_gpu_active()) {
+                port_log("renderer: gpu unavailable (%s)", why);
+            }
+        }
+        w = video_gpu_shots[i].w > 0 ? video_gpu_shots[i].w : video_w;
+        h = video_gpu_shots[i].h > 0 ? video_gpu_shots[i].h : video_h;
+        buf = malloc((size_t)w * (size_t)h * 4);
+        if (!render_gpu_active() || buf == NULL ||
+            !render_gpu_readback(video_pixels, video_w, video_h, w, h,
+                                 video_gpu_shots[i].w > 0 ? video_dest_rect : NULL, buf)) {
+            port_log("gpu screenshot: frame %ld skipped (no GPU device) -> %s", port_frames, video_gpu_shots[i].path);
+        } else if (!video_ppm(video_gpu_shots[i].path, buf, w, h)) {
+            port_fatal("gpu screenshot: cannot write %s", video_gpu_shots[i].path);
+        } else {
+            port_log("gpu screenshot: frame %ld, %dx%d -> %s", port_frames, w, h, video_gpu_shots[i].path);
+        }
+        free(buf);
+    }
+}
 #else
 int port_video_available(void) {
     return 0;
+}
+
+static void video_gpu_shots_due(void) {
 }
 
 void port_video_open(int scale, int fullscreen) {
@@ -349,6 +509,9 @@ void port_video_frame(void) {
     for (i = 0; i < video_shot_count; i++) {
         shot |= video_shots[i].frame == port_frames;
     }
+    for (i = 0; i < video_gpu_shot_count; i++) {
+        shot |= video_gpu_shots[i].frame == port_frames;
+    }
     present = port_window && video_due();
     if (!present && !shot) {
         return;
@@ -359,6 +522,7 @@ void port_video_frame(void) {
             video_write_ppm(video_shots[i].path);
         }
     }
+    video_gpu_shots_due();
     if (present) {
         video_present();
     }

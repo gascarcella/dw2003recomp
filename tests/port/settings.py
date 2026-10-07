@@ -221,14 +221,15 @@ def main():
     a = out / "a"
     write(a / "settings.json", {"schema": 1})
     _, s, _ = printed(binary, a / "settings.json")
-    check(s["disc"]["path"] == "" and s["video"] == {"window": True, "scale": 2, "fullscreen": False, "refresh": 50}
+    check(s["disc"]["path"] == "" and s["video"] == {"window": True, "scale": 2, "fullscreen": False, "refresh": 50,
+                                                     "renderer": "software"}
           and s["audio"] == {"mute": False} and s["watchdog"] == 0, "the defaults of an empty file")
     check(s["memcard1"] == str(a / "card1.mcd") and s["memcard2"] == str(a / "card2.mcd"),
           "the cards default to card1.mcd and card2.mcd beside the file")
     full = {
         "schema": 1,
         "disc": {"path": "../discs/dw2003.cue", "sha1": "457cb233" + "0" * 32},
-        "video": {"window": False, "scale": 3, "fullscreen": True, "refresh": 60},
+        "video": {"window": False, "scale": 3, "fullscreen": True, "refresh": 60, "renderer": "gpu"},
         "audio": {"mute": True},
         "memcard1": "cards/one.mcd",
         "memcard2": None,
@@ -255,10 +256,12 @@ def main():
 
     print("settings: the command line overrides the file")
     _, s, _ = printed(binary, a / "full.json", "--disc", "x.cue", "--scale", "5", "--memcard1", "none",
-                      "--memcard2", "two.mcd", "--watchdog", "7")
+                      "--memcard2", "two.mcd", "--watchdog", "7", "--renderer", "software")
     check(s["disc"]["path"] == str(ROOT / "x.cue") and s["video"]["scale"] == 5 and s["video"]["window"]
-          and s["memcard1"] is None and s["memcard2"] == str(ROOT / "two.mcd") and s["watchdog"] == 7,
-          "--disc (from the current directory), --scale (implies the window), --memcard1 none, --memcard2, --watchdog")
+          and s["memcard1"] is None and s["memcard2"] == str(ROOT / "two.mcd") and s["watchdog"] == 7
+          and s["video"]["renderer"] == "software",
+          "--disc (from the current directory), --scale (implies the window), --memcard1 none, --memcard2, --watchdog, "
+          "--renderer")
 
     print("settings: the mods and their manifests")
     mods_check(binary)
@@ -288,6 +291,9 @@ def main():
         "a wrong type": ({"schema": 1, "video": {"scale": "3"}}, "video.scale: a number, not a string"),
         "out of range": ({"schema": 1, "video": {"scale": 17}}, "video.scale: an integer from 1 to 16"),
         "refresh 55": ({"schema": 1, "video": {"refresh": 55}}, "video.refresh: 50 (PAL) or 60"),
+        "an unknown renderer": ({"schema": 1, "video": {"renderer": "vulkan"}},
+                                'video.renderer: "software" or "gpu", not "vulkan"'),
+        "a renderer not a string": ({"schema": 1, "video": {"renderer": 1}}, "video.renderer: a string, not a number"),
         "a card path not a string": ({"schema": 1, "memcard1": 3}, "memcard1: a path"),
         "mods not an object": ({"schema": 1, "mods": []}, "mods: an object, not an array"),
         "not JSON": ('{"schema": 1,}', "not JSON"),

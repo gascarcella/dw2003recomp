@@ -3,7 +3,7 @@
  *
  *   { "schema": 1,
  *     "disc":     { "path": "dw2003.cue", "sha1": "457cb233..." },          none / none
- *     "video":    { "window": true, "scale": 2, "fullscreen": false, "refresh": 50 },
+ *     "video":    { "window": true, "scale": 2, "fullscreen": false, "refresh": 50, "renderer": "software" },
  *     "audio":    { "mute": false },
  *     "memcard1": "card1.mcd", "memcard2": "card2.mcd",                    null: no card in that slot
  *     "watchdog": 0,                                                       seconds; 0 off
@@ -140,7 +140,7 @@ void port_settings_load(const char *path) {
     static const char *const top_keys[] = { "schema", "disc", "video", "audio", "memcard1", "memcard2", "watchdog",
                                             "input", "mods", "launcher", NULL };
     static const char *const disc_keys[] = { "path", "sha1", NULL };
-    static const char *const video_keys[] = { "window", "scale", "fullscreen", "refresh", NULL };
+    static const char *const video_keys[] = { "window", "scale", "fullscreen", "refresh", "renderer", NULL };
     static const char *const audio_keys[] = { "mute", NULL };
     PortSettings *s = &port_settings;
     const PortJson *root, *v, *obj;
@@ -209,6 +209,12 @@ void port_settings_load(const char *path) {
         if (s->refresh != 50 && s->refresh != 60) {
             port_settings_fail("video.refresh", "50 (PAL) or 60, not %d", s->refresh);
         }
+        if ((v = settings_member(obj, "video", "renderer", PORT_JSON_STRING)) != NULL) {
+            if (strcmp(v->string, "software") != 0 && strcmp(v->string, "gpu") != 0) {
+                port_settings_fail("video.renderer", "\"software\" or \"gpu\", not \"%s\"", v->string);
+            }
+            s->gpu = v->string[0] == 'g';
+        }
     }
     if ((obj = settings_member(root, "", "audio", PORT_JSON_OBJECT)) != NULL) {
         settings_unknown(obj, "audio", audio_keys);
@@ -238,9 +244,10 @@ void port_settings_print(FILE *f, const PortSettings *s) {
     fputs(",\n    \"sha1\": ", f);
     port_json_write_string(f, s->disc_sha1 != NULL ? s->disc_sha1 : "");
     fprintf(f, "\n  },\n  \"video\": {\n    \"window\": %s,\n    \"scale\": %d,\n    \"fullscreen\": %s,\n"
-               "    \"refresh\": %d\n  },\n  \"audio\": {\n    \"mute\": %s\n  },\n  \"memcard1\": ",
+               "    \"refresh\": %d,\n    \"renderer\": \"%s\"\n  },\n  \"audio\": {\n    \"mute\": %s\n  },\n"
+               "  \"memcard1\": ",
             s->window ? "true" : "false", s->scale, s->fullscreen ? "true" : "false", s->refresh,
-            s->mute ? "true" : "false");
+            s->gpu ? "gpu" : "software", s->mute ? "true" : "false");
     settings_print_path(f, s->memcard[0]);
     fputs(",\n  \"memcard2\": ", f);
     settings_print_path(f, s->memcard[1]);

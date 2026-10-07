@@ -15,7 +15,7 @@
 #                launcher's command) and a forced crash of the bundled game (tests/port/crash.py --wine) whose report
 #                symbolizes with the symbols zip's PDB
 #   --jobs N     parallel compile jobs (default: every core)
-# Needs: scripts/setup.sh llvm-mingw sdl3-windows imgui; cmake, ninja, python3 (tools/venv), the host's objdump.
+# Needs: scripts/setup.sh llvm-mingw sdl3-windows imgui dxc; cmake, ninja, python3 (tools/venv), the host's objdump.
 # Outputs: <out>/dw2003-<version>-windows-x86_64.zip, <out>/dw2003-<version>-windows-x86_64-symbols.zip,
 # <out>/SHA256SUMS-windows; the build trees in build/port-win and build/launcher-win, the staging under
 # build/release/windows/.
