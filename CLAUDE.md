@@ -48,7 +48,7 @@ with the original-era toolchain). The same C also builds the native PC port (`po
 |---|---|---|
 | `iso/` | no | `dw2003.bin/.cue` (symlink to user's disc, made by `setup.sh disc`) |
 | `extracted/` | no | Disc contents from dumpsxiso, plus its rebuild XML |
-| `tools/` | scripts only | Built tools `venv/`, `binutils/`, `mkpsxiso/`, `gcc/<ver>/`, `bin/` (objdiff-cli), `ext/` (pinned clones), `redux/` (PCSX-Redux, headless), `src/` (live in the main checkout; symlinks in worktrees); our scripts (`psyq_match.py`, …); `requirements.txt`; `local.env` (machine paths, untracked; see `local.env.example`) |
+| `tools/` | scripts only | Built tools `venv/`, `binutils/`, `mkpsxiso/`, `gcc/<ver>/`, `bin/` (objdiff-cli), `ext/` (pinned clones), `redux/` (PCSX-Redux, headless), `src/` (live in the main checkout; symlinks in worktrees); our scripts (`psyq_match.py`, …); `mcp/` (the MCP server for the port's debug channel, `tools/mcp/README.md`; `.mcp.json` at the root registers it); `requirements.txt`; `local.env` (machine paths, untracked; see `local.env.example`) |
 | `port/` | yes | The PC port: `CMakeLists.txt`, `src/` (arena, overlay manager, pump), `psyq/` (the Psy-Q shim), `README.md`; builds into `build/port/` (`docs/PORT.md`; hooks: `include/port.h`) |
 | `launcher/` | yes | The launcher (`launcher/README.md`, `docs/LAUNCHER.md`): C++, Dear ImGui on SDL3; its own CMake project, builds into `build/launcher/` |
 | `config/` | yes | splat YAML per link unit (`main.yaml` = EXE, `<overlay>.yaml`), `symbol_addrs.txt` (EXE names), `<overlay>.symbols.txt` (overlay names), `*.sha1` |
@@ -86,6 +86,7 @@ tools/venv/bin/python tools/port_inventory.py counts [--sites KIND[:TAG]]   # PC
 tools/venv/bin/python tools/port_inventory.py probe [FILES...] [-v] [--warnings] [--m32]   # host-compile gate (-m64, -Werror on pointer/int casts, implicit declarations, incompatible pointers); exit 0 = clean (~1 s); test.sh and CI run it
 tools/venv/bin/python tools/port_inventory.py link | structs   # duplicate/undefined globals over the probe's objects; struct sizes at -m32/-m64 vs the documented PS1 sizes
 tools/venv/bin/python tests/port/run.py [--m32] [--sanitize] [--cd-speed instant]   # the port's M1 test: new_game from the disc, twice, against the emulator's record (tests/port/README.md)
+build/port/dw2003 --disc iso/dw2003.cue --debug /tmp/dw3.sock [--cd-speed instant]   # the debug channel (port/src/debug.c: pause/step/wait, pad, peek/poke, screenshot, hash over a Unix socket); `.mcp.json` registers tools/mcp/server.py as an MCP server that drives it (tools/mcp/README.md); tools/venv/bin/python tools/mcp/selftest.py = its offline self-test; tests/port/debug.py = the gate (in test.sh's port layer)
 scripts/setup.sh sdl3 && cmake -S port -B build/port-sdl -G Ninja -DDW3_PORT_SDL=ON && cmake --build build/port-sdl && build/port-sdl/dw2003 --disc iso/dw2003.cue --window   # play it (M2: software GPU, SDL3 window, keyboard/gamepad)
 scripts/setup.sh imgui sdl3-desktop appimage && scripts/package_appimage.sh --test   # the release AppImage (docs/RELEASE.md; Fedora without libstdc++-static: --shared-libstdcxx); a tag vX.Y.Z runs release.yml: a DRAFT release
 scripts/ci_areas.sh --diff origin/main   # which CI areas (game, port, launcher) a change runs (DECISIONS "CI per area")

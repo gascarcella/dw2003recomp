@@ -247,6 +247,14 @@ static const u8 *port_state_map_addr(u32 addr, u32 size) {
     return NULL;
 }
 
+void *port_state_host(u32 addr, int size) {
+    if (size != 1 && size != 2 && size != 4) {
+        return NULL;
+    }
+    /* the mapped objects are the game's globals, writable; the map's pointers are const only for the readers */
+    return (void *)(uintptr_t)port_state_map_addr(addr, (u32)size);
+}
+
 int port_state_read(u32 addr, int size, int is_signed, s32 *out) {
     const u8 *p;
     if (size != 1 && size != 2 && size != 4) {

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "dw2003": {
+      "command": "tools/venv/bin/python",
+      "args": ["tools/mcp/server.py"]
+    }
+  }
+}

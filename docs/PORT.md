@@ -148,9 +148,42 @@ PS1's copy into the slot:
 - **Frame rate:** PAL 50 Hz by default. `--refresh 60` sets the game's own 60 Hz mode (the NTSC patch's
   `records_60hz`) with the pace, audio and CD rates to match.
 - **Watchdog:** `--watchdog SEC` exits when no `port_wait()` ran for that long (a loop no hook reaches).
+- **Pause:** the pump can hold the game between two vsyncs (the window's pause key; the debug channel's pause, step
+  and wait). Nothing of it reaches the game, the log or the record.
+- **Debug channel** (`--debug SOCKET`): a tool drives the running game between two vsyncs (below).
 - **Console reset** (`port/src/reset.c`): a script's `reset` step longjmps from the vsync tick back to `main()`,
   restores every game section from the startup snapshot, zeroes the arena and resets the shim, then runs the game's
   `main()` again. `DW3_PORT_RESET_CHECK=1` verifies the restore.
+
+## Debug channel and the MCP server
+`--debug SOCKET` (`port/src/debug.c`, whose header comment is the protocol, v1) opens a Unix stream socket of
+newline-delimited JSON requests (`{"id", "op", ...}`), answered in order, on which a tool drives and inspects the
+running game, headless or in a window. Without the option nothing of it exists (`port_frame` pays one branch): the
+bare binary, the replays and the goldens are unchanged. The ops:
+- `status`: frame, stage, file, map, paused, pace, pad owner. `pause` / `resume`: hold the game at the next vsync
+  boundary (the pump's pause, shared with the window's pause key). `step frames`: exactly N vsyncs, then pause.
+- `wait`: run until a host or PS1 read, the stage or the map equals a value, or a timeout in frames; leaves the game
+  paused. `pad buttons frames release [sync]`: the channel owns pad 1 (`psyq_pad_set` each vsync) until `pad_free`;
+  a script keeps precedence.
+- `peek` / `poke`: raw host memory, any range `/proc/self/maps` says is mapped (a bad address never faults the game).
+  `peek_ps1` / `poke_ps1`: a PS1 address, the arena (from `0x80082CB0`) directly at any length, anything else through
+  the state map (`port_state_read`'s layout-identical objects, 1/2/4 bytes).
+- `screenshot path` (the display image as a binary PPM), `hash` (`gamestate_data`'s PS1 image, as a checkpoint hashes
+  it), `pace fps`, `reset` (the console reset, after the answer), `quit status`.
+
+The game thread polls the socket itself: once per vsync from `port_frame` (after the script's step, before the video)
+and 50 times a second while the pump holds it paused. So every command runs between two vsyncs, reads and writes are
+frame-consistent, and a driven run is as deterministic as a scripted one (the same presses at the same frames give the
+same log and record). A deferred op (`step`, `wait`, `pad` with sync) is answered when it completes, and nothing else is
+read meanwhile. `--debug` turns the watchdog and the default frame cap off; a client that disconnects frees the pad and
+resumes the game. `--debug-hold` holds the game paused at its first vsync until the client resumes it, so a run is
+reproducible from frame 1 (without it an unthrottled headless game is past the boot by the time the client connects).
+
+`tools/mcp/` (`tools/mcp/README.md`) is the MCP server on top of it, registered for Claude Code by `.mcp.json` at the
+root: `game.py` is the plain client (no MCP dependency; `Game.spawn`, one method per op), `symbols.py` adds names
+(host addresses from `nm` on the ELF, PS1 addresses from `config/symbol_addrs.txt` and the overlays' tables:
+`mem_read("ps1:gamestate_data+8")`), `server.py` the tools (`game_start`, `pad_press`, `wait_stage`, `mem_read`,
+`screenshot` as a PNG image, `state_hash`, ...). `fake_game.py` is the protocol double for `selftest.py`.
 
 ## The Psy-Q shim
 `port/psyq/` implements the **123 Psy-Q functions** the game C calls (the count is `tools/port_inventory.py counts`;
@@ -238,6 +271,7 @@ mods); without `--config` the binary depends on nothing on the machine. Built-in
 | Saves | Port and emulator load each other's saves (layer 3) | `tests/saves/run.py` |
 | 60 Hz | The port's 60 Hz mode against the NTSC-patched game in the emulator | `tests/port/hz60.py` |
 | Settings, mods, input | Settings round trip; mods keep the emulator's stable hashes; the battle-script scanner on every script on the disc; `--input-test` | `tests/port/settings.py`, `mods.py`, `battle.py`, `dw2003 --input-test` |
+| Debug channel | One `--debug` run to CNTY_SEL: step and pad advance the frame exactly, the state map and the host symbol read the same, poke/peek, screenshot, hash, quit status; `tools/mcp`'s offline self-test | `tests/port/debug.py` (the `port` layer), `tools/mcp/selftest.py` |
 | Holdouts | A `NON_MATCHING` PS1 image (the holdouts' WIP C) replayed in the emulator without divergence | `tests/holdouts/run.sh` |
 
 What the port and the emulator are *not* compared on: frame numbers (the port's CD timing and CPU time differ), the

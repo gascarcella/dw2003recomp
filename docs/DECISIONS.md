@@ -213,6 +213,16 @@ and the port one, and the game scales its animations by the ticks elapsed, so th
 (issue #7). There the 3D maths is checked by layer-1 families (`libgs_view`) and the VRAM by what is not a frame:
 the textures and CLUTs (`tests/port/vram.py`).
 
+## The port's debug channel and the MCP server
+_Decided: 2026-10-06_
+
+A tool inspects and drives the running port through an in-process channel (`--debug SOCKET`, `port/src/debug.c`),
+not through ptrace or gdb: the game thread polls the socket at the vsync boundary, so every read, write and press
+lands between two frames and a driven run stays deterministic, and nothing depends on Yama or a debugger. Without
+`--debug` nothing of it exists. One Python server, `tools/mcp/`, registered by `.mcp.json`, speaks MCP over it;
+`game.py` is the dependency-free client for scripts. Memory is raw bytes by address or symbol name (`nm`,
+`config/symbol_addrs.txt`); typed access through DWARF is deferred until a use needs it.
+
 # Launcher and mods
 
 ## Launcher and mods

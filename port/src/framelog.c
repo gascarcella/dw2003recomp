@@ -164,6 +164,10 @@ void port_framelog_input(u16 buttons) {
     port_logf("I %ld buttons 0x%04X", port_frames, buttons);
 }
 
+u16 port_framelog_last_input(void) {
+    return port_last_buttons;
+}
+
 /* ---- The record (JSON) */
 
 static void port_json_string(FILE *f, const char *s) {

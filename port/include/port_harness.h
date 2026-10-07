@@ -37,6 +37,9 @@ u32 port_state_slot1_word0(void);  /* the first word of the file last loaded int
 /* A `size`-byte (1, 2, 4) read at PS1 address `addr`, sign-extended if `is_signed`, into *out: 1, or 0 when the
  * address is not one the port maps (fatal to the caller). */
 int port_state_read(u32 addr, int size, int is_signed, s32 *out);
+/* The host bytes a `size`-byte (1, 2, 4) access at PS1 address `addr` maps to (the same ranges as port_state_read),
+ * writable: the debug channel's poke_ps1; NULL when unmapped. */
+void *port_state_host(u32 addr, int size);
 
 /* ---- script.c: the input script (tests/replay/scripts/<name>.json, the layer-2 format) ----
  * port_script_load: parses the script (fatal on error). port_script_frame: once per vsync: advances the steps, sets
@@ -79,6 +82,9 @@ void port_pace_set(long fps);
 long port_pace_get(void);
 int port_video_available(void);
 int port_video_screenshot_add(const char *spec); /* "FRAME:PATH"; 0 when malformed (or too many) */
+/* The current display image (converted at this frame already, or now) to `path` as --screenshot writes it; its size
+ * in *w, *h; 0 when the file cannot be written (the debug channel's screenshot). */
+int port_video_screenshot_now(const char *path, int *w, int *h);
 void port_video_open(int scale, int fullscreen);
 void port_video_frame(void);
 void port_video_toggle_fullscreen(void);
@@ -138,5 +144,25 @@ void port_mods_start(int active);
 void port_mods_frame(void);
 void port_mods_print(FILE *f, int level);
 void port_mods_print_registry(FILE *f);
+
+/* ---- debug.c: the debug channel (`--debug SOCKET`; the protocol is the file's header comment) ----
+ * port_debug_open: the Unix socket at `path` (fatal when it cannot listen); sets port_debug_active. port_debug_frame
+ * (pump.c, once per vsync after the script's step, before the video): the pad the channel holds, its deferred ops
+ * (step, wait, a synced pad), then the socket's requests; a reset it was asked for is requested at its end.
+ * port_debug_poll_paused: the requests only (pump.c's pause loop, every poll). port_debug_resumed: after the pause
+ * loop (a reset asked for while paused runs here). port_debug_close: from port_exit (the socket file unlinked).
+ * port_debug_pad_owned: the channel owns the pad (a pad op until pad_free): input.c sends nothing to the pad. */
+extern int port_debug_active;
+extern int port_debug_pad_owned;
+void port_debug_open(const char *path);
+void port_debug_frame(void);
+void port_debug_poll_paused(void);
+void port_debug_resumed(void);
+void port_debug_close(void);
+/* pump.c: the pause the channel and the pause key share: `wanted` holds the game between two vsyncs (from the end of
+ * the current one) until a resume; port_pump_paused is the state (1 inside the pause loop, or about to enter it). */
+void port_pump_pause_request(void);
+void port_pump_resume_request(void);
+int port_pump_paused(void);
 
 #endif /* PORT_HARNESS_H */

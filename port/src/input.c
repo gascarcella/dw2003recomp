@@ -803,7 +803,7 @@ void port_input_frame(void) {
         input_test_before();
     }
     input_poll();
-    if (!port_script_active) {
+    if (!port_script_active && !port_debug_pad_owned) {
         u16 bits = input_buttons();
         psyq_pad_set(0, 1, bits);
         port_framelog_input(bits);
