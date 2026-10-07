@@ -64,14 +64,24 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 # ---- Flags shared by everything that includes the game's headers (the units, the runtime, the shim).
 set(DW3_GAME_DEFINES PC_PORT NON_MATCHING)
 set(DW3_GAME_INCLUDES "${DW3_GEN}/include" "${DW3_ROOT}/include" "${DW3_ROOT}")
-set(DW3_COMMON_FLAGS -fsigned-char -fwrapv -fno-strict-aliasing -fno-pie)
+set(DW3_COMMON_FLAGS -fsigned-char -fwrapv -fno-strict-aliasing)
 if(DW3_PORT_SANITIZE)
     list(APPEND DW3_COMMON_FLAGS -fsanitize=address,undefined -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address,undefined)
 endif()
-add_link_options(-no-pie)
+# Non-PIE (ELF): the 16 MB-aligned arena wants a fixed load (port/src/arena.c). PE has no such flag (ASLR relocates
+# the image); the Windows build's arena is a later arrangement (the project board's "Windows 1"). The Windows cross
+# build (cmake/windows-x86_64.cmake) still links with the ld script and checks the map below, which lld for PE cannot
+# do: "Windows 2" replaces them. Until then that build compiles every object and fails at the link.
+if(NOT WIN32)
+    list(APPEND DW3_COMMON_FLAGS -fno-pie)
+    add_link_options(-no-pie)
+endif()
 # -m32: everything compiled and linked 32-bit (the arena is 16 MB-aligned and non-PIE there too; nm reads both).
 if(DW3_PORT_M32)
+    if(WIN32)
+        message(FATAL_ERROR "DW3_PORT_M32: the Windows build is x86_64 only")
+    endif()
     add_compile_options(-m32)
     add_link_options(-m32)
 endif()
@@ -87,6 +97,13 @@ target_compile_options(dw3_game PRIVATE ${DW3_COMMON_FLAGS} -fno-builtin -fno-co
 # GCC 14+ makes some old-C constructs errors; the probe (tools/port_inventory.py) keeps them warnings the same way.
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 14)
     target_compile_options(dw3_game PRIVATE -fpermissive)
+endif()
+# Clang (the Windows cross build) makes the same constructs errors, each under its own flag: back to warnings. The
+# probe's --target windows (tools/port_inventory.py CLANG_GAME_FLAGS) uses the same list.
+if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+    target_compile_options(dw3_game PRIVATE -Wno-error=implicit-function-declaration -Wno-error=implicit-int
+                           -Wno-error=int-conversion -Wno-error=incompatible-pointer-types
+                           -Wno-error=incompatible-function-pointer-types -Wno-error=return-type)
 endif()
 set_source_files_properties("${DW3_ROOT}/src/main/main.c" PROPERTIES COMPILE_DEFINITIONS "main=game_main")
 

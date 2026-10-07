@@ -6,6 +6,7 @@
   tools/venv/bin/python tools/port_inventory.py probe [FILES...]       # host-compile gate at -m64 (exit 0 = clean)
   tools/venv/bin/python tools/port_inventory.py probe --warnings       # also count the non-gating -Wall warnings
   tools/venv/bin/python tools/port_inventory.py probe --m32            # the same at -m32 (compile only)
+  tools/venv/bin/python tools/port_inventory.py probe --target windows # the same with llvm-mingw's clang (Windows x86_64)
   tools/venv/bin/python tools/port_inventory.py link                   # probe, then nm: duplicate / undefined globals
   tools/venv/bin/python tools/port_inventory.py structs                # sizeof every typedef'd struct, -m32 and -m64
   tools/venv/bin/python tools/port_inventory.py object-sizes           # literal object/data sizes (exit 0 = none)
@@ -32,6 +33,9 @@ INCLUDE_ASM/INCLUDE_RODATA empty and every gte_* macro a no-op (override headers
 touched). A file fails on a gating diagnostic (GATE), on any other compiler error, or on an assembler error (MIPS inline
 asm). GCC 14+ gets -fpermissive so that its other default errors (return-mismatch, implicit-int, ...) stay warnings, as
 on GCC 13: the gate is the same on every version. Only the `[-Wflag]` tags of the messages are parsed.
+--target windows compiles with llvm-mingw's clang (tools/llvm-mingw, scripts/setup.sh llvm-mingw; the Windows cross
+build's compiler, cmake/windows-x86_64.cmake) into build/port_inventory/windows/: the same gate, with clang's own
+default errors back to warnings (CLANG_GAME_FLAGS), so a unit that compiles for Linux but not for Windows shows here.
 link and structs run the compiler themselves. Needs: gcc and nm on PATH. Nothing here touches the PS1 build.
 
 object-sizes (FINDINGS 9d) lists every object_new / object_create call in src/ whose object size (second argument) or
@@ -422,11 +426,30 @@ def top(counter, n=None, sep=", "):
     return sep.join(f"{k} {v}" if v > 1 else k for k, v in counter.most_common(n))
 
 
-def gcc_version():
+def gcc_version(target="host"):
     try:
-        return subprocess.run(["gcc", "--version"], capture_output=True, text=True).stdout.splitlines()[0]
+        return subprocess.run([compiler(target), "--version"], capture_output=True, text=True).stdout.splitlines()[0]
     except (OSError, IndexError):
-        return "gcc: not found"
+        return f"{compiler(target)}: not found"
+
+
+def llvm_mingw_dir():
+    """tools/llvm-mingw (scripts/setup.sh llvm-mingw): $DW3_LLVM_MINGW, this checkout's, else the main checkout's
+    (a worktree before its link)."""
+    dirs = [os.environ.get("DW3_LLVM_MINGW", ""), str(ROOT / "tools" / "llvm-mingw")]
+    r = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                       capture_output=True, text=True)
+    if r.returncode == 0 and r.stdout.strip():
+        dirs.append(str(Path(r.stdout.strip()).parent / "tools" / "llvm-mingw"))
+    for d in dirs:
+        if d and (Path(d) / "bin" / "x86_64-w64-mingw32-clang").exists():
+            return Path(d)
+    sys.exit("llvm-mingw not found: run scripts/setup.sh llvm-mingw (or set DW3_LLVM_MINGW)")
+
+
+def compiler(target):
+    """The probe's compiler: the host gcc, or llvm-mingw's clang for the Windows cross build (--target windows)."""
+    return "gcc" if target == "host" else str(llvm_mingw_dir() / "bin" / "x86_64-w64-mingw32-clang")
 
 
 def git_head():
@@ -590,32 +613,45 @@ def write_overrides(out):
     return inc
 
 
-def probe_command(width, inc, warnings):
-    cmd = ["gcc", f"-m{width}"] + PROBE_FLAGS + [f"-Werror={g}" for g in GATE]
-    if gcc_major() >= 14:
-        cmd.append("-fpermissive")
+# Clang makes the old-C constructs GCC 14 does errors, each under its own flag; the ones that are not the gate go back
+# to warnings (port/CMakeLists.txt gives the Windows build's units the same list, the gate's flags included).
+CLANG_GAME_FLAGS = ["-Wno-error=implicit-int", "-Wno-error=incompatible-function-pointer-types",
+                    "-Wno-error=return-type"]
+
+
+def probe_command(width, inc, warnings, target="host"):
+    if target == "host":
+        cmd = ["gcc", f"-m{width}"] + PROBE_FLAGS + [f"-Werror={g}" for g in GATE]
+        if gcc_major() >= 14:
+            cmd.append("-fpermissive")
+        diag = ["-fno-diagnostics-show-caret", "-fmax-errors=0"]
+    else:
+        # Windows x86_64 (cmake/windows-x86_64.cmake's compiler, no -m: the triple sets the width)
+        cmd = [compiler(target)] + PROBE_FLAGS + [f"-Werror={g}" for g in GATE] + CLANG_GAME_FLAGS
+        diag = ["-fno-caret-diagnostics", "-ferror-limit=0"]
     if warnings:
         cmd += ["-Wall", "-Wstrict-prototypes"]
-    cmd += ["-fdiagnostics-color=never", "-fno-diagnostics-show-caret", "-fmax-errors=0", "-fmessage-length=0",
+    cmd += ["-fdiagnostics-color=never"] + diag + ["-fmessage-length=0",
             f"-I{inc}", f"-I{ROOT / 'include'}", f"-I{ROOT}"]
     return cmd
 
 
-def check_width(width, out):
-    """None when gcc can compile at this width, else its message."""
-    t = out / f"width{width}.c"
+def check_width(width, out, target="host"):
+    """None when the compiler can compile at this width (the host gcc; the Windows clang at its own), else its
+    message."""
+    t = out / f"width{width}{'' if target == 'host' else '-' + target}.c"
     t.write_text("int probe_width(int a) { return a + 1; }\n")
-    r = subprocess.run(["gcc", f"-m{width}", "-c", str(t), "-o", str(t.with_suffix(".o"))],
-                       capture_output=True, text=True)
-    return None if r.returncode == 0 else (r.stderr.strip().splitlines() or ["gcc failed"])[0]
+    cmd = [compiler(target)] + ([f"-m{width}"] if target == "host" else [])
+    r = subprocess.run(cmd + ["-c", str(t), "-o", str(t.with_suffix(".o"))], capture_output=True, text=True)
+    return None if r.returncode == 0 else (r.stderr.strip().splitlines() or [f"{cmd[0]} failed"])[0]
 
 
-def run_probe(files, width=64, warnings=False, jobs=None):
+def run_probe(files, width=64, warnings=False, jobs=None, target="host"):
     """Compiles files (repo-relative posix paths). -> {rel: (ok, errors Counter, warnings Counter, messages, obj)}"""
-    out = OUT / f"m{width}"
+    out = OUT / (f"m{width}" if target == "host" else target)
     out.mkdir(parents=True, exist_ok=True)
     inc = write_overrides(OUT)
-    base = probe_command(width, inc, warnings)
+    base = probe_command(width, inc, warnings, target)
     env = dict(os.environ, LC_ALL="C")
 
     def one(rel):
@@ -683,16 +719,21 @@ def resolve_files(names):
 
 def cmd_probe(args):
     width = 32 if args.m32 else 64
+    target = args.target
+    if target != "host" and args.m32:
+        sys.exit("probe: --m32 is the host's; the Windows build is x86_64 only")
     OUT.mkdir(parents=True, exist_ok=True)
-    why = check_width(width, OUT)
+    why = check_width(width, OUT, target)
     if why:
-        print(f"probe: the host gcc cannot compile at -m{width}: {why}")
+        print(f"probe: {compiler(target)} cannot compile" + (f" at -m{width}" if target == "host" else "") + f": {why}")
         return 2
     files = resolve_files(args.files)
     t0 = time.time()
-    res = run_probe(files, width, args.warnings, args.jobs)
-    print(f"port inventory: host-compile probe at {git_head()}, -m{width}, {gcc_version()}")
-    print("flags: " + " ".join(probe_command(width, Path("build/port_inventory/include"), args.warnings)[1:-3]))
+    res = run_probe(files, width, args.warnings, args.jobs, target)
+    what = f"-m{width}" if target == "host" else f"{target} x86_64 (llvm-mingw)"
+    print(f"port inventory: {'host' if target == 'host' else target}-compile probe at {git_head()}, {what}, "
+          f"{gcc_version(target)}")
+    print("flags: " + " ".join(probe_command(width, Path("build/port_inventory/include"), args.warnings, target)[1:-3]))
     failing = {f: r for f, r in res.items() if not r[0]}
     total = Counter()
 
@@ -1054,6 +1095,8 @@ def main():
     p.add_argument("files", nargs="*", help="C files or directories (default: every src/**/*.c)")
     p.add_argument("-j", "--jobs", type=int, help="parallel compiles (default: all cores)")
     p.add_argument("--m32", action="store_true", help="compile at -m32 instead of -m64")
+    p.add_argument("--target", choices=["host", "windows"], default="host",
+                   help="windows: compile with llvm-mingw's clang for Windows x86_64 instead (tools/llvm-mingw)")
     p.add_argument("--warnings", action="store_true", help="add -Wall and count the non-gating warnings by flag")
     p.add_argument("-v", "--verbose", action="store_true", help="print the compiler's messages")
     p.set_defaults(func=cmd_probe)
