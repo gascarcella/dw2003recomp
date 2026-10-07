@@ -6,15 +6,16 @@
 #        scripts/ci_areas.sh --diff BASE [HEAD]  the areas of what changed from BASE to HEAD (default HEAD)
 #        scripts/ci_areas.sh --all               every area (manual runs, release tags, unknown history)
 #
-# The areas and what each runs (ci.yml has the steps):
-#   game      the byte-identical rebuild (build.sh --check), the toolchain smoke test, all of scripts/test.sh
-#   port      the PC port: its SDL build and input self-tests, the probe (the host's gcc and llvm-mingw's clang),
-#             scripts/test.sh's layers 1, 3 and port (every test that compiles or runs port/: the host replays of the
-#             gpu/gte/libgs_view/mdec goldens, tests/spu, tests/xa, the save round trips, tests/port), the -m32 build's
-#             M1 test; and the `windows` job: the Windows cross-build of the game and the launcher, the launcher's
-#             self-test and the layer-2 replays under Wine (scripts/build_windows.sh --test). Layer 2 (the emulator's
-#             replays and SPU trace) reads nothing of port/.
-#   launcher  the launcher's build and self-test, and its run with the disc and the SDL game
+# The areas and the jobs each runs (ci.yml has the steps; the jobs run in parallel, each gated by its area):
+#   game      `game`: the toolchain smoke test, the byte-identical rebuild (build.sh --check), scripts/test.sh's
+#             layer 2 (the emulator's replays and SPU trace: nothing of port/)
+#   port      `check`'s probes (the host's gcc and llvm-mingw's clang), `port`: scripts/test.sh's layer 1 and port
+#             layer (every test that compiles or runs port/: the host replays of the gpu/gte/libgs_view/mdec goldens,
+#             tests/spu, tests/xa, tests/port, the -m32 build's M1 test), `port-mods`: layer 3 (the formats, the save
+#             round trips) and the mods, `windows`: the Windows cross-build of the game and the launcher, the launcher's
+#             self-test, the crash report and the layer-2 replays under Wine (scripts/build_windows.sh --test)
+#   launcher  `launcher`: the SDL game's build and input self-tests, the launcher's build and self-test, and its run
+#             with the disc and the SDL game
 # Each implies the next: game => port (the port compiles the game's C, and its tests replay the game's scripts) =>
 # launcher (the launcher compiles port/src/json.c and sha1.c, lists port/mods/*/mod.json, and its self-test starts the
 # game with --config: the settings contract). A path no rule below names counts as game, so a new kind of file runs
@@ -24,8 +25,8 @@ set -euo pipefail
 # The area of one path: all, game, port, launcher, or none (no CI step reads it).
 area_of() {
     case "$1" in
-        # CI itself, and this mapping: everything.
-        .github/workflows/ci.yml|scripts/ci_areas.sh) echo all ;;
+        # CI itself (the workflow, its jobs' setup action), and this mapping: everything.
+        .github/workflows/ci.yml|.github/actions/*|scripts/ci_areas.sh) echo all ;;
         # Documentation (ci.yml's paths-ignore too): no step reads it.
         docs/*|*.md|LICENSE|.gitignore|.github/ISSUE_TEMPLATE/*) echo none ;;
         # The release's own files: release.yml tests them (a manual run); here only `bash -n`, which always runs.

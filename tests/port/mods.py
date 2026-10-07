@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """The port's mods that change the game's behaviour, run with the mod on (docs/LAUNCHER.md "Mod runtime").
 
-Usage: tests/port/mods.py [check] [--out DIR] [-j N]
+Usage: tests/port/mods.py [check] [--out DIR] [-j N] [--only MOD ...]
        tests/port/mods.py record [--out DIR]     # rewrite tests/port/mods/expected/ from this build (after a review)
+The mods run N at a time (-j, default $DW3_JOBS, else every mod at once): each in its own process (this script with
+--only MOD, its output printed whole, in the order below) and its own directory under --out; the port is built once
+first. DW3_JOBS=1 (scripts/test.sh's default) runs them one after another.
 
 A run with a mod on has its own expected results (the random generator steps once a frame: any skipping moves later
 rolls), and the emulator has no mods, so they are the port's, committed in tests/port/mods/expected/ and checked here
@@ -55,6 +58,7 @@ import os
 import shutil
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -417,11 +421,34 @@ def xp_boost(binary, out):
               f"({'; '.join(boosts)})")
 
 
+# Every mod's test, the longest first (the parallel run's critical path): name -> function(binary, out, record).
+MODS_TESTS = {
+    "preset_language": lambda binary, out, record: preset_language(binary, out),
+    "skip_dialogues": skip_dialogues,
+    "party_xp": lambda binary, out, record: party_xp(binary, out),
+    "xp_boost": lambda binary, out, record: xp_boost(binary, out),
+    "global_save": lambda binary, out, record: global_save(binary, out),
+    "battle_animations": lambda binary, out, record: battle_animations(binary, out),
+}
+
+
+def run_child(name, mode, out, binary):
+    """One mod's test in its own process (--only); returns (name, exit code, its output)."""
+    cmd = [sys.executable, str(Path(__file__).resolve()), mode, "--only", name, "--out", str(out / name),
+           "--binary", str(binary)]
+    proc = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+    return name, proc.returncode, proc.stdout + (proc.stderr if proc.returncode not in (0, 1) else "")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("mode", nargs="?", default="check", choices=("check", "record"))
     ap.add_argument("--out", help="scratch directory (default build/port-test/mods)")
-    ap.add_argument("-j", "--jobs", type=int, default=int(os.environ.get("DW3_JOBS", "0")) or None)
+    ap.add_argument("-j", "--jobs", type=int, default=int(os.environ.get("DW3_JOBS", "0")) or None,
+                    help="mods run at once, and the build's jobs (default: $DW3_JOBS, else every mod at once)")
+    ap.add_argument("--only", action="append", choices=sorted(MODS_TESTS), metavar="MOD",
+                    help="only these mods' tests, in this process one after another (repeatable)")
+    ap.add_argument("--binary", help=argparse.SUPPRESS)   # the parallel run's children: the port built by the parent
     args = ap.parse_args()
     try:
         if not DISC.exists():
@@ -434,14 +461,21 @@ def main():
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
-    binary = build("build/port", [], args.jobs, env)
-    skip_dialogues(binary, out, args.mode == "record")
-    battle_animations(binary, out)
-    global_save(binary, out)
-    preset_language(binary, out)
-    party_xp(binary, out)
-    xp_boost(binary, out)
-    print(f"mods test: {'FAIL (' + str(len(FAILURES)) + ')' if FAILURES else 'pass'}")
+    binary = Path(args.binary) if args.binary else build("build/port", [], args.jobs, env)
+    if args.only:
+        for name in args.only:
+            MODS_TESTS[name](binary, out, args.mode == "record")
+    else:
+        names = list(MODS_TESTS)
+        with ThreadPoolExecutor(max_workers=min(args.jobs or len(names), len(names))) as pool:
+            for name, rc, text in pool.map(lambda n: run_child(n, args.mode, out, binary), names):
+                print(text, end="", flush=True)
+                if rc != 0:
+                    FAILURES.append(f"{name}: exit {rc}")
+                    if rc != 1:
+                        print(f"  FAIL {name}: exit {rc}")
+    if not args.binary:   # a child's summary is its parent's
+        print(f"mods test: {'FAIL (' + str(len(FAILURES)) + (' check(s))' if args.only else ' mod(s))') if FAILURES else 'pass'}")
     return 1 if FAILURES else 0
 
 

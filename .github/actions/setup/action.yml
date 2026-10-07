@@ -1,0 +1,110 @@
+# A CI job's setup (ci.yml; DECISIONS "CI per area"): the apt packages, the job's own tool cache, scripts/setup.sh
+# for the tools the job names, ccache for the host builds, and with the maintainers' deploy key the data checkout and
+# the disc. Every job runs this once, right after its checkout.
+#
+# The tool cache's key is the pins (scripts/setup.sh --pins: every version, tag, hash and URL), tools/requirements.txt
+# and the job's tool list, not the text of setup.sh: an edit to the script's logic keeps the caches valid, a changed
+# pin rebuilds the tools once. One cache per job (`cache`, the job's name): a job saves exactly the tools it installs,
+# and restores only those. A cache saved by a pull request's run is visible to that pull request only; main's run
+# after the merge saves main's, which every later branch restores.
+name: Toolchain and disc
+description: The job's apt packages, cached tools (scripts/setup.sh), ccache, and the disc from the data checkout
+inputs:
+  tools:
+    description: "The scripts/setup.sh steps this job needs (space separated)"
+    required: true
+  cache:
+    description: "The tool cache's name (the job's: each job saves its own tools)"
+    required: true
+  apt:
+    description: "apt packages beyond ninja-build, cmake, xz-utils and unzip"
+    default: ""
+  ccache:
+    description: "true: ccache for the host builds (CMAKE_C/CXX_COMPILER_LAUNCHER), its directory cached across runs"
+    default: "false"
+  disc:
+    description: "true: the data checkout and the disc (scripts/worktree_init.sh) when deploy-key is set"
+    default: "false"
+  deploy-key:
+    description: "The data checkout's read-only deploy key (secrets.GAMEDATA_DEPLOY_KEY; empty on fork pull requests)"
+    default: ""
+runs:
+  using: composite
+  steps:
+    # The runners' own Ubuntu mirror for setup.sh's downloads (archive.ubuntu.com stalls from them); the data
+    # checkout's place, for setup.sh (the pinned emulator build in its tools/prebuilt/) and worktree_init.sh.
+    - name: Environment
+      shell: bash
+      run: |
+        echo "DW3_UBUNTU_MIRROR=http://azure.archive.ubuntu.com/ubuntu" >> "$GITHUB_ENV"
+        echo "DW3_GAMEDATA=$GITHUB_WORKSPACE/dw2003-gamedata" >> "$GITHUB_ENV"
+
+    - name: System packages
+      shell: bash
+      run: |
+        sudo apt-get update -q
+        sudo apt-get install -y -q --no-install-recommends ninja-build cmake xz-utils unzip \
+          ${{ inputs.ccache == 'true' && 'ccache' || '' }} ${{ inputs.apt }}
+
+    - name: Data checkout (maintainers only)
+      if: inputs.disc == 'true' && inputs.deploy-key != ''
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.repository_owner }}/dw2003-gamedata
+        ssh-key: ${{ inputs.deploy-key }}
+        path: dw2003-gamedata
+
+    - name: The pins (the tool cache's key)
+      id: pins
+      shell: bash
+      run: |
+        hash=$({ scripts/setup.sh --pins; cat tools/requirements.txt; echo "${{ inputs.tools }}"; } | sha256sum | cut -c1-16)
+        echo "hash=$hash" >> "$GITHUB_OUTPUT"
+
+    # Every tool directory setup.sh can install: the ones this job's steps install exist and get saved; the others are
+    # skipped (actions/cache saves whatever of the list exists).
+    - name: Cached tools
+      uses: actions/cache@v4
+      with:
+        path: |
+          tools/binutils
+          tools/mkpsxiso
+          tools/venv
+          tools/gcc
+          tools/bin
+          tools/ext
+          tools/redux
+          tools/sdl3
+          tools/sdl3-desktop
+          tools/sdl3-windows
+          tools/imgui
+          tools/llvm-mingw
+          tools/appimage
+        key: tools-${{ inputs.cache }}-${{ runner.os }}-${{ steps.pins.outputs.hash }}
+
+    - name: Toolchain (scripts/setup.sh ${{ inputs.tools }})
+      shell: bash
+      run: scripts/setup.sh ${{ inputs.tools }}
+
+    # ccache hashes the preprocessed unit (a comment-only change is a hit) and the compiler; the port's and the
+    # launcher's CMake builds pick the launcher up from the environment. One directory per job, restored from the
+    # newest run of this job (restore-keys) and saved under this commit's key.
+    - name: Cached ccache
+      if: inputs.ccache == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ccache
+        key: ccache-${{ inputs.cache }}-${{ runner.os }}-${{ github.sha }}
+        restore-keys: ccache-${{ inputs.cache }}-${{ runner.os }}-
+
+    - name: ccache
+      if: inputs.ccache == 'true'
+      shell: bash
+      run: |
+        { echo "CMAKE_C_COMPILER_LAUNCHER=ccache"; echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"; echo "CCACHE_MAXSIZE=300M"; } >> "$GITHUB_ENV"
+        ccache -z
+
+    - name: Disc from the data checkout
+      if: inputs.disc == 'true' && inputs.deploy-key != ''
+      shell: bash
+      run: scripts/worktree_init.sh

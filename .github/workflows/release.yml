@@ -64,6 +64,11 @@ jobs:
           sudo apt-get install -y -q ninja-build cmake xz-utils $(scripts/setup.sh --sdl3-desktop-apt)
 
       # Its own cache: CI's tools/sdl3 is headless (no desktop -dev packages there), tools/sdl3-desktop never is.
+      # Keyed as CI's (.github/actions/setup): the pins, not setup.sh's text.
+      - name: The pins (the tool cache's key)
+        id: pins
+        run: echo "hash=$({ scripts/setup.sh --pins; cat tools/requirements.txt; } | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
       - name: Cached release tools
         uses: actions/cache@v4
         with:
@@ -73,7 +78,7 @@ jobs:
             tools/imgui
             tools/sdl3-desktop
             tools/appimage
-          key: release-tools-${{ runner.os }}-${{ hashFiles('scripts/setup.sh', 'tools/requirements.txt') }}
+          key: tools-release-${{ runner.os }}-${{ steps.pins.outputs.hash }}
 
       # mkpsxiso: worktree_init.sh extracts the disc (the port's sound check reads the EXE from extracted/).
       - name: Release tools

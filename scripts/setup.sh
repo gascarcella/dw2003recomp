@@ -3,6 +3,7 @@
 # Nothing here needs sudo or installs outside the repo.
 #
 # Usage: scripts/setup.sh [--disc /path/to/disc.bin] [step...]
+#        scripts/setup.sh --pins      print the pinned versions, tags, hashes and URLs (CI's tool-cache key)
 #   steps: binutils venv cmake mkpsxiso gcc objdiff ext redux link gamedata disc  (default: all)
 #          optional: psyq sdl3 imgui sdl3-desktop appimage llvm-mingw sdl3-windows
 #   llvm-mingw: the pinned llvm-mingw release (clang + lld, UCRT) into tools/llvm-mingw: the Windows cross toolchain
@@ -28,6 +29,7 @@ TOOLS="$ROOT/tools"          # tracked files of this checkout
 INSTALL="$MAIN/tools"        # built/installed tools, shared across worktrees
 SRC="$INSTALL/src"
 JOBS="${DW3_JOBS:-$(nproc)}"   # DW3_JOBS: fewer on a shared machine (as scripts/build.sh)
+PINS_BEFORE="$(compgen -A variable)"   # `--pins`: every variable defined from here to the steps is a pin (below)
 
 BINUTILS_VER=2.47
 BINUTILS_SHA256=154ab23b60070e8f27013c22977f1129425d67d1e8acd6e13010e617811e4cff
@@ -667,13 +669,26 @@ step_link() {
     done
 }
 
+# The pins: every variable this script defined after PINS_BEFORE (versions, tags, SHA-256s, URLs, package lists), as
+# `declare -p` lines. CI hashes them with tools/requirements.txt into its tool caches' key (.github/actions/setup), so
+# a change to this script's logic alone keeps the caches valid; only what the tools are built from changes the key.
+pins() {
+    local v
+    for v in $(comm -13 <(sort <<< "$PINS_BEFORE") <(compgen -A variable | sort)); do
+        [[ "$v" =~ ^[A-Z][A-Z0-9_]*$ ]] || continue
+        case "$v" in PINS_BEFORE|REDUX_UBUNTU|DISC_PATH|FUNCNAME) continue ;; esac   # REDUX_UBUNTU: the machine's mirror
+        declare -p "$v"
+    done
+}
+
 DISC_PATH=""
 steps=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --disc) DISC_PATH="$2"; shift 2 ;;
+        --pins) pins; exit 0 ;;
         --sdl3-desktop-apt) echo $SDL3_DESKTOP_APT; exit 0 ;;   # what release.yml installs before sdl3-desktop
-        -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
         *) steps+=("$1"); shift ;;
     esac
 done

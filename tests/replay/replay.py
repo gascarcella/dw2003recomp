@@ -4,7 +4,7 @@
 Usage:
   tests/replay/replay.py run <script.json> [--record] [--repeat N] [--bios openbios|retail] [--speed S] [--interpreter]
                              [--iso CUE] [--prelude LUA] [--expected-dir DIR] [--out DIR] [-v]
-  tests/replay/replay.py check [--interpreter] [--iso CUE] [script.json ...]   # every script with an expected file (the test entry point)
+  tests/replay/replay.py check [--interpreter] [--iso CUE] [-j N] [script.json ...]   # every script with an expected file (the test entry point), N at a time
 
 A script (tests/replay/scripts/<name>.json) is a list of steps (see tests/README.md); the runner tests/replay/run.lua
 executes it in the emulator and writes result.json plus one gamestate_data dump per checkpoint. This driver hashes
@@ -22,6 +22,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -305,38 +306,41 @@ def cmd_run(args):
     return status
 
 
+def check_one(script_path, args):
+    """One script's replay against its expected file: (status, the lines to print)."""
+    script = load_script(script_path)
+    expected_path = EXPECTED / f"{script['name']}.json"
+    if not expected_path.exists():
+        return 0, [f"replay {script['name']}: no expected file, skipped"]
+    expected = json.loads(expected_path.read_text())
+    if expected.get("script_sha1") != sha1_file(script_path):
+        return 1, [f"replay {script['name']}: FAIL (the script changed since it was recorded; re-record)"]
+    bios = bios_path(expected["bios"]["name"])
+    out = Path(tempfile.mkdtemp(prefix=f"dw3_replay_{script['name']}_"))
+    lines = [f"replay {script['name']} (bios {expected['bios']['name']})"]
+    try:
+        record = run_once(script_path, script, bios, out, emu_args=EMU_INTERPRETER if args.interpreter else (),
+                          iso=args.iso)
+    except (RuntimeError, subprocess.TimeoutExpired) as e:
+        return 1, lines + [f"  FAIL: {e}"]
+    diffs = compare(cross_core_view(expected), cross_core_view(record)) if args.interpreter else compare(expected, record)
+    if diffs:
+        return 1, lines + [f"  FAIL: mismatch vs {expected_path.relative_to(ROOT)}:\n    " + "\n    ".join(diffs)]
+    shutil.rmtree(out, ignore_errors=True)
+    return 0, lines + [f"  pass ({record['frames']} frames, {len(record['checkpoints'])} checkpoints)"]
+
+
 def cmd_check(args):
+    """Every script (or the ones named), -j at a time (default $DW3_JOBS, else all at once: each is one emulator,
+    single-threaded); each one's lines are printed together, in the scripts' order."""
     check_tools()
     scripts = [Path(s) for s in args.scripts] or sorted(SCRIPTS.glob("*.json"))
     status = 0
-    for script_path in scripts:
-        script = load_script(script_path)
-        expected_path = EXPECTED / f"{script['name']}.json"
-        if not expected_path.exists():
-            print(f"replay {script['name']}: no expected file, skipped")
-            continue
-        expected = json.loads(expected_path.read_text())
-        if expected.get("script_sha1") != sha1_file(script_path):
-            print(f"replay {script['name']}: FAIL (the script changed since it was recorded; re-record)")
-            status = 1
-            continue
-        bios = bios_path(expected["bios"]["name"])
-        out = Path(tempfile.mkdtemp(prefix=f"dw3_replay_{script['name']}_"))
-        print(f"replay {script['name']} (bios {expected['bios']['name']})")
-        try:
-            record = run_once(script_path, script, bios, out, emu_args=EMU_INTERPRETER if args.interpreter else (),
-                              iso=args.iso)
-        except (RuntimeError, subprocess.TimeoutExpired) as e:
-            print(f"  FAIL: {e}")
-            status = 1
-            continue
-        diffs = compare(cross_core_view(expected), cross_core_view(record)) if args.interpreter else compare(expected, record)
-        if diffs:
-            status = 1
-            print(f"  FAIL: mismatch vs {expected_path.relative_to(ROOT)}:\n    " + "\n    ".join(diffs))
-        else:
-            print(f"  pass ({record['frames']} frames, {len(record['checkpoints'])} checkpoints)")
-            shutil.rmtree(out, ignore_errors=True)
+    jobs = max(1, min(args.jobs or len(scripts), len(scripts)))
+    with ThreadPoolExecutor(max_workers=jobs) as pool:
+        for rc, lines in pool.map(lambda s: check_one(s, args), scripts):
+            print("\n".join(lines), flush=True)
+            status |= rc
     return status
 
 
@@ -364,6 +368,8 @@ def main():
     c.add_argument("scripts", nargs="*")
     c.add_argument("--interpreter", action="store_true", help="run on the interpreter core; compare the cross-core view")
     c.add_argument("--iso", help="another disc image (.cue) instead of iso/dw2003.cue (tests/holdouts/run.py)")
+    c.add_argument("-j", "--jobs", type=int, default=int(os.environ.get("DW3_JOBS", "0")) or None,
+                   help="scripts replayed at once (default: $DW3_JOBS, else all)")
     c.set_defaults(func=cmd_check)
     args = ap.parse_args()
     sys.exit(args.func(args))

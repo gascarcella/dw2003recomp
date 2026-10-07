@@ -302,6 +302,20 @@ ready for review starts the run (saves runner minutes on work in progress). The 
 job of the **port** area, `windows`, beside `build`: the cross-build, the launcher's self-test and the layer-2 replays
 under Wine, with its own tool cache; the fork pull requests get its disc-free part.
 
+**Parallel jobs (2026-10-07).** One job doing everything in sequence took 15-20 min (the reference tests 10 of them,
+the mods' tests 4), so CI is now an `areas` job and, gated by its outputs, parallel jobs: `check` (disc-free, always:
+the scripts parse, the probes), `game` (the PS1 side: smoke test, byte-identical rebuild, layer 2), `port` (layer 1 and
+the port layer, with `--m32`), `port-mods` (layer 3 and the mods, the longest test: its own job), `launcher` and
+`windows`, ~6 min on the critical path. Jobs, not workflows (one check list, one concurrency group, `release.yml`'s
+`workflow_call` unchanged), and no artifacts between them: a port build is 30 s, a job's setup about a minute, so each
+job builds what it needs. Every job sets itself up with the composite action `.github/actions/setup`: one tool cache per
+job keyed on the pins (`scripts/setup.sh --pins`), not on `setup.sh`'s text (an edit to the script's logic cost two
+cold toolchain builds, the pull request's and main's, six times in 27 pull requests); ccache for the host builds of
+the port and the launcher (a comment-only change recompiles nothing; not the Windows cross-build, whose compile
+launcher is the overlay renamer). The PS1 rebuild stays from scratch: being byte-identical from nothing is the test, and
+it is a minute off the critical path. Inside the scripts, what is independent runs `DW3_JOBS` at a time: the mods
+(`tests/port/mods.py`, one process per mod) and the layer-2 replays; CI sets 4, the runners' cores.
+
 ## Releases: tagged drafts, published by hand
 _Decided: 2026-10-06_
 
