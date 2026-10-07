@@ -330,6 +330,29 @@ void port_global_save_restore(const void *slot) {
              gamestate_data.field_map, r.attr_layer, r.player_depth, r.player_height);
 }
 
+/* ---- preset_language (docs/LAUNCHER.md "Preset language"): while enabled, port_mod_preset_language makes CNTY_SEL's root object set
+ * records_language to the option's code and go on to the opening (0xE02; 0xE01 for Japanese, as the menu) instead of
+ * drawing the language select screen. It acts at boot only (and after a reset, which goes through CNTY_SEL again).
+ * The codes are the text sets' (records_language: the offset of every localized file ID): the five the screen offers
+ * in its order (cnty_sel_languages), then USA and JPN, whose sets are on the EU disc but which the screen never
+ * reaches. */
+static const char *const pl_languages[] = { "english", "french", "german", "italian", "spanish", "usa", "japanese", NULL };
+static const s32 pl_codes[] = { 2, 3, 5, 4, 6, 1, 0 };
+enum { PL_LANGUAGE };
+static const ModOption pl_options[] = {
+    { .id = "language", .type = MOD_ENUM, .def = "\"english\"", .values = pl_languages, .applies = "restart" },
+};
+int port_mod_preset_language;
+s32 port_preset_language = 2;
+
+static void pl_start(struct Mod *mod) {
+    int i = (int)mod->values[PL_LANGUAGE].number;
+    port_mod_preset_language = 1;
+    port_preset_language = pl_codes[i];
+    port_log("preset language: %s (records_language %d), no language select screen", pl_languages[i],
+             (int)port_preset_language);
+}
+
 static Mod mods[] = {
     { .id = "fast_forward", .version = "0.1", .options = ff_options,
       .option_count = (int)(sizeof(ff_options) / sizeof(ff_options[0])), .start = ff_start, .frame = ff_frame },
@@ -339,6 +362,8 @@ static Mod mods[] = {
       .option_count = (int)(sizeof(ba_options) / sizeof(ba_options[0])), .start = ba_start },
     { .id = "global_save", .version = "0.1", .options = gs_options,
       .option_count = (int)(sizeof(gs_options) / sizeof(gs_options[0])), .start = gs_start },
+    { .id = "preset_language", .version = "0.1", .options = pl_options,
+      .option_count = (int)(sizeof(pl_options) / sizeof(pl_options[0])), .start = pl_start },
 };
 enum { MOD_FAST_FORWARD, MOD_SKIP_DIALOGUES };
 #define MOD_COUNT ((int)(sizeof(mods) / sizeof(mods[0])))

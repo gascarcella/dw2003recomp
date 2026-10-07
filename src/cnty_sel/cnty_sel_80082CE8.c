@@ -108,6 +108,16 @@ void cnty_sel_update_root(Object *obj, CntySelMenu **data) {
     case OBJECT_STATE_INIT:
     default:
         if (sound_module.is_loading() == 0) {
+#ifdef PC_PORT
+            if (port_mod_preset_language) {
+                /* preset_language (docs/LAUNCHER.md "Preset language"): the menu's choice (cnty_sel_update_menu's steps 7
+                 * and 13) without the screen */
+                records_language = port_preset_language;
+                gamestate_data.funcs.set_next_map(records_language == 0 ? 0xE01 : 0xE02, 0);
+                obj->next_state(obj);
+                break;
+            }
+#endif
             gfx_module.reset();
             gfx_module.alloc_packet_buffers(0xA000);
             gfx_module.funcs.init_display(0x140, 0xF0, 0, 0);
