@@ -5,7 +5,7 @@
  *
  * The watchdog: a loop that no PLATFORM_WAIT reaches (cdload_load_file's `do cdload_update() while (loading)`, which
  * only a CD interrupt ends on the PS1) would spin forever once the shim cannot complete a read; SIGALRM ends it with
- * status 4 and names the last Psy-Q call, instead of hanging the acceptance run.
+ * status 4 after a crash report (crash.c: the registers say where it spins), instead of hanging the acceptance run.
  *
  * The window (video.c, input.c; `--window`): each vsync also polls SDL's events (the pad, unless a script owns it),
  * presents the display, and waits for the vsync's time against CLOCK_MONOTONIC. Two rates (docs/LAUNCHER.md
@@ -44,25 +44,11 @@ static void port_frame(void);
 static void port_pace(void);
 static void port_pause(void);
 
-static void port_watchdog(int sig) {
-    static const char msg[] = "port: watchdog: no port_wait() for the watchdog's time: the game spins in a loop without "
-                              "a PLATFORM_WAIT hook (cdload_load_file?); exiting 4\n";
-    (void)sig;
-    if (write(2, msg, sizeof(msg) - 1) < 0) {
-        /* nothing to do */
-    }
-    _exit(4);
-}
-
-
 void port_pump_init(void) {
     psyq_set_vsync_pre_hook(port_audio_frame); /* the SPU's samples of the frame, before the game's handler */
     psyq_set_vsync_hook(port_frame);
     if (port_watchdog_sec > 0) {
-        struct sigaction sa;
-        memset(&sa, 0, sizeof(sa));
-        sa.sa_handler = port_watchdog;
-        sigaction(SIGALRM, &sa, NULL);
+        port_crash_watchdog_install(); /* SIGALRM writes the crash report (the registers show where it spins), exits 4 */
         alarm((unsigned)port_watchdog_sec);
         port_watchdog_armed = 1;
     }
@@ -91,6 +77,7 @@ static void port_frame(void) {
     }
     cd = psyq_cd_tick();
     port_frames++;
+    port_crash_frame(port_frames); /* DW3_PORT_CRASH_AT: the crash report's test hook */
     if (port_trace) {
         port_log("tick: frame %ld%s", port_frames, cd ? " (CD handler ran)" : "");
     }
@@ -219,7 +206,10 @@ void port_wait(void) {
 }
 
 void port_halt(const char *file, int line) {
+    char where[256];
     port_log("halt: the game entered its endless loop at %s:%d", file, line);
+    snprintf(where, sizeof(where), "PLATFORM_HALT at %s:%d", file, line);
+    port_crash_report("halt", 2, where);
     port_exit(2, "PLATFORM_HALT");
 }
 
@@ -229,6 +219,7 @@ void port_cdload_wait_read(s32 id) {
 
 void port_unimplemented(const char *fn) {
     port_log("unimplemented: %s", fn);
+    port_crash_report("unimplemented", 3, fn);
     port_exit(3, fn);
 }
 

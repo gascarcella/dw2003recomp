@@ -130,6 +130,13 @@ checks that the socket path fits `sun_path` (108 bytes). Then it runs `tools/mcp
 lookup and the server's tools against `fake_game.py`, offline; skipped with a message when the `mcp` package is not
 installed). Needs `build/port/dw2003` (`run.py` builds it) and the disc. In `scripts/test.sh --layer port`.
 
+## The crash report (`crash.py`; docs/PORT.md "Crash report")
+`tests/port/crash.py` runs the headless build three times (~3 s): with `DW3_PORT_CRASH_AT=30` it must die of SIGSEGV
+(status -11), name its report on the last stderr line, and the report must carry the build of `--version`, the
+platform, vsync 30, the signal, fault address 0, a pc and a stack that `scripts/symbolize.py` resolves to
+`port_crash_test_write` and `port_frame`; a missing disc must give a `fatal` report with the reason; a normal run
+writes none. Needs `build/port/dw2003`, the disc and `addr2line`. In `scripts/test.sh --layer port`.
+
 ## What it found (session 16)
 - **The overlay copy takes CPU time on the PS1.** The game copies FIELDSTG (0x19000 bytes) into its slot with LIBC2's
   byte-loop `memcpy`, about 1.8 frames, so the emulator samples FIELDSTG's stage with no stage file yet (`(2, -1)` in the

@@ -55,6 +55,8 @@ sdk/
 *.OBJ
 
 # --- Misc ---
+# A crash report of the port written in the repository (the default --crash-dir is the current directory)
+crash-*.txt
 __pycache__
 *.pyc
 .splat_cache

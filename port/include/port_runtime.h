@@ -9,7 +9,11 @@
 
 #include "common.h" /* the game's types and, with PC_PORT, include/port.h */
 
-/* ---- Logging (stderr) */
+/* ---- The build (port_version.c, generated at every build by port/cmake/version.cmake from git describe) */
+extern const char port_version[]; /* "0.2.2", "0.2.2-3-gabcdef1", "dev-abcdef1" (-dirty when the tree has changes) */
+extern const char port_commit[];  /* the commit's hash, "unknown" without git */
+
+/* ---- Logging (stderr; the last 64 lines also go to the crash report, crash.c) */
 extern int port_trace; /* --trace: every overlay resolve, every tick */
 void port_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void port_fatal(const char *fmt, ...) __attribute__((format(printf, 1, 2), noreturn));
@@ -100,5 +104,14 @@ void port_framelog_reset(void);                /* framelog.c: the log's R line *
 void port_pump_reset(void);                    /* pump.c: the watchdog re-armed */
 void port_reset_check(const char *when);       /* reset.c: DW3_PORT_RESET_CHECK=1 or --trace */
 void port_exit(int status, const char *reason) __attribute__((noreturn)); /* logs the frame count and the reason */
+
+/* ---- The crash report (crash.c; docs/PORT.md "Crash report") */
+void port_crash_init(const char *dir);        /* the handlers; the report goes to `dir` (NULL: the current directory) */
+void port_crash_watchdog_install(void);       /* SIGALRM reports too (pump.c arms the alarm) */
+void port_crash_log_line(const char *line);   /* port_log's lines, for the report's tail */
+/* A report for a stop that is not a signal (port_fatal, port_halt, port_unimplemented): `kind` and `detail` go in it. */
+void port_crash_report(const char *kind, int status, const char *detail);
+const char *port_crash_last_path(void);       /* the file last written, NULL before any */
+void port_crash_frame(long frame);            /* the DW3_PORT_CRASH_AT test hook, once per vsync */
 
 #endif /* PORT_RUNTIME_H */

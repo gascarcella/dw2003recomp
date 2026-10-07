@@ -272,6 +272,7 @@ mods); without `--config` the binary depends on nothing on the machine. Built-in
 | 60 Hz | The port's 60 Hz mode against the NTSC-patched game in the emulator | `tests/port/hz60.py` |
 | Settings, mods, input | Settings round trip; mods keep the emulator's stable hashes; the battle-script scanner on every script on the disc; `--input-test` | `tests/port/settings.py`, `mods.py`, `battle.py`, `dw2003 --input-test` |
 | Debug channel | One `--debug` run to CNTY_SEL: step and pad advance the frame exactly, the state map and the host symbol read the same, poke/peek, screenshot, hash, quit status; `tools/mcp`'s offline self-test | `tests/port/debug.py` (the `port` layer), `tools/mcp/selftest.py` |
+| Crash report | A forced NULL write dies of SIGSEGV with a report whose pc symbolizes to the hook's function; a fatal error's report; `--version` | `tests/port/crash.py` (the `port` layer) |
 | Holdouts | A `NON_MATCHING` PS1 image (the holdouts' WIP C) replayed in the emulator without divergence | `tests/holdouts/run.sh` |
 
 What the port and the emulator are *not* compared on: frame numbers (the port's CD timing and CPU time differ), the
@@ -279,6 +280,22 @@ random index and the full checkpoint hash (both follow the frame count). See `te
 
 Play-tests on a desktop (window, gamepads, audio device, real time) cover what the headless tests cannot. Their
 findings are filed as issues.
+
+## Crash report
+
+When the game dies of a signal (SIGSEGV, SIGBUS, SIGFPE, SIGILL, SIGABRT) or stops on a fatal error, a halt, an
+unimplemented part or the watchdog, `port/src/crash.c` writes one text file, `crash-<YYYYMMDD-HHMMSS>.txt` (UTC), into
+`--crash-dir DIR` (the launcher passes `<settings dir>/crashes/`; default: the current directory), and names it on its
+last stderr line: `port: crash report: PATH`. The report holds the kind and status, the build (`port_version` and the
+commit: `dw2003 --version`; `port/cmake/version.cmake` stamps every build from `git describe`), the platform, the vsync
+count, the overlays in both tiers, the stage, file and map, the pad, whether a script runs, the last 64 lines of the
+port's log, and, for a signal, the signal, the fault address, the pc and sp and the stack; for a fatal stop the reason
+and the stack. Code addresses are relative to the executable (`exe+0x...`): `scripts/symbolize.py REPORT --binary
+FILE` names them with `addr2line` against the unstripped build or the release's `.debug` file (`docs/RELEASE.md`). The
+signal handler is async-signal-safe (a static buffer, `write`), runs on its own stack and is one-shot: after the
+report the signal's default action ends the process, so the exit status stays the signal's. The report never enters
+the frame log or the record. Test hook: `DW3_PORT_CRASH_AT=VSYNC` writes through a NULL pointer at that vsync
+(`tests/port/crash.py`).
 
 ## Known limitations
 - **Pads:** one digital pad on port 0; no analog mode, no rumble (`PadSetAct` is accepted and ignored), no second

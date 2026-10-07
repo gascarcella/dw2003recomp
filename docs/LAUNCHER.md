@@ -13,14 +13,15 @@ Code cites this file as `docs/LAUNCHER.md "<heading>"`; keep the headings stable
   file.
 - **The game never loads a configuration on its own.** Without `--config` it behaves as the bare binary always did:
   the tests and CI run it that way and must not depend on the machine.
-- The launcher edits that file and starts `dw2003 --config <dir>/settings.json` in the settings directory
-  (`SDL_CreateProcess`). Before that it runs `dw2003 --config FILE --print-settings`, the game's own check of the file.
-  The game stays startable without the launcher (`--config`, or plain options).
+- The launcher edits that file and starts `dw2003 --config <dir>/settings.json --crash-dir <dir>/crashes` in the
+  settings directory (`SDL_CreateProcess`). Before that it runs `dw2003 --config FILE --print-settings`, the game's own
+  check of the file. The game stays startable without the launcher (`--config`, or plain options).
 - A game started with `--config` has, by default: a window, memory card files beside the settings file, and the
   watchdog off.
 - The disc's SHA-1 check stays the game's (`port/src/disc.c`, `sha1.c`). The launcher compiles `port/src/sha1.c` and
   `port/src/json.c` in as they are, to verify the disc before storing it and to read JSON with the same parser.
-- Exit statuses the launcher reports: 0 normal, 1 a fatal error, 4 the watchdog, 64 bad options or settings.
+- Exit statuses the launcher reports: 0 normal, 1 a fatal error, 4 the watchdog, 64 bad options or settings, a
+  signal. On any of them but 0 the game may have written a crash report ("Crash report").
 - The launcher's screens use the same SDL3 + `SDL_Renderer` as the game, so they could later be drawn inside the
   game's window.
 
@@ -34,8 +35,9 @@ The launcher picks one directory, the first of these that applies (`launcher/src
 4. The per-user directory, `SDL_GetPrefPath("", "dw2003")`: `~/.local/share/dw2003/` on Linux (`$XDG_DATA_HOME` when
    set), `%APPDATA%\dw2003\` on Windows.
 
-The directory holds `settings.json`, the memory cards and (later) `mods/`. The launcher shows which directory it chose
-and why. The game itself never looks for a settings directory: it reads only the file `--config` names.
+The directory holds `settings.json`, the memory cards, `logs/` (the game's output: `last-run.log`, the previous run's
+as `last-run.1.log`), `crashes/` (the game's crash reports) and (later) `mods/`. The launcher shows which directory it
+chose and why. The game itself never looks for a settings directory: it reads only the file `--config` names.
 
 ## Settings file
 
@@ -233,10 +235,21 @@ vsyncs per second. Every change of the pace starts the schedule over, so lowerin
 `dw2003-launcher` (`launcher/`) is C++17 with Dear ImGui on SDL3 + `SDL_Renderer`; it is its own CMake project and the
 game stays C. It finds the settings directory, edits `settings.json` (keeping every member it does not edit, unknown
 ones included), and starts the game. Screens: **Disc** (file dialog, drag-and-drop, or a typed path; only the EU disc's
-SHA-1 is accepted), **Play** (starts the game; on an error shows the exit status and the last lines of output),
+SHA-1 is accepted), **Play** (starts the game; on an error shows the exit status, the crash report and the last lines
+of output, "Crash report"),
 **Settings** (scale, fullscreen, 50/60 Hz, mute, memory cards), **Controls** (keyboard, gamepad, hotkeys), **Mods**
 (an on/off switch per mod and a page generated from its manifest). Build, run, details and the self-test:
 `launcher/README.md`.
+
+## Crash report
+
+The game writes a crash report when it dies or stops on an error (`docs/PORT.md` "Crash report"): the launcher passes
+`--crash-dir <settings dir>/crashes`, streams the game's whole output to `<settings dir>/logs/last-run.log` (the
+previous run's kept as `last-run.1.log`) and, when the game ends with an error, reads the report the game named
+(`port: crash report: PATH`) and shows its path on the Play screen. **Copy** puts on the clipboard, in this order: the
+launcher's version and the platform, the game's path and version, the command, the result in words, the report's
+text, the last 40 lines of the output and the log file's path: what to paste into an issue. **Open folder** opens the
+crash directory. A game too old for `--crash-dir` is reported as too old, like one without `--config`.
 
 ## Built-in mods
 

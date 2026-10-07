@@ -54,6 +54,10 @@ void psyq_pad_set(int port, int connected, u16 buttons) {
     }
 }
 
+u16 psyq_pad_get(int port) {
+    return (port == 0 || port == 1) ? psyq_pad_buttons[port] : 0;
+}
+
 /* The console's reset (psyq.c psyq_reset): no buffers, not started, the default pads (port 0 connected with nothing
  * pressed, port 1 empty). */
 void psyq_pad_reset(void) {

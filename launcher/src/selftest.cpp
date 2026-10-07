@@ -658,6 +658,28 @@ int self_test_fake_game(const char *mode, int argc, char **argv) {
         std::puts("{}");
         return 0;
     }
+    if (std::strcmp(mode, "crash") == 0) { // a game that writes a crash report where --crash-dir says, then aborts
+        std::string dir;
+        for (int i = 1; i + 1 < argc; i++) {
+            if (std::strcmp(argv[i], "--crash-dir") == 0) {
+                dir = argv[i + 1];
+            }
+        }
+        std::printf("port: version 0.0-selftest (none)\n");
+        std::printf("port: start: the stand-in\n");
+        if (dir.empty()) {
+            std::printf("port: fatal: no --crash-dir\n");
+            std::fflush(stdout);
+            return 1;
+        }
+        path_make_dir(dir, nullptr);
+        const std::string report = path_join(dir, "crash-selftest.txt");
+        write(report, "dw2003 crash report\nkind: crash\nstatus: -6\nbuild: 0.0-selftest (none)\nvsync: 123\n"
+                      "\nsignal: SIGABRT (6)\n");
+        std::printf("port: crash report: %s\n", report.c_str());
+        std::fflush(stdout);
+        std::abort();
+    }
     if (std::strcmp(mode, "fail") == 0) { // more lines than the launcher keeps, then a fatal error
         for (int i = 0; i < 250; i++) {
             std::printf("line %d\n", i);
@@ -722,9 +744,28 @@ static void test_game(const std::string &root) {
               run.lines().front() == "line 51",
           "the last 200 lines are kept, the unterminated last one too");
 
+    // A run that writes a crash report and aborts: the report's path is taken from its output, the output streamed
+    // to a log file, the version line kept.
+    set_fake_mode("crash");
+    const std::string crashes = path_join(root, "crashes"), log = path_join(root, "run.log");
+    GameRun crash;
+    check(crash.start({ exe, "--config", settings, "--crash-dir", crashes }, root, &err, false, log),
+          "the crashing stand-in starts: " + err);
+    for (int i = 0; i < 2000 && crash.poll(); i++) {
+        SDL_Delay(5);
+    }
+    check(!crash.running() && crash.exit_code() == -6, "the crashing run's exit status is the signal's");
+    check(crash.report_path() == path_join(crashes, "crash-selftest.txt") && path_is_file(crash.report_path()),
+          "the crash report's path is taken from the output: " + crash.report_path());
+    check(crash.version() == "0.0-selftest (none)", "the game's version line is kept: " + crash.version());
+    check(crash.log_path() == log && read(log).find("port: crash report: ") != std::string::npos,
+          "the whole output went to the log file");
+
     SettingsFile f;
     f.load(path_join(root, "command"));
-    check(game_args("g", f) == std::vector<std::string>({ "g", "--config", f.path() }), "the --config command");
+    check(game_args("g", f) == std::vector<std::string>({ "g", "--config", f.path(), "--crash-dir",
+                                                          path_join(f.dir(), "crashes") }),
+          "the --config --crash-dir command");
     SDL_UnsetEnvironmentVariable(SDL_GetEnvironment(), SELF_TEST_GAME_ENV);
 
     // The real game, when the environment names it (DW3_SELFTEST_GAME: an SDL build of dw2003): the probe must accept
@@ -904,6 +945,40 @@ static void test_play(SDL_Window *window, const std::string &root) {
     check((SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) == 0, "the launcher comes back when the game ends");
     pump(app, 2);
     std::string png = path_join(shots, "5-Play-error.png");
+    app.frame(png.c_str());
+    check(path_is_file(path_join(dir, "logs/last-run.log")), "the run's output went to logs/last-run.log");
+    check(app.play_report_path().empty(), "no crash report on a fatal error of the stand-in");
+
+    // The game crashes with a report: the report is shown and Copy's text holds the launcher, the game, the
+    // command, the report and the last lines; the previous run's log was kept.
+    set_fake_mode("crash");
+    app.play();
+    pump_until(app, [&] { return !app.game_run().running(); }, 10000);
+    check(app.play_error().find("signal 6") != std::string::npos, "the crash's exit status is shown: " + app.play_error());
+    check(app.play_report_path() == path_join(dir, "crashes/crash-selftest.txt"),
+          "the crash report's path is shown: " + app.play_report_path());
+    {
+        const std::string text = app.play_copy_text();
+        check(text.compare(0, 16, "dw2003-launcher ") == 0 && text.find(SDL_GetPlatform()) != std::string::npos,
+              "Copy's header names the launcher and the platform");
+        check(text.find("game: " + self_exe() + " (version 0.0-selftest (none))") != std::string::npos,
+              "Copy's header names the game and its version");
+        check(text.find("command: " + self_exe() + " --config ") != std::string::npos, "Copy has the command");
+        check(text.find("result: The game was killed by signal 6") != std::string::npos, "Copy has the result");
+        check(text.find("--- crash report: " + app.play_report_path()) != std::string::npos &&
+                  text.find("signal: SIGABRT (6)") != std::string::npos,
+              "Copy has the crash report's text");
+        check(text.find("--- the last lines") != std::string::npos &&
+                  text.find("port: crash report: ") != std::string::npos,
+              "Copy has the last lines");
+        check(text.find("(the whole output: " + path_join(dir, "logs/last-run.log") + ")") != std::string::npos,
+              "Copy names the log file");
+    }
+    check(read(path_join(dir, "logs/last-run.log")).find("port: crash report: ") != std::string::npos &&
+              read(path_join(dir, "logs/last-run.1.log")).find("line 249") != std::string::npos,
+          "logs/last-run.log is the crash's, last-run.1.log the previous run's");
+    pump(app, 2);
+    png = path_join(shots, "5b-Play-crash.png");
     app.frame(png.c_str());
 
     // A game too old for --config: told so, nothing started.

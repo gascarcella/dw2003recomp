@@ -84,12 +84,16 @@ the expected size (692,146,560 bytes); a disc set by hand without a SHA-1 is che
 **Play** is enabled when the disc is verified and the game is found: `--game PATH`, else `$DW3_GAME`, else `dw2003`
 beside the launcher, else the development tree's SDL build (`build/port-sdl/dw2003` beside `build/launcher/`). Play
 saves the settings, runs `dw2003 --config FILE --print-settings` (the game's own check of the file), then starts
-`dw2003 --config FILE` in the settings directory and hides the launcher's window. The game's output (stdout and
-stderr) is read without blocking, copied to the launcher's stderr, and its last 200 lines kept. When the game ends the
-window comes back; on an error status it shows the status in words (1 a fatal error, 4 the watchdog, 64 bad
-settings, a signal) and the last 40 lines, with a Copy button. Closing the launcher does not end a running game.
+`dw2003 --config FILE --crash-dir <dir>/crashes` in the settings directory and hides the launcher's window. The
+game's output (stdout and stderr) is read without blocking, copied to the launcher's stderr, streamed whole to
+`<dir>/logs/last-run.log` (the previous run's kept as `last-run.1.log`), and its last 200 lines kept. When the game
+ends the window comes back; on an error status it shows the status in words (1 a fatal error, 4 the watchdog, 64 bad
+settings, a signal), the crash report the game wrote (`docs/LAUNCHER.md` "Crash report") and the last 40 lines, with
+**Copy** (the launcher's and the game's versions, the command, the result, the report's text, the last lines) and
+**Open folder**. Closing the launcher does not end a running game.
 
-A game build from before `--config` (its usage, exit 64, at the probe) is reported as too old, with how to rebuild it.
+A game build from before `--config` or `--crash-dir` (its usage, exit 64, at the probe) is reported as too old, with how
+to rebuild it.
 
 ## Settings and controls
 

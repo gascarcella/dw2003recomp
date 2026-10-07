@@ -56,9 +56,17 @@ target_include_directories(dw3_imgui SYSTEM PUBLIC "${DW3_IMGUI_DIR}" "${DW3_IMG
 target_compile_features(dw3_imgui PUBLIC cxx_std_17)
 target_link_libraries(dw3_imgui PUBLIC SDL3::SDL3)
 
+# The launcher's version stamp (launcher_version, launcher_commit: the Copy text's header), from git describe at every
+# build, as the game's (port/cmake/version.cmake rewrites the file only when it changed).
+set(DW3_LAUNCHER_VERSION_C "${CMAKE_BINARY_DIR}/gen/launcher_version.c")
+add_custom_target(dw3_launcher_version COMMAND "${CMAKE_COMMAND}" -DROOT=${DW3_ROOT} -DOUT=${DW3_LAUNCHER_VERSION_C}
+                  -DPREFIX=launcher -P "${DW3_ROOT}/port/cmake/version.cmake" BYPRODUCTS "${DW3_LAUNCHER_VERSION_C}"
+                  COMMENT "port/cmake/version.cmake (the launcher's version stamp)" VERBATIM)
+
 file(GLOB DW3_LAUNCHER_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
-set(DW3_LAUNCHER_SHARED "${DW3_ROOT}/port/src/json.c" "${DW3_ROOT}/port/src/sha1.c")
+set(DW3_LAUNCHER_SHARED "${DW3_ROOT}/port/src/json.c" "${DW3_ROOT}/port/src/sha1.c" "${DW3_LAUNCHER_VERSION_C}")
 add_executable(dw2003-launcher ${DW3_LAUNCHER_SRCS} ${DW3_LAUNCHER_SHARED})
+add_dependencies(dw2003-launcher dw3_launcher_version)
 set_target_properties(dw2003-launcher PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF
                       C_STANDARD 99)
 target_include_directories(dw2003-launcher PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src" "${DW3_ROOT}/port/src")
