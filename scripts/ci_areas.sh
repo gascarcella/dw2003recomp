@@ -8,10 +8,12 @@
 #
 # The areas and what each runs (ci.yml has the steps):
 #   game      the byte-identical rebuild (build.sh --check), the toolchain smoke test, all of scripts/test.sh
-#   port      the PC port: its SDL build and input self-tests, the probe, scripts/test.sh's layers 1, 3 and port (every
-#             test that compiles or runs port/: the host replays of the gpu/gte/libgs_view/mdec goldens, tests/spu, tests/xa, the
-#             save round trips, tests/port), the -m32 build's M1 test. Layer 2 (the emulator's replays and SPU trace)
-#             reads nothing of port/.
+#   port      the PC port: its SDL build and input self-tests, the probe (the host's gcc and llvm-mingw's clang),
+#             scripts/test.sh's layers 1, 3 and port (every test that compiles or runs port/: the host replays of the
+#             gpu/gte/libgs_view/mdec goldens, tests/spu, tests/xa, the save round trips, tests/port), the -m32 build's
+#             M1 test; and the `windows` job: the Windows cross-build of the game and the launcher, the launcher's
+#             self-test and the layer-2 replays under Wine (scripts/build_windows.sh --test). Layer 2 (the emulator's
+#             replays and SPU trace) reads nothing of port/.
 #   launcher  the launcher's build and self-test, and its run with the disc and the SDL game
 # Each implies the next: game => port (the port compiles the game's C, and its tests replay the game's scripts) =>
 # launcher (the launcher compiles port/src/json.c and sha1.c, lists port/mods/*/mod.json, and its self-test starts the

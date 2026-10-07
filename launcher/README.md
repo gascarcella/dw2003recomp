@@ -139,6 +139,12 @@ starts on the Disc screen.
 SDL_VIDEO_DRIVER=offscreen build/launcher/dw2003-launcher --self-test DIR    # exit 0 = passed, 1 = failed
 ```
 
+(`DW3_SELFTEST_VIDEO_DRIVER=offscreen` does the same through SDL's hint, for the Windows build under Wine, which drops
+`SDL_VIDEO_DRIVER` from the program's environment: `scripts/build_windows.sh --test`.)
+
+```sh
+```
+
 No disc and no display needed (CI runs it). It replaces `DIR/launcher-self-test/` and checks: the path helpers (Windows
 forms too), the JSON writer, the lookup order, the settings file's round trips (the documented example with its unknown
 members kept, invalid values, a broken file, a newer schema), the binding grammar and the input prompt (keys, gamepad buttons, stick directions, chords, Escape), the `.cue` reader

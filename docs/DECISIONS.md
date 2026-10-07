@@ -298,7 +298,9 @@ _Decided: 2026-10-06_
 files into areas, each implying the next: **game** (the build `--check`, every test layer, and everything below),
 **port**, **launcher**; an unknown path counts as `game`, and changes to the CI itself run everything. A docs-only pull
 request shows no checks; "CI green" means green when a run started. Draft pull requests run nothing: marking one
-ready for review starts the run (saves runner minutes on work in progress).
+ready for review starts the run (saves runner minutes on work in progress). The Windows build (2026-10-07) is a second
+job of the **port** area, `windows`, beside `build`: the cross-build, the launcher's self-test and the layer-2 replays
+under Wine, with its own tool cache; the fork pull requests get its disc-free part.
 
 ## Releases: tagged drafts, published by hand
 _Decided: 2026-10-06_

@@ -92,8 +92,9 @@ tools/venv/bin/python tools/port_inventory.py probe         # the game C still c
 ```
 
 For port or launcher changes also build them (`cmake` commands in the README) and run the relevant tests
-(`tests/port/run.py`, the launcher's `--self-test`). `scripts/ci_areas.sh --diff origin/main` tells you which areas
-your change touches.
+(`tests/port/run.py`, the launcher's `--self-test`); CI also cross-builds them for Windows and runs them under Wine
+(`scripts/build_windows.sh --test` is the same gate, needs `scripts/setup.sh llvm-mingw sdl3-windows` and `wine`).
+`scripts/ci_areas.sh --diff origin/main` tells you which areas your change touches.
 
 ## Opening a pull request
 

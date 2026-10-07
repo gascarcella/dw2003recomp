@@ -692,6 +692,19 @@ int self_test_fake_game(const char *mode, int argc, char **argv) {
     return 0;
 }
 
+// The stand-in's abort(): SIGABRT on POSIX (the exit status is the signal's, -6); on Windows the C runtime ends the
+// process with status 3, which the launcher reads as "unimplemented part of the port" until it names the Windows
+// exit codes (the board's Windows 7).
+#ifdef SDL_PLATFORM_WINDOWS
+static const int ABORT_STATUS = 3;
+static const char ABORT_TEXT[] = "status 3";
+static const char ABORT_RESULT[] = "result: The game stopped at an unimplemented part of the port (status 3)";
+#else
+static const int ABORT_STATUS = -6;
+static const char ABORT_TEXT[] = "signal 6";
+static const char ABORT_RESULT[] = "result: The game was killed by signal 6";
+#endif
+
 static std::string self_exe() {
     const char *base = SDL_GetBasePath();
 #ifdef SDL_PLATFORM_WINDOWS
@@ -715,7 +728,12 @@ static void test_game(const std::string &root) {
     std::vector<std::string> tried;
     check(game_find(exe, "/nowhere", &tried) == exe && tried.size() == 1, "--game is the only place looked at");
     tried.clear();
-    check(game_find("", "/nowhere/launcher", &tried).empty() && tried.back() == "/nowhere/port-sdl/dw2003",
+#ifdef SDL_PLATFORM_WINDOWS
+    const std::string dev_build = "/nowhere/port-sdl/dw2003.exe";
+#else
+    const std::string dev_build = "/nowhere/port-sdl/dw2003";
+#endif
+    check(game_find("", "/nowhere/launcher", &tried).empty() && tried.back() == dev_build,
           "the development tree's SDL build is looked at last");
 
     set_fake_mode("new");
@@ -728,7 +746,7 @@ static void test_game(const std::string &root) {
           "the probe: a file the game rejects, with its message");
     set_fake_mode("abort");
     p = game_probe(exe, settings);
-    check(p.result == GameProbe::Result::Failed && p.message.find("signal 6") != std::string::npos,
+    check(p.result == GameProbe::Result::Failed && p.message.find(ABORT_TEXT) != std::string::npos,
           "the probe: a game that crashes: " + p.message);
 
     // A run that writes 251 lines and fails: the status, the last lines kept, the line without a newline.
@@ -754,7 +772,7 @@ static void test_game(const std::string &root) {
     for (int i = 0; i < 2000 && crash.poll(); i++) {
         SDL_Delay(5);
     }
-    check(!crash.running() && crash.exit_code() == -6, "the crashing run's exit status is the signal's");
+    check(!crash.running() && crash.exit_code() == ABORT_STATUS, "the crashing run's exit status is abort()'s");
     check(crash.report_path() == path_join(crashes, "crash-selftest.txt") && path_is_file(crash.report_path()),
           "the crash report's path is taken from the output: " + crash.report_path());
     check(crash.version() == "0.0-selftest (none)", "the game's version line is kept: " + crash.version());
@@ -954,7 +972,7 @@ static void test_play(SDL_Window *window, const std::string &root) {
     set_fake_mode("crash");
     app.play();
     pump_until(app, [&] { return !app.game_run().running(); }, 10000);
-    check(app.play_error().find("signal 6") != std::string::npos, "the crash's exit status is shown: " + app.play_error());
+    check(app.play_error().find(ABORT_TEXT) != std::string::npos, "the crash's exit status is shown: " + app.play_error());
     check(app.play_report_path() == path_join(dir, "crashes/crash-selftest.txt"),
           "the crash report's path is shown: " + app.play_report_path());
     {
@@ -964,7 +982,7 @@ static void test_play(SDL_Window *window, const std::string &root) {
         check(text.find("game: " + self_exe() + " (version 0.0-selftest (none))") != std::string::npos,
               "Copy's header names the game and its version");
         check(text.find("command: " + self_exe() + " --config ") != std::string::npos, "Copy has the command");
-        check(text.find("result: The game was killed by signal 6") != std::string::npos, "Copy has the result");
+        check(text.find(ABORT_RESULT) != std::string::npos, "Copy has the result");
         check(text.find("--- crash report: " + app.play_report_path()) != std::string::npos &&
                   text.find("signal: SIGABRT (6)") != std::string::npos,
               "Copy has the crash report's text");
@@ -1217,6 +1235,14 @@ bool self_test_run(const std::string &dir) {
         }
     }
     const std::string root = path_join(base, "launcher-self-test");
+    // The video driver for the windowed part, when SDL_VIDEO_DRIVER cannot reach the program: Wine drops that
+    // variable from the Windows environment (Proton and wine-staging do), so the Windows self-test is run with
+    // DW3_SELFTEST_VIDEO_DRIVER=offscreen instead (scripts/build_windows.sh --test, CI).
+    if (const char *driver = SDL_getenv("DW3_SELFTEST_VIDEO_DRIVER")) {
+        if (*driver != '\0') {
+            SDL_SetHint(SDL_HINT_VIDEO_DRIVER, driver);
+        }
+    }
     remove_tree(root);
     if (!path_make_dir(root, &err)) {
         std::fprintf(stderr, "self-test: %s\n", err.c_str());

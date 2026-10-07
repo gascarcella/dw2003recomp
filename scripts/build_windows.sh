@@ -7,7 +7,10 @@
 #   --launcher        also the launcher into build/launcher-win (dw2003-launcher.exe and its PDB)
 #   --configure-only  stop after configuring
 #   --test            after the launcher: its --self-test under Wine (wine on PATH; SDL's offscreen video) in
-#                     build/launcher-win/selftest/, the prefix in build/wine-prefix/
+#                     build/launcher-win/selftest/, the prefix in build/wine-prefix/; the game's crash report under
+#                     Wine (tests/port/crash.py --wine); and when the disc is there (iso/dw2003.cue) the game's
+#                     layer-2 replays under Wine (tests/port/run.py --exe ... --wine: the log and the record must
+#                     equal the Linux build's). The same gate as CI's windows job; each Wine run under `timeout`.
 # Needs: scripts/setup.sh llvm-mingw sdl3-windows (and imgui for the launcher); cmake and ninja (tools/venv's when the
 # system has none). Exit 0 when everything asked for built (and the test passed), else 1 with a summary: which objects
 # did not compile and whether the link failed. The game links since the overlay sections stopped needing a linker
@@ -47,6 +50,7 @@ for t in cmake ninja; do
 done
 toolchain="$ROOT/cmake/windows-x86_64.cmake"
 status=0
+mkdir -p "$ROOT/build"   # a fresh checkout has none: the logs below go beside the build directories
 
 # ---- The game.
 port_dir="$ROOT/build/port-win"
@@ -101,14 +105,44 @@ if [[ $launcher -eq 1 ]]; then
         mkdir -p "$selftest" "$ROOT/build/wine-prefix"
         log "launcher: --self-test under wine ($(wine --version 2>/dev/null); log: $selftest.log)"
         # Wine sees the Unix tree as drive Z:; forward slashes are fine for the Windows API.
-        if WINEPREFIX="$ROOT/build/wine-prefix" WINEDEBUG=-all SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=dummy \
-            wine "$launcher_dir/dw2003-launcher.exe" --self-test "Z:$selftest" >"$selftest.log" 2>&1; then
+        # Wine drops SDL_VIDEO_DRIVER from the Windows environment (Proton, wine-staging): the self-test takes the
+        # driver from DW3_SELFTEST_VIDEO_DRIVER (SDL's hint). `timeout`: a hang (a window waiting for a display) fails
+        # instead of holding the runner.
+        if WINEPREFIX="$ROOT/build/wine-prefix" WINEDEBUG=-all DW3_SELFTEST_VIDEO_DRIVER=offscreen \
+            SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=dummy \
+            timeout 600 wine "$launcher_dir/dw2003-launcher.exe" --self-test "Z:$selftest" >"$selftest.log" 2>&1; then
             log "launcher: self-test passed under wine: $(grep -o '[0-9]* of [0-9]* checks passed' "$selftest.log" || true)"
         else
             status=1
             log "launcher: self-test FAILED under wine: $(grep -o '[0-9]* of [0-9]* checks passed' "$selftest.log" || true)"
             grep 'FAILED' "$selftest.log" | sed 's/^/    /' | head -20
         fi
+    fi
+fi
+
+# ---- The game's crash report under Wine (no disc needed: tests/port/crash.py --wine).
+if [[ $test -eq 1 && $configure_only -eq 0 && -x "$port_dir/dw2003.exe" ]]; then
+    log "game: the crash report under wine (tests/port/crash.py --wine)"
+    if timeout 600 "$(tool venv)/bin/python" "$ROOT/tests/port/crash.py" --wine --exe "$port_dir/dw2003.exe"; then
+        log "game: the crash report under wine passed"
+    else
+        status=1
+        log "game: the crash report under wine FAILED"
+    fi
+fi
+
+# ---- The game's replays under Wine (the disc needed).
+if [[ $test -eq 1 && $configure_only -eq 0 && -x "$port_dir/dw2003.exe" ]]; then
+    if [[ -f "$ROOT/iso/dw2003.cue" ]]; then
+        log "game: the layer-2 replays under wine (tests/port/run.py --exe $port_dir/dw2003.exe --wine)"
+        if timeout 1800 "$(tool venv)/bin/python" "$ROOT/tests/port/run.py" --exe "$port_dir/dw2003.exe" --wine -j "$JOBS"; then
+            log "game: the replays under wine match the Linux build's"
+        else
+            status=1
+            log "game: the replays under wine FAILED"
+        fi
+    else
+        log "game: no disc (iso/dw2003.cue): the replays under wine skipped"
     fi
 fi
 
