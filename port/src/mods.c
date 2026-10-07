@@ -353,6 +353,66 @@ static void pl_start(struct Mod *mod) {
              (int)port_preset_language);
 }
 
+/* ---- party_xp (docs/LAUNCHER.md "Party experience"; docs/MECHANICS.md section 6, "Who gets a battle's experience"):
+ * while enabled, port_mod_party_xp makes STFGTREP's report ask port_party_xp_share for every party member's
+ * experience. A member that took part keeps one fighter's split share; one that did not gets `share` percent of it
+ * (at least 1 when both are above 0), a knocked-out one (port_party_xp_knocked_out, from WFIGHTMN) only with
+ * `knocked_out`. With `catch_up` a member below the party's highest level gets 10% more per level below it, at most
+ * twice as much. The report then shows, counts and adds it as it does a fighter's (item 0x141's fifth included); form
+ * experience still goes only to the forms that fought. */
+enum { PX_SHARE, PX_KNOCKED_OUT, PX_CATCH_UP };
+static const ModOption px_options[] = {
+    { .id = "share", .type = MOD_INT, .def = "50", .min = 0, .max = 100, .step = 5, .applies = "live" },
+    { .id = "knocked_out", .type = MOD_BOOL, .def = "false", .applies = "live" },
+    { .id = "catch_up", .type = MOD_BOOL, .def = "false", .applies = "live" },
+};
+int port_mod_party_xp;
+static int px_share, px_knocked_out, px_catch_up;
+static int px_ko[3]; /* the last battle's party slots at 0 HP */
+
+static void px_start(struct Mod *mod) {
+    port_mod_party_xp = 1;
+    px_share = (int)mod->values[PX_SHARE].number;
+    px_knocked_out = mod->values[PX_KNOCKED_OUT].number != 0;
+    px_catch_up = mod->values[PX_CATCH_UP].number != 0;
+}
+
+void port_party_xp_knocked_out(s32 slot, s32 knocked_out) {
+    if (slot >= 0 && slot < 3) {
+        px_ko[slot] = knocked_out;
+    }
+}
+
+static s32 px_level(s32 slot) {
+    s32 id = gamestate_data.funcs.get_party_member(slot);
+    return id >= 0 ? gamestate_data.digimon[id].record.stats.values[0] : -1;
+}
+
+s32 port_party_xp_share(s32 slot, s32 took_part, s32 exp) {
+    const char *how = took_part ? "took part" : px_ko[slot] ? "knocked out" : "sat out";
+    s32 gain = exp, lv = px_level(slot), top = lv, bonus = 0, k;
+    if (!took_part) {
+        if (px_ko[slot] && !px_knocked_out) {
+            gain = 0;
+        } else {
+            gain = exp * px_share / 100;
+            if (gain == 0 && exp > 0 && px_share > 0) {
+                gain = 1;
+            }
+        }
+    }
+    if (px_catch_up && gain > 0) {
+        for (k = 0; k < 3; k++) {
+            top = px_level(k) > top ? px_level(k) : top;
+        }
+        bonus = (top - lv) * 10 > 100 ? 100 : (top - lv) * 10;
+        gain += gain * bonus / 100;
+    }
+    port_log("party xp: frame %ld: slot %d (level %d) %s: %d of the fighters' %d%s", port_frames, slot, lv, how, gain,
+             exp, bonus > 0 ? " (catch-up)" : "");
+    return gain;
+}
+
 static Mod mods[] = {
     { .id = "fast_forward", .version = "0.1", .options = ff_options,
       .option_count = (int)(sizeof(ff_options) / sizeof(ff_options[0])), .start = ff_start, .frame = ff_frame },
@@ -364,6 +424,8 @@ static Mod mods[] = {
       .option_count = (int)(sizeof(gs_options) / sizeof(gs_options[0])), .start = gs_start },
     { .id = "preset_language", .version = "0.1", .options = pl_options,
       .option_count = (int)(sizeof(pl_options) / sizeof(pl_options[0])), .start = pl_start },
+    { .id = "party_xp", .version = "0.1", .options = px_options,
+      .option_count = (int)(sizeof(px_options) / sizeof(px_options[0])), .start = px_start },
 };
 enum { MOD_FAST_FORWARD, MOD_SKIP_DIALOGUES };
 #define MOD_COUNT ((int)(sizeof(mods) / sizeof(mods[0])))

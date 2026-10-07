@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "id": "party_xp",
+  "name": "Party experience",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "Party members that did not fight in a won battle still get experience: a share of what one fighter got. The fighters' experience, the money and the techniques' experience are unchanged. Only the three Digimon in the party gain; the others at the lab do not.",
+  "options": [
+    { "id": "share", "name": "Share for members that did not fight (%)",
+      "description": "Percent of one fighter's experience. 100: as much as a fighter; 0: nothing.",
+      "type": "int", "min": 0, "max": 100, "step": 5, "default": 50, "applies": "live" },
+    { "id": "knocked_out", "name": "Knocked-out members get the share too",
+      "description": "A member knocked out when the battle ends gets nothing in the game. On: it gets the same share as a member that did not fight.",
+      "type": "bool", "default": false, "applies": "live" },
+    { "id": "catch_up", "name": "Catch-up bonus",
+      "description": "A member below the party's highest level gets 10% more experience per level below it, at most twice as much. Applies to fighters too.",
+      "type": "bool", "default": false, "applies": "live" }
+  ]
+}
