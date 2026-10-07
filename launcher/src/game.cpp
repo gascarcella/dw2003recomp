@@ -112,7 +112,12 @@ std::string game_exit_text(int code) {
     case 2:
         return "halted (status 2: the game stopped itself)";
     case 3:
+#ifdef SDL_PLATFORM_WINDOWS
+        // The C runtime's abort() ends a Windows process with 3 too (the crash report's `kind:` line says which).
+        return "stopped with status 3 (abort(), or an unimplemented part of the port)";
+#else
         return "stopped at an unimplemented part of the port (status 3)";
+#endif
     case 4:
         return "was stopped by the watchdog (status 4: no frame for too long)";
     case 64:
@@ -120,10 +125,30 @@ std::string game_exit_text(int code) {
     default:
         break;
     }
+#ifdef SDL_PLATFORM_WINDOWS
+    // SDL_WaitProcess hands out GetExitCodeProcess's DWORD as an int: an unhandled exception's NTSTATUS code (what the
+    // game's crash handler ends the process with, port/src/crash.c) comes out negative.
+    const unsigned status = (unsigned)code;
+    if (status >= 0x80000000u) {
+        const char *name = status == 0xC0000005u   ? "access violation"
+                           : status == 0xC000001Du ? "illegal instruction"
+                           : status == 0xC00000FDu ? "stack overflow"
+                           : status == 0xC0000094u ? "integer division by zero"
+                           : status == 0xC000008Eu ? "floating-point division by zero"
+                           : status == 0xC0000374u ? "heap corruption"
+                           : status == 0x80000003u ? "breakpoint"
+                           : status == 0xC000013Au ? "Ctrl+C or the console closed"
+                                                   : "an exception";
+        char hex[16];
+        std::snprintf(hex, sizeof(hex), "0x%08X", status);
+        return std::string("crashed: ") + name + " (" + hex + ")";
+    }
+#else
     if (code < 0 && code != -255) {
         const char *name = code == -11 ? " (a crash: SIGSEGV)" : code == -6 ? " (SIGABRT)" : code == -9 ? " (SIGKILL)" : "";
         return "was killed by signal " + std::to_string(-code) + name;
     }
+#endif
     return "ended with status " + std::to_string(code);
 }
 

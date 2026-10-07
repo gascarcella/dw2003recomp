@@ -7,7 +7,9 @@ It is C++17 with Dear ImGui on SDL3 + `SDL_Renderer`; the game stays C.
 **Status (Linux):** the window and its navigation, the settings directory, reading and writing `settings.json`, the disc screen (file dialog, drag-and-drop, typed path, the SHA-1
 check), the play button (the game's exit status and last lines on an error), the settings screen (video, 50/60 Hz,
 audio, memory cards), the controls screen (keyboard, gamepad, hotkeys), the mods screen (each mod's page generated from
-its `mod.json`), the self-test. Windows comes later (the Windows track on the project board); the code uses SDL's calls, not POSIX.
+its `mod.json`), the self-test. The code uses SDL's calls, not POSIX, so the same source cross-builds for Windows
+(`scripts/build_windows.sh --launcher`: a GUI-subsystem `dw2003-launcher.exe` with a manifest, `launcher/windows/`;
+the self-test passes under Wine, `docs/RELEASE.md` "The Windows package"); on real Windows it has not run yet.
 
 ## Build
 
@@ -185,5 +187,5 @@ desktop backends (`scripts/setup.sh sdl3-desktop`).
 | `src/game.cpp`, `game.h` | Finding the game, its `--print-settings` probe, the command, the running game |
 | `src/input.cpp`, `input.h` | The PS1 buttons, the game's default bindings, the binding grammar, the input prompt |
 | `src/mods.cpp`, `mods.h` | The manifests (reading, checking), the user's values in `mods.<id>` |
-| `src/paths.cpp`, `paths.h` | Paths and files through SDL's calls only (no POSIX: Windows comes later) |
+| `src/paths.cpp`, `paths.h` | Paths and files through SDL's calls only (no POSIX; `/` and `\` and drive letters alike) |
 | `src/selftest.cpp`, `selftest.h` | The self-test |

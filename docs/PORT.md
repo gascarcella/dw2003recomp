@@ -354,7 +354,7 @@ stack overflow gets the text (the filter runs on what the guard page leaves) and
 - **State probes:** `port_state_read` (a script's `wait_mem`) maps only layout-identical data and an explicit field
   table; other pointer-bearing objects and overlay data read as unmapped.
 - **BIOS:** a stand-in string, not the user's BIOS.
-- **Windows, in progress (tested under Wine only):** the Windows cross build is in place (DECISIONS "Windows:
+- **Windows (tested under Wine and Proton, not yet on real Windows):** the Windows cross build (DECISIONS "Windows:
   cross-built from Linux"): `scripts/setup.sh llvm-mingw sdl3-windows`, the CMake toolchain file
   `cmake/windows-x86_64.cmake`, `scripts/build_windows.sh [--launcher] [--test]` (the game into `build/port-win`,
   the launcher into `build/launcher-win`, the launcher's self-test under Wine) and `tools/port_inventory.py probe
@@ -365,8 +365,11 @@ stack overflow gets the text (the filter runs on what the guard page leaves) and
   Wine 9.0: the cross-build, the launcher's self-test under Wine (`DW3_SELFTEST_VIDEO_DRIVER=offscreen`: Wine drops
   `SDL_VIDEO_DRIVER` from the Windows environment), the crash report under Wine (`tests/port/crash.py --wine`), and
   with the disc both replays; `build`'s probe step compiles every unit with llvm-mingw's clang too. Locally the same
-  gate is `scripts/build_windows.sh --test`, every Wine run under a timeout.
-  Nothing has run on real Windows yet (the board's Windows 9); the SDL window is 64-bit only; macOS
+  gate is `scripts/build_windows.sh --test`, every Wine run under a timeout. The release carries a Windows zip
+  (`scripts/package_windows.sh`, `docs/RELEASE.md` "The Windows package"). Play-tested on this desktop with the
+  packaged `dw2003.exe` under Wine 11.17 and GE-Proton 10-25 (umu-run): a window at scale 2, WASAPI audio with no
+  refill or drop, 49.97 frames a second, the `new_game` route to the first field map. Nothing has run on real Windows
+  yet (the board's Windows 9); the SDL window is 64-bit only; macOS
   is not planned. The launcher links and passes its self-test under Wine. The runtime's operating-system calls are in one
   file with a POSIX and a Windows half, `port/src/platform.c` (`port/include/platform.h`: paths with drive letters
   and `\`, a replacing rename for the memory cards and the stamp cache, the per-user cache directory, positional

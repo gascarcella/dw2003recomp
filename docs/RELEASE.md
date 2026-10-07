@@ -1,9 +1,11 @@
 # Releases
 
-The rules are in DECISIONS "Releases: tagged drafts, published by hand": **one Linux x86_64 AppImage** for players (the launcher, the game and the mods'
-manifests in one file; the player supplies the disc in the launcher and never compiles anything), built on CI's
-`ubuntu-24.04` runner (glibc 2.39), **only for a pushed tag `vX.Y.Z`**, and only as a **draft** GitHub Release: the
-maintainer downloads it, tests it and presses Publish. Windows comes later (the Windows track on the project board).
+The rules are in DECISIONS "Releases: tagged drafts, published by hand": **one Linux x86_64 AppImage** and **one
+Windows x86_64 zip** for players (each the launcher, the game and the mods' manifests; the player supplies the disc in
+the launcher and never compiles anything), both built on CI's `ubuntu-24.04` runner (the AppImage against glibc 2.39,
+the Windows programs cross-compiled with llvm-mingw: DECISIONS "Windows: cross-built from Linux"), **only for a pushed
+tag `vX.Y.Z`**, and only as a **draft** GitHub Release: the maintainer downloads them, tests them and presses Publish.
+The Windows build is tested on Linux under Wine and Proton; real Windows comes from testers (the board's Windows 9).
 
 ## Making a release
 
@@ -14,12 +16,16 @@ maintainer downloads it, tests it and presses Publish. Windows comes later (the 
    ```
    The pattern is `v[0-9]+.[0-9]+.[0-9]+*` (`v0.1.0`, `v0.2.0-rc1`); the decomp's milestone tags such as
    `v0.1-matching-closed` do not match it and start nothing.
-3. `.github/workflows/release.yml` runs (`gh run watch`): the whole of `ci.yml` (every area, with the disc), then the
-   game's Release build through the port's M1 test, the AppImage build and its smoke test, then a **draft** release named
-   `dw2003recomp v0.1.0` with `dw2003-0.1.0-x86_64.AppImage`, `dw2003-0.1.0-x86_64.debug` (the game's debug info, for
-   crash reports; below), `SHA256SUMS` and notes generated from the merged pull requests.
-4. Download the draft's AppImage, run it on a desktop (Play with the real disc, a window, sound, a gamepad), and
-   **Publish** it on GitHub when it is good (or delete the draft and the tag). Publishing puts binaries built from the
+3. `.github/workflows/release.yml` runs (`gh run watch`): the whole of `ci.yml` (every area, with the disc), then two
+   jobs side by side: `appimage` (the game's Release build through the port's M1 test, the AppImage build and its
+   smoke test) and `windows` (the Windows package cross-built and tested unzipped under Wine, "The Windows package"
+   below), then a **draft** release named `dw2003recomp v0.1.0` with `dw2003-0.1.0-x86_64.AppImage`,
+   `dw2003-0.1.0-x86_64.debug` (the game's debug info, for crash reports; below), `dw2003-0.1.0-windows-x86_64.zip`,
+   `dw2003-0.1.0-windows-x86_64-symbols.zip` (the PDBs), `SHA256SUMS`, `SHA256SUMS-windows` and notes generated from
+   the merged pull requests.
+4. Download the draft's AppImage, run it on a desktop (Play with the real disc, a window, sound, a gamepad), run the
+   Windows zip under Wine or Proton the same way (or on a Windows machine when one is at hand), and **Publish** the
+   release on GitHub when it is good (or delete the draft and the tag). Publishing puts binaries built from the
    decompiled code on the public page: the maintainer's decision each time (DECISIONS "Releases: tagged drafts, published by hand").
 
 A failed run creates no release. To retry after a fix, delete the tag (`git push --delete origin v0.1.0; git tag -d
@@ -32,21 +38,23 @@ the maintainer's machine:
 
 ```sh
 scripts/release_local.sh v0.2.0                 # origin/main; --commit REF for another pushed commit
-scripts/release_local.sh v0.2.0 --build-only    # the AppImage only: no tag, no release
+scripts/release_local.sh v0.2.0 --build-only    # the packages only: no tag, no release
 ```
 
-It builds in a Docker `ubuntu:24.04` container (the runner's base, so the same glibc floor) with the appimage job's
-own steps: the tools, the disc, the game's Release build through the port's M1 test, `package_appimage.sh --test`.
-Then it pushes the tag, cancels the release.yml run the tag starts and creates the same draft with the local
-AppImage. It does **not** run the whole CI: check that `main`'s CI is green for that commit first. Needs `docker`,
-`gh` and the disc (`iso/dw2003.bin` or `DW3_DISC_BIN`); the container's tools stay in `build/release-local/`.
-Step 4 above (test, then Publish) is unchanged.
+It builds in a Docker `ubuntu:24.04` container (the runner's base, so the same glibc floor; with `wine64` for the
+Windows package's test) with the appimage and windows jobs' own steps: the tools, the disc, the game's Release build
+through the port's M1 test, `package_appimage.sh --test`, `package_windows.sh --test`. Then it pushes the tag,
+cancels the release.yml run the tag starts and creates the same draft with the local files. It does **not** run the
+whole CI: check that `main`'s CI is green for that commit first. Needs `docker`, `gh` and the disc (`iso/dw2003.bin`
+or `DW3_DISC_BIN`); the container's tools stay in `build/release-local/`. Step 4 above (test, then Publish) is
+unchanged.
 
-## Trying a branch's AppImage
+## Trying a branch's packages
 
 ```sh
-gh workflow run release.yml --ref <branch>     # tests + AppImage; no release
-gh run download <run-id> -n dw2003-appimage     # the AppImage and SHA256SUMS (kept 30 days)
+gh workflow run release.yml --ref <branch>     # tests + the AppImage + the Windows zip; no release
+gh run download <run-id> -n dw2003-appimage     # the AppImage, the .debug file and SHA256SUMS (kept 30 days)
+gh run download <run-id> -n dw2003-windows      # the Windows zip, its symbols zip and SHA256SUMS-windows
 ```
 
 Locally (Linux x86_64):
@@ -83,6 +91,37 @@ per-user directory `~/.local/share/dw2003/` (or `--config-dir`, `$DW3_CONFIG_DIR
 directory). Known limit: the game runs from the AppImage's mount, so closing the launcher while the game runs
 (the launcher's window is hidden then) can end the mount under the game.
 
+## The Windows package
+
+```sh
+scripts/setup.sh venv imgui llvm-mingw sdl3-windows
+scripts/package_windows.sh --test              # build/release/dw2003-<version>-windows-x86_64.zip, -symbols.zip, SHA256SUMS-windows
+```
+
+`package_windows.sh` cross-builds the game (the SDL build) and the launcher in Release through
+`scripts/build_windows.sh` (llvm-mingw's clang and lld, everything static, a PDB beside each executable: DECISIONS
+"Windows: cross-built from Linux"), checks both executables (GUI subsystem, the application manifest, no DLL of the
+toolchain's or SDL's imported: only Windows' own), and zips one folder:
+
+```
+dw2003-<version>-windows-x86_64/
+  dw2003-launcher.exe        the launcher (run this)
+  dw2003.exe                 the game, found by the launcher beside itself
+  mods/<id>/mod.json         the mods' manifests (port/mods/)
+  README.txt                 packaging/windows/README.txt: the disc, SmartScreen, where settings and crash reports live
+  LICENSES/                  ours, SDL3, Dear ImGui, its two fonts, LLVM's runtime, the mingw-w64 runtime, winpthreads
+                             (packaging/windows/LICENSES/README.txt)
+dw2003-<version>-windows-x86_64-symbols/
+  dw2003.pdb, dw2003-launcher.pdb   the symbols of crash reports and minidumps (not needed to play)
+```
+
+`--test` unzips both and, under Wine (`wine` on PATH, the prefix in `build/wine-prefix/`): the launcher's self-test
+from the unzipped folder with `DW3_SELFTEST_GAME=beside` (the bundled game and mods found by its own lookup; with
+`iso/dw2003.cue` the game runs 300 frames from the launcher's command), then a forced crash of the bundled game
+(`tests/port/crash.py --wine`) whose report must symbolize with the symbols zip's PDB. Settings, memory cards, logs
+and crash reports go to `%APPDATA%\dw2003\` (`C:\Users\<name>\AppData\Roaming\dw2003\`), or beside the launcher with
+a `portable.txt` there (`launcher/README.md`). The programs are not signed: SmartScreen warns the first time.
+
 ## Crash reports from a release
 
 A player's crash report (`docs/LAUNCHER.md` "Crash report": the launcher's Copy text, pasted into an issue) names its
@@ -94,7 +133,15 @@ gh release download v0.2.2 -p '*.debug'
 scripts/symbolize.py report.txt --binary dw2003-0.2.2-x86_64.debug   # each pc/stack line with its function and line
 ```
 
-## The smoke test
+A Windows report (its `platform:` line) resolves through the symbols zip's PDB, and its `crash-<date>.dmp` opens in
+WinDbg or Visual Studio with the same PDB (`docs/PORT.md` "Crash report"):
+
+```sh
+gh release download v0.2.2 -p '*-windows-x86_64.zip' -p '*-symbols.zip' && unzip -q '*.zip'
+scripts/symbolize.py report.txt --binary dw2003-0.2.2-windows-x86_64/dw2003.exe --pdb dw2003-0.2.2-windows-x86_64-symbols/dw2003.pdb
+```
+
+## The AppImage's smoke test
 
 `scripts/package_appimage.sh --test` runs the AppImage itself (extract-and-run, SDL's offscreen video and dummy
 audio) with `--self-test` and `DW3_SELFTEST_GAME=beside`: the launcher's whole self-test, then the game **the launcher

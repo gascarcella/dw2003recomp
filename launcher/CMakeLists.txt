@@ -79,3 +79,12 @@ option(DW3_LAUNCHER_STATIC_RUNTIME "Link libstdc++ and libgcc statically (the re
 if(DW3_LAUNCHER_STATIC_RUNTIME)
     target_link_options(dw2003-launcher PRIVATE -static-libstdc++ -static-libgcc)
 endif()
+
+# Windows (cmake/windows-x86_64.cmake): a GUI-subsystem program (no console window behind the launcher; SDL_main.h
+# keeps `main` the entry) with the manifest resource (launcher/windows/: the UTF-8 code page, long paths, per-monitor
+# DPI awareness), compiled by the toolchain's windres, as the game's (port/windows/).
+if(WIN32)
+    enable_language(RC)
+    target_sources(dw2003-launcher PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/windows/dw2003-launcher.rc")
+    set_target_properties(dw2003-launcher PROPERTIES WIN32_EXECUTABLE ON)
+endif()

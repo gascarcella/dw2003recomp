@@ -90,7 +90,8 @@ build/port/dw2003 --disc iso/dw2003.cue --debug /tmp/dw3.sock [--cd-speed instan
 scripts/setup.sh sdl3 && cmake -S port -B build/port-sdl -G Ninja -DDW3_PORT_SDL=ON && cmake --build build/port-sdl && build/port-sdl/dw2003 --disc iso/dw2003.cue --window   # play it (M2: software GPU, SDL3 window, keyboard/gamepad)
 scripts/setup.sh llvm-mingw sdl3-windows && scripts/build_windows.sh [--launcher] [--test]   # the Windows cross-build (cmake/windows-x86_64.cmake: build/port-win, build/launcher-win; --test: the launcher's self-test under Wine); tools/venv/bin/python tools/port_inventory.py probe --target windows = the units through llvm-mingw's clang
 scripts/setup.sh imgui sdl3-desktop appimage && scripts/package_appimage.sh --test   # the release AppImage (docs/RELEASE.md; Fedora without libstdc++-static: --shared-libstdcxx); a tag vX.Y.Z runs release.yml: a DRAFT release
-scripts/release_local.sh vX.Y.Z [--build-only]   # the same DRAFT release built locally in Docker ubuntu:24.04, release.yml's run cancelled (~6 min vs ~30)
+scripts/setup.sh imgui llvm-mingw sdl3-windows && scripts/package_windows.sh --test   # the release's Windows zip + its PDB symbols zip (docs/RELEASE.md "The Windows package"); --test runs the unzipped package under Wine
+scripts/release_local.sh vX.Y.Z [--build-only]   # the same DRAFT release (the AppImage and the Windows zip) built locally in Docker ubuntu:24.04, release.yml's run cancelled (~10 min vs ~30)
 scripts/ci_areas.sh --diff origin/main   # which CI areas (game, port, launcher) a change runs (DECISIONS "CI per area")
 tools/venv/bin/python tests/sound/spu_trace.py run|check|diff ...   # the emulator's SPU write trace (M3's oracle; docs/SOUND.md); tests/sound/key_trace.py gen|check: per-key goldens (~22 min)
 build/port/dw2003 --disc iso/dw2003.cue --script tests/replay/scripts/new_game.json --wav out.wav [--spu-trace out.trace]   # the port's audio (M3) headless

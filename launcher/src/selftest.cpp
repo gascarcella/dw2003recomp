@@ -88,6 +88,8 @@ static void test_paths() {
     check(!path_is_absolute("a/b") && !path_is_absolute("C:a") && !path_is_absolute(""), "relative paths");
     check(path_join("/a", "b") == "/a/b" && path_join("/a/", "b") == "/a/b" && path_join("C:\\a\\", "b") == "C:\\a\\b",
           "path_join");
+    check(path_join("C:\\a", "b") == "C:\\a\\b" && path_join("C:\\a/x", "b") == "C:\\a/x/b",
+          "path_join keeps a Windows path's backslashes");
     check(path_join("/a", "/b") == "/b" && path_join("", "b") == "b", "path_join with an absolute name");
     check(path_dir("/a/b") == "/a" && path_dir("/b") == "/" && path_dir("C:\\b") == "C:\\" && path_dir("b") == "",
           "path_dir");
@@ -693,12 +695,11 @@ int self_test_fake_game(const char *mode, int argc, char **argv) {
 }
 
 // The stand-in's abort(): SIGABRT on POSIX (the exit status is the signal's, -6); on Windows the C runtime ends the
-// process with status 3, which the launcher reads as "unimplemented part of the port" until it names the Windows
-// exit codes (the board's Windows 7).
+// process with status 3, the same as the port's "unimplemented" stop (game_exit_text names both).
 #ifdef SDL_PLATFORM_WINDOWS
 static const int ABORT_STATUS = 3;
 static const char ABORT_TEXT[] = "status 3";
-static const char ABORT_RESULT[] = "result: The game stopped at an unimplemented part of the port (status 3)";
+static const char ABORT_RESULT[] = "result: The game stopped with status 3 (abort(), or an unimplemented part of the port)";
 #else
 static const int ABORT_STATUS = -6;
 static const char ABORT_TEXT[] = "signal 6";
@@ -748,6 +749,23 @@ static void test_game(const std::string &root) {
     p = game_probe(exe, settings);
     check(p.result == GameProbe::Result::Failed && p.message.find(ABORT_TEXT) != std::string::npos,
           "the probe: a game that crashes: " + p.message);
+    // The exit statuses in words: the port's own, and a crash as each platform reports it (a signal; on Windows the
+    // exception's NTSTATUS code, which SDL_WaitProcess hands out as a negative int).
+    check(game_exit_text(0) == "ended normally" && game_exit_text(1).find("fatal error") != std::string::npos &&
+              game_exit_text(4).find("watchdog") != std::string::npos && game_exit_text(64).find("64") != std::string::npos &&
+              game_exit_text(7) == "ended with status 7",
+          "game_exit_text: the port's statuses");
+#ifdef SDL_PLATFORM_WINDOWS
+    check(game_exit_text((int)0xC0000005u) == "crashed: access violation (0xC0000005)" &&
+              game_exit_text((int)0xC00000FDu) == "crashed: stack overflow (0xC00000FD)" &&
+              game_exit_text((int)0xC0000409u) == "crashed: an exception (0xC0000409)" &&
+              game_exit_text(3).find("abort()") != std::string::npos,
+          "game_exit_text: Windows exception codes and abort()");
+#else
+    check(game_exit_text(-11) == "was killed by signal 11 (a crash: SIGSEGV)" && game_exit_text(-6).find("SIGABRT") != std::string::npos &&
+              game_exit_text(3).find("unimplemented") != std::string::npos,
+          "game_exit_text: signals and the port's status 3");
+#endif
 
     // A run that writes 251 lines and fails: the status, the last lines kept, the line without a newline.
     set_fake_mode("fail");

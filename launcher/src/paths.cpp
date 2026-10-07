@@ -26,7 +26,12 @@ std::string path_join(const std::string &dir, const std::string &name) {
     if (name.empty()) {
         return dir;
     }
-    return is_sep(dir.back()) ? dir + name : dir + "/" + name;
+    if (is_sep(dir.back())) {
+        return dir + name;
+    }
+    // The directory's own separator: a Windows path (SDL's %APPDATA%\dw2003\) stays all backslashes on screen.
+    const bool backslashes = dir.find('\\') != std::string::npos && dir.find('/') == std::string::npos;
+    return dir + (backslashes ? "\\" : "/") + name;
 }
 
 std::string path_dir(const std::string &p) {
