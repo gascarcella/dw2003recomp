@@ -298,6 +298,25 @@ void cdload_free_file(s32 id) {
     }
 }
 
+#ifdef PC_PORT
+/* PC_PORT: free_above and free_all free an entry whatever its state, also the one the CD is still reading into
+ * (state 2 while the reader is busy); the sectors still to come then land in whatever reuses the memory. FIELDSTG's
+ * map entry frees above HEAP_ADDR(0x8015C674) and puts its 0x9615C-byte buffer at the heap's top, so the read
+ * overwrote that block's header and freeing it crashed (issue #33). The PS1's 1.3 MB heap seldom holds a file in
+ * flight that high; the port's 4 MB one keeps every file it loaded, high up. Wait for the read before freeing. */
+static void cdload_wait_read(CdloadEntry *entry) {
+    if (entry->state == 2 && cdload_is_busy() != 0) {
+        port_cdload_wait_read(entry->id);
+        while (cdload_is_busy() != 0) {
+            PLATFORM_WAIT(); /* the CD interrupt ends this loop */
+        }
+    }
+}
+#define CDLOAD_WAIT_READ(entry) cdload_wait_read(entry)
+#else
+#define CDLOAD_WAIT_READ(entry)
+#endif
+
 /* Frees every entry. */
 void cdload_free_all(void) {
     CdloadEntry *entry = cdload_module.entries;
@@ -305,6 +324,7 @@ void cdload_free_all(void) {
 
     for (i = 0; i < 64; i++, entry++) {
         if (entry->id != 0) {
+            CDLOAD_WAIT_READ(entry);
             heap_funcs.free(entry->buffer);
             entry->id = 0;
             entry->buffer = NULL;
@@ -326,6 +346,7 @@ void cdload_free_above(u8 *addr) {
 
             end += filetable_funcs.get_sectors(entry->id) << 11;
             if (end >= addr) {
+                CDLOAD_WAIT_READ(entry);
                 heap_funcs.free(entry->buffer);
                 entry->id = 0;
                 entry->buffer = NULL;
