@@ -32,6 +32,13 @@ an inn's map), the field menu's SAVE entry, STGMCARD's save, Back to the field, 
   - with the mod off the menu has no SAVE entry: the script's SAVE press opens STATUS instead and its wait for
     STGMCARD times out.
 tests/saves/run.py loads the card the mod writes in the emulator (the PS1 game ignores the record).
+preset_language (no script of its own):
+  - each of the seven languages, booted through the debug channel (tools/mcp/game.py), reaches the opening's map
+    (0xE02; 0xE01 for Japanese) with its records_language, without the language select screen; with the mod off the
+    game is still on that screen (map 0x1600) 600 frames in;
+  - French through new_game.json's route from the opening (its CNTY_SEL steps replaced by a wait for map 0xE02) to
+    the first field map: the opening well before the emulator's (which goes through the screen), and the new game's
+    deck names (gamestate_init_records, at the title's New Game) are the French text file's.
 party_xp: first_battle_save's route to back_on_field (the first battle: party member 0 fights alone, 4 experience),
 the mod on with its defaults (share 50) and with share 100, and off: the checkpoints up to battle_won have the
 emulator's stable hashes (the mod acts in the report only); from battle_won to battle_end member 0 gains 4 in every
@@ -261,6 +268,75 @@ def global_save(binary, out):
           f"with the mod off the menu has no SAVE: the press opens STATUS (map 0x1000) and the wait for STGMCARD times out (exit {rc3})")
 
 
+PL_CODES = {"english": 2, "french": 3, "german": 5, "italian": 4, "spanish": 6, "usa": 1, "japanese": 0}
+PL_DECKS = 0x628  # gamestate_data.decks[3]: GamestateDeck (0x66 bytes), its name first
+NEW_GAME = SCRIPTS / "new_game.json"
+NG_EXPECTED = ROOT / "tests/replay/expected/new_game.json"
+
+
+def pl_boot(binary, out, lang):
+    """One boot through the debug channel with preset_language on (lang) or off (None): (map, records_language,
+    frame) once the opening's map is reached, or after 600 frames on the language select screen."""
+    sys.path.insert(0, str(ROOT / "tools/mcp"))
+    from game import Game  # the debug channel's client (stdlib only)
+    from symbols import Symbols
+    mods = {"preset_language": {"enabled": True, "language": lang}} if lang else {}
+    cfg = settings(out, f"pl_{lang or 'off'}", mods)
+    rl = Symbols(ROOT, binary).host("records_language").addr
+    g = Game.spawn([str(binary), "--config", str(cfg), "--cd-speed", "instant"], cwd=str(ROOT), hold=True)
+    try:
+        r = g.wait(ps1_map=0xE01 if lang == "japanese" else 0xE02, timeout=600)
+        st = g.status()
+        return st["map"], int.from_bytes(g.peek(rl, 4), "little", signed=True), r["frame"]
+    finally:
+        g.stop()
+
+
+def preset_language(binary, out):
+    """preset_language: every language boots past the language select screen with its records_language, and a new
+    game in French starts with the French text (the docstring)."""
+    print("mods: preset_language (boots through the debug channel; new_game's route from the opening in French)")
+    for lang, code in PL_CODES.items():
+        m, rl, frame = pl_boot(binary, out, lang)
+        want = 0xE01 if code == 0 else 0xE02
+        check(m == want and rl == code, f"{lang}: the opening's map {m:#x} (want {want:#x}) at frame {frame}, "
+              f"records_language {rl} (want {code}), no language select screen")
+    m, rl, frame = pl_boot(binary, out, None)
+    check(m == 0x1600 and rl == 2, f"the mod off: still on the language select screen (map {m:#x}) after {frame} "
+          f"frames, records_language {rl}")
+    # new_game.json from the opening on: its first three steps (CNTY_SEL, its checkpoint, the START that confirms
+    # English) become a wait for the opening's map, and the route stops at the first field map's checkpoint
+    steps = json.loads(NEW_GAME.read_text())["steps"]
+    names = [s.get("name") for s in steps]
+    script = derived(out, "preset_language", [{"type": "wait_map", "map": "0xE02", "timeout": 3000}] +
+                     steps[3:names.index("new_game_field") + 1])
+    cfg = settings(out, "pl_new_game", {"preset_language": {"enabled": True, "language": "french"}})
+    dumps = out / "pl_dumps"
+    dumps.mkdir()
+    rc, _, rec, err = run_port(binary, out, "pl_new_game", script, cfg, True, {"DW3_PORT_CHECKPOINT_DIR": str(dumps)})
+    if rc != 0 or rec is None:
+        print("    " + "\n    ".join(err.splitlines()[-5:]))
+    cps = {c["name"]: c for c in rec["checkpoints"]} if rec else {}
+    emu = {c["name"]: c for c in json.loads(NG_EXPECTED.read_text())["checkpoints"]}
+    check(rc == 0 and "opening_movie" in cps and "new_game_field" in cps and
+          cps["opening_movie"]["frame"] + 100 < emu["opening_movie"]["frame"],
+          f"French: new_game's route from the opening to the first field map (exit {rc}); the opening at frame "
+          f"{cps.get('opening_movie', {}).get('frame')} (the emulator's, through the screen: {emu['opening_movie']['frame']})")
+    dump = next(dumps.glob("cp*_new_game_field.bin"), None)
+    if dump is None:
+        check(False, "French: the new_game_field checkpoint's dump")
+        return
+    sys.path.insert(0, str(ROOT / "tools"))
+    import disc_files
+    import dump_text
+    text = disc_files.read(0x32 + PL_CODES["french"])
+    offs = dump_text.table_offsets(text)
+    want = [text[offs[0x16 + j]:].split(b"\0")[0] for j in range(3)]
+    d = dump.read_bytes()
+    got = [d[PL_DECKS + 0x66 * j:][:0x16].split(b"\0")[0] for j in range(3)]
+    check(got == want, f"French: the new game's deck names are the French text file's (0x35, entries 0x16-0x18): {got}")
+
+
 PX_GAINS = {"px_on": (4, 2, 2), "px_full": (4, 4, 4), "px_off": (4, 0, 0)}
 
 
@@ -302,6 +378,7 @@ def party_xp(binary, out):
               f"{label}: the party (Digimon {', '.join(str(w[0]) for w in won)}) gains {gains}, "
               f"want {PX_GAINS[label]}; {shares} share(s) logged")
 
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("mode", nargs="?", default="check", choices=("check", "record"))
@@ -323,6 +400,7 @@ def main():
     skip_dialogues(binary, out, args.mode == "record")
     battle_animations(binary, out)
     global_save(binary, out)
+    preset_language(binary, out)
     party_xp(binary, out)
     print(f"mods test: {'FAIL (' + str(len(FAILURES)) + ')' if FAILURES else 'pass'}")
     return 1 if FAILURES else 0
