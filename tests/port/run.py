@@ -21,8 +21,9 @@ same LIBSND calls (the segments between them are reported: docs/SOUND.md section
   --sanitize  also build build/port-san (-DDW3_PORT_SANITIZE=ON), run it once, and fail on any ASan/UBSan report
               (its log and record must equal the plain build's too)
   --cd-speed  the port's CD timing (default: the port's, realistic)
-  --exe PATH  run this binary instead of building build/port (build/port is still built: the sound replay compiles
-              against its generated headers); --m32 and --sanitize do not apply to it
+  --exe PATH  run this binary instead of building build/port; build/port is only configured (the run's own sound
+              check compiles against its generated headers), and LIBSND's replay on the emulator's timeline is
+              skipped (it tests the host's LIBSND, the plain run's job); --m32 and --sanitize do not apply to it
   --wine      run the binary (--exe, a Windows build: scripts/build_windows.sh) through `wine`, headless (SDL's
               dummy video and audio drivers, the prefix in build/wine-prefix/); its log and record must equal the
               Linux build's, which is what tests/replay/expected/ holds
@@ -81,13 +82,19 @@ def tool_env():
     return env
 
 
-def build(build_dir, options, jobs, env):
-    """Configures (once) and builds the port into build_dir; returns the binary."""
+def configure(build_dir, options, env):
+    """Configures the port into build_dir once (the generated headers are written then); returns the directory."""
     build_dir = ROOT / build_dir
     if not (build_dir / "CMakeCache.txt").exists():
         print(f"  configure {build_dir.relative_to(ROOT)} {' '.join(options)}".rstrip())
         subprocess.run(["cmake", "-S", str(ROOT / "port"), "-B", str(build_dir), "-G", "Ninja", *options],
                        check=True, env=env, stdout=subprocess.DEVNULL)
+    return build_dir
+
+
+def build(build_dir, options, jobs, env):
+    """Configures (once) and builds the port into build_dir; returns the binary."""
+    build_dir = configure(build_dir, options, env)
     cmd = ["cmake", "--build", str(build_dir)] + (["-j", str(jobs)] if jobs else [])
     proc = subprocess.run(cmd, env=env, capture_output=True, text=True)
     if proc.returncode != 0:
@@ -272,20 +279,25 @@ def main():
     out = out.resolve()
 
     failed = []
-    try:  # the sound replay below compiles against the port's generated headers (build/port/gen): build it first
-        build("build/port", [], args.jobs, env)
+    try:  # the sound replays below compile against the port's generated headers (build/port/gen): build it first
+        if args.exe:
+            configure("build/port", [], env)  # the headers only: the binary under test is --exe's
+        else:
+            build("build/port", [], args.jobs, env)
     except (RuntimeError, subprocess.CalledProcessError) as e:
         print(f"port test: FAIL: {e}")
         return 1
-    # LIBSND on the emulator's timeline, once (the committed emulator traces; tests/port/sound.py replay)
-    try:
-        variants = ["m64"] + (["m32"] if args.m32 else []) + (["san"] if args.sanitize else [])
-        failures = sound.check_libsnd(variants, out / "sound")
-    except (sound.Missing, RuntimeError) as e:
-        failures = [str(e)]
-    if failures:
-        print("port test: sound: FAIL\n  " + "\n  ".join(failures))
-        failed.append("sound")
+    # LIBSND on the emulator's timeline, once (the committed emulator traces; tests/port/sound.py replay): the host's
+    # LIBSND through gcc, so not with --exe (another binary is under test; the plain run covers it)
+    if not args.exe:
+        try:
+            variants = ["m64"] + (["m32"] if args.m32 else []) + (["san"] if args.sanitize else [])
+            failures = sound.check_libsnd(variants, out / "sound")
+        except (sound.Missing, RuntimeError) as e:
+            failures = [str(e)]
+        if failures:
+            print("port test: sound: FAIL\n  " + "\n  ".join(failures))
+            failed.append("sound")
     for name in names:
         failures = check_script(name, args, env, out)
         if failures:

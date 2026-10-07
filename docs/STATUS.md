@@ -90,7 +90,9 @@ The plan's milestones (`docs/PORT.md`):
 
 ## Infrastructure
 - **CI** (`.github/workflows/ci.yml`) runs per area (game, port, launcher; `scripts/ci_areas.sh`) on pull requests
-  and pushes to `main`, and skips docs-only changes. A deploy key adds the disc-dependent build and tests.
+  and pushes to `main`, and skips docs-only changes. A deploy key adds the disc-dependent build and tests. The port
+  area's `windows` job cross-builds the Windows game and launcher and runs them under Wine (the launcher's self-test;
+  with the disc, the layer-2 replays against the Linux build's logs and records).
 - **Sessions:** local work happens in git worktrees (`scripts/worktree_init.sh` shares the main checkout's tools).
   Cloud sessions set themselves up through the SessionStart hook, with the private data checkout beside the repo.
 - **Emulator:** a pinned PCSX-Redux build runs headless (`scripts/check_emulator.sh`), with OpenBIOS or the retail

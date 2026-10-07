@@ -24,6 +24,11 @@
 #                (every test that compiles or runs port/; layer 2 is the emulator alone), the -m32 M1 test; and below
 #   launcher  launcher/ (the port's json.c/sha1.c it compiles are port/, which implies launcher)
 #             -> the launcher's build and self-test, the SDL game's build, the self-test with the disc and that game
+# The `windows` job (DECISIONS "Windows: cross-built from Linux") belongs to the port area and runs beside `build`:
+# the cross-build of the game and the launcher with llvm-mingw (scripts/build_windows.sh), the launcher's self-test
+# under Wine, and with the disc the layer-2 replays of the Windows game under Wine, which must give the Linux build's
+# log and record (tests/port/run.py --exe ... --wine). `build` keeps the cheap Windows gate, the probe's
+# --target windows (every unit compiles with llvm-mingw's clang).
 #   none      documentation, release.yml, scripts/package_appimage.sh, packaging/ (release.yml tests those)
 # ci.yml and scripts/ci_areas.sh themselves, manual runs, release tags (workflow_call) and a push whose base commit is
 # unknown run every area. The toolchain, the parse check and the cache run always (the cache is one key for all).
@@ -66,6 +71,7 @@ jobs:
     env:
       DW3_GAMEDATA: ${{ github.workspace }}/dw2003-gamedata
       DW3_JOBS: "2"
+      DW3_UBUNTU_MIRROR: http://azure.archive.ubuntu.com/ubuntu   # the runners' own mirror (setup.sh: archive.ubuntu.com stalls from them)
     steps:
       - uses: actions/checkout@v4
         with:
@@ -118,12 +124,13 @@ jobs:
             tools/redux
             tools/sdl3
             tools/imgui
+            tools/llvm-mingw
           key: tools-${{ runner.os }}-${{ hashFiles('scripts/setup.sh', 'tools/requirements.txt') }}
 
       # Every tool, whatever the areas: the cache is one key, and a run that saved only some tools would leave the
       # others missing from it until setup.sh changes.
       - name: Toolchain
-        run: scripts/setup.sh binutils mkpsxiso venv gcc objdiff ext redux sdl3 imgui
+        run: scripts/setup.sh binutils mkpsxiso venv gcc objdiff ext redux sdl3 imgui llvm-mingw
 
       - name: Scripts parse, Python compiles
         run: |
@@ -137,11 +144,12 @@ jobs:
       # Disc-free: the probe compiles every game unit with the runner's gcc (Ubuntu 24.04: GCC 13) at -m64 with its own
       # INCLUDE_ASM/gte override headers (include/asm_generated/ is not needed), then nm checks for duplicate globals.
       # scripts/test.sh repeats it in the data-gated part.
-      - name: Host-compile probe (every unit clean at -m64, no duplicate globals)
+      - name: Host-compile probe (every unit clean at -m64, no duplicate globals; and for Windows with llvm-mingw)
         if: steps.areas.outputs.port == 'true'
         run: |
           tools/venv/bin/python tools/port_inventory.py probe -j "$DW3_JOBS"
           tools/venv/bin/python tools/port_inventory.py link -j "$DW3_JOBS"
+          tools/venv/bin/python tools/port_inventory.py probe --target windows -j "$DW3_JOBS"
 
       # The PC port's window (-DDW3_PORT_SDL=ON, SDL3 from tools/sdl3): it keeps compiling (the launcher's run with the
       # game below needs it too).
@@ -214,4 +222,120 @@ jobs:
           path: |
             crash-*.txt
             build/**/crash-*.txt
+          if-no-files-found: ignore
+
+  # The Windows build (DECISIONS "Windows: cross-built from Linux, tested under Wine and Proton"): the port area's
+  # second job, in parallel with `build`. Cross-built on the same ubuntu-24.04 runner with llvm-mingw and SDL3 for
+  # Windows (their own cache: the two jobs save different tools), then run under Ubuntu's Wine (9.0) headless. Fork
+  # pull requests get the disc-free part: the cross-build and the launcher's self-test under Wine.
+  windows:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      DW3_GAMEDATA: ${{ github.workspace }}/dw2003-gamedata
+      DW3_JOBS: "2"
+      DW3_UBUNTU_MIRROR: http://azure.archive.ubuntu.com/ubuntu
+      WINEDEBUG: "-all"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # The same sorting as `build`'s (the jobs run in parallel; the script is a second).
+      - name: Which areas changed (scripts/ci_areas.sh)
+        id: areas
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [[ "$EVENT" == pull_request ]] && git rev-parse -q --verify HEAD^2 >/dev/null; then
+            scripts/ci_areas.sh --diff HEAD^1 HEAD >> "$GITHUB_OUTPUT"
+          elif [[ "$EVENT" == push && "$GITHUB_REF" == refs/heads/* && ! "$BEFORE" =~ ^0*$ ]] &&
+               git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            scripts/ci_areas.sh --diff "$BEFORE" HEAD >> "$GITHUB_OUTPUT"
+          else
+            scripts/ci_areas.sh --all >> "$GITHUB_OUTPUT"
+          fi
+          cat "$GITHUB_OUTPUT"
+
+      - name: Is the data checkout available?
+        id: data
+        run: echo "present=${{ secrets.GAMEDATA_DEPLOY_KEY != '' }}" >> "$GITHUB_OUTPUT"
+
+      - name: Data checkout (maintainers only)
+        if: steps.data.outputs.present == 'true' && steps.areas.outputs.port == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/dw2003-gamedata
+          ssh-key: ${{ secrets.GAMEDATA_DEPLOY_KEY }}
+          path: dw2003-gamedata
+
+      # wine64 alone: no 32-bit multiarch (the binaries are x86_64; `wine` is the launcher script the tests call).
+      - name: System packages
+        if: (steps.areas.outputs.port == 'true' || steps.areas.outputs.launcher == 'true')
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ninja-build cmake xz-utils wine wine64
+
+      - name: Cached Windows toolchain
+        if: (steps.areas.outputs.port == 'true' || steps.areas.outputs.launcher == 'true')
+        uses: actions/cache@v4
+        with:
+          path: |
+            tools/venv
+            tools/mkpsxiso
+            tools/imgui
+            tools/llvm-mingw
+            tools/sdl3-windows
+          key: tools-windows-${{ runner.os }}-${{ hashFiles('scripts/setup.sh', 'tools/requirements.txt') }}
+
+      # mkpsxiso: the disc's extraction below (the replays' sound check reads the EXE's sound bank table).
+      - name: Windows toolchain
+        if: (steps.areas.outputs.port == 'true' || steps.areas.outputs.launcher == 'true')
+        run: scripts/setup.sh venv mkpsxiso imgui llvm-mingw sdl3-windows
+
+      # Wine's prefix once, headless (no display on the runner: the console programs below need none).
+      - name: Wine prefix
+        if: (steps.areas.outputs.port == 'true' || steps.areas.outputs.launcher == 'true')
+        run: |
+          mkdir -p build/wine-prefix
+          WINEPREFIX="$PWD/build/wine-prefix" wineboot --init
+          wine --version
+
+      # The game (Release, the SDL build) and the launcher cross-compiled: every object, then the links; then the
+      # launcher's self-test under Wine (SDL's offscreen video: no display, no disc) and, when the disc is there
+      # (below), the layer-2 replays.
+      - name: Windows cross-build and the launcher's self-test under Wine
+        if: (steps.areas.outputs.port == 'true' || steps.areas.outputs.launcher == 'true')
+        timeout-minutes: 25
+        run: scripts/build_windows.sh --launcher --test --jobs "$DW3_JOBS"
+
+      # The disc, linked and extracted (as `build` does): the replays' sound check reads the EXE from extracted/.
+      - name: Disc from the data checkout
+        if: steps.data.outputs.present == 'true' && steps.areas.outputs.port == 'true'
+        run: scripts/worktree_init.sh
+
+      # The Windows game replays the layer-2 scripts under Wine: its frame log and record must equal the Linux build's
+      # (tests/port/run.py builds build/port for the sound replay, so the host gcc runs here too).
+      # The crash report on Windows (docs/PORT.md "Crash report"): a forced access violation in a run on the disc
+      # writes the report and the minidump under Wine, with the exception's exit code.
+      - name: The Windows crash report under Wine
+        if: steps.data.outputs.present == 'true' && steps.areas.outputs.port == 'true'
+        timeout-minutes: 10
+        run: tools/venv/bin/python tests/port/crash.py --wine --exe build/port-win/dw2003.exe
+
+      - name: The Windows game under Wine, the layer-2 replays
+        if: steps.data.outputs.present == 'true' && steps.areas.outputs.port == 'true'
+        timeout-minutes: 30
+        run: tools/venv/bin/python tests/port/run.py new_game first_battle_save --exe build/port-win/dw2003.exe --wine
+
+      - name: Crash reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-reports-windows
+          # Not build/**: the Wine prefix's dosdevices/z: links to /, which the glob cannot walk.
+          path: |
+            crash-*.txt
+            build/port-test/**/crash-*.txt
+            build/launcher-win/selftest/**/crash-*.txt
           if-no-files-found: ignore

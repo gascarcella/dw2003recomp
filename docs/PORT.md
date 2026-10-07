@@ -361,7 +361,12 @@ stack overflow gets the text (the filter runs on what the guard page leaves) and
   --target windows` (the units through llvm-mingw's clang). `dw2003.exe` links (the overlay sections need no linker
   script, see "Overlays") and, run under Wine headless (`tests/port/run.py --exe build/port-win/dw2003.exe --wine`),
   replays `new_game` and `first_battle_save` with the frame log, the record and the SPU trace byte for byte equal to
-  the Linux build's. Nothing has run on real Windows yet (the board's Windows 9); the SDL window is 64-bit only; macOS
+  the Linux build's. CI's `windows` job (the port area, beside `build`) does the same on ubuntu-24.04 with Ubuntu's
+  Wine 9.0: the cross-build, the launcher's self-test under Wine (`DW3_SELFTEST_VIDEO_DRIVER=offscreen`: Wine drops
+  `SDL_VIDEO_DRIVER` from the Windows environment), the crash report under Wine (`tests/port/crash.py --wine`), and
+  with the disc both replays; `build`'s probe step compiles every unit with llvm-mingw's clang too. Locally the same
+  gate is `scripts/build_windows.sh --test`, every Wine run under a timeout.
+  Nothing has run on real Windows yet (the board's Windows 9); the SDL window is 64-bit only; macOS
   is not planned. The launcher links and passes its self-test under Wine. The runtime's operating-system calls are in one
   file with a POSIX and a Windows half, `port/src/platform.c` (`port/include/platform.h`: paths with drive letters
   and `\`, a replacing rename for the memory cards and the stamp cache, the per-user cache directory, positional

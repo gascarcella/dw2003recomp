@@ -69,7 +69,10 @@ DISC_SHA1=457cb233349ba841e03b33d8060f8fbcadd45cb3
 REDUX_ZIP=PCSX-Redux-bf4c9ceb-linux-x86_64.zip
 REDUX_URL=https://distrib.app/storage/assets/d9b/f74/b48/50eac9b83609cd54f27b63a27b7155cf9c91d293b32673847315b52/$REDUX_ZIP
 REDUX_SHA256=5c0138d8a948c021e67aaba62648924c0a6e05d9d933c945d2c5077b4c758980
-REDUX_UBUNTU=http://archive.ubuntu.com/ubuntu
+# DW3_UBUNTU_MIRROR: the Ubuntu archive the sysroot's packages (and binutils' fallback) come from. CI sets the runners'
+# own mirror (http://azure.archive.ubuntu.com/ubuntu): archive.ubuntu.com is slow or stalls from GitHub's runners now
+# and then (2026-10-07: three runs stuck in this download).
+REDUX_UBUNTU="${DW3_UBUNTU_MIRROR:-http://archive.ubuntu.com/ubuntu}"
 REDUX_SYSROOT_DEBS=(
     "pool/main/g/glibc/libc6_2.43-2ubuntu2_amd64.deb c13775dc0c984403f3fcad229d14507a9f387763bd07ace1e5f93897ee6b8434"
     "pool/main/g/gcc-16/libgcc-s1_16-20260322-1ubuntu1_amd64.deb 2fb4d81c14fdf34251639ae82f5181f9f98480ea16125d535571ac1be9db3065"
@@ -90,6 +93,14 @@ REDUX_SYSROOT_DEBS=(
 
 log() { printf '\033[1;34m[setup]\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m[setup]\033[0m %s\n' "$*" >&2; exit 1; }
+# fetch URL FILE: a download that survives a transient failure. CI's runners get connection resets and stalls from
+# the mirrors now and then (archive.ubuntu.com, 2026-10-07: two runs died, two hung); a cold tool cache must not die
+# or stall on that: a transfer under 1 KB/s for a minute is given up (--speed-limit/--speed-time), 5 retries on any
+# error, no connect longer than 30 s, no transfer longer than 10 min.
+fetch() {
+    curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 --connect-timeout 30 --max-time 600 \
+        --speed-limit 1024 --speed-time 60 -o "$2" "$1"
+}
 
 step_binutils() {
     local prefix="$INSTALL/binutils"
@@ -103,9 +114,8 @@ step_binutils() {
         log "binutils: downloading $BINUTILS_VER"
         # Ubuntu's .orig tarball is the upstream file (same SHA-256); it is the fallback for
         # networks that block ftp.gnu.org (e.g. cloud sessions).
-        curl -sSfL -o "$tarball.part" "https://ftp.gnu.org/gnu/binutils/binutils-$BINUTILS_VER.tar.xz" ||
-            curl -sSfL -o "$tarball.part" \
-                "http://archive.ubuntu.com/ubuntu/pool/main/b/binutils/binutils_$BINUTILS_VER.orig.tar.xz"
+        fetch "https://ftp.gnu.org/gnu/binutils/binutils-$BINUTILS_VER.tar.xz" "$tarball.part" ||
+            fetch "$REDUX_UBUNTU/pool/main/b/binutils/binutils_$BINUTILS_VER.orig.tar.xz" "$tarball.part"
         mv "$tarball.part" "$tarball"
     fi
     echo "$BINUTILS_SHA256  $tarball" | sha256sum -c --quiet - || die "binutils: checksum mismatch"
@@ -186,8 +196,8 @@ sdl3_fetch() {
     mkdir -p "$SRC"
     if [[ ! -f "$tarball" ]] || ! echo "$SDL3_SHA256  $tarball" | sha256sum -c --quiet - 2>/dev/null; then
         log "$name: downloading $SDL3_VER"
-        curl -sSfL -o "$tarball.part" \
-            "https://github.com/libsdl-org/SDL/releases/download/release-$SDL3_VER/SDL3-$SDL3_VER.tar.gz"
+        fetch "https://github.com/libsdl-org/SDL/releases/download/release-$SDL3_VER/SDL3-$SDL3_VER.tar.gz" \
+            "$tarball.part"
         mv "$tarball.part" "$tarball"
     fi
     echo "$SDL3_SHA256  $tarball" | sha256sum -c --quiet - || die "$name: checksum mismatch"
@@ -268,8 +278,8 @@ step_llvm-mingw() {
     mkdir -p "$SRC"
     if [[ ! -f "$tarball" ]] || ! echo "$LLVM_MINGW_SHA256  $tarball" | sha256sum -c --quiet - 2>/dev/null; then
         log "llvm-mingw: downloading $LLVM_MINGW_VER (~80 MB)"
-        curl -sSfL -o "$tarball.part" \
-            "https://github.com/mstorsjo/llvm-mingw/releases/download/$LLVM_MINGW_VER/$LLVM_MINGW_NAME.tar.xz"
+        fetch "https://github.com/mstorsjo/llvm-mingw/releases/download/$LLVM_MINGW_VER/$LLVM_MINGW_NAME.tar.xz" \
+            "$tarball.part"
         mv "$tarball.part" "$tarball"
     fi
     echo "$LLVM_MINGW_SHA256  $tarball" | sha256sum -c --quiet - || die "llvm-mingw: checksum mismatch"
@@ -326,7 +336,7 @@ APPIMAGE_RUNTIME_SHA256=2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a
 APPIMAGE_RUNTIME_LICENSE_SHA256=aa154fc9070614bbe7921f89db11efd1dba7a1f3a41685958110e2230f9c0ca1
 appimage_get() { # URL FILE SHA256
     log "appimage: downloading $(basename "$2")"
-    curl -sSfL -o "$2.part" "$1"
+    fetch "$1" "$2.part"
     echo "$3  $2.part" | sha256sum -c --quiet - || die "appimage: checksum mismatch: $1"
     mv "$2.part" "$2"
 }
@@ -419,8 +429,8 @@ step_gcc() {
         tarball="$SRC/gcc-$ver-psx.tar.gz"
         if [[ ! -f "$tarball" ]] || ! echo "$sha  $tarball" | sha256sum -c --quiet - 2>/dev/null; then
             log "gcc: downloading $ver (old-gcc $OLDGCC_TAG)"
-            curl -sSfL -o "$tarball.part" \
-                "https://github.com/decompals/old-gcc/releases/download/$OLDGCC_TAG/gcc-$ver-psx.tar.gz"
+            fetch "https://github.com/decompals/old-gcc/releases/download/$OLDGCC_TAG/gcc-$ver-psx.tar.gz" \
+                "$tarball.part"
             mv "$tarball.part" "$tarball"
         fi
         echo "$sha  $tarball" | sha256sum -c --quiet - || die "gcc: checksum mismatch for $ver"
@@ -449,7 +459,7 @@ step_psyq() {
         read -r name url sha <<<"$entry"
         if [[ ! -f "$dir/$name" ]] || ! echo "$sha  $dir/$name" | sha256sum -c --quiet - 2>/dev/null; then
             log "psyq: downloading $name"
-            curl -sSfL -o "$dir/$name.part" "$url"
+            fetch "$url" "$dir/$name.part"
             echo "$sha  $dir/$name.part" | sha256sum -c --quiet - || die "psyq: checksum mismatch for $name"
             mv "$dir/$name.part" "$dir/$name"
         fi
@@ -467,8 +477,7 @@ step_objdiff() {
     fi
     mkdir -p "$INSTALL/bin"
     log "objdiff: downloading objdiff-cli $OBJDIFF_VER"
-    curl -sSfL -o "$bin.part" \
-        "https://github.com/encounter/objdiff/releases/download/v$OBJDIFF_VER/objdiff-cli-linux-x86_64"
+    fetch "https://github.com/encounter/objdiff/releases/download/v$OBJDIFF_VER/objdiff-cli-linux-x86_64" "$bin.part"
     echo "$OBJDIFF_CLI_SHA256  $bin.part" | sha256sum -c --quiet - || die "objdiff: checksum mismatch"
     chmod +x "$bin.part"
     mv "$bin.part" "$bin"
@@ -577,7 +586,7 @@ step_redux() {
         src="$zip"; sha="$REDUX_SHA256"
     elif [[ -f "$SRC/$REDUX_ZIP" ]] && echo "$REDUX_SHA256  $SRC/$REDUX_ZIP" | sha256sum -c --quiet - 2>/dev/null; then
         src="$SRC/$REDUX_ZIP"; sha="$REDUX_SHA256"
-    elif mkdir -p "$SRC" && log "redux: downloading $REDUX_ZIP (86 MB)" && curl -sSfL -o "$SRC/$REDUX_ZIP.part" "$REDUX_URL"; then
+    elif mkdir -p "$SRC" && log "redux: downloading $REDUX_ZIP (86 MB)" && fetch "$REDUX_URL" "$SRC/$REDUX_ZIP.part"; then
         mv "$SRC/$REDUX_ZIP.part" "$SRC/$REDUX_ZIP"
         src="$SRC/$REDUX_ZIP"; sha="$REDUX_SHA256"
     else
@@ -616,7 +625,7 @@ step_redux() {
             read -r file want <<<"$entry"
             deb="$SRC/redux-debs/$(basename "$file")"
             if [[ ! -f "$deb" ]] || ! echo "$want  $deb" | sha256sum -c --quiet - 2>/dev/null; then
-                curl -sSfL -o "$deb.part" "$REDUX_UBUNTU/$file"
+                fetch "$REDUX_UBUNTU/$file" "$deb.part"
                 mv "$deb.part" "$deb"
             fi
             echo "$want  $deb" | sha256sum -c --quiet - || die "redux: checksum mismatch for $(basename "$file")"
