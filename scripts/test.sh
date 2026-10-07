@@ -115,6 +115,7 @@ for L in $LAYERS; do
             "$PY" "$ROOT/tests/port/mods.py"       # the mods that change the game, run with the mod on
             "$PY" "$ROOT/tests/port/vram.py"       # the first battle's textures in VRAM against the emulator's
             "$PY" "$ROOT/tests/port/debug.py"      # the debug channel (--debug) and tools/mcp's offline self-test
+            "$PY" "$ROOT/tests/port/crash.py"      # the crash report (DW3_PORT_CRASH_AT, a fatal error, --version)
         fi ;;
     *) echo "unknown layer $L" >&2; exit 2 ;;
     esac

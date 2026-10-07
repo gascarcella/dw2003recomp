@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 2026-10-06_
+_Last updated: 2026-10-07_
 
 Every game file of the EU disc (SLES-03936) rebuilds byte-identical from this repository, and nearly all of the game's
 code compiles from matching C; only 8 functions remain as assembly. The PC port, built from the same C, runs on
@@ -65,6 +65,9 @@ The plan's milestones (`docs/PORT.md`):
 ## Launcher and mods
 - **Launcher** (`launcher/README.md`): Dear ImGui on SDL3. Handles the disc (with a SHA-1 check), Play, settings,
   controls (rebinding, hotkeys, chords) and the mods' pages. A headless self-test runs in CI.
+- **Crash report** (`docs/PORT.md` "Crash report"): the game writes one on a signal or a fatal stop (build, vsync,
+  overlays, log tail, registers, stack); the launcher keeps the run's log and puts the report into its Copy text; the
+  release carries the game's `.debug` file for `scripts/symbolize.py`. Windows's half (a minidump) is on the board.
 - **Game side:** `dw2003 --config FILE` (the settings file, schema 1), rebindable input, hotkeys, a pause key, the mod
   registry with manifests in `port/mods/`.
 - **Mods:** fast-forward (hold `Tab`, 4x), the 60 Hz mode (checked against the patched game in the emulator), skip

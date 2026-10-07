@@ -1,5 +1,8 @@
 #include "game.h"
 
+#include <cstdio>
+#include <cstring>
+
 #include "paths.h"
 
 namespace dw3 {
@@ -72,8 +75,9 @@ GameProbe game_probe(const std::string &game, const std::string &settings_path) 
     }
     if (code == 0) {
         probe.result = GameProbe::Result::Valid;
-    } else if (code == 64 && out.compare(0, 6, "usage:") == 0 && out.find("--config") == std::string::npos) {
-        probe.result = GameProbe::Result::NoConfig;
+    } else if (code == 64 && out.compare(0, 6, "usage:") == 0 &&
+               (out.find("--config") == std::string::npos || out.find("--crash-dir") == std::string::npos)) {
+        probe.result = GameProbe::Result::NoConfig; // before --config, or before --crash-dir: too old for this launcher
     } else if (code == 64) {
         probe.result = GameProbe::Result::Invalid;
         probe.message = out;
@@ -88,7 +92,15 @@ GameProbe game_probe(const std::string &game, const std::string &settings_path) 
 }
 
 std::vector<std::string> game_args(const std::string &game, const SettingsFile &settings) {
-    return { game, "--config", settings.path() };
+    return { game, "--config", settings.path(), "--crash-dir", game_crash_dir(settings.dir()) };
+}
+
+std::string game_crash_dir(const std::string &settings_dir) {
+    return path_join(settings_dir, "crashes");
+}
+
+std::string game_log_dir(const std::string &settings_dir) {
+    return path_join(settings_dir, "logs");
 }
 
 std::string game_exit_text(int code) {
@@ -121,14 +133,32 @@ GameRun::~GameRun() {
     if (proc_ != nullptr) {
         SDL_DestroyProcess(proc_); // leaves the game running: closing the launcher does not end it
     }
+    if (log_ != nullptr) {
+        SDL_CloseIO(log_);
+    }
 }
 
 bool GameRun::start(const std::vector<std::string> &args, const std::string &working_dir, std::string *err,
-                    bool echo) {
+                    bool echo, const std::string &log_path) {
     if (proc_ != nullptr) {
         *err = "the game is already running";
         return false;
     }
+    if (log_ != nullptr) {
+        SDL_CloseIO(log_);
+        log_ = nullptr;
+    }
+    log_path_.clear();
+    if (!log_path.empty()) {
+        log_ = SDL_IOFromFile(log_path.c_str(), "wb");
+        if (log_ == nullptr) {
+            std::fprintf(stderr, "launcher: cannot write %s: %s\n", log_path.c_str(), SDL_GetError());
+        } else {
+            log_path_ = log_path;
+        }
+    }
+    report_path_.clear();
+    version_.clear();
     std::vector<const char *> argv;
     command_.clear();
     for (const std::string &a : args) {
@@ -158,8 +188,16 @@ bool GameRun::start(const std::vector<std::string> &args, const std::string &wor
 }
 
 void GameRun::add_text(const char *data, size_t n) {
+    if (log_ != nullptr && n > 0) {
+        SDL_WriteIO(log_, data, n);
+    }
     for (size_t i = 0; i < n; i++) {
         if (data[i] == '\n') {
+            if (partial_.compare(0, std::strlen(GAME_REPORT_LINE), GAME_REPORT_LINE) == 0) {
+                report_path_ = partial_.substr(std::strlen(GAME_REPORT_LINE));
+            } else if (version_.empty() && partial_.compare(0, 14, "port: version ") == 0) {
+                version_ = partial_.substr(14);
+            }
             lines_.push_back(partial_);
             partial_.clear();
             if (lines_.size() > kept_lines) {
@@ -204,6 +242,10 @@ bool GameRun::poll() {
     exit_code_ = code;
     SDL_DestroyProcess(proc_);
     proc_ = nullptr;
+    if (log_ != nullptr) {
+        SDL_CloseIO(log_);
+        log_ = nullptr;
+    }
     return false;
 }
 

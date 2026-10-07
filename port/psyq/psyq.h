@@ -62,6 +62,7 @@ void psyq_cd_set_reader(int (*read)(unsigned lba, u8 *sector));
  * active high: bit 3 START, bit 4..7 up/right/down/left, bit 12..15 triangle/circle/cross/square);
  * `connected` 0 reports no controller. Default: port 0 connected with nothing pressed, port 1 empty. */
 void psyq_pad_set(int port, int connected, u16 buttons);
+u16 psyq_pad_get(int port); /* the buttons last set (0 when none, or the port is not 0 or 1): the crash report */
 
 /* The primitive stream recorder (LIBGPU): the FNV-1a hash of every primitive DrawOTag/ContinueDraw walked since
  * the previous call (and the number of them in *count, if not NULL), then resets both. */

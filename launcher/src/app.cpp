@@ -10,6 +10,10 @@
 
 #include "paths.h"
 
+// The launcher's own version stamp (launcher/CMakeLists.txt, port/cmake/version.cmake): the Copy text's header.
+extern "C" const char launcher_version[];
+extern "C" const char launcher_commit[];
+
 namespace dw3 {
 
 static const char *const SCREEN_NAMES[] = { "Play", "Disc", "Settings", "Controls", "Mods" };
@@ -398,11 +402,25 @@ void App::play() {
         play_error_ = "The game could not be run: " + probe.message;
         return;
     }
+    // The game's whole output to logs/last-run.log (the previous run's kept as last-run.1.log), its crash reports to
+    // crashes/ (game_args passes --crash-dir).
+    const std::string logs = game_log_dir(settings_.dir());
+    std::string log_path;
+    if (path_make_dir(logs, nullptr)) {
+        log_path = path_join(logs, GAME_LOG_FILE);
+        if (path_is_file(log_path)) {
+            SDL_RenamePath(log_path.c_str(), path_join(logs, GAME_LOG_FILE_PREVIOUS).c_str());
+        }
+    }
+    path_make_dir(game_crash_dir(settings_.dir()), nullptr);
     std::string err;
-    if (!run_.start(args, settings_.dir(), &err, echo_game_)) {
+    if (!run_.start(args, settings_.dir(), &err, echo_game_, log_path)) {
         play_error_ = err;
         return;
     }
+    play_report_path_.clear();
+    play_report_text_.clear();
+    play_command_ = run_.command();
     std::fprintf(stderr, "launcher: started %s\n", run_.command().c_str());
     SDL_HideWindow(window_);
 }
@@ -416,13 +434,49 @@ void App::update_game() {
     SDL_RaiseWindow(window_);
     int code = run_.exit_code();
     std::fprintf(stderr, "launcher: the game %s\n", game_exit_text(code).c_str());
+    play_version_ = run_.version();
     if (code != 0) {
         play_error_ = "The game " + game_exit_text(code) + ".";
         const auto &lines = run_.lines();
         size_t from = lines.size() > 40 ? lines.size() - 40 : 0;
         play_log_.assign(lines.begin() + (long)from, lines.end());
+        // The crash report it named (docs/PORT.md "Crash report"): its text goes into Copy.
+        play_report_path_ = run_.report_path();
+        play_report_text_.clear();
+        if (!play_report_path_.empty()) {
+            std::string err;
+            if (!file_read(play_report_path_, &play_report_text_, &err)) {
+                play_report_text_ = "(" + err + ")";
+            } else if (play_report_text_.size() > 64 * 1024) {
+                play_report_text_.resize(64 * 1024);
+                play_report_text_ += "\n(truncated)\n";
+            }
+            std::fprintf(stderr, "launcher: crash report: %s\n", play_report_path_.c_str());
+        }
         screen_ = Screen::Play;
     }
+}
+
+std::string App::play_copy_text() const {
+    std::string text = std::string("dw2003-launcher ") + launcher_version + " (" + launcher_commit + ") on " +
+                       SDL_GetPlatform() + "\n";
+    text += "game: " + game_ + (play_version_.empty() ? "" : " (version " + play_version_ + ")") + "\n";
+    text += "command: " + play_command_ + "\n";
+    text += "result: " + play_error_ + "\n";
+    if (!play_report_path_.empty()) {
+        text += "\n--- crash report: " + play_report_path_ + " ---\n" + play_report_text_;
+        if (!play_report_text_.empty() && play_report_text_.back() != '\n') {
+            text += "\n";
+        }
+    }
+    text += "\n--- the last lines of the game's output ---\n";
+    for (const std::string &l : play_log_) {
+        text += l + "\n";
+    }
+    if (!run_.log_path().empty()) {
+        text += "(the whole output: " + run_.log_path() + ")\n";
+    }
+    return text;
 }
 
 void App::flush() {
@@ -664,14 +718,19 @@ void App::draw_play_error() {
     if (play_log_.empty()) {
         return;
     }
-    ImGui::TextDisabled("Its last lines:");
+    if (!play_report_path_.empty()) {
+        ImGui::TextWrapped("Crash report: %s", play_report_path_.c_str());
+    }
+    ImGui::TextDisabled(play_report_path_.empty() ? "Its last lines:" : "Its last lines (Copy takes the report too):");
     ImGui::SameLine();
     if (ImGui::SmallButton("Copy")) {
-        std::string text = run_.command() + "\n";
-        for (const std::string &l : play_log_) {
-            text += l + "\n";
+        ImGui::SetClipboardText(play_copy_text().c_str());
+    }
+    if (!play_report_path_.empty()) {
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Open folder")) {
+            SDL_OpenURL(path_to_url(path_dir(play_report_path_)).c_str());
         }
-        ImGui::SetClipboardText(text.c_str());
     }
     ImGui::BeginChild("log", ImVec2(0, 0), ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
     for (const std::string &l : play_log_) {

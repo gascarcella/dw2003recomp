@@ -10,7 +10,7 @@
 #   --build-only   build and test the AppImage only: no tag, no release
 # Needs: docker, gh (logged in, with push rights), the disc (iso/dw2003.bin here or in the main checkout, or
 # DW3_DISC_BIN in tools/local.env). The container's tools stay in build/release-local/ between runs (~6 min cold).
-# Output: build/release-local/src/build/release/dw2003-<version>-x86_64.AppImage and SHA256SUMS.
+# Output: build/release-local/src/build/release/dw2003-<version>-x86_64.AppImage, the .debug file and SHA256SUMS.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -87,6 +87,7 @@ scripts/package_appimage.sh --test
 out="$WORK/src/build/release"
 (cd "$out" && sha256sum -c SHA256SUMS) || die "SHA256SUMS does not match"
 appimage="$(ls "$out"/dw2003-*-x86_64.AppImage)"
+debug="$(ls "$out"/dw2003-*-x86_64.debug)"
 log "built $appimage"
 [[ $build_only == 1 ]] && exit 0
 
@@ -108,6 +109,7 @@ cd "$out"
 gh release create "$tag" --draft --verify-tag --title "dw2003recomp $tag" \
     --generate-notes --notes "Linux x86_64 AppImage: the launcher, the PC port and its mods in one file.
 Bring your own disc image of Digimon World 2003 (PS1, Europe; the launcher checks its SHA-1).
-\`chmod +x dw2003-*.AppImage\`, then run it. Needs glibc 2.39 or newer (Ubuntu 24.04, Fedora 40, Debian 13 or later)." \
-    "./$(basename "$appimage")" SHA256SUMS
+\`chmod +x dw2003-*.AppImage\`, then run it. Needs glibc 2.39 or newer (Ubuntu 24.04, Fedora 40, Debian 13 or later).
+The .debug file is the game's debug info for crash reports (not needed to play)." \
+    "./$(basename "$appimage")" "./$(basename "$debug")" SHA256SUMS
 log "draft release $tag created: test the AppImage, then Publish it on GitHub (gh release edit $tag --draft=false)"

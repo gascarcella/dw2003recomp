@@ -235,6 +235,16 @@ third-party code mods. The game never loads a configuration on its own (tests ru
 `--script` unless asked for, a mod's change in the game's C sits in a `PC_PORT` block, and hotkeys never reach the pad.
 Linux first; Windows after the launcher works on Linux.
 
+## Crash reports are one text file, named on stderr, kept by the launcher
+_Decided: 2026-10-07_
+
+A crash or a fatal stop of the port writes one text report (`port/src/crash.c`: the build, the vsync, the overlays, the
+log's tail, the registers and a stack of executable-relative addresses) and names it on its last stderr line, which
+is the launcher's only contract with it. The launcher owns where things go (`<settings dir>/crashes/`, `logs/`) and
+what a tester pastes (its Copy text). Every build is stamped from `git describe` (`port/cmake/version.cmake`) so a
+report says which build it is, and a release ships the game's debug info beside the AppImage, so reports from
+players symbolize without rebuilding. The frame log and the record never change.
+
 ## The settings file
 _Decided: 2026-10-06_
 

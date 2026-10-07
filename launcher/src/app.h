@@ -72,6 +72,10 @@ public:
     void play();
     const GameRun &game_run() const { return run_; }
     const std::string &play_error() const { return play_error_; }
+    // The crash report of the last run ("" when none) and what Copy puts on the clipboard: the launcher, the game,
+    // the command, the exit, the report's text and the last lines (docs/LAUNCHER.md "Crash report").
+    const std::string &play_report_path() const { return play_report_path_; }
+    std::string play_copy_text() const;
     const std::string &game_path() const { return game_; }
     // The controls' prompt (the self-test drives it with events).
     InputCapture &capture() { return capture_; }
@@ -149,6 +153,8 @@ private:
     GameRun run_;
     std::string play_error_; // why the last start failed, or how the game ended
     std::vector<std::string> play_log_; // the game's last lines when it ended with an error
+    std::string play_report_path_, play_report_text_; // the crash report it wrote, and its text
+    std::string play_command_, play_version_; // the run's command and the game's version line
 };
 
 } // namespace dw3

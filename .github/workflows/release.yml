@@ -99,6 +99,7 @@ jobs:
           name: dw2003-appimage
           path: |
             build/release/*.AppImage
+            build/release/*.debug
             build/release/SHA256SUMS
           if-no-files-found: error
           retention-days: 30
@@ -126,5 +127,6 @@ jobs:
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title "dw2003recomp $TAG" \
             --generate-notes --notes "Linux x86_64 AppImage: the launcher, the PC port and its mods in one file.
           Bring your own disc image of Digimon World 2003 (PS1, Europe; the launcher checks its SHA-1).
-          \`chmod +x dw2003-*.AppImage\`, then run it. Needs glibc 2.39 or newer (Ubuntu 24.04, Fedora 40, Debian 13 or later)." \
-            ./*.AppImage SHA256SUMS
+          \`chmod +x dw2003-*.AppImage\`, then run it. Needs glibc 2.39 or newer (Ubuntu 24.04, Fedora 40, Debian 13 or later).
+          The .debug file is the game's debug info for crash reports (not needed to play)." \
+            ./*.AppImage ./*.debug SHA256SUMS

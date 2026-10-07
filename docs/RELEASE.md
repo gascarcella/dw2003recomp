@@ -16,8 +16,8 @@ maintainer downloads it, tests it and presses Publish. Windows comes later (the 
    `v0.1-matching-closed` do not match it and start nothing.
 3. `.github/workflows/release.yml` runs (`gh run watch`): the whole of `ci.yml` (every area, with the disc), then the
    game's Release build through the port's M1 test, the AppImage build and its smoke test, then a **draft** release named
-   `dw2003recomp v0.1.0` with `dw2003-0.1.0-x86_64.AppImage`, `SHA256SUMS` and notes generated from the merged pull
-   requests.
+   `dw2003recomp v0.1.0` with `dw2003-0.1.0-x86_64.AppImage`, `dw2003-0.1.0-x86_64.debug` (the game's debug info, for
+   crash reports; below), `SHA256SUMS` and notes generated from the merged pull requests.
 4. Download the draft's AppImage, run it on a desktop (Play with the real disc, a window, sound, a gamepad), and
    **Publish** it on GitHub when it is good (or delete the draft and the tag). Publishing puts binaries built from the
    decompiled code on the public page: the maintainer's decision each time (DECISIONS "Releases: tagged drafts, published by hand").
@@ -82,6 +82,17 @@ Settings live where the launcher's lookup puts them (`launcher/README.md`): insi
 per-user directory `~/.local/share/dw2003/` (or `--config-dir`, `$DW3_CONFIG_DIR`, a `settings.json` in the current
 directory). Known limit: the game runs from the AppImage's mount, so closing the launcher while the game runs
 (the launcher's window is hidden then) can end the mount under the game.
+
+## Crash reports from a release
+
+A player's crash report (`docs/LAUNCHER.md` "Crash report": the launcher's Copy text, pasted into an issue) names its
+build on the `build:` line and its code addresses as `exe+0x...`. The release's `.debug` file is the game's debug info
+(`objcopy --only-keep-debug` of the Release build, which keeps `-g`; the AppImage's game is stripped):
+
+```sh
+gh release download v0.2.2 -p '*.debug'
+scripts/symbolize.py report.txt --binary dw2003-0.2.2-x86_64.debug   # each pc/stack line with its function and line
+```
 
 ## The smoke test
 

@@ -15,21 +15,28 @@
 int port_trace;
 
 void port_log(const char *fmt, ...) {
+    char line[512];
     va_list ap;
-    fputs("port: ", stderr);
     va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
+    vsnprintf(line, sizeof(line), fmt, ap);
     va_end(ap);
+    fputs("port: ", stderr);
+    fputs(line, stderr);
     fputc('\n', stderr);
+    port_crash_log_line(line);
 }
 
 void port_fatal(const char *fmt, ...) {
+    char line[512];
     va_list ap;
-    fputs("port: fatal: ", stderr);
     va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
+    vsnprintf(line, sizeof(line), fmt, ap);
     va_end(ap);
+    fputs("port: fatal: ", stderr);
+    fputs(line, stderr);
     fputc('\n', stderr);
+    port_crash_log_line(line);
+    port_crash_report("fatal", 1, line);
     port_exit(1, "fatal error");
 }
 
@@ -40,7 +47,8 @@ static void usage(const char *argv0) {
             "          [--script JSON]\n"
             "          [--log FILE] [--record FILE] [--max-frames N] [--watchdog SEC] [--trace]\n"
             "          [--window] [--scale N] [--fullscreen] [--fps N] [--input-test] [--screenshot FRAME:PATH]\n"
-            "          [--spu-trace FILE] [--wav FILE] [--mute] [--debug SOCKET] [--debug-hold]\n"
+            "          [--spu-trace FILE] [--wav FILE] [--mute] [--debug SOCKET] [--debug-hold] [--crash-dir DIR]\n"
+            "          [--version]\n"
             "  --config JSON    the settings file (docs/LAUNCHER.md; what the launcher starts the game\n"
             "                   with): the disc, the window, the memory cards (default card1.mcd and card2.mcd beside\n"
             "                   the file), the watchdog (default off); the options below override it\n"
@@ -80,7 +88,10 @@ static void usage(const char *argv0) {
             "                   JSON requests (pause, step, wait, pad, peek/poke, screenshot, hash, reset, quit),\n"
             "                   polled once per vsync; turns the watchdog and the default frame cap off\n"
             "  --debug-hold     with --debug: hold the game paused at its first vsync until the client resumes it\n"
-            "                   (a run reproducible from frame 1: the client connects before anything happened)\n",
+            "                   (a run reproducible from frame 1: the client connects before anything happened)\n"
+            "  --crash-dir DIR  where a crash report goes (crash-<time>.txt; docs/PORT.md \"Crash report\"); default:\n"
+            "                   the current directory\n"
+            "  --version        print the build's version and commit, and exit\n",
             argv0);
 }
 
@@ -99,7 +110,7 @@ static long number(const char *s, const char *opt) {
 int main(int argc, char **argv) {
     const char *disc = NULL, *script = NULL, *log = NULL, *record = NULL, *speed = NULL;
     const char *memcard[2] = { NULL, NULL };
-    const char *spu_trace = NULL, *wav = NULL, *debug = NULL;
+    const char *spu_trace = NULL, *wav = NULL, *debug = NULL, *crash_dir = NULL;
     int mute = 0, debug_hold = 0;
     int memcard_given[2] = { 0, 0 };
     int disc_check = 1, max_frames_given = 0;
@@ -199,6 +210,11 @@ int main(int argc, char **argv) {
             debug = argv[++i];
         } else if (strcmp(argv[i], "--debug-hold") == 0) {
             debug_hold = 1;
+        } else if (strcmp(argv[i], "--crash-dir") == 0 && i + 1 < argc) {
+            crash_dir = argv[++i];
+        } else if (strcmp(argv[i], "--version") == 0) {
+            printf("dw2003 %s (%s)\n", port_version, port_commit);
+            return 0;
         } else if (strcmp(argv[i], "--screenshot") == 0 && i + 1 < argc) {
             if (!port_video_screenshot_add(argv[++i])) {
                 fprintf(stderr, "port: --screenshot: FRAME:PATH (FRAME >= 1; at most 64): %s\n", argv[i]);
@@ -257,6 +273,8 @@ int main(int argc, char **argv) {
         return 64;
     }
     setvbuf(stderr, NULL, _IOLBF, 0);
+    port_crash_init(crash_dir);
+    port_log("version %s (%s)", port_version, port_commit);
     if (port_trace) {
         psyq_set_trace(1, stderr); /* else the shim decides by DW3_PORT_TRACE at its first call */
     }

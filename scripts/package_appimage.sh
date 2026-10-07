@@ -16,7 +16,9 @@
 #   --shared-libstdcxx  a local test build on a system without the static libstdc++ (Fedora: libstdc++-static): the
 #                launcher then needs the system's libstdc++, so this AppImage is not one to publish
 # Needs: scripts/setup.sh sdl3-desktop imgui appimage; cmake, ninja, gcc/g++ (with libstdc++.a), binutils, python3.
-# Outputs: <out>/dw2003-<version>-x86_64.AppImage, <out>/SHA256SUMS; build trees and logs under build/release/.
+# Outputs: <out>/dw2003-<version>-x86_64.AppImage, <out>/dw2003-<version>-x86_64.debug (the game's debug info, which
+# symbolizes crash reports: scripts/symbolize.py, docs/PORT.md "Crash report"), <out>/SHA256SUMS; build trees and logs
+# under build/release/.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -57,13 +59,14 @@ fi
 version="${version#v}"
 [[ "$version" =~ ^[A-Za-z0-9._+-]+$ ]] || die "a version of letters, digits and ._+- only: '$version'"
 name="dw2003-$version-x86_64.AppImage"
+debug="dw2003-$version-x86_64.debug"
 
 # ---- The tools.
 [[ -n "$sdl" ]] || { sdl="$(tool sdl3-desktop)"; [[ -d "$sdl" ]] || sdl="$(tool sdl3)"; }
 [[ -f "$sdl/lib/libSDL3.a" && -f "$sdl/lib/cmake/SDL3/SDL3Config.cmake" ]] ||
     die "no SDL3 at $sdl: scripts/setup.sh sdl3-desktop (or --sdl3 DIR)"
 PATH="$PATH:$(tool venv)/bin"   # cmake/ninja from tools/venv when the system has none (scripts/setup.sh cmake)
-for t in cmake ninja gcc g++ strip ldd nm objdump; do
+for t in cmake ninja gcc g++ strip ldd nm objdump objcopy; do
     command -v "$t" >/dev/null || die "no $t on PATH"
 done
 # The desktop drivers (the same list as setup.sh's SDL3_DESKTOP_DRIVERS): without them the AppImage could only open
@@ -112,6 +115,10 @@ rm -rf "$appdir"
 mkdir -p "$appdir/usr/bin" "$appdir/usr/share/applications" "$appdir/usr/share/icons/hicolor/scalable/apps" \
     "$appdir/LICENSES"
 strip -o "$appdir/usr/bin/dw2003" "$work/port-sdl/dw2003"
+# The game's debug info (the Release build keeps -g; port/CMakeLists.txt) as the release's .debug file: a crash report's
+# exe+offset addresses resolve against it (scripts/symbolize.py --binary).
+rm -f "$out/$debug"
+objcopy --only-keep-debug "$work/port-sdl/dw2003" "$out/$debug"
 strip -o "$appdir/usr/bin/dw2003-launcher" "$work/launcher/dw2003-launcher"
 [[ -d "$work/port-sdl/mods" ]] || die "the game's build has no mods/ (port/CMakeLists.txt copies port/mods there)"
 cp -r "$work/port-sdl/mods" "$appdir/usr/bin/mods"
@@ -144,8 +151,9 @@ log "appimagetool -> $out/$name"
 rm -f "$work/appimagetool.log"
 quiet "$work/appimagetool.log" env ARCH=x86_64 "$appimage/appimagetool/AppRun" --no-appstream \
     --runtime-file "$appimage/runtime-x86_64" "$appdir" "$out/$name"
-(cd "$out" && sha256sum "$name" > SHA256SUMS)
-log "$(cat "$out/SHA256SUMS") ($(du -h "$out/$name" | cut -f1))"
+(cd "$out" && sha256sum "$name" "$debug" > SHA256SUMS)
+log "$(head -n 1 "$out/SHA256SUMS") ($(du -h "$out/$name" | cut -f1))"
+log "debug info: $out/$debug ($(du -h "$out/$debug" | cut -f1); scripts/symbolize.py REPORT --binary $debug)"
 
 # ---- The smoke test: the launcher inside the AppImage finds the game and the mods beside itself.
 if [[ $test -eq 1 ]]; then

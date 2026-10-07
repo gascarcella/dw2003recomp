@@ -135,10 +135,22 @@ if(NOT DW3_PSYQ_SRCS AND NOT DW3_PORT_ALLOW_UNRESOLVED)
                         "-DDW3_PORT_ALLOW_UNRESOLVED=ON for a link that ignores undefined symbols")
 endif()
 
+# ---- The build's version stamp (port_version, port_commit: `--version`, the start line, the crash report), from git
+# describe at every build (port/cmake/version.cmake rewrites the file only when it changed).
+add_custom_target(dw3_version COMMAND "${CMAKE_COMMAND}" -DROOT=${DW3_ROOT} -DOUT=${DW3_GEN}/port_version.c
+                  -DPREFIX=port -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake" BYPRODUCTS "${DW3_GEN}/port_version.c"
+                  COMMENT "port/cmake/version.cmake (the build's version stamp)" VERBATIM)
+# A release build keeps the debug info in the build tree: scripts/package_appimage.sh strips the shipped binary and
+# saves it as the release's .debug file, which symbolizes crash reports (docs/PORT.md "Crash report"). -g changes no code.
+if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT CMAKE_C_FLAGS_RELEASE MATCHES "(^| )-g( |$)")
+    string(APPEND CMAKE_C_FLAGS_RELEASE " -g")
+endif()
+
 # ---- The binary: the runtime, the tables, the shim, the units.
 file(GLOB DW3_RUNTIME_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
-add_executable(dw2003 ${DW3_RUNTIME_SRCS} "${DW3_GEN}/overlay_tables.c" "${DW3_GEN}/port_state_tables.c" ${DW3_PSYQ_SRCS}
-               $<TARGET_OBJECTS:dw3_game>)
+add_executable(dw2003 ${DW3_RUNTIME_SRCS} "${DW3_GEN}/overlay_tables.c" "${DW3_GEN}/port_state_tables.c"
+               "${DW3_GEN}/port_version.c" ${DW3_PSYQ_SRCS} $<TARGET_OBJECTS:dw3_game>)
+add_dependencies(dw2003 dw3_version)
 set_target_properties(dw2003 PROPERTIES C_STANDARD 99 C_EXTENSIONS ON C_STANDARD_REQUIRED ON
                       LINK_DEPENDS "${DW3_GEN}/overlays.ld")
 target_compile_definitions(dw2003 PRIVATE ${DW3_GAME_DEFINES})
