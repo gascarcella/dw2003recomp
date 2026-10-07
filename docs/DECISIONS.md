@@ -310,9 +310,10 @@ the port layer, with `--m32`), `port-mods` (layer 3 and the mods, the longest te
 `workflow_call` unchanged), and no artifacts between them: a port build is 30 s, a job's setup about a minute, so each
 job builds what it needs. Every job sets itself up with the composite action `.github/actions/setup`: one tool cache per
 job keyed on the pins (`scripts/setup.sh --pins`), not on `setup.sh`'s text (an edit to the script's logic cost two
-cold toolchain builds, the pull request's and main's, six times in 27 pull requests); ccache for the host builds of
-the port and the launcher (a comment-only change recompiles nothing; not the Windows cross-build, whose compile
-launcher is the overlay renamer). The PS1 rebuild stays from scratch: being byte-identical from nothing is the test, and
+cold toolchain builds, the pull request's and main's, six times in 27 pull requests); ccache (a pinned static binary,
+`setup.sh ccache`) for the host builds of the port and the launcher (a comment-only change recompiles nothing; not
+the Windows cross-build, whose compile launcher is the overlay renamer); apt only for gcc-multilib and Wine, cmake and
+ninja from the venv instead (the runners' Ubuntu mirror stalled a job's `apt-get install` for 4.5 min). The PS1 rebuild stays from scratch: being byte-identical from nothing is the test, and
 it is a minute off the critical path. Inside the scripts, what is independent runs `DW3_JOBS` at a time: the mods
 (`tests/port/mods.py`, one process per mod) and the layer-2 replays; CI sets 4, the runners' cores.
 

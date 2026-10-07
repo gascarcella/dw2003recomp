@@ -35,11 +35,12 @@
 # ci.yml, .github/actions/ and scripts/ci_areas.sh themselves, manual runs, release tags (workflow_call) and a push
 # whose base commit is unknown run every area. `check` (the scripts parse, the Python compiles) always runs.
 #
-# Each job sets itself up with .github/actions/setup: its apt packages, its own tool cache (keyed on the pins,
-# scripts/setup.sh --pins, not on setup.sh's text), scripts/setup.sh for the tools it names, ccache for the host
-# builds of the port and the launcher (a comment-only change recompiles nothing; the Windows cross-build keeps its own
-# compile launcher, tools/port_gen.py rename, so no ccache there), and with the deploy key the data checkout and the
-# disc. DW3_JOBS=4: the runners' cores (the port's builds, the mods and the replays run that many at once).
+# Each job sets itself up with .github/actions/setup: its own tool cache (keyed on the pins, scripts/setup.sh --pins,
+# not on setup.sh's text), scripts/setup.sh for the tools it names (cmake and ninja from the venv, ccache's pinned
+# binary: apt only for gcc-multilib and Wine, the runners' mirror stalls), ccache for the host builds of the port and
+# the launcher (a comment-only change recompiles nothing; the Windows cross-build keeps its own compile launcher,
+# tools/port_gen.py rename, so no ccache there), and with the deploy key the data checkout and the disc. DW3_JOBS=4:
+# the runners' cores (the port's builds, the mods and the replays run that many at once).
 name: CI
 on:
   push:
@@ -150,7 +151,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         with:
-          tools: binutils mkpsxiso venv gcc objdiff ext redux
+          tools: binutils mkpsxiso venv cmake gcc objdiff ext redux
           cache: game
           disc: "true"
           deploy-key: ${{ secrets.GAMEDATA_DEPLOY_KEY }}
@@ -181,7 +182,7 @@ jobs:
           fetch-depth: 0   # the port's version stamp (port/cmake/version.cmake: git describe over the tags)
       - uses: ./.github/actions/setup
         with:
-          tools: venv mkpsxiso redux
+          tools: venv cmake mkpsxiso redux ccache
           apt: gcc-multilib   # the -m32 build
           cache: port
           ccache: "true"
@@ -193,7 +194,7 @@ jobs:
 
       - name: ccache statistics
         if: always()
-        run: ccache -s
+        run: tools/ccache/ccache -s
 
       # A crash of the port in any step above leaves its report (docs/PORT.md "Crash report") in the current
       # directory or under build/: readable from the run's artifacts, with the stack as exe+offset addresses.
@@ -220,7 +221,7 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup
         with:
-          tools: venv mkpsxiso redux
+          tools: venv cmake mkpsxiso redux ccache
           cache: port-mods
           ccache: "true"
           disc: "true"
@@ -231,7 +232,7 @@ jobs:
 
       - name: ccache statistics
         if: always()
-        run: ccache -s
+        run: tools/ccache/ccache -s
 
       - name: Crash reports
         if: failure()
@@ -261,7 +262,7 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup
         with:
-          tools: venv mkpsxiso sdl3 imgui
+          tools: venv cmake mkpsxiso sdl3 imgui ccache
           cache: launcher
           ccache: "true"
           disc: "true"
@@ -292,7 +293,7 @@ jobs:
 
       - name: ccache statistics
         if: always()
-        run: ccache -s
+        run: tools/ccache/ccache -s
 
       - name: Crash reports
         if: failure()
@@ -322,7 +323,7 @@ jobs:
       # mkpsxiso: the disc's extraction (the replays' sound check reads the EXE's sound bank table from extracted/).
       - uses: ./.github/actions/setup
         with:
-          tools: venv mkpsxiso imgui llvm-mingw sdl3-windows
+          tools: venv cmake mkpsxiso imgui llvm-mingw sdl3-windows
           apt: wine wine64
           cache: windows
           disc: ${{ needs.areas.outputs.port }}

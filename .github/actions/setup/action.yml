@@ -1,6 +1,9 @@
-# A CI job's setup (ci.yml; DECISIONS "CI per area"): the apt packages, the job's own tool cache, scripts/setup.sh
-# for the tools the job names, ccache for the host builds, and with the maintainers' deploy key the data checkout and
-# the disc. Every job runs this once, right after its checkout.
+# A CI job's setup (ci.yml; DECISIONS "CI per area"): the job's own tool cache, scripts/setup.sh for the tools the
+# job names (cmake and ninja among them, pip-installed into the venv: tools/venv/bin goes on the PATH), ccache for the
+# host builds, with the maintainers' deploy key the data checkout and the disc, and apt only for what has no pinned
+# install (gcc-multilib, Wine): the runners' Ubuntu mirror stalls on package fetches now and then (2026-10-07: a
+# 4.5 min `apt-get install gcc-multilib`), so the jobs that need no package run no apt at all. Every job runs this
+# once, right after its checkout.
 #
 # The tool cache's key is the pins (scripts/setup.sh --pins: every version, tag, hash and URL), tools/requirements.txt
 # and the job's tool list, not the text of setup.sh: an edit to the script's logic keeps the caches valid, a changed
@@ -17,10 +20,10 @@ inputs:
     description: "The tool cache's name (the job's: each job saves its own tools)"
     required: true
   apt:
-    description: "apt packages beyond ninja-build, cmake, xz-utils and unzip"
+    description: "apt packages (gcc-multilib, wine ...); empty: no apt at all"
     default: ""
   ccache:
-    description: "true: ccache for the host builds (CMAKE_C/CXX_COMPILER_LAUNCHER), its directory cached across runs"
+    description: "true: tools/ccache (setup.sh's pinned binary; name it in `tools`) for the host builds (CMAKE_C/CXX_COMPILER_LAUNCHER), its directory cached across runs"
     default: "false"
   disc:
     description: "true: the data checkout and the disc (scripts/worktree_init.sh) when deploy-key is set"
@@ -39,12 +42,12 @@ runs:
         echo "DW3_UBUNTU_MIRROR=http://azure.archive.ubuntu.com/ubuntu" >> "$GITHUB_ENV"
         echo "DW3_GAMEDATA=$GITHUB_WORKSPACE/dw2003-gamedata" >> "$GITHUB_ENV"
 
-    - name: System packages
+    - name: System packages (${{ inputs.apt }})
+      if: inputs.apt != ''
       shell: bash
       run: |
         sudo apt-get update -q
-        sudo apt-get install -y -q --no-install-recommends ninja-build cmake xz-utils unzip \
-          ${{ inputs.ccache == 'true' && 'ccache' || '' }} ${{ inputs.apt }}
+        sudo apt-get install -y -q --no-install-recommends ${{ inputs.apt }}
 
     - name: Data checkout (maintainers only)
       if: inputs.disc == 'true' && inputs.deploy-key != ''
@@ -80,11 +83,16 @@ runs:
           tools/imgui
           tools/llvm-mingw
           tools/appimage
+          tools/ccache
         key: tools-${{ inputs.cache }}-${{ runner.os }}-${{ steps.pins.outputs.hash }}
 
+    # The venv's cmake and ninja (setup.sh cmake pins them) first on the PATH: build.sh, the cmake commands in ci.yml,
+    # tests/port/run.py and build_windows.sh all find them there.
     - name: Toolchain (scripts/setup.sh ${{ inputs.tools }})
       shell: bash
-      run: scripts/setup.sh ${{ inputs.tools }}
+      run: |
+        scripts/setup.sh ${{ inputs.tools }}
+        echo "$GITHUB_WORKSPACE/tools/venv/bin" >> "$GITHUB_PATH"
 
     # ccache hashes the preprocessed unit (a comment-only change is a hit) and the compiler; the port's and the
     # launcher's CMake builds pick the launcher up from the environment. One directory per job, restored from the
@@ -101,8 +109,10 @@ runs:
       if: inputs.ccache == 'true'
       shell: bash
       run: |
-        { echo "CMAKE_C_COMPILER_LAUNCHER=ccache"; echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"; echo "CCACHE_MAXSIZE=300M"; } >> "$GITHUB_ENV"
-        ccache -z
+        { echo "CMAKE_C_COMPILER_LAUNCHER=$GITHUB_WORKSPACE/tools/ccache/ccache"
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=$GITHUB_WORKSPACE/tools/ccache/ccache"
+          echo "CCACHE_MAXSIZE=300M"; } >> "$GITHUB_ENV"
+        tools/ccache/ccache -z
 
     - name: Disc from the data checkout
       if: inputs.disc == 'true' && inputs.deploy-key != ''
