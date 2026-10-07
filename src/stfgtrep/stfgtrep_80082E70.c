@@ -1033,6 +1033,16 @@ void stfgtrep_main_update(StfgtrepMain *obj, StfgtrepMainData *data) {
                     data->members[i] = stfgtrep_member_create(obj, i, 0);
                 }
             }
+#ifdef PC_PORT
+            if (port_mod_party_xp != 0) {
+                for (i = 0; i < obj->member_count; i++) {
+                    m = data->members[i];
+                    m->exp_gained = port_party_xp_share(i, records_battle_results.members[i].took_part, exp);
+                    m->bonus_applied = 0;
+                    obj->member_exp[i] = m->get_exp(m);
+                }
+            }
+#endif
             obj->exp_anim.duration = 10;
             obj->frame_anim.duration = 10;
             break;

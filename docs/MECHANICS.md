@@ -389,6 +389,21 @@ a big exp award gives several levels in one call and returns 1; cap level 99; wi
   `digimon[0].record.stats.values[2]` (HP, `gamestate_data` + 0x788: 150 -> 93);
   the report (STFGTREP) then adds the prize money (`money`, + 0x6C) and `digimon[0].record.exp` (+ 0x780), no level-up. The outcome and the stable hashes are the same on both CPU cores although
   the battle takes a different number of frames.
+- **Who gets a battle's experience** [C] (`stfgtrep_main_update`, step 1 of its init; the party mod of issue #28 hooks here):
+  - The amount is per battle, not per enemy: `stfgtrep_rewards[records_battle_results.battle]` = `{tech_exp, exp, money}`
+    (335 rows, STFGTREP `.data`), `battle` copied from `records_state.battle` (set by `fieldstg_start_battle`) when the battle is
+    won (`wfightmn` result step). Enemy levels and the party's levels play no part.
+  - `n` = party members with `records_battle_results.members[i].took_part`: set when the member acts (`wfightmn_mark_took_part`,
+    the side's `current[0]`) or is chosen in the command menu (`wfightmn_mark_chosen_took_part`), and cleared again with its `forms[]`
+    at the end for a member at 0 HP (which is left at 1 HP). The battle has one acting member per side; the others wait to be switched in.
+  - It is split, not copied: n = 1 (or 0) -> `exp` each, 2 -> `exp * 6 / 10` each (120% in all), 3 -> `exp / 3` each.
+    A member that did not take part is created with 0; the report skips its panel's experience step (`member_exp == 0`), so it gets no
+    experience, no form experience and no new-form check (`learn_technique`) this battle.
+  - Item 0x141 (equipment slot 4 or 5) then adds a fifth to the member's share (`stfgtrep_member_get_exp`, through `get_exp`).
+  - Base Digimon versus forms: the share goes to the party Digimon's own record (`digimon[id].record.exp` and its level, through
+    `stfgtrep_add_exp` in the panel's step 40) whichever form it fought as. A form keeps its own level and experience
+    (`GamestateForm`, section 7) and gains only `tech_exp`, for the chosen forms marked in `forms[]`; the Digimon's own form gains none.
+  - Only the three party members have panels; the five other Digimon (`gamestate_data.digimon[8]`, not in `party[3]`) get nothing.
 
 ## 7. Digivolution (forms)
 

@@ -734,6 +734,11 @@ void wfightmn_battle_end(WfightmnMain *obj, WfightmnMainData *data) {
             party = fightstg_battle.state.members[0];
             for (k = 0; k < 3; k++) {
                 id = gamestate_data.funcs.get_party_member(k);
+#ifdef PC_PORT
+                if (port_mod_party_xp != 0) {
+                    port_party_xp_knocked_out(k, id >= 0 && party[k].hp <= 0);
+                }
+#endif
                 if (id >= 0) {
                     if (party[k].hp <= 0) {
                         gamestate_data.digimon[id].record.stats.values[2] = 1;

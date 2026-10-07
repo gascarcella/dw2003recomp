@@ -32,6 +32,10 @@ an inn's map), the field menu's SAVE entry, STGMCARD's save, Back to the field, 
   - with the mod off the menu has no SAVE entry: the script's SAVE press opens STATUS instead and its wait for
     STGMCARD times out.
 tests/saves/run.py loads the card the mod writes in the emulator (the PS1 game ignores the record).
+party_xp: first_battle_save's route to back_on_field (the first battle: party member 0 fights alone, 4 experience),
+the mod on with its defaults (share 50) and with share 100, and off: the checkpoints up to battle_won have the
+emulator's stable hashes (the mod acts in the report only); from battle_won to battle_end member 0 gains 4 in every
+run and members 1 and 2 gain 2, 4 and 0. Catch-up and knocked-out members are not reached by this battle.
 Exit codes: 0 pass, 1 fail, 2 something missing.
 """
 import argparse
@@ -257,6 +261,47 @@ def global_save(binary, out):
           f"with the mod off the menu has no SAVE: the press opens STATUS (map 0x1000) and the wait for STGMCARD times out (exit {rc3})")
 
 
+PX_GAINS = {"px_on": (4, 2, 2), "px_full": (4, 4, 4), "px_off": (4, 0, 0)}
+
+
+def px_party_exp(dump):
+    """The party's (Digimon, exp) from a gamestate_data dump: party[3] at 0x70, digimon[i].record.exp at
+    0x75C + i * 0x3DC + 0xC + 0x18."""
+    party = [int.from_bytes(dump[0x70 + 4 * k:0x74 + 4 * k], "little", signed=True) for k in range(3)]
+    return [(d, int.from_bytes(dump[0x780 + d * 0x3DC:0x784 + d * 0x3DC], "little", signed=True)) for d in party]
+
+
+def party_xp(binary, out):
+    """party_xp: the first battle's report with the mod on (share 50, share 100) and off (the docstring)."""
+    print("mods: party_xp (first_battle_save to back_on_field: the first battle, one member of three fights)")
+    fbs = json.loads((SCRIPTS / "first_battle_save.json").read_text())["steps"]
+    j = next(k for k, s in enumerate(fbs) if s.get("type") == "checkpoint" and s.get("name") == "back_on_field")
+    script = derived(out, "party_xp", fbs[:j + 1])
+    emu = {c["name"]: c for c in json.loads(FBS_EXPECTED.read_text())["checkpoints"]}
+    for label, mods in (("px_on", {"party_xp": {"enabled": True}}),
+                        ("px_full", {"party_xp": {"enabled": True, "share": 100, "catch_up": True}}),
+                        ("px_off", None)):
+        dumps = out / f"{label}_dumps"
+        dumps.mkdir()
+        cfg = settings(out, label, mods) if mods else None
+        rc, _, rec, err = run_port(binary, out, label, script, cfg, mods is not None,
+                                   {"DW3_PORT_CHECKPOINT_DIR": str(dumps)})
+        d = {f.name.split("_", 1)[1][:-4]: f.read_bytes() for f in dumps.glob("cp*.bin")}
+        if rc != 0 or "battle_end" not in d:
+            check(False, f"{label}: the run reaches back_on_field (exit {rc})")
+            print("    " + "\n    ".join(err.splitlines()[-5:]))
+            continue
+        cps = {c["name"]: c for c in rec["checkpoints"]}
+        before = ("battle_start", "battle_won")
+        check(all(cps[n]["gamestate_sha1_stable"] == emu[n]["gamestate_sha1_stable"] for n in before),
+              f"{label}: battle_start and battle_won have the emulator's stable hashes")
+        won, end = px_party_exp(d["battle_won"]), px_party_exp(d["battle_end"])
+        gains = tuple(e[1] - w[1] for w, e in zip(won, end))
+        shares = err.count("party xp: frame")
+        check(gains == PX_GAINS[label] and shares == (3 if mods else 0),
+              f"{label}: the party (Digimon {', '.join(str(w[0]) for w in won)}) gains {gains}, "
+              f"want {PX_GAINS[label]}; {shares} share(s) logged")
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("mode", nargs="?", default="check", choices=("check", "record"))
@@ -278,6 +323,7 @@ def main():
     skip_dialogues(binary, out, args.mode == "record")
     battle_animations(binary, out)
     global_save(binary, out)
+    party_xp(binary, out)
     print(f"mods test: {'FAIL (' + str(len(FAILURES)) + ')' if FAILURES else 'pass'}")
     return 1 if FAILURES else 0
 

@@ -319,6 +319,29 @@ the mod off, the binary is the plain game: the menu has no SAVE and a load resto
 `tests/port/mods.py` saves from the lab (map 0x206), returns, reboots and loads, with `restore_map_state` on and off,
 and with the mod off; `tests/saves/run.py` loads the card it writes in the emulator.
 
+### Party experience
+
+`party_xp`. Options: `share` (int 0-100, step 5, default 50), `knocked_out` (bool, default false), `catch_up` (bool,
+default false). No hotkey: it acts whenever enabled (`port_mod_party_xp`).
+
+The game splits a won battle's experience among the party members that took part (one fighter: all of it, two: 60%
+each, three: a third each) and gives the others nothing, knocked-out members included (`docs/MECHANICS.md` section 6,
+"Who gets a battle's experience"). With the mod on, STFGTREP's report (`stfgtrep_main_update`, after it creates the
+members' panels) asks `port_party_xp_share` (`port/src/mods.c`) for each member's experience:
+
+- **A member that took part** keeps the game's share.
+- **A member that did not** gets `share` percent of one fighter's share (at least 1 when both are above 0). A member at
+  0 HP when the battle ends (WFIGHTMN tells `port_party_xp_knocked_out` before it clears the member's `took_part`)
+  gets it only with `knocked_out`.
+- **`catch_up`:** a member below the party's highest level gets 10% more per level below it, at most twice as much;
+  fighters included.
+
+The report then shows, counts and adds that experience as it does a fighter's: its panel, the level-ups and their stat
+draws, a new form, and item 0x141's fifth more. Form experience still goes only to the forms that fought, and only
+the three party members gain (the Digimon at the lab have no panel). The money, the item and the battle are
+unchanged. `tests/port/mods.py` runs the first story battle (one fighter of three) with the mod on and off; catch-up
+and knocked-out members are not reached by a scripted run.
+
 ## 50/60 Hz
 
 A setting, not a mod: `video.refresh: 60` or `--refresh 60` (default 50, PAL). It sets, before `port_overlay_init()`

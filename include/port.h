@@ -219,6 +219,13 @@ void port_global_save_open(void);
 s32 port_global_save_map_name(s32 map_name);
 void port_global_save_record(void *slot);
 void port_global_save_restore(const void *slot);
+/* port_mod_party_xp: party_xp is on ("Party experience"): at the end of every battle WFIGHTMN tells
+ * port_party_xp_knocked_out which party slots are at 0 HP (before it clears their took_part), and STFGTREP's report,
+ * once it has created the members' panels, sets each panel's experience to port_party_xp_share(slot, took_part, exp)
+ * (`exp`: one fighter's split share; the result is before item 0x141's fifth, which get_exp then adds). */
+extern int port_mod_party_xp;
+void port_party_xp_knocked_out(s32 slot, s32 knocked_out);
+s32 port_party_xp_share(s32 slot, s32 took_part, s32 exp);
 
 #endif /* PC_PORT */
 
