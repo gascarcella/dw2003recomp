@@ -253,3 +253,12 @@ tag `vX.Y.Z` runs `release.yml`: the whole CI, the port's test on the Release bu
 then a **draft** GitHub release. Publishing a release (binaries built from the decompiled code, no game data) is the
 owner's explicit decision each time. Built on `ubuntu-24.04`; both programs depend only on the C library. Windows
 comes later.
+
+## Mods extend the save in the slot's unused tail, never in its checksummed bytes
+_Decided: 2026-10-06_
+
+The save-anywhere mod needs state the game does not save (the map's layer, depth, per-visit flags). It goes into the
+slot's unused tail (slot offset 0x26C4, 0x3C bytes of stale buffer the game writes and reads back with the slot but
+never looks at), under its own magic, version and checksum. The slot's 0x26C4 bytes and the header stay exactly the
+game's, so every card the port writes still loads on a PS1 or an emulator (as a fresh entry to the map), and a card
+from either still loads in the port. A mod that needs more than the tail would need a sidecar file, not a changed slot.

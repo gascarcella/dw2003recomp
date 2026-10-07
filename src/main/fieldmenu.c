@@ -54,7 +54,11 @@ typedef struct FieldmenuWindows {
     /* 0x00 */ MessageWindow *help;       /* "(triangle) Button: Close Status" */
     /* 0x04 */ MessageWindow *money_unit; /* "BIT" */
     /* 0x08 */ MessageWindow *money;    /* the money */
+#ifdef PC_PORT
+    /* 0x0C */ MessageWindow *options[7]; /* the options; [6]: the global_save mod's SAVE entry (the PS1 has 6) */
+#else
     /* 0x0C */ MessageWindow *options[6]; /* the options */
+#endif
     /* 0x24 */ MessageCursor *cursor;    /* the cursor */
     /* 0x28 */ FieldmenuMemberWindows members[3];
 } FieldmenuWindows; /* size 0xAC */
@@ -181,6 +185,11 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
             D_8005CCF0.extended = 0;
         }
         obj->option_count = obj->extended + 5;
+#ifdef PC_PORT
+        if (port_mod_global_save != 0 && gamestate_data.funcs.get_map() != 0x1000) {
+            obj->option_count++; /* global_save: a SAVE entry last, in the field's menu only (docs/LAUNCHER.md) */
+        }
+#endif
         if (fieldmenu_get_map_region() >= 0) {
             obj->map_enabled = 1;
         } else {
@@ -203,6 +212,14 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
             if (window_anim_update(&obj->panel_anims[1])) {
                 fieldmenu_show_member(obj, data, 1, 1);
                 for (obj->base.timer = 0; obj->base.timer < obj->option_count; obj->base.timer++) {
+#ifdef PC_PORT
+                    if (obj->base.timer == obj->extended + 5) {
+                        /* global_save's SAVE entry: the save screen's title (?SMEMCRD entry 1, in every language) */
+                        data->options[obj->base.timer]->set_text(data->options[obj->base.timer],
+                                                                cdload_module.files.get_file(records_language + 0x78), 1);
+                        continue;
+                    }
+#endif
                     data->options[obj->base.timer]->set_text(data->options[obj->base.timer],
                                                             cdload_module.files.get_file(records_language + 0xB0),
                                                             fieldmenu_option_messages[obj->extended][obj->base.timer]);
@@ -335,7 +352,19 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
             } else {
                 gfx.set_scale(0x1000, 0x1000, 0x1000);
             }
+#ifdef PC_PORT
+            if (obj->option_count == 7) {
+                /* global_save's entry with the card case's: the bank has panels for 5 and 6 entries only (a 22 px top,
+                 * 14 px rows, a 20 px bottom), so the 6-entry one (98 px) is stretched to 112 px from its top */
+                gfx.set_scale(obj->panel_anims[1].level, 0x1249, 0x1000);
+                gfx.set_pivot(0x140, 0x28);
+                gfx.draw(cdload_module.get_subfile_by_id(0x2860000), 0x1B, 0xA8, 0x28);
+            } else {
+                gfx.draw(cdload_module.get_subfile_by_id(0x2860000), 0x1C - (obj->option_count - 5), 0xA8, 0x28);
+            }
+#else
             gfx.draw(cdload_module.get_subfile_by_id(0x2860000), 0x1C - obj->extended, 0xA8, 0x28);
+#endif
         }
         if (obj->panel_anims[2].level != 0) {
             if (obj->panel_anims[2].level != 0x1000) {
@@ -381,6 +410,13 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
             }
             break;
         case 6:
+#ifdef PC_PORT
+            if (obj->option_count == obj->extended + 6 && obj->cursor == obj->extended + 5) {
+                port_global_save_open(); /* global_save's SAVE: STGMCARD in save mode instead of STSTATUS */
+                obj->base.step++;
+                break;
+            }
+#endif
             if (gamestate_data.funcs.get_map() == 0x1000) {
                 gamestate_data.funcs.set_next_map(gamestate_data.field_map, 0);
             } else {

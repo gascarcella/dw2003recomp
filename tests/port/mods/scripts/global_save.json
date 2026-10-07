@@ -1,0 +1,495 @@
+{
+  "name": "global_save",
+  "max_frames": 60000,
+  "default_timeout": 3000,
+  "comment": "The port's global_save mod (docs/LAUNCHER.md \"Save anywhere\"), run by tests/port/mods.py with the mod on: first_battle_save's route to the field after the first battle (the lab, map 0x206, not an inn's map), the field menu's SAVE entry, STGMCARD's save to card 1 slot 1 (first_battle_save's card steps), Back to the field, a reset and Continue to load it. Port-only (the emulator has no mods); tests/saves/run.py loads the card it writes in the emulator.",
+  "steps": [
+    {
+      "type": "wait_stage",
+      "stage": 22,
+      "word0": "0x80083DC0",
+      "comment": "CNTY_SEL (overlay_files[22]) loaded: the country / language select"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 2,
+      "release": 18,
+      "until": {
+        "type": "wait_map",
+        "map": "0xE02"
+      },
+      "timeout": 1500,
+      "comment": "START until the opening movie's map: confirms the default choice 0 = English (cnty_sel_languages[0] = 2 = ENG), records_language 2, once the panels have slid in and the cursor is up (cnty_sel_update_menu step 7 is the only step that reads START, the fade-out steps ignore it); the EU game then goes to map 0xE02 = the opening movie"
+    },
+    {
+      "type": "wait_stage",
+      "stage": 14,
+      "comment": "STDWTITL loaded (map 0xE02, stdwtitl_movie_screen for movie 1)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 30,
+      "release": 30,
+      "until": {
+        "type": "wait_map",
+        "map": "0xE00"
+      },
+      "timeout": 3000,
+      "comment": "START skips the movie (stdwtitl_update_movie checks pad pressed bit 3). On the dynarec core the player spins in StGetNext and samples the pad rarely (the STR stream never reaches its last frame), so a short tap can fall between two samples: hold 30 / release 30 until the title screen proper (map 0xE00). On -interpreter the movie decodes normally and the first press skips it"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 2,
+      "release": 18,
+      "repeat": 40,
+      "comment": "the logo slides in, shines and glows; START opens the New Game / Continue menu only at stdwtitl_menu step 2 (600 ticks there without START start the demo), every other step ignores it, so tap START for 800 frames instead of waiting a fixed time"
+    },
+    {
+      "type": "wait_frames",
+      "frames": 60,
+      "comment": "the menu blinks and the two choices slide out (steps 3-5: 12 + 15 + 6 ticks)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "UP"
+      ],
+      "frames": 4,
+      "comment": "cursor 0 = New Game (the menu opens on cursor 1 = Continue)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 4,
+      "release": 30,
+      "until": {
+        "type": "wait_stage",
+        "stage": 2
+      },
+      "timeout": 1500,
+      "comment": "confirm until FIELDSTG is loaded: physical CROSS is logical bit 13 (PAD_PRESSED(0xD)) for non-Japanese languages; stdwtitl_title_apply_choice case 1: gamestate_new_game, set_next_map(0x2D7)"
+    },
+    {
+      "type": "wait_map",
+      "map": "0x2D7",
+      "timeout": 200
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_map",
+        "map": "0xE03"
+      },
+      "timeout": 15000,
+      "comment": "the intro (maps 0x2D7-0x2D9), the registration in STPLNMET (map 0x500: CROSS types the name, the default partner set) and the chamber capsule, every line confirmed with CROSS, until the login movie (STDWTITL map 0xE03)"
+    },
+    {
+      "type": "checkpoint",
+      "name": "login_movie",
+      "comment": "after the registration: the name, the partner set and the three Digimon records are in gamestate_data"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 400,
+      "release": 2,
+      "until": {
+        "type": "wait_map",
+        "map": "0x207"
+      },
+      "timeout": 3000,
+      "comment": "skip the login movie at once with one long START hold, as new_game did first. The dynarec core's STR playback is fragile: waiting 150 frames first, or tapping every 30 frames, made the emulated machine run off (reads from 0x17FF0500, a reset, then 'Unrecoverable error while running recompiler' at PC 0xFF050014), at speed 1 too"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_map",
+        "map": "0x203"
+      },
+      "timeout": 5000,
+      "comment": "the arrival scenes in Asuka (map 0x207, WSTAG225: progress 1 -> 2) until the Main Lobby"
+    },
+    {
+      "type": "checkpoint",
+      "name": "asuka_lobby"
+    },
+    {
+      "type": "walk",
+      "x": 600,
+      "y": 440,
+      "comment": "Main Lobby (map 0x203, WSTAG210; positions from its attribute map, layer 0): down the ramp (the player can move once the arrival scene ends)"
+    },
+    {
+      "type": "walk",
+      "x": 545,
+      "y": 438
+    },
+    {
+      "type": "walk",
+      "x": 470,
+      "y": 355,
+      "comment": "up the stairs"
+    },
+    {
+      "type": "walk",
+      "x": 400,
+      "y": 330
+    },
+    {
+      "type": "walk",
+      "x": 359,
+      "y": 284,
+      "tol": 4,
+      "comment": "below the Tamer Service counter (actor 49 at (361, 221))"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "UP",
+        "RIGHT"
+      ],
+      "frames": 3,
+      "comment": "face the counter (direction 5, as event 13 places the player)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_map",
+        "map": "0x204"
+      },
+      "timeout": 3000,
+      "comment": "talk to Tamer Service (talk 13 starts event 13: the first answer leads to the admin room, map 0x204). Before progress 3 the lobby's exit to the city (map event 6, event 20) turns the player back"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_stage",
+        "stage": 6
+      },
+      "timeout": 8000,
+      "comment": "the admin room scene (WSTAG212: progress 2 -> 3), the walk to Asuka City (map 0x200), whose progress-3 event starts the first battle (map 0x600)"
+    },
+    {
+      "type": "checkpoint",
+      "name": "battle_start",
+      "comment": "FIGHTSTG loaded: the scripted first battle of the story (one enemy)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_stage",
+        "stage": 20
+      },
+      "timeout": 6000,
+      "comment": "CROSS on every menu: Fight, the default technique and target; the enemy falls to the first attacks"
+    },
+    {
+      "type": "checkpoint",
+      "name": "battle_won",
+      "comment": "STFGTREP (the battle report) loaded: HP/MP after the battle, records_battle_results; the experience is not added yet"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_stage",
+        "stage": 2
+      },
+      "timeout": 3000,
+      "comment": "through the report"
+    },
+    {
+      "type": "checkpoint",
+      "name": "battle_end",
+      "comment": "back in FIELDSTG (map 0x200): the report has added the experience (stfgtrep_add_exp, level-ups and their stat draws)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_map",
+        "map": "0x206"
+      },
+      "timeout": 4000,
+      "comment": "the post-battle scene in Asuka City, which ends in the lab (map 0x206, progress 4)"
+    },
+    {
+      "type": "checkpoint",
+      "name": "back_on_field"
+    },
+    {
+      "type": "wait_frames",
+      "frames": 400,
+      "comment": "the lab's map title fades; the menu needs no event running"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 2,
+      "release": 150,
+      "comment": "the field menu (fieldstg_manager_update: progress 4 reached after the first battle); its three panels slide in"
+    },
+    {
+      "type": "checkpoint",
+      "name": "menu_open",
+      "comment": "the menu is open on the lab (map 0x206): field_map and player_pos set"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "DOWN"
+      ],
+      "frames": 2,
+      "release": 8,
+      "repeat": 5,
+      "comment": "cursor 0 (ITEMS) to 5: the mod's SAVE entry (no card case yet: ITEMS SORT MAP TECHNIQUES STATUS SAVE)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 8,
+      "until": {
+        "type": "wait_stage",
+        "stage": 12
+      },
+      "timeout": 1500,
+      "comment": "SAVE: the menu's closing animation, then STGMCARD in save mode (map 0xC00, entry -1: port_global_save_open; the lab is not an inn's map)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 30,
+      "until": {
+        "type": "wait_mem",
+        "addr": "0x80048750",
+        "size": 4,
+        "value": 2
+      },
+      "timeout": 1500,
+      "comment": "STGMCARD: choose memory card slot 1 (the default) until the card is accessed (memcard_state.state 2, MemCardAccept)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 30,
+      "until": {
+        "type": "wait_mem",
+        "addr": "0x800487E0",
+        "size": 4,
+        "value": 8
+      },
+      "timeout": 1500,
+      "comment": "the runner's card is empty: 'File cannot be found. Create new data?' YES (the default) until the create command (memcard_state.command 8)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 30,
+      "until": {
+        "type": "wait_mem",
+        "addr": "0x80048A50",
+        "size": 4,
+        "value": "0x2700"
+      },
+      "timeout": 3000,
+      "comment": "after the file's header is written: 'Save here?' on save slot 1, CROSS, until the slot's 0x2700 bytes are written (memcard_state.done)"
+    },
+    {
+      "type": "checkpoint",
+      "name": "saved_anywhere",
+      "comment": "the slot is on the card with the map's state in its tail (port_global_save_record)"
+    },
+    {
+      "type": "wait_frames",
+      "frames": 120,
+      "comment": "'Saved.' appears (window animation)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 4,
+      "comment": "dismiss 'Saved.' (TRIANGLE does nothing there)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "TRIANGLE"
+      ],
+      "frames": 2,
+      "release": 30,
+      "until": {
+        "type": "wait_stage",
+        "stage": 2
+      },
+      "timeout": 1500,
+      "comment": "Back (TRIANGLE: logical cancel) from the save slots, then from the card choice: STGMCARD returns to the field (map 0x20A)"
+    },
+    {
+      "type": "checkpoint",
+      "name": "back_after_save",
+      "comment": "Back from STGMCARD: FIELDSTG on the lab again (prev_map 0xC00: the player at player_pos), map_is_new 0"
+    },
+    {
+      "type": "reset",
+      "comment": "reboot; the card keeps the save"
+    },
+    {
+      "type": "wait_stage",
+      "stage": 22,
+      "word0": "0x80083DC0",
+      "comment": "CNTY_SEL (overlay_files[22]) loaded: the country / language select"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 2,
+      "release": 18,
+      "until": {
+        "type": "wait_map",
+        "map": "0xE02"
+      },
+      "timeout": 1500,
+      "comment": "START until the opening movie's map: confirms the default choice 0 = English (cnty_sel_languages[0] = 2 = ENG), records_language 2, once the panels have slid in and the cursor is up (cnty_sel_update_menu step 7 is the only step that reads START, the fade-out steps ignore it); the EU game then goes to map 0xE02 = the opening movie"
+    },
+    {
+      "type": "wait_stage",
+      "stage": 14,
+      "comment": "STDWTITL loaded (map 0xE02, stdwtitl_movie_screen for movie 1)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 30,
+      "release": 30,
+      "until": {
+        "type": "wait_map",
+        "map": "0xE00"
+      },
+      "timeout": 3000,
+      "comment": "START skips the movie (stdwtitl_update_movie checks pad pressed bit 3). On the dynarec core the player spins in StGetNext and samples the pad rarely (the STR stream never reaches its last frame), so a short tap can fall between two samples: hold 30 / release 30 until the title screen proper (map 0xE00). On -interpreter the movie decodes normally and the first press skips it"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "START"
+      ],
+      "frames": 2,
+      "release": 18,
+      "repeat": 40,
+      "comment": "the logo slides in, shines and glows; START opens the New Game / Continue menu only at stdwtitl_menu step 2 (600 ticks there without START start the demo), every other step ignores it, so tap START for 800 frames instead of waiting a fixed time"
+    },
+    {
+      "type": "wait_frames",
+      "frames": 60,
+      "comment": "the menu blinks and the two choices slide out (steps 3-5: 12 + 15 + 6 ticks)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 4,
+      "release": 30,
+      "until": {
+        "type": "wait_stage",
+        "stage": 12
+      },
+      "timeout": 1500,
+      "comment": "the menu opens on Continue (cursor 1): STGMCARD in load mode (map 0xC00, entry 0)"
+    },
+    {
+      "type": "press",
+      "buttons": [
+        "CROSS"
+      ],
+      "frames": 2,
+      "release": 30,
+      "until": {
+        "type": "wait_stage",
+        "stage": 2
+      },
+      "timeout": 4000,
+      "comment": "card slot 1, save slot 1, confirm; the load sets the map back to the saved field map"
+    },
+    {
+      "type": "checkpoint",
+      "name": "loaded_anywhere",
+      "comment": "FIELDSTG on the lab from the save: compare with saved_anywhere; the map's state restored (port_global_save_restore)"
+    },
+    {
+      "type": "wait_frames",
+      "frames": 120,
+      "comment": "the map title; the actors stand"
+    },
+    {
+      "type": "checkpoint",
+      "name": "loaded_settled"
+    }
+  ]
+}
