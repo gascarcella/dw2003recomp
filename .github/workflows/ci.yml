@@ -280,14 +280,16 @@ jobs:
         with:
           path: |
             tools/venv
+            tools/mkpsxiso
             tools/imgui
             tools/llvm-mingw
             tools/sdl3-windows
           key: tools-windows-${{ runner.os }}-${{ hashFiles('scripts/setup.sh', 'tools/requirements.txt') }}
 
+      # mkpsxiso: the disc's extraction below (the replays' sound check reads the EXE's sound bank table).
       - name: Windows toolchain
         if: (steps.areas.outputs.port == 'true' || steps.areas.outputs.launcher == 'true')
-        run: scripts/setup.sh venv imgui llvm-mingw sdl3-windows
+        run: scripts/setup.sh venv mkpsxiso imgui llvm-mingw sdl3-windows
 
       # Wine's prefix once, headless (no display on the runner: the console programs below need none).
       - name: Wine prefix
@@ -305,9 +307,10 @@ jobs:
         timeout-minutes: 25
         run: scripts/build_windows.sh --launcher --test --jobs "$DW3_JOBS"
 
+      # The disc, linked and extracted (as `build` does): the replays' sound check reads the EXE from extracted/.
       - name: Disc from the data checkout
         if: steps.data.outputs.present == 'true' && steps.areas.outputs.port == 'true'
-        run: scripts/setup.sh gamedata
+        run: scripts/worktree_init.sh
 
       # The Windows game replays the layer-2 scripts under Wine: its frame log and record must equal the Linux build's
       # (tests/port/run.py builds build/port for the sound replay, so the host gcc runs here too).

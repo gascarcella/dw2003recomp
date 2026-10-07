@@ -9,6 +9,8 @@ tests/port/run.py                     # build/port, two runs, compare (~1 s once
 tests/port/run.py --m32 --sanitize    # also the -m32 build (same log and record) and an ASan/UBSan build (no report)
 tests/port/run.py --cd-speed instant  # the port's CD without seek or transfer time (the default is realistic)
 tests/port/run.py --exe build/port-win/dw2003.exe --wine   # the Windows build (scripts/build_windows.sh) under Wine, headless;
+                                                           # with --exe build/port is only configured (the generated headers) and
+                                                           # LIBSND's replay on the emulator's timeline is left to the plain run;
                                       # its log, record and SPU trace must be the Linux build's (build/port is still built)
 scripts/test.sh --layer port          # the same as the plain run, skipped when cmake/ninja/gcc/the disc are missing
 ```

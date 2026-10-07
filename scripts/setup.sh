@@ -616,7 +616,9 @@ step_redux() {
             read -r file want <<<"$entry"
             deb="$SRC/redux-debs/$(basename "$file")"
             if [[ ! -f "$deb" ]] || ! echo "$want  $deb" | sha256sum -c --quiet - 2>/dev/null; then
-                curl -sSfL -o "$deb.part" "$REDUX_UBUNTU/$file"
+                # --retry: archive.ubuntu.com resets connections from CI's runners now and then (two runs in a row
+                # on 2026-10-07); a cold toolchain cache must not fail on that
+                curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 -o "$deb.part" "$REDUX_UBUNTU/$file"
                 mv "$deb.part" "$deb"
             fi
             echo "$want  $deb" | sha256sum -c --quiet - || die "redux: checksum mismatch for $(basename "$file")"
