@@ -9,7 +9,7 @@ void fieldstg_event_update();
 
 /* Data block of FieldstgEvent (its children). */
 typedef struct FieldstgEventData {
-    /* 0x00 */ s32 started; /* what the event definition's start returned: a child object the event waits for */
+    /* 0x00 */ Object *started; /* what the event definition's start returned: a child object the event waits for */
     /* 0x04 */ struct FieldstgDialog *dialogs[3]; /* message windows (fieldstg_dialog_create) */
     /* 0x10 */ Object *script_objects[10]; /* script objects the script started (fieldstg_start_script_object) */
 } FieldstgEventData; /* size 0x38 */
@@ -217,7 +217,7 @@ void fieldstg_event_update(FieldstgEvent *obj, FieldstgEventData *data) {
             obj->base.next_step(obj);
             /* fallthrough */
         case 1:
-            if (data->started == 0) {
+            if (data->started == NULL) {
                 obj->base.set_state(obj, OBJECT_STATE_END);
             }
             break;

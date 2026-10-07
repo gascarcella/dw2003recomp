@@ -99,7 +99,7 @@ typedef struct FieldstgEventDef {
     /* 0x00 */ s32 id;     /* -1 ends the list; 8000-8999 don't stop the player */
     /* 0x04 */ s16 *script; /* docs/FORMATS.md "Event scripts" */
     /* 0x08 */ s32 text;   /* text sub-file ID (high half: file ID), 0: none */
-    /* 0x0C */ s32 (*start)(void);   /* run once after the script (FieldstgEvent.start); it returns an object (or 0)
+    /* 0x0C */ Object *(*start)(void); /* run once after the script (FieldstgEvent.start); it returns an object (or 0)
                                      * that the event keeps as a child and waits for */
     /* 0x10 */ void (*end)(void);    /* run at the end (FieldstgEvent.end) */
 } FieldstgEventDef; /* size 0x14 */
@@ -270,7 +270,7 @@ typedef struct FieldstgEvent {
     /* 0x000 */ Object base;
     /* 0x050 */ s32 id;      /* event ID */
     /* 0x054 */ s16 *script_pos; /* script position, NULL when done */
-    /* 0x058 */ s32 (*start)(void);
+    /* 0x058 */ Object *(*start)(void);
     /* 0x05C */ void (*end)(void);
     /* 0x060 */ s32 wait;    /* wait counter */
     /* 0x064 */ FieldstgEventActor actors[30]; /* the actors it uses, found by ID (fieldstg_event_find_actor) */

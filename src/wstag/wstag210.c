@@ -1342,15 +1342,15 @@ FieldstgMapEvent wstag210_map_events[11] = {
 };
 WstagFadeFuncs wstag210_funcs = { wstag210_setup, wstag210_fade_start, wstag210_fade_update };
 FieldstgEventDef wstag210_events[14] = {
-    { 8, NULL, 0x01120001, (s32 (*)(void))wstag210_event_8_start, NULL },
-    { 9, NULL, 0x01120002, (s32 (*)(void))wstag210_event_9_start, NULL },
+    { 8, NULL, 0x01120001, (Object *(*)(void))wstag210_event_8_start, NULL },
+    { 9, NULL, 0x01120002, (Object *(*)(void))wstag210_event_9_start, NULL },
     { 13, D_WSTAG210_800A77EC, 0x01120006, NULL, NULL }, { 14, D_WSTAG210_800A7844, 0x01120007, NULL, NULL },
     { 20, D_WSTAG210_800A78C0, 0x01120008, NULL, NULL }, { 30, D_WSTAG210_800A7924, 0x01120009, NULL, NULL },
     { 58, D_WSTAG210_800A7990, 0x01120012, NULL, NULL },
     { 310, D_WSTAG210_800A7A08, 0x0112001C, NULL, wstag210_event_310_end },
     { 320, D_WSTAG210_800A7B88, 0x0112001D, NULL, NULL }, { 330, D_WSTAG210_800A7BE4, 0x0112001E, NULL, NULL },
     { 685, D_WSTAG210_800A7C40, 0x01120022, NULL, wstag210_event_685_end },
-    { 1510, NULL, 0x01120035, (s32 (*)(void))wstag210_event_1510_start, NULL },
+    { 1510, NULL, 0x01120035, (Object *(*)(void))wstag210_event_1510_start, NULL },
     { 1511, D_WSTAG210_800A7F6C, 0x01120030, NULL, NULL },
     { -1, NULL, 0, NULL, NULL },
 };

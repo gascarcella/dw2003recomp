@@ -763,11 +763,11 @@ s32 (*D_WSTAG220_800A81BC)(WindowAnim *fade) = wstag220_fade_update;
 FieldstgEventDef wstag220_events[11] = {
     { 53, D_WSTAG220_800A7330, 0x0112000D, NULL, NULL }, { 54, D_WSTAG220_800A73B8, 0x0112000E, NULL, NULL },
     { 55, D_WSTAG220_800A7438, 0x0112000F, NULL, NULL }, { 56, D_WSTAG220_800A74B0, 0x01120010, NULL, NULL },
-    { 1512, NULL, 0x01120036, (s32 (*)(void))wstag220_event_1512_start, NULL },
+    { 1512, NULL, 0x01120036, (Object *(*)(void))wstag220_event_1512_start, NULL },
     { 1513, D_WSTAG220_800A7538, 0x01120031, NULL, NULL },
-    { 1514, NULL, 0x01120037, (s32 (*)(void))wstag220_event_1514_start, NULL },
+    { 1514, NULL, 0x01120037, (Object *(*)(void))wstag220_event_1514_start, NULL },
     { 1515, D_WSTAG220_800A7550, 0x01120032, NULL, NULL },
-    { 1516, NULL, 0x01120038, (s32 (*)(void))wstag220_event_1516_start, NULL },
+    { 1516, NULL, 0x01120038, (Object *(*)(void))wstag220_event_1516_start, NULL },
     { 1517, D_WSTAG220_800A7568, 0x01120033, NULL, NULL },
     { -1, NULL, 0, NULL, NULL },
 };

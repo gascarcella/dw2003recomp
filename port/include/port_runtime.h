@@ -25,7 +25,7 @@ int game_main(void);
 
 /* ---- The arena (arena.c; the layout comes from tools/port_gen.py arena-header -> port_arena_gen.h) */
 void port_arena_init(void);
-/* The 16 MB-aligned base: a 24-bit ordering-table tag (PTR_TO_U32 & 0xFFFFFF) is an offset from it. */
+/* The arena's base (port_arena): a 24-bit ordering-table tag (PTR_TO_U32 & 0xFFFFFF) is an offset from it. */
 void *port_arena_base(void);
 int port_arena_contains(const void *p, size_t size);
 

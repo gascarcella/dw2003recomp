@@ -35,8 +35,7 @@ cmake -S port -B build/port-m32 -G Ninja -DDW3_PORT_M32=ON && cmake --build buil
 build/port-m32/dw2003 --max-frames 600 --log m32.log && build/port/dw2003 --max-frames 600 --log m64.log && cmp m32.log m64.log
 ```
 The `-m32` build is the layout check: pointers are 4 bytes there, as on the PS1, so a run whose log differs from the
-64-bit build's has a pointer-size bug on one side (the log holds no host address). The arena is 16 MB-aligned and
-non-PIE in both.
+64-bit build's has a pointer-size bug on one side (the log holds no host address).
 
 ## Layout
 | Path | Contents |
@@ -201,12 +200,12 @@ writable input section of a game object (`.data*`, `.bss*`, `COMMON` of the unit
 runtime's and the shim's own writable data, which reset themselves).
 
 ## The runtime
-**Arena** (docs/PORT.md "Memory arena"): one 16 MB-aligned `.bss` block, smaller than 16 MB, mirroring the PS1 from
+**Arena** (docs/PORT.md "Memory arena"): one static block, `port_arena`, smaller than 16 MB, mirroring the PS1 from
 `0x80082CB0` up: slot 1 (`0x23130` bytes), slot 2 (`0x5A20`), then the heap (4 MB, larger than the PS1's
-1.3 MB because 64-bit structs are bigger). A pointer's PS1-style address (`PTR_TO_S32`) is `0x80082CB0 + offset`;
-the low 24 bits of any arena pointer are its offset, which is what the ordering-table tags keep (`PTR_TO_U32`), and
-the shim's `DrawOTag` walks them from the arena's base. The 16 MB alignment is an ELF/GNU ld property of a
-non-PIE executable (`-no-pie`; checked at startup).
+1.3 MB because 64-bit structs are bigger); `port_slot1`, `port_slot2`, `port_heap_start` and `port_heap_end` are
+macros on it (`include/port.h`). A pointer's PS1-style address (`PTR_TO_S32`) is `0x80082CB0 + offset`; an
+ordering-table tag is the offset (`PTR_TO_U32`), and the shim's `DrawOTag` walks them from `port_arena`. No alignment
+or link address is assumed (the binary may be PIE): the arrangement a PE build can use as it is.
 
 **Overlay manager** (2.5): every overlay is linked in. `OVERLAY_COPY` (the game's two `memcpy` sites) calls
 `port_overlay_load(tier, file, ...)`: a file with a table becomes the tier's current overlay and gets its `.data` and
@@ -334,9 +333,10 @@ at 24-85 ms (mean 57) with no refill and no drop, and the disk file holds the WA
   4-byte block alignment (now 8 under `PC_PORT`, `src/main/heap.c` `HEAP_ALIGN`), FIELDSTG's NULL map-event list and
   `FieldstgBackgroundView`'s byte pad. The disc is read through `--disc` (`src/disc.c`, SHA-1 checked).
 - The BIOS is a stand-in: `BIOS_PTR` serves a 256-byte region at `0x1FC00100` holding a version string.
-- Windows/macOS: the ld script (`INSERT`, `-T`) and the 16 MB `.bss` alignment are GNU ld/ELF; PE needs another
-  arrangement for the arena (allocate at startup; `port.h` would need the slot symbols as pointers) and for the
-  per-overlay sections.
+- Windows/macOS: the ld script (`INSERT`, `-T`) that collects the per-overlay sections is GNU ld/ELF; PE needs
+  another arrangement for them (the Windows track on the project board). The arena needs nothing of the linker
+  since 2026-10-07 (no alignment, no link-time symbols, PIE allowed), and `port_gen.py state` reads symbol sizes
+  from a compile of the units, not from `nm -S` (COFF has none).
 - The snapshot copies with plain byte loops in `no_sanitize_address` functions (ASan's redzones between globals
   are inside the ranges); so a sanitizer build's overlay-load log lines show other section sizes (ASan's redzones)
   than a normal build's: compare logs only between builds of the same kind.

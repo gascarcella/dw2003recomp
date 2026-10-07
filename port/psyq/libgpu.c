@@ -4,9 +4,9 @@
  * the GPU; LoadImage, MoveImage, ClearImage(2) draw into its VRAM; psyq_gpu_vram/psyq_gpu_display are the video
  * output (psyq.h).
  *
- * Tags (docs/PORT.md "Ordering tables on 64-bit"): a tag's low 24 bits are an offset inside the 16 MB window the ordering table lives in, so
- * the walk resolves `tag & 0xFFFFFF` against `ot & ~0xFFFFFF` and follows it only inside the window psyq_set_arena
- * gave (by default the heap, port_heap_start..port_heap_end). */
+ * Tags (docs/PORT.md "Ordering tables on 64-bit"): a tag's low 24 bits are a pointer's offset in the arena (PTR_TO_U32),
+ * so the walk resolves `tag & 0xFFFFFF` against the arena's base (port_arena) and follows it only inside the window
+ * psyq_set_arena gave (by default the heap, port_heap_start..port_heap_end). */
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -127,7 +127,7 @@ static void psyq_gpu_hash_prim(const u32 *w, u32 len) {
  * words (the `len` words after its tag). */
 static void psyq_gpu_walk(const u32 *p, const char *who) {
     const u32 *start = p;
-    uintptr_t base = (uintptr_t)p & ~(uintptr_t)0xFFFFFF;
+    const u8 *base = port_arena;
     const u8 *lo;
     const u8 *hi;
     u32 prims = 0;

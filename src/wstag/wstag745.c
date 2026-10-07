@@ -67,7 +67,7 @@ Object *wstag745_flash_new(void) {
     return object_create(wstag745_flash_update, sizeof(WstagObject), 0, 0x18);
 }
 
-s32 wstag745_event_8000_start(void) {
+Object *wstag745_event_8000_start(void) {
     Object *flash = heap_objects.find(0x18, -1, -1);
 
     if (flash != NULL) {
@@ -77,10 +77,10 @@ s32 wstag745_event_8000_start(void) {
         flash->set_state(flash, OBJECT_STATE_RUN);
         flash->key1 = 0;
     }
-    return 0;
+    return NULL;
 }
 
-s32 wstag745_event_8001_start(void) {
+Object *wstag745_event_8001_start(void) {
     Object *flash = heap_objects.find(0x18, -1, -1);
 
     if (flash != NULL) {
@@ -90,10 +90,10 @@ s32 wstag745_event_8001_start(void) {
         flash->set_state(flash, OBJECT_STATE_DONE);
         flash->key1 = 0;
     }
-    return 0;
+    return NULL;
 }
 
-s32 wstag745_event_8002_start(void) {
+Object *wstag745_event_8002_start(void) {
     Object *flash = heap_objects.find(0x18, -1, -1);
 
     if (flash != NULL) {
@@ -103,7 +103,7 @@ s32 wstag745_event_8002_start(void) {
         flash->set_state(flash, OBJECT_STATE_RUN);
         flash->key1 = 1;
     }
-    return 0;
+    return NULL;
 }
 
 

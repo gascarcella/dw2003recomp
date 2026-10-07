@@ -57,7 +57,9 @@ The plan's milestones (`docs/PORT.md`):
   names from `nm` and the config tables (`docs/PORT.md`; gate: `tests/port/debug.py`).
 - **Platforms:** Linux x86_64. Windows is in progress (the board's Windows track, [#37](https://github.com/gascarcella/dw2003recomp/issues/37)):
   the cross toolchain (llvm-mingw, SDL3 for Windows, `scripts/build_windows.sh`) compiles every unit and the launcher,
-  which passes its self-test under Wine; the game does not link yet. macOS is not planned.
+  which passes its self-test under Wine; the arena needs no alignment, fixed link address or linker-script symbols
+  and the state tables no `nm -S`; the game does not link yet (the overlay sections and the platform layer are next).
+  macOS is not planned.
 - **Play-tested** on a desktop (Wayland, NVIDIA, PipeWire) through the first battle, a save and its load:
   picture, sound and timing were right except for the battle camera, fixed since
   ([#7](https://github.com/gascarcella/dw2003recomp/issues/7)); the battle has not been play-tested again.

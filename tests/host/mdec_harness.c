@@ -17,8 +17,7 @@
 
 #define BUF_SIZE 0x40000
 
-u8 port_heap_start[1];
-u8 port_heap_end[1];
+u8 port_arena[PORT_ARENA_SIZE]; /* the arena the shim's window and tags refer to (include/port.h) */
 
 void port_unimplemented(const char *fn) {
     fprintf(stderr, "unimplemented: %s\n", fn);

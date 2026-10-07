@@ -521,6 +521,6 @@ s32 (*D_WSTAG280_800A793C)(WindowAnim *fade) = wstag280_fade_update;
 FieldstgEventDef wstag280_events[6] = {
     { 57, D_WSTAG280_800A6708, 0x01120011, NULL, NULL }, { 66, D_WSTAG280_800A6798, 0x01120013, NULL, NULL },
     { 67, D_WSTAG280_800A6810, 0x01120014, NULL, NULL },
-    { 1522, NULL, 0x01120039, (s32 (*)(void))wstag280_event_1522_start, NULL },
+    { 1522, NULL, 0x01120039, (Object *(*)(void))wstag280_event_1522_start, NULL },
     { 1523, D_WSTAG280_800A68B0, 0x01120034, NULL, NULL }, { -1, NULL, 0, NULL, NULL },
 };

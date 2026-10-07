@@ -29,8 +29,9 @@ formats are in `port/README.md`; the shim's per-function behaviour is in `port/p
 
 ## Compiling the game C for the host
 - **Flags:** C99 with GNU extensions (`gnu99`: unprototyped `f()` declarations are common in the game C and C23 would
-  read them as `(void)`), `-fsigned-char` (the code relies on signed `char`), `-fwrapv`, `-fno-strict-aliasing`,
-  `-fno-pie`/`-no-pie` (the arena needs a fixed link address; see "Memory arena").
+  read them as `(void)`), `-fsigned-char` (the code relies on signed `char`), `-fwrapv`, `-fno-strict-aliasing`.
+  The binary is the toolchain's default (PIE where that is the default): nothing depends on the link address (see
+  "Memory arena").
 - **`INCLUDE_ASM`** is empty on the host. No game function is left in asm except the 8 holdouts, and with
   `NON_MATCHING` their WIP C is compiled instead: the WIP C is the port's code. `tests/holdouts/run.sh` validates it
   by running a `NON_MATCHING` PS1 image through the replays (see "Testing").
@@ -71,21 +72,26 @@ wrapped). The mods' flags (`port_mod_skip_dialogues`, `port_mod_battle_animation
 declared there; they are read only inside `#ifdef PC_PORT` blocks.
 
 ## Memory arena
-One `.bss` block, `port_arena`, stands for the PS1 RAM from the tier-1 slot up (`port/src/arena.c`; sizes generated
-into `port_arena_gen.h` by `tools/port_gen.py`):
+One static block, `port_arena`, stands for the PS1 RAM from the tier-1 slot up (`port/src/arena.c`; the sizes are
+macros in `include/port.h`, and `tools/port_gen.py` generates the same numbers into `port_arena_gen.h`, which
+`arena.c` checks against the macros with `_Static_assert`s):
 
-| Region | PS1 address | Size | Symbols |
+| Region | PS1 address | Size | Macro (on `port_arena`) |
 |---|---|---|---|
 | Tier-1 slot | `0x80082CB0` | `0x23130` | `port_slot1` |
 | Tier-2 slot | `0x800A5DE0` | `0x5A20` | `port_slot2` |
 | Heap | `0x800AB800` | 4 MB (the PS1's is 1.3 MB; 64-bit runtime structs are larger) | `port_heap_start`, `port_heap_end` |
 
-- The block is **16 MB-aligned and smaller than 16 MB**, so the low 24 bits of any arena pointer are its offset in
-  the arena. A pointer's PS1-style address is `0x80082CB0 + offset` (`port_ptr_to_s32`).
+- The regions are macros on `port_arena + offset`, so their addresses stay constant expressions (static initializers
+  in `records.c` and FIELDSTG's script table use them). A pointer's PS1-style address is `0x80082CB0 + offset`
+  (`port_ptr_to_s32`); an ordering-table tag is the offset itself (`port_ptr_to_u32`, below).
+- **No alignment or link address is assumed:** the block is 4 KB-aligned, the binary may be PIE, and nothing
+  relies on the arena lying below 4 GB (the last `s32` that held half a host pointer, `FieldstgEventDef.start`, is a
+  pointer now). This is what a PE (Windows) build needs: COFF allows no section alignment past 8 KB and ASLR moves
+  the image.
+- The block is smaller than 16 MB, so every offset fits a 24-bit tag (`port_gen.py` asserts it).
 - Everything `heap_funcs` hands out (objects, packet buffers, ordering tables, the file cache) lives in the heap
   region, so every primitive and ordering table is in the arena.
-- The alignment is a property of a non-PIE ELF linked with GNU ld; `arena.c` checks it at startup. A non-PIE `.bss`
-  also keeps the arena below 4 GB, which one remaining `s32`-typed field (`FieldstgEventDef.start`) still relies on.
 - The slot buffers hold data files loaded into a slot (WSTAG260, FIELDSTG's data files) and the targets of
   `SLOT_PTR`; code overlays are linked in, not copied (see "Overlays").
 
@@ -93,8 +99,10 @@ into `port_arena_gen.h` by `tools/port_gen.py`):
 - PS1 primitives start with a tag whose address field is 24 bits (`P_TAG.addr`). The game sets it through
   `setaddr`/`addPrim` and `gfx_compact_ot` compares `ptr & 0xFFFFFF` with tags; `ClearOTagR` terminates with
   `0xFFFFFF`.
-- Because the arena is 16 MB-aligned, this code works unchanged on the host: a tag's low 24 bits are the arena
-  offset, and the shim's `DrawOTag`/`ContinueDraw` follow a link as `(ot & ~0xFFFFFF) + (tag & 0xFFFFFF)`, inside the
+- On the host `PTR_TO_U32(p)` is the pointer's offset in the arena (`port_ptr_to_u32`; a fatal error for a pointer
+  outside it), so a tag's low 24 bits are the arena offset and this code works unchanged. `addPrim` passes a tag it
+  read back (`setaddr(p, getaddr(ot))`): the macro keeps an integer argument as it is, chosen at compile time by the
+  argument's type. The shim's `DrawOTag`/`ContinueDraw` follow a link as `port_arena + (tag & 0xFFFFFF)`, inside the
   window `psyq_set_arena` gives (the heap by default).
 - Primitive layouts therefore stay PS1-sized; no primitive type is widened.
 
@@ -309,15 +317,20 @@ the frame log or the record. Test hook: `DW3_PORT_CRASH_AT=VSYNC` writes through
 - **State probes:** `port_state_read` (a script's `wait_mem`) maps only layout-identical data and an explicit field
   table; other pointer-bearing objects and overlay data read as unmapped.
 - **BIOS:** a stand-in string, not the user's BIOS.
-- **Linux only, Windows in progress:** the ld script (`INSERT`, `-T`) and the 16 MB-aligned `.bss` are GNU ld/ELF
-  features; a Windows (PE) or macOS build needs another arrangement for the arena and for the per-overlay sections.
-  The SDL window is 64-bit only. The Windows cross toolchain is in place (DECISIONS "Windows: cross-built from Linux"):
-  `scripts/setup.sh llvm-mingw sdl3-windows`, the CMake toolchain file `cmake/windows-x86_64.cmake`,
-  `scripts/build_windows.sh [--launcher] [--test]` (the game into `build/port-win`, the launcher into
-  `build/launcher-win`, the launcher's self-test under Wine) and `tools/port_inventory.py probe --target windows`
-  (the units through llvm-mingw's clang). Every unit compiles for Windows; the launcher links and passes its
-  self-test under Wine; the game does not link yet (the arena's alignment, the ld script, the POSIX calls of
-  `port/src/` and the `unsigned long` pointer casts of `port/psyq/`, which is 32-bit there): the project board's
-  Windows 1, 2 and 4.
+- **Linux only, Windows in progress:** the ld script (`INSERT`, `-T`) that collects the per-overlay sections is a
+  GNU ld/ELF feature; a Windows (PE) or macOS build needs another arrangement for them (the Windows track on the
+  project board). The arena no longer needs anything of the linker. The SDL window is 64-bit only. The Windows cross
+  toolchain is in place (DECISIONS "Windows: cross-built from Linux"): `scripts/setup.sh llvm-mingw sdl3-windows`, the
+  CMake toolchain file `cmake/windows-x86_64.cmake`, `scripts/build_windows.sh [--launcher] [--test]` (the game into
+  `build/port-win`, the launcher into `build/launcher-win`, the launcher's self-test under Wine) and
+  `tools/port_inventory.py probe --target windows` (the units through llvm-mingw's clang). Every unit compiles for
+  Windows; the launcher links and passes its self-test under Wine; the game does not link yet (the ld script and the
+  POSIX calls of `port/src/`): the project board's Windows 2 and 4.
+- **`long` on Windows (LLP64) was audited (2026-10-07):** `long` is 32-bit there, 64-bit on Linux x86_64. The game's
+  structs and headers use the sized types (`s32`, `u32`, `s64`); the `long`s left are Psy-Q prototypes (`CdRead2`,
+  `MemCardInit`), `(unsigned long)` offset casts in `gfx.c`, `pad.c` and `gamestate.c` (values under 64 KB), and
+  counters and option values in `port/src` (`port_frames`, `port_max_frames`, the pace, the step counts), none of
+  which holds a pointer or a byte count over 2 GB. The `-m32` build, where `long` is 32-bit too, replays with the
+  same log as the 64-bit build, which brackets LLP64 between the two.
 - **Sanitizer builds** see other section sizes (ASan's redzones), so logs compare only between builds of the same
   kind.
