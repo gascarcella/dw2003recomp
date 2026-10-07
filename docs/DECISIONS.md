@@ -252,8 +252,10 @@ stays non-PIE because the debug channel, the MCP server and `tests/port/mods.py`
 link-time addresses, which a PIE relocates: CI's Ubuntu GCC links PIE by default); on PE into `$`-sorted chunk
 groups of two output sections, `.dw3data` and `.dw3bss`, between generated
 empty marker chunks that carry the same symbols (one section per overlay would be 600 PE sections). The post-link
-check reads the objects (`objdump -h`), not a link map, so it is the same on both. Not `#pragma clang section`:
-GCC has none, and one path for both compilers is worth the objcopy pass.
+check reads the objects (`objdump -h`), not a link map, so it is the same on both. The PE side moved from objcopy to
+`#pragma clang section` (forced into each unit's compile) the same day: GNU objcopy drops the COMDAT flag of the COFF
+sections it rewrites, and lld then discards the units' `.pdata`/`.xdata`, the x64 unwind tables the Windows crash
+report's stack walk needs. GCC has no such pragma, so ELF keeps the objcopy pass: two paths after all.
 
 # Launcher and mods
 

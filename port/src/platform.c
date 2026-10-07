@@ -248,9 +248,9 @@ void port_sleep_ms(int ms) {
     Sleep((DWORD)ms);
 }
 
-/* The watchdog: a thread that compares the clock with the deadline the kicks move forward. On POSIX SIGALRM's
- * handler writes the crash report before exiting; here only the message is written (the report from a second
- * thread is the board's Windows 8). */
+/* The watchdog: a thread that compares the clock with the deadline the kicks move forward. As SIGALRM's handler
+ * does on POSIX, it writes the crash report (the main thread's registers and stack, crash.c's
+ * port_crash_watchdog_fire) and exits 4. */
 static volatile LONG64 win_watchdog_deadline_ms;
 static int win_watchdog_sec;
 
@@ -259,10 +259,7 @@ static DWORD WINAPI win_watchdog_thread(LPVOID arg) {
     for (;;) {
         Sleep(250);
         if ((LONG64)GetTickCount64() > win_watchdog_deadline_ms) {
-            static const char msg[] = "port: watchdog: no port_wait() for the watchdog's time: the game spins in a "
-                                      "loop without a PLATFORM_WAIT hook (cdload_load_file?); exiting 4\n";
-            _write(2, msg, sizeof(msg) - 1);
-            _exit(4);
+            port_crash_watchdog_fire();
         }
     }
     return 0;
@@ -270,6 +267,7 @@ static DWORD WINAPI win_watchdog_thread(LPVOID arg) {
 
 void port_watchdog_start(int sec) {
     HANDLE t;
+    port_crash_watchdog_install(); /* the main thread's handle, for the report */
     win_watchdog_sec = sec;
     win_watchdog_deadline_ms = (LONG64)GetTickCount64() + (LONG64)sec * 1000;
     t = CreateThread(NULL, 0, win_watchdog_thread, NULL, 0, NULL);

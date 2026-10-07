@@ -138,6 +138,13 @@ installed). Needs `build/port/dw2003` (`run.py` builds it) and the disc. In `scr
 platform, vsync 30, the signal, fault address 0, a pc and a stack that `scripts/symbolize.py` resolves to
 `port_crash_test_write` and `port_frame`; a missing disc must give a `fatal` report with the reason; a normal run
 writes none. Needs `build/port/dw2003`, the disc and `addr2line`. In `scripts/test.sh --layer port`.
+`crash.py --wine [--exe PATH]` runs the same three with the Windows build (`build/port-win/dw2003.exe`,
+`scripts/build_windows.sh`) through `wine`, headless: the crash is an access violation (exit status 0xC0000005, which
+`wine` reports as 5), the report names the exception, the fault address and the access, its stack walked from the
+exception's context resolves through `port_crash_test_write`, `port_frame`, the game's frames and `main` with
+llvm-symbolizer and the PDB beside the exe, and the minidump beside it is read by the test's own minidump reader: the
+exception record (code 0xC0000005, a write at 0, the address equal to the report's pc inside `dw2003.exe`), the module
+list and the crashing thread's context. Needs `wine` and `tools/llvm-mingw` (~15 s).
 
 ## What it found (session 16)
 - **The overlay copy takes CPU time on the PS1.** The game copies FIELDSTG (0x19000 bytes) into its slot with LIBC2's

@@ -102,24 +102,28 @@ endif()
 # which renames the object's .data/.bss sections into its overlay's (ELF: dw3_data_<ovl>/dw3_bss_<ovl>, whose
 # __start_/__stop_ symbols GNU ld makes by itself; PE: the .dw3data$<ovl>_1/.dw3bss$<ovl>_1 chunk groups between the
 # generated markers), so that the overlay manager can snapshot and restore them (port/src/overlay.c) with no linker
-# script. GNU objcopy and objdump do the renaming on both formats (llvm-objcopy cannot rename COFF sections); a
-# launcher of the user's (ccache) still runs, after the rename's. The game's own main() becomes game_main
-# (port/src/main.c has the host's).
+# script. On ELF GNU objcopy renames the sections after the compile; on PE (clang) the launcher forces the overlay's
+# `#pragma clang section` into the compile instead (GNU objcopy drops the COMDAT flag of the COFF sections it
+# rewrites, and lld then discards the units' .pdata/.xdata unwind tables; llvm-objcopy cannot rename COFF sections
+# at all). GNU objdump reads both formats for the checks. A launcher of the user's (ccache) still runs, after the
+# rename's. The game's own main() becomes game_main (port/src/main.c has the host's).
 find_program(DW3_OBJCOPY NAMES objcopy NO_CMAKE_FIND_ROOT_PATH)
 find_program(DW3_OBJDUMP NAMES objdump NO_CMAKE_FIND_ROOT_PATH)
 if(NOT DW3_OBJCOPY OR NOT DW3_OBJDUMP)
     message(FATAL_ERROR "GNU objcopy and objdump (binutils) are needed on the host: the units' section renaming")
 endif()
+set(DW3_RENAME_FLAGS "")
 if(WIN32)
-    execute_process(COMMAND "${DW3_OBJCOPY}" --info OUTPUT_VARIABLE DW3_OBJCOPY_INFO ERROR_QUIET)
-    if(NOT DW3_OBJCOPY_INFO MATCHES "pe-x86-64")
-        message(FATAL_ERROR "${DW3_OBJCOPY} cannot read PE objects (x86_64-pe is not among its targets): the units' "
-                            "section renaming needs a host binutils with it (Fedora's and Ubuntu's have it)")
+    execute_process(COMMAND "${DW3_OBJDUMP}" --info OUTPUT_VARIABLE DW3_OBJDUMP_INFO ERROR_QUIET)
+    if(NOT DW3_OBJDUMP_INFO MATCHES "pe-x86-64")
+        message(FATAL_ERROR "${DW3_OBJDUMP} cannot read PE objects (x86_64-pe is not among its targets): the units' "
+                            "section checks need a host binutils with it (Fedora's and Ubuntu's have it)")
     endif()
+    list(APPEND DW3_RENAME_FLAGS --pe)
 endif()
 add_library(dw3_game OBJECT ${DW3_GAME_UNITS})
 set(DW3_RENAME_LAUNCHER "${DW3_PYTHON}" "${DW3_PORT_GEN}" rename --objcopy "${DW3_OBJCOPY}" --objdump "${DW3_OBJDUMP}"
-    --units "${DW3_GEN}/unit_overlays.txt" --)
+    --units "${DW3_GEN}/unit_overlays.txt" ${DW3_RENAME_FLAGS} --)
 if(CMAKE_C_COMPILER_LAUNCHER)
     list(APPEND DW3_RENAME_LAUNCHER ${CMAKE_C_COMPILER_LAUNCHER})
 endif()

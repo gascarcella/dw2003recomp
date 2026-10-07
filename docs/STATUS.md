@@ -58,7 +58,8 @@ The plan's milestones (`docs/PORT.md`):
 - **Platforms:** Linux x86_64. Windows is in progress (the board's Windows track, [#37](https://github.com/gascarcella/dw2003recomp/issues/37)):
   the cross toolchain (llvm-mingw, SDL3 for Windows, `scripts/build_windows.sh`) builds `dw2003.exe` and the
   launcher, which passes its self-test under Wine; the arena needs no alignment, fixed link address or linker-script
-  symbols, the overlay sections no linker script (the units' sections are renamed per overlay after each compile),
+  symbols, the overlay sections no linker script (the units' sections go to their overlay's: objcopy after each
+  compile on ELF, `#pragma clang section` on PE, which keeps the units' unwind tables),
   the state tables no `nm -S`; the runtime's system calls are split into POSIX and Windows halves
   (`port/src/platform.c`). Under Wine, headless, the game replays both layer-2 scripts with the Linux build's log,
   record and SPU trace byte for byte (`tests/port/run.py --exe build/port-win/dw2003.exe --wine`). Nothing has run on
@@ -72,7 +73,9 @@ The plan's milestones (`docs/PORT.md`):
   controls (rebinding, hotkeys, chords) and the mods' pages. A headless self-test runs in CI.
 - **Crash report** (`docs/PORT.md` "Crash report"): the game writes one on a signal or a fatal stop (build, vsync,
   overlays, log tail, registers, stack); the launcher keeps the run's log and puts the report into its Copy text; the
-  release carries the game's `.debug` file for `scripts/symbolize.py`. Windows's half (a minidump) is on the board.
+  release carries the game's `.debug` file for `scripts/symbolize.py`. On Windows a crash (an SEH exception) writes
+  the same report, its stack walked through the game's frames, plus a minidump for WinDbg with the build's PDB
+  (`tests/port/crash.py --wine`; `symbolize.py` reads the PDB through llvm-symbolizer).
 - **Game side:** `dw2003 --config FILE` (the settings file, schema 1), rebindable input, hotkeys, a pause key, the mod
   registry with manifests in `port/mods/`.
 - **Mods:** fast-forward (hold `Tab`, 4x), the 60 Hz mode (checked against the patched game in the emulator), skip

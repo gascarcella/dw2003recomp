@@ -177,17 +177,22 @@ At configure time:
   overlay's `.data`/`.bss` as empty labelled chunks in the groups `.dw3data$<ovl>_0`/`_2` and `.dw3bss$<ovl>_0`/`_2`.
 
 Each unit is compiled through `port_gen.py rename` (CMake's `C_COMPILER_LAUNCHER` on the units; a launcher of the
-user's such as ccache runs after it): the compile, then GNU objcopy renames the object's writable sections
-(`.data*`, `.bss*`; not `.data.rel.ro*`, const after relocation) into the overlay's: on ELF `dw3_data_<ovl>` and
+user's such as ccache runs after it): the object's writable sections (`.data*`, `.bss*`; not `.data.rel.ro*`, const
+after relocation) go into the overlay's: on ELF `dw3_data_<ovl>` and
 `dw3_bss_<ovl>` (`<ovl>` = `main` for the EXE), orphan output sections with C-identifier names, for which GNU ld
 makes `__start_`/`__stop_` by itself and which it places after `.data`/`.bss`, outside GNU_RELRO (a PIE link with
 `-z now` would be fine for them; the ELF link stays non-PIE for the debug channel's `nm` addresses, `docs/PORT.md`
 "Compiling the game C for the host"); on PE `.dw3data$<ovl>_1` and `.dw3bss$<ovl>_1`, chunk groups of the two output sections
 `.dw3data` and `.dw3bss` that lld sorts by their `$` suffix, so that they lie between the markers above (two output
 sections in all, not one per overlay). No linker script (lld for PE takes none; DECISIONS "Overlay sections by
-renaming, no linker script"). The host's GNU objcopy and objdump do the renaming for both formats: they read COFF
-(Fedora's and Ubuntu's binutils have the `x86_64-pe` target; CMake checks `objcopy --info`), and llvm-objcopy cannot
-rename COFF sections. `port/src/asmdata.c` names its FIELDSTG section explicitly the same way.
+renaming, no linker script"). On ELF the launcher runs the compile, then the host's GNU objcopy renames the
+sections. On PE (`--pe`) it forces the overlay's `#pragma clang section data=... bss=...` into the compile
+(`build/port-win/gen/sections/<ovl>.h`), and no objcopy touches the object: GNU objcopy drops the
+`IMAGE_SCN_LNK_COMDAT` flag of every COFF section it rewrites, after which lld discards the unit's COMDAT
+`.pdata$fn`/`.xdata$fn` (the x64 unwind tables; a crash report's stack walk and any SEH unwinding then stop at the
+first game frame), and llvm-objcopy cannot rename COFF sections at all. Either way the launcher checks the object
+with GNU objdump, which reads COFF too (Fedora's and Ubuntu's binutils have the `x86_64-pe` target; CMake checks
+`objdump --info`). `port/src/asmdata.c` names its FIELDSTG section explicitly the same way.
 
 At build time, after the units are compiled:
 - `overlay_tables.c`: per overlay `{ tier, file ID, name, [{ PS1 address, host function }], section bounds }`.
@@ -352,8 +357,8 @@ at 24-85 ms (mean 57) with no refill and no drop, and the disk file holds the WA
   nothing has run on real Windows yet (the board's Windows 9). The arena needs nothing of the linker (no alignment,
   no link-time symbols), the overlay sections need no linker script (above), `port_gen.py state` reads symbol sizes
   from a compile of the units, not from `nm -S` (COFF has none), and the runtime's system calls are platform-split
-  (`port/src/platform.c`; `docs/PORT.md` "Known limitations"); `--debug` is refused there, and the watchdog's and a
-  crash's report are the board's Windows 8. macOS is not planned.
+  (`port/src/platform.c`; `docs/PORT.md` "Known limitations"); `--debug` is refused there; a crash writes the report
+  and a minidump (`docs/PORT.md` "Crash report"). macOS is not planned.
 - The snapshot copies with plain byte loops in `no_sanitize_address` functions (ASan's redzones between globals
   are inside the ranges); so a sanitizer build's overlay-load log lines show other section sizes (ASan's redzones)
   than a normal build's: compare logs only between builds of the same kind.
