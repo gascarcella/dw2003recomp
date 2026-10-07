@@ -49,6 +49,7 @@ tools/appimage
 tools/llvm-mingw
 tools/sdl3-windows
 tools/ccache
+tools/dxc
 tools/local.env
 
 # --- Copyrighted SDK files (Psy-Q etc.): user-supplied only ---

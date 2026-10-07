@@ -84,6 +84,7 @@ runs:
           tools/llvm-mingw
           tools/appimage
           tools/ccache
+          tools/dxc
         key: tools-${{ inputs.cache }}-${{ runner.os }}-${{ steps.pins.outputs.hash }}
 
     # The venv's cmake and ninja (setup.sh cmake pins them) first on the PATH: build.sh, the cmake commands in ci.yml,
