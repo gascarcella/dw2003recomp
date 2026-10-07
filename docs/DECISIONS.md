@@ -247,8 +247,10 @@ sections by object path, which lld for PE cannot take, and which put the game's 
 with `-z now` (CI's Ubuntu). Now each unit's object has its `.data`/`.bss` sections renamed right after the compile
 (`port_gen.py rename`, the units' CMake compiler launcher, with the host's GNU objcopy, which reads COFF too): on ELF
 into `dw3_data_<ovl>`/`dw3_bss_<ovl>`, orphan sections for which GNU ld makes the `__start_`/`__stop_` symbols
-itself and which it places after `.data`/`.bss`, outside RELRO, so the ELF link is PIE or not as the toolchain
-likes; on PE into `$`-sorted chunk groups of two output sections, `.dw3data` and `.dw3bss`, between generated
+itself and which it places after `.data`/`.bss`, outside RELRO (a PIE link would be fine for them; the ELF link
+stays non-PIE because the debug channel, the MCP server and `tests/port/mods.py` resolve host symbols with `nm`'s
+link-time addresses, which a PIE relocates: CI's Ubuntu GCC links PIE by default); on PE into `$`-sorted chunk
+groups of two output sections, `.dw3data` and `.dw3bss`, between generated
 empty marker chunks that carry the same symbols (one section per overlay would be 600 PE sections). The post-link
 check reads the objects (`objdump -h`), not a link map, so it is the same on both. Not `#pragma clang section`:
 GCC has none, and one path for both compilers is worth the objcopy pass.

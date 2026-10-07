@@ -181,7 +181,8 @@ user's such as ccache runs after it): the compile, then GNU objcopy renames the 
 (`.data*`, `.bss*`; not `.data.rel.ro*`, const after relocation) into the overlay's: on ELF `dw3_data_<ovl>` and
 `dw3_bss_<ovl>` (`<ovl>` = `main` for the EXE), orphan output sections with C-identifier names, for which GNU ld
 makes `__start_`/`__stop_` by itself and which it places after `.data`/`.bss`, outside GNU_RELRO (a PIE link with
-`-z now` is fine); on PE `.dw3data$<ovl>_1` and `.dw3bss$<ovl>_1`, chunk groups of the two output sections
+`-z now` would be fine for them; the ELF link stays non-PIE for the debug channel's `nm` addresses, `docs/PORT.md`
+"Compiling the game C for the host"); on PE `.dw3data$<ovl>_1` and `.dw3bss$<ovl>_1`, chunk groups of the two output sections
 `.dw3data` and `.dw3bss` that lld sorts by their `$` suffix, so that they lie between the markers above (two output
 sections in all, not one per overlay). No linker script (lld for PE takes none; DECISIONS "Overlay sections by
 renaming, no linker script"). The host's GNU objcopy and objdump do the renaming for both formats: they read COFF

@@ -79,9 +79,16 @@ if(DW3_PORT_SANITIZE)
     list(APPEND DW3_COMMON_FLAGS -fsanitize=address,undefined -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address,undefined)
 endif()
-# PIE or not is the toolchain's choice: nothing depends on the link address (port/src/arena.c, DECISIONS "The arena
-# assumes no alignment and no link address"), and the overlay sections are orphan sections the linker places after
-# .data/.bss, outside GNU_RELRO (DECISIONS "Overlay sections by renaming, no linker script").
+# Non-PIE on ELF, for the debug channel's sake: the channel (port/src/debug.c), the MCP server (tools/mcp) and the
+# tests over them (tests/port/mods.py) resolve host symbols with nm's link-time addresses of build/port/dw2003, which
+# a PIE would relocate at load (Ubuntu's GCC links PIE by default; CI, 2026-10-07). Nothing else needs it: the arena
+# needs no link address (port/src/arena.c) and the overlay sections are orphan sections the linker places after
+# .data/.bss, outside GNU_RELRO, so a PIE link works for everything but the channel (DECISIONS "Overlay sections by
+# renaming, no linker script"). PE has no such flag (ASLR relocates the image; --debug is refused there).
+if(NOT WIN32)
+    list(APPEND DW3_COMMON_FLAGS -fno-pie)
+    add_link_options(-no-pie)
+endif()
 # -m32: everything compiled and linked 32-bit (nm reads both).
 if(DW3_PORT_M32)
     if(WIN32)

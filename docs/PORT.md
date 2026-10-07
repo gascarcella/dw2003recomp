@@ -30,8 +30,10 @@ formats are in `port/README.md`; the shim's per-function behaviour is in `port/p
 ## Compiling the game C for the host
 - **Flags:** C99 with GNU extensions (`gnu99`: unprototyped `f()` declarations are common in the game C and C23 would
   read them as `(void)`), `-fsigned-char` (the code relies on signed `char`), `-fwrapv`, `-fno-strict-aliasing`.
-  PIE or not is the toolchain's default: nothing depends on the link address (see "Memory arena"), and the overlay
-  sections are orphan sections the linker places after `.data`/`.bss`, outside GNU_RELRO (see "Overlays").
+  On ELF `-fno-pie`/`-no-pie`, for the debug channel alone: it, the MCP server and `tests/port/mods.py` resolve host
+  symbols with `nm`'s link-time addresses of `build/port/dw2003`, which a PIE would relocate at load (Ubuntu's GCC
+  links PIE by default). Nothing else needs it: the arena needs no link address (see "Memory arena") and the
+  overlay sections are orphan sections the linker places after `.data`/`.bss`, outside GNU_RELRO (see "Overlays").
 - **`INCLUDE_ASM`** is empty on the host. No game function is left in asm except the 8 holdouts, and with
   `NON_MATCHING` their WIP C is compiled instead: the WIP C is the port's code. `tests/holdouts/run.sh` validates it
   by running a `NON_MATCHING` PS1 image through the replays (see "Testing").
