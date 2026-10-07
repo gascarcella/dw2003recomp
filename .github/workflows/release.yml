@@ -37,6 +37,7 @@ jobs:
     timeout-minutes: 45
     env:
       DW3_GAMEDATA: ${{ github.workspace }}/dw2003-gamedata
+      DW3_UBUNTU_MIRROR: http://azure.archive.ubuntu.com/ubuntu   # as ci.yml: the runners' own mirror
     steps:
       - uses: actions/checkout@v4
         with:

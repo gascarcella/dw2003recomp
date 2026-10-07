@@ -71,6 +71,7 @@ jobs:
     env:
       DW3_GAMEDATA: ${{ github.workspace }}/dw2003-gamedata
       DW3_JOBS: "2"
+      DW3_UBUNTU_MIRROR: http://azure.archive.ubuntu.com/ubuntu   # the runners' own mirror (setup.sh: archive.ubuntu.com stalls from them)
     steps:
       - uses: actions/checkout@v4
         with:
@@ -234,6 +235,7 @@ jobs:
     env:
       DW3_GAMEDATA: ${{ github.workspace }}/dw2003-gamedata
       DW3_JOBS: "2"
+      DW3_UBUNTU_MIRROR: http://azure.archive.ubuntu.com/ubuntu
       WINEDEBUG: "-all"
     steps:
       - uses: actions/checkout@v4
