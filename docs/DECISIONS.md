@@ -232,8 +232,9 @@ do none of that (COFF aligns sections to 8 KB at most, ASLR moves the image, lld
 regions are macros on `port_arena` (`include/port.h`), a tag is a pointer's word offset in the tag window (the units'
 data regions and the arena, measured at startup, up to 64 MB so that ASan's redzones fit; `port_ptr_to_u32`, resolved
 against `port_tag_base` by the shim),
-the last `s32` that carried half a host pointer is a pointer, and the binary is PIE wherever the toolchain defaults
-to it. The symbol sizes of `port_gen.py state` come from compiling the units (asm comments printing `sizeof`), not
+the last `s32` that carried half a host pointer is a pointer. The ELF link stays non-PIE for now, for the ld script
+alone: its `INSERT BEFORE .data` sections fall inside GNU_RELRO in a PIE link with `-z now` (Ubuntu's defaults) and
+the game's data comes out read-only; Windows 2 replaces the script. The symbol sizes of `port_gen.py state` come from compiling the units (asm comments printing `sizeof`), not
 from `nm -S`, which COFF cannot give. The Windows track on the project board builds on this. The tag window also
 fixed a silent drop: a static ordering table (FIGHTSTG's cursor) lay outside the old walkable window.
 

@@ -207,7 +207,8 @@ macros on it (`include/port.h`). A pointer's PS1-style address (`PTR_TO_S32`) is
 ordering-table tag (`PTR_TO_U32`) is a pointer's word offset in the **tag window**, the units' `.data`/`.bss` regions
 plus the arena (about 6 MB, 27 MB under ASan; measured by `port_overlay_init`, under 64 MB by a startup check), since
 a few ordering tables are static (`fightstg_cursor_ot`); the shim's `DrawOTag` walks tags from `port_tag_base`. No alignment or link
-address is assumed (the binary may be PIE): the arrangement a PE build can use as it is.
+address is assumed by the arena (the ELF link is still non-PIE, for the ld script's RELRO interaction only;
+`port/CMakeLists.txt`): the arrangement a PE build can use as it is.
 
 **Overlay manager** (2.5): every overlay is linked in. `OVERLAY_COPY` (the game's two `memcpy` sites) calls
 `port_overlay_load(tier, file, ...)`: a file with a table becomes the tier's current overlay and gets its `.data` and
@@ -337,7 +338,8 @@ at 24-85 ms (mean 57) with no refill and no drop, and the disk file holds the WA
 - The BIOS is a stand-in: `BIOS_PTR` serves a 256-byte region at `0x1FC00100` holding a version string.
 - Windows/macOS: the ld script (`INSERT`, `-T`) that collects the per-overlay sections is GNU ld/ELF; PE needs
   another arrangement for them (the Windows track on the project board). The arena needs nothing of the linker
-  since 2026-10-07 (no alignment, no link-time symbols, PIE allowed), and `port_gen.py state` reads symbol sizes
+  since 2026-10-07 (no alignment, no link-time symbols; `-no-pie` stays only because the script's inserted sections
+  would fall into a PIE link's RELRO), and `port_gen.py state` reads symbol sizes
   from a compile of the units, not from `nm -S` (COFF has none).
 - The snapshot copies with plain byte loops in `no_sanitize_address` functions (ASan's redzones between globals
   are inside the ranges); so a sanitizer build's overlay-load log lines show other section sizes (ASan's redzones)

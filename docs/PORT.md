@@ -30,8 +30,9 @@ formats are in `port/README.md`; the shim's per-function behaviour is in `port/p
 ## Compiling the game C for the host
 - **Flags:** C99 with GNU extensions (`gnu99`: unprototyped `f()` declarations are common in the game C and C23 would
   read them as `(void)`), `-fsigned-char` (the code relies on signed `char`), `-fwrapv`, `-fno-strict-aliasing`.
-  The binary is the toolchain's default (PIE where that is the default): nothing depends on the link address (see
-  "Memory arena").
+  On ELF `-fno-pie`/`-no-pie` still: not for the arena (nothing depends on the link address any more, see "Memory
+  arena") but for the ld script, whose `INSERT BEFORE .data` sections land inside GNU_RELRO in a PIE link with
+  `-z now` (Ubuntu's defaults) and come out read-only; "Windows 2" replaces the script and lifts this.
 - **`INCLUDE_ASM`** is empty on the host. No game function is left in asm except the 8 holdouts, and with
   `NON_MATCHING` their WIP C is compiled instead: the WIP C is the port's code. `tests/holdouts/run.sh` validates it
   by running a `NON_MATCHING` PS1 image through the replays (see "Testing").
@@ -85,7 +86,8 @@ macros in `include/port.h`, and `tools/port_gen.py` generates the same numbers i
 - The regions are macros on `port_arena + offset`, so their addresses stay constant expressions (static initializers
   in `records.c` and FIELDSTG's script table use them). A pointer's PS1-style address is `0x80082CB0 + offset`
   (`port_ptr_to_s32`); an ordering-table tag is an offset in the tag window (`port_ptr_to_u32`, below).
-- **No alignment or link address is assumed:** the block is 4 KB-aligned, the binary may be PIE, and nothing
+- **No alignment or link address is assumed:** the block is 4 KB-aligned, the arena would work in a PIE (the ELF
+  link stays non-PIE for the ld script's sake, "Compiling the game C for the host"), and nothing
   relies on the arena lying below 4 GB (the last `s32` that held half a host pointer, `FieldstgEventDef.start`, is a
   pointer now). This is what a PE (Windows) build needs: COFF allows no section alignment past 8 KB and ASLR moves
   the image.
@@ -312,7 +314,8 @@ FILE` names them with `addr2line` against the unstripped build or the release's 
 signal handler is async-signal-safe (a static buffer, `write`), runs on its own stack and is one-shot: after the
 report the signal's default action ends the process, so the exit status stays the signal's. The report never enters
 the frame log or the record. Test hook: `DW3_PORT_CRASH_AT=VSYNC` writes through a NULL pointer at that vsync
-(`tests/port/crash.py`).
+(`tests/port/crash.py`). A crash in CI leaves its report in the run's `crash-reports` artifact (`ci.yml`'s last step,
+on failure: `crash-*.txt` of the checkout and of `build/`).
 
 ## Known limitations
 - **Pads:** one digital pad on port 0; no analog mode, no rumble (`PadSetAct` is accepted and ignored), no second
