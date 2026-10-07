@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "id": "xp_boost",
+  "name": "XP boost",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "Multiplies what a won battle gives: the Digimon's experience, the Digivolutions' (forms') experience and the Bits. The sliders go up to 5x; to go up to 10x, switch on Type values and type them in. Works with Party experience: its shares come from the boosted experience.",
+  "presets": [
+    { "id": "boost", "name": "Boost", "description": "Everything 2x.",
+      "values": { "exp": 2, "form_exp": 2, "bits": 2 } },
+    { "id": "turbo", "name": "Turbo", "description": "Everything 3x.",
+      "values": { "exp": 3, "form_exp": 3, "bits": 3 } },
+    { "id": "ultra", "name": "Ultra", "description": "Everything 5x, the sliders' top.",
+      "values": { "exp": 5, "form_exp": 5, "bits": 5 } }
+  ],
+  "options": [
+    { "id": "exp", "name": "Experience (x)",
+      "description": "The Digimon's experience from a battle, after the game splits it among the fighters (an equipped experience bonus item adds its fifth on top).",
+      "type": "float", "min": 1, "max": 10, "step": 0.1, "slider_max": 5, "input_toggle": "manual", "default": 2,
+      "applies": "live" },
+    { "id": "form_exp", "name": "Evolution experience (x)",
+      "description": "The experience of each Digivolution (form) that fought, after the game's cap (10 a battle, 50 past a form's threshold level).",
+      "type": "float", "min": 1, "max": 10, "step": 0.1, "slider_max": 5, "input_toggle": "manual", "default": 2,
+      "applies": "live" },
+    { "id": "bits", "name": "Bits (x)",
+      "description": "The money from a battle (an equipped money bonus item's fifth included). Bits stop at 9,999,999.",
+      "type": "float", "min": 1, "max": 10, "step": 0.1, "slider_max": 5, "input_toggle": "manual", "default": 2,
+      "applies": "live" },
+    { "id": "manual", "name": "Type values (up to 10x)",
+      "description": "Off: sliders from 1x to 5x (a higher value in the settings counts as 5x). On: type any value from 1x to 10x.",
+      "type": "bool", "default": false, "applies": "live" }
+  ]
+}

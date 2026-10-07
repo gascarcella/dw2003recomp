@@ -947,6 +947,30 @@ void App::draw_mod(const ModManifest &m) {
     if (m.options.empty()) {
         return;
     }
+    // The presets: a button each, the one whose values are all in place shown pressed.
+    if (!m.presets.empty()) {
+        ImGui::BeginDisabled(!settings_.writable());
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Presets");
+        for (const ModPreset &p : m.presets) {
+            ImGui::SameLine();
+            const bool active = values.preset_active(m, p);
+            if (active) {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
+            }
+            if (ImGui::Button(p.name.c_str())) {
+                values.apply_preset(m, p);
+                dirty_ = true;
+            }
+            if (active) {
+                ImGui::PopStyleColor();
+            }
+            if (!p.description.empty()) {
+                ImGui::SetItemTooltip("%s", p.description.c_str());
+            }
+        }
+        ImGui::EndDisabled();
+    }
     // The options: the ungrouped ones first, then each group in the order the manifest names it.
     std::vector<std::string> groups = { "" };
     for (const ModOption &o : m.options) {
@@ -999,6 +1023,15 @@ void App::draw_mod(const ModManifest &m) {
     }
 }
 
+// A typed number's range, shown beside it ("" for a slider or an unbounded number).
+static std::string typed_range(const ModOption &o, bool typed) {
+    char text[64] = "";
+    if (typed && o.has_min && o.has_max) {
+        SDL_snprintf(text, sizeof(text), "%g to %g", o.min, o.max);
+    }
+    return text;
+}
+
 bool App::draw_mod_option(const ModManifest &m, const ModOption &o, ModValues &values,
                           const std::vector<BindingUse> &uses) {
     bool changed = false;
@@ -1017,7 +1050,11 @@ bool App::draw_mod_option(const ModManifest &m, const ModOption &o, ModValues &v
     }
     ImGui::TableNextColumn();
     const Json v = values.value(m, o);
-    const float w = 260 * ImGui::GetStyle().FontScaleDpi;
+    const float w = std::min(260 * ImGui::GetStyle().FontScaleDpi, ImGui::GetContentRegionAvail().x); // in the column
+    // A number's width, leaving room for its range beside it when it is typed.
+    auto number_width = [&](const std::string &range) {
+        return range.empty() ? w : w - ImGui::CalcTextSize(range.c_str()).x - ImGui::GetStyle().ItemSpacing.x;
+    };
     switch (o.type) {
     case ModOption::Type::Bool: {
         bool b = v.as_bool(false);
@@ -1028,17 +1065,24 @@ bool App::draw_mod_option(const ModManifest &m, const ModOption &o, ModValues &v
         break;
     }
     case ModOption::Type::Int: {
-        int x = (int)v.as_number(0);
-        ImGui::SetNextItemWidth(w);
-        bool edited = o.has_min && o.has_max
-                          ? ImGui::SliderInt("##v", &x, (int)o.min, (int)o.max, "%d", ImGuiSliderFlags_AlwaysClamp)
-                          : ImGui::InputInt("##v", &x, o.step > 0 ? (int)o.step : 1);
+        // With an input_toggle: a slider up to slider_max while it is off, a plain typed number while it is on.
+        const bool typed = values.typed(m, o), slider = o.has_min && o.has_max && !typed;
+        const double top = slider && o.has_slider_max ? o.slider_max : o.max;
+        int x = (int)values.effective(m, o).as_number(0);
+        const std::string range = typed_range(o, typed);
+        ImGui::SetNextItemWidth(number_width(range));
+        bool edited = slider ? ImGui::SliderInt("##v", &x, (int)o.min, (int)top, "%d", ImGuiSliderFlags_AlwaysClamp)
+                             : ImGui::InputInt("##v", &x, typed ? 0 : o.step > 0 ? (int)o.step : 1);
+        if (!range.empty()) {
+            ImGui::SameLine();
+            ImGui::TextDisabled("%s", range.c_str());
+        }
         if (edited) {
             if (o.has_min && x < o.min) {
                 x = (int)o.min;
             }
-            if (o.has_max && x > o.max) {
-                x = (int)o.max;
+            if (o.has_max && x > top) {
+                x = (int)top;
             }
             values.set(m, o, Json::number(x));
             changed = true;
@@ -1046,22 +1090,29 @@ bool App::draw_mod_option(const ModManifest &m, const ModOption &o, ModValues &v
         break;
     }
     case ModOption::Type::Float: {
-        float x = (float)v.as_number(0);
-        ImGui::SetNextItemWidth(w);
+        const bool typed = values.typed(m, o), slider = o.has_min && o.has_max && !typed;
+        const double top = slider && o.has_slider_max ? o.slider_max : o.max;
+        float x = (float)values.effective(m, o).as_number(0);
+        const std::string range = typed_range(o, typed);
+        ImGui::SetNextItemWidth(number_width(range));
         const char *fmt = o.step >= 1 ? "%.0f" : o.step >= 0.1 ? "%.1f" : o.step >= 0.01 ? "%.2f" : "%.3f";
-        bool edited = o.has_min && o.has_max
-                          ? ImGui::SliderFloat("##v", &x, (float)o.min, (float)o.max, fmt, ImGuiSliderFlags_AlwaysClamp)
-                          : ImGui::InputFloat("##v", &x, (float)o.step, (float)o.step * 10, fmt);
+        bool edited = slider ? ImGui::SliderFloat("##v", &x, (float)o.min, (float)top, fmt, ImGuiSliderFlags_AlwaysClamp)
+                      : ImGui::InputFloat("##v", &x, typed ? 0 : (float)o.step, typed ? 0 : (float)o.step * 10, fmt);
+        if (!range.empty()) {
+            ImGui::SameLine();
+            ImGui::TextDisabled("%s", range.c_str());
+        }
         if (edited) {
             double d = x;
             if (o.step > 0) {
                 d = (o.has_min ? o.min : 0) + std::round((d - (o.has_min ? o.min : 0)) / o.step) * o.step;
+                d = std::round(d * 1e9) / 1e9; // 1 + 15 * 0.1 is 2.5, not 2.5000000000000004, in the file
             }
             if (o.has_min && d < o.min) {
                 d = o.min;
             }
-            if (o.has_max && d > o.max) {
-                d = o.max;
+            if (o.has_max && d > top) {
+                d = top;
             }
             values.set(m, o, Json::number(d));
             changed = true;
