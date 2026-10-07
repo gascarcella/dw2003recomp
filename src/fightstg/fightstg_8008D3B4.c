@@ -7088,22 +7088,6 @@ void fightstg_models_get_range(s32 type, s32 *min, s32 *max) {
     *max = last;
 }
 
-#ifdef NON_MATCHING
-/* 98.2%: the clamp loops match with p = &stats.unk_00[6]/[12] and p[i] (wip-9); the enemy branch matches with its own
- * loop variable j and records_state.enemies[member] read directly (last-fight; the original keeps j in a1). Left: the original allocates m to
- * s3 and id to s4 (here swapped: m conflicts with the first item loop's pseudo in s3, so it gets s4), and keeps
- * digimon->unk_3C0 in s0 from the second item loop's start to the third's (copied to s3 for the second).
- * The item lookup is records_funcs.get_item (its own object: the original's in-loop lui/lw). wip-12: the original keeps
- * digimon->unk_3C0 as a base for the second and third item loops (copied for the second, walked in place by the
- * third): `items = digimon->unk_3C0;` and index loops on items[i] give that structure but need one more saved
- * register (96.4%; 98.3 with search-output loop counters, not adopted). final-fight: in the original p is s0 in every
- * item loop and found is s3. `p = digimon->unk_3C0;` once, p[i] in the second loop and p++ in the third gives the
- * copy (96.9%) but found (3*14/56 = 0.75) still outranks p (5*37/305 = 0.61); an own `items` for those two: 97.0%.
- * last-fight (final): with this form p is 5*43/298 = 0.72 against found's 0.74 (one ref short), but it re-sets p for
- * the third loop where the original doesn't. In the original's form (p[i] / p++, 97.7%) found must lose to p, so
- * the original's found has a lower priority (>= 59 insns or <= 11 refs) or p more refs: own walker for the second
- * loop, `items` base, LOOP_BLOCK around the other item loops (+1 ref each), the permuter (30 min; its best drops a
- * `found = 1` or adds dead tests of p): no match. */
 /* What records_funcs.get_item(item)->data points to, as fightstg_rules_get_stats reads it: one view of
  * RecordsWeapon, RecordsArmor and RecordsAccessory (include/records.h), as the function reads them all through one
  * pointer. */
@@ -7119,6 +7103,36 @@ typedef struct FightstgItemBonus {
     /* 0x12 */ u8 strong_type;
 } FightstgItemBonus;
 
+/* An enemy's stats: its record's, scaled by the fight's strength for it, plus the member's modifiers. */
+static inline void fightstg_rules_get_enemy_stats(FightstgStats *out, FightstgMember *m, s32 member) {
+    FightstgEnemyRecord *enemy;
+    s32 j;
+
+    enemy = fightstg_enemy_records.get(m->digimon);
+    out->level = records_state.enemies[member].level;
+    for (j = 0; j < 5; j++) {
+        out->stats[j] = enemy->stats[j] * records_state.enemies[member].stat_scale / 16;
+    }
+    for (j = 0; j < 12; j++) {
+        out->resists[j] = enemy->resists[j];
+    }
+    out->status = m->status;
+    if (m->modifiers[0] != 0) {
+        out->stats[0] += m->modifiers[0];
+    }
+    if (m->modifiers[1] != 0) {
+        out->stats[1] += m->modifiers[1];
+    }
+    if (m->modifiers[2] != 0) {
+        out->stats[4] += m->modifiers[2];
+    }
+    if (m->modifiers[3] != 0) {
+        out->stats[2] += m->modifiers[3];
+    }
+    out->type = enemy->type;
+    out->power_up = m->power_up;
+}
+
 /* Fills the stats block of a combatant (first: fightstg_rules.stats[0], else [1]): a party member's
  * (side 0) from its Digimon, its current form and its items; an enemy's from its record. */
 FightstgStats *fightstg_rules_get_stats(u8 side, s32 first, s32 member) {
@@ -7130,13 +7144,11 @@ FightstgStats *fightstg_rules_get_stats(u8 side, s32 first, s32 member) {
     GamestateRecord *digimon;
     RecordsItem *entry;
     FightstgItemBonus *item;
-    FightstgEnemyRecord *enemy;
-    s16 *p;
     s32 id;
-    s32 i;
+    s16 *p;
     s32 n;
     s32 found;
-    s32 j;
+    s32 i;
 
     if (first) {
         out = &fightstg_rules.stats[0];
@@ -7174,6 +7186,9 @@ FightstgStats *fightstg_rules_get_stats(u8 side, s32 first, s32 member) {
             stats.values[10] += m->modifiers[2];
         }
         out->level = stats.values[0];
+        /* FAKE: p walks the stat totals here and the equipment below (the shape of the US decomp's
+         * FIGHTSTG_computeStats): the extra references put p ahead of found in gcc's register allocation, so p gets
+         * s0 and found s3, as in the original; a pointer of its own for the totals leaves them swapped (99.1%). */
         p = &stats.values[6];
         for (i = 0; i < 5; i++) {
             if (p[i] > 0) {
@@ -7193,9 +7208,9 @@ FightstgStats *fightstg_rules_get_stats(u8 side, s32 first, s32 member) {
         out->status = m->status;
         digimon = gamestate_data.funcs.get_record(id);
         p = &digimon->equipment[4];
-        for (i = 0; i < 2; i++, p++) {
-            if (*p != 0) {
-                item = records_funcs.get_item(*p)->data;
+        for (i = 0; i < 2; i++) {
+            if (p[i] != 0) {
+                item = records_funcs.get_item(p[i])->data;
                 if (item->kind == 0x11) {
                     out->resists[7] = item->value;
                 } else if (item->kind == 0x12) {
@@ -7209,12 +7224,13 @@ FightstgStats *fightstg_rules_get_stats(u8 side, s32 first, s32 member) {
                 }
             }
         }
-        n = 0;
+        p = digimon->equipment;
         out->type = records_get_digimon_func(m->digimon)->type;
         out->power_up = m->power_up;
-        for (i = 0, p = digimon->equipment; i < 4; i++, p++) {
-            if (*p > 0) {
-                entry = records_funcs.get_item(*p);
+        n = 0;
+        for (i = 0; i < 4; i++) {
+            if (p[i] > 0) {
+                entry = records_funcs.get_item(p[i]);
                 if (entry->type >= 2 && entry->type <= 14) {
                     item = entry->data;
                     out->accuracy += item->accuracy;
@@ -7230,30 +7246,30 @@ FightstgStats *fightstg_rules_get_stats(u8 side, s32 first, s32 member) {
             }
         }
         found = 0;
-        for (i = 0, p = digimon->equipment; i < 4; i++, p++) {
-            if (i != 1 && *p > 0) {
-                item = records_funcs.get_item(*p)->data;
-                if (*p == 0x97) {
+        for (i = 0; i < 4; i++) {
+            if (i != 1 && p[i] > 0) {
+                item = records_funcs.get_item(p[i])->data;
+                if (p[i] == 0x97) {
                     out->poison_chance = item->status_chance;
                     out->poison_power = item->status_power;
                     found = 1;
-                } else if (*p == 0xD2) {
+                } else if (p[i] == 0xD2) {
                     out->paralysis_chance = item->status_chance;
                     out->paralysis_power = item->status_power;
                     found = 1;
-                } else if (*p == 0xB4 || *p == 0xC2) {
+                } else if (p[i] == 0xB4 || p[i] == 0xC2) {
                     out->confusion_chance = item->status_chance;
                     out->confusion_power = item->status_power;
                     found = 1;
-                } else if (*p == 0x6D || *p == 0xBA) {
+                } else if (p[i] == 0x6D || p[i] == 0xBA) {
                     out->knockout_chance = item->status_chance;
                     out->knockout_power = item->status_power;
                     found = 1;
-                } else if (*p == 0x5E || *p == 0x93 || *p == 0xAD) {
+                } else if (p[i] == 0x5E || p[i] == 0x93 || p[i] == 0xAD) {
                     out->drain_chance = item->status_chance;
                     out->drain_power = item->status_power;
                     found = 1;
-                } else if (*p == 0x96 || *p == 0xBF) {
+                } else if (p[i] == 0x96 || p[i] == 0xBF) {
                     out->critical = item->status_power;
                     found = 1;
                 }
@@ -7261,87 +7277,67 @@ FightstgStats *fightstg_rules_get_stats(u8 side, s32 first, s32 member) {
         }
         if (!found) {
             p = &digimon->equipment[4];
-            for (i = 0; i < 2; i++, p++) {
-                if (*p == 0x13C) {
+            for (i = 0; i < 2; i++) {
+                if (p[i] == 0x13C) {
                     out->multi_hit = 1;
-                } else if (*p == 0x13D) {
+                } else if (p[i] == 0x13D) {
                     item = records_funcs.get_item(0x13D)->data;
                     out->critical = item->value;
-                } else if (*p == 0x13E) {
+                } else if (p[i] == 0x13E) {
                     item = records_funcs.get_item(0x13E)->data;
                     out->counter = item->value;
                 }
             }
         }
         p = &digimon->equipment[4];
-        for (i = 0; i < 2; i++, p++) {
-            if (*p >= 0x153 && *p < 0x168) {
-                item = records_funcs.get_item(*p)->data;
-                if (*p < 0x156) {
+        for (i = 0; i < 2; i++) {
+            if (p[i] >= 0x153 && p[i] <= 0x167) {
+                item = records_funcs.get_item(p[i])->data;
+                if (p[i] < 0x156) {
                     out->attack_element = 2;
-                } else if (*p < 0x159) {
+                } else if (p[i] < 0x159) {
                     out->attack_element = 3;
-                } else if (*p < 0x15C) {
+                } else if (p[i] < 0x15C) {
                     out->attack_element = 4;
-                } else if (*p < 0x15F) {
+                } else if (p[i] < 0x15F) {
                     out->attack_element = 5;
-                } else if (*p < 0x162) {
+                } else if (p[i] < 0x162) {
                     out->attack_element = 6;
-                } else if (*p < 0x165) {
+                } else if (p[i] < 0x165) {
                     out->attack_element = 7;
-                } else if (*p < 0x168) {
+                } else if (p[i] < 0x168) {
                     out->attack_element = 8;
                 }
                 out->attack_element_power = item->value;
-            } else if (*p == 0x145 || *p == 0x146) {
-                out->guard = ((FightstgItemBonus *)records_funcs.get_item(*p)->data)->value;
-            } else if (*p == 0x14B || *p == 0x14C) {
-                out->accuracy += ((FightstgItemBonus *)records_funcs.get_item(*p)->data)->value;
-            } else if (*p == 0x14D || *p == 0x14E) {
-                out->evasion += ((FightstgItemBonus *)records_funcs.get_item(*p)->data)->value;
-            } else if (*p == 0x14F || *p == 0x150) {
-                out->escape = ((FightstgItemBonus *)records_funcs.get_item(*p)->data)->value;
-            } else if (*p == 0x13F) {
-                records_funcs.get_item(0x13F);
+            } else if (p[i] >= 0x145 && p[i] <= 0x146) {
+                item = records_funcs.get_item(p[i])->data;
+                out->guard = item->value;
+            } else if (p[i] >= 0x14B && p[i] <= 0x14C) {
+                item = records_funcs.get_item(p[i])->data;
+                out->accuracy += item->value;
+            } else if (p[i] >= 0x14D && p[i] <= 0x14E) {
+                item = records_funcs.get_item(p[i])->data;
+                out->evasion += item->value;
+            } else if (p[i] >= 0x14F && p[i] <= 0x150) {
+                item = records_funcs.get_item(p[i])->data;
+                out->escape = item->value;
+            } else if (p[i] == 0x13F) {
+                item = records_funcs.get_item(p[i])->data;
                 out->no_escape = 1;
-            } else if (*p == 0x147 || *p == 0x148) {
-                out->steal = ((FightstgItemBonus *)records_funcs.get_item(*p)->data)->value;
+            } else if (p[i] >= 0x147 && p[i] <= 0x148) {
+                item = records_funcs.get_item(p[i])->data;
+                out->steal = item->value;
             }
         }
     } else {
         m = &fightstg_battle.state.members[1][member];
-        enemy = fightstg_enemy_records.get(m->digimon);
-        out->level = records_state.enemies[member].level;
-        for (j = 0; j < 5; j++) {
-            out->stats[j] = enemy->stats[j] * records_state.enemies[member].stat_scale / 16;
-        }
-        for (j = 0; j < 12; j++) {
-            out->resists[j] = enemy->resists[j];
-        }
-        out->status = m->status;
-        if (m->modifiers[0] != 0) {
-            out->stats[0] += m->modifiers[0];
-        }
-        if (m->modifiers[1] != 0) {
-            out->stats[1] += m->modifiers[1];
-        }
-        if (m->modifiers[2] != 0) {
-            out->stats[4] += m->modifiers[2];
-        }
-        if (m->modifiers[3] != 0) {
-            out->stats[2] += m->modifiers[3];
-        }
-        out->type = enemy->type;
-        out->power_up = m->power_up;
+        fightstg_rules_get_enemy_stats(out, m, member);
     }
     if (first) {
         return &fightstg_rules.stats[0];
     }
     return &fightstg_rules.stats[1];
 }
-#else
-INCLUDE_ASM("asm/fightstg/nonmatchings/fightstg_8008D3B4", fightstg_rules_get_stats);
-#endif
 
 s32 fightstg_rules_get_field_bonus(s32 value, s32 element) {
     FightstgField *info = &fightstg_battle.state.field;
