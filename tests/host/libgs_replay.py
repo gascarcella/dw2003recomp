@@ -23,7 +23,8 @@ import gte  # noqa: E402  (the wrapper's scratch addresses)
 import libgs_view as family  # noqa: E402
 from oracle import LARGE_READ, Symbols  # noqa: E402
 
-WRAPPED = ("GsSetRefView2", "GsGetLw", "MulMatrix", "MulMatrix2", "ApplyMatrixLV", "TransposeMatrix", "SquareRoot0")
+WRAPPED = ("GsSetRefView2", "GsGetLw", "GsSetFlatLight", "MulMatrix", "MulMatrix2", "ApplyMatrixLV", "TransposeMatrix",
+           "SquareRoot0")
 
 
 def build(out, m32=False, cflags=""):
@@ -67,7 +68,7 @@ def replay(golden, binary, verbose=False):
     calls, mismatches = 0, []
     for case in golden["cases"]:
         bufs = case["buffers"]
-        for call in case["calls"]:
+        for k, call in enumerate(case["calls"]):
             calls += 1
             if int(call["func"], 16) != wrap:
                 raise ValueError(f"{case['name']}: not the wrapper ({call['func']})")
@@ -79,6 +80,11 @@ def replay(golden, binary, verbose=False):
                 ws, ws_copy, view, out_regs, v0 = ask(f"V {fn} {regs} {bufs['view']} {a0:#x} {a1:#x}")
                 got = {f"0x{family.WS_ADDR:08X}": ws, f"0x{family.WS_COPY_ADDR:08X}": ws_copy, "buf:view": view,
                        f"0x{family.VIEW_BASE_ADDR:08X}": state_base, f"0x{family.PSDCNT_ADDR:08X}": state_psdcnt}
+            elif fn == "GsSetFlatLight":
+                # the case's calls build on each other (a stage's three lights); the first starts from zero matrices
+                light = bufs[call["args"][1]["buf"]]
+                lm, cm, out_regs, v0 = ask(f"L {regs} {call['args'][0]:#x} {light} {1 if k == 0 else 0}")
+                got = {f"0x{family.LIGHT_ADDR:08X}": lm, f"0x{family.COLOR_ADDR:08X}": cm}
             else:
                 args, distinct = [], []
                 for i, a in enumerate(call["args"][:3]):

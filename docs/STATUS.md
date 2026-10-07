@@ -45,8 +45,8 @@ The plan's milestones (`docs/PORT.md`):
 - **M0 (groundwork) and M1 (headless build):** all 388 units compile for the host (`-m64 -Werror` gate in CI); the port
   boots the disc (SHA-1 checked) and replays both layer-2 scripts with the emulator's checkpoints.
 - **M2 (rendering):** a software GPU with the whole VRAM equal to the emulator's at the checked points (new_game; the
-  first battle's textures, `tests/port/vram.py`); LIBGS's battle camera (`GsSetRefView2`, `GsSetProjection`) equal to
-  the PS1's to the bit; an SDL3 window with keyboard and gamepad. Missing: LIBGS's light colours (`GsSetFlatLight`, issue #19).
+  first battle's textures, `tests/port/vram.py`); LIBGS's battle camera and lights (`GsSetRefView2`, `GsSetProjection`,
+  `GsSetFlatLight`) equal to the PS1's to the bit; an SDL3 window with keyboard and gamepad.
 - **M3 (sound):** our own SPU core and LIBSND reproduce the emulator's SPU write traces exactly on its timeline
   (`docs/SOUND.md`); output through SDL3 or `--wav`.
 - **M4 (saves):** memory cards as `.mcd` images; saves move both ways between the port and the emulator.
@@ -84,7 +84,6 @@ The plan's milestones (`docs/PORT.md`):
   BIOS.
 
 ## Known limitations
-- The battle's lights: `GsSetFlatLight`'s colours are not loaded into the GTE ([issue #19](https://github.com/gascarcella/dw2003recomp/issues/19)).
 - No reset key in the window; a physical gamepad has not been play-tested yet.
 - The port's game timing differs from the emulator's at CD loads and boot (by a few frames), so sound is compared on
   the emulator's timeline instead of frame for frame.

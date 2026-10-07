@@ -5,9 +5,11 @@
  *  - D_800812F8: the flat-light matrix (the three light directions as rows). Evidence: GsSetFlatLight (gs_107.s)
  *    reads it, rewrites one row and stores it back; fightstg_model.c composes it with a model's matrix for
  *    gte_SetLightMatrix. gfx.c calls it the world-screen matrix (its save/restore pairs are what matters there).
- * Real: GsGetTimInfo (it parses a TIM header, docs/FORMATS.md "TIM"), GsSetProjection (the GTE's H), GsSetRefView2
- * and GsGetLw (with the PS1's LIBGTE calls through the software GTE, so the matrices are the PS1's to the bit: the
- * layer-1 family tests/golden/families/libgs_view.py, replayed by tests/host/libgs_replay.py); the rest records. */
+ * Real: GsGetTimInfo (it parses a TIM header, docs/FORMATS.md "TIM"), GsSetProjection (the GTE's H), GsSetFlatLight
+ * (the light and light colour matrices, the GTE's LCM), GsSetRefView2 and GsGetLw (with the PS1's LIBGTE calls through
+ * the software GTE, so the matrices are the PS1's to the bit: the layer-1 family tests/golden/families/libgs_view.py,
+ * replayed by tests/host/libgs_replay.py); GsInitGraph and GsInit3D do the GTE and matrix set-up of the PS1's and
+ * record the rest (the game draws with its own environments). */
 #include <string.h>
 #include "psyq_internal.h"
 #include "psyq/libgs.h"
@@ -15,13 +17,18 @@
 
 MATRIX D_80081358; /* GsSetRefView2's world-screen matrix */
 MATRIX D_800812F8; /* GsSetFlatLight's light matrix */
-/* LIBGS's view state (the PS1's .bss; the game does not read it, tests/host/libgs_harness.c does): */
+/* LIBGS's view and light state (the PS1's .bss; the game does not read it, tests/host/libgs_harness.c does): */
+MATRIX D_80081318; /* GsSetFlatLight's light colour matrix (the GTE's LCM): light `id`'s colour is column id */
 MATRIX D_80081338; /* GsSetRefView2's result again (GsGetLs and the like read it on the PS1) */
 MATRIX D_80081398; /* GsSetRefView2's start: GsInitGraph's identity with m[1][1] the screen's aspect */
 u32 D_800812D8;    /* PSDCNT: 1 after GsInitGraph (GsSwapDispBuff counts it; the EXE has none): GsGetLw's "current" */
 
 /* libgte.c: the LIBGTE functions LIBGS calls (not the game: our libgte.h does not declare them). */
+void InitGeom(void);
+void SetGeomOffset(s32 ofx, s32 ofy);
 void SetGeomScreen(s32 h);
+void SetFarColor(s32 rfc, s32 gfc, s32 bfc);
+void SetColorMatrix(MATRIX *m);
 MATRIX *MulMatrix(MATRIX *m0, MATRIX *m1);
 MATRIX *MulMatrix2(MATRIX *m0, MATRIX *m1);
 VECTOR *ApplyMatrixLV(MATRIX *m, VECTOR *v0, VECTOR *v1);
@@ -33,24 +40,25 @@ static const MATRIX psyq_gs_identity = { { { 4096, 0, 0 }, { 0, 4096, 0 }, { 0, 
 
 static struct {
     s32 projection;        /* GsSetProjection: the distance to the screen (h) */
-    s32 light_mode;        /* GsSetLightMode */
-    u8 light_rgb[3][3];    /* GsSetFlatLight's colours */
+    s32 light_mode;        /* GsSetLightMode (D_800812EC on the PS1; only LIBGS's own object drawing reads it) */
     u16 w, h, intl, dither, vram; /* GsInitGraph */
     GsCOORDINATE2 *lw_stack[100]; /* D_800813B8: GsGetLw's walk up the hierarchy */
 } psyq_gs;
 
-/* The console's reset (psyq.c psyq_reset): LIBGS's .bss (the two matrices) and the recorded settings zero. */
+/* The console's reset (psyq.c psyq_reset): LIBGS's .bss (the matrices) and the recorded settings zero. */
 void psyq_gs_reset(void) {
     memset(&D_80081358, 0, sizeof(D_80081358));
     memset(&D_800812F8, 0, sizeof(D_800812F8));
+    memset(&D_80081318, 0, sizeof(D_80081318));
     memset(&D_80081338, 0, sizeof(D_80081338));
     memset(&D_80081398, 0, sizeof(D_80081398));
     D_800812D8 = 0;
     memset(&psyq_gs, 0, sizeof(psyq_gs));
 }
 
-/* Stub: records the screen size (the PS1 version also resets the GPU and sets up LIBGS's draw/display environments,
- * none of which the game reads back: it uses its own gfx module). */
+/* Real where the game can see it (gs_001.s): the GTE and the matrices as the PS1 leaves them. Left out: the GPU
+ * reset and LIBGS's draw/display environments (PutDrawEnv/PutDispEnv), which the game never reads back: it draws
+ * with its own gfx module's. */
 void GsInitGraph(u16 w, u16 h, u16 intl, u16 dither, u16 vram) {
     PSYQ_TRACE("GsInitGraph %ux%u intl %u dither %u vram %u", w, h, intl, dither, vram);
     psyq_gs.w = w;
@@ -58,10 +66,16 @@ void GsInitGraph(u16 w, u16 h, u16 intl, u16 dither, u16 vram) {
     psyq_gs.intl = intl;
     psyq_gs.dither = dither;
     psyq_gs.vram = vram;
+    /* gs_121.s gte_init: the GTE's defaults (H 1000, the depth cue, ZSF3/4), no far colour, no screen offset */
+    InitGeom();
+    SetFarColor(0, 0, 0);
+    SetGeomOffset(0, 0);
     /* gs_001.s func_800293E4: the view's base matrix scales y by the aspect, (h << 14) / w / 3 (4096 for 320x240,
-     * the game's), and PSDCNT starts at 1 */
+     * the game's); the light matrix and the light colour matrix are zero; PSDCNT starts at 1 */
     D_80081398 = psyq_gs_identity;
     D_80081398.m[1][1] = (s16)(((s32)h << 14) / (s32)w / 3);
+    memset(&D_800812F8, 0, sizeof(D_800812F8));
+    memset(&D_80081318, 0, sizeof(D_80081318));
     D_800812D8 = 1;
 }
 
@@ -109,31 +123,42 @@ void GsSetProjection(s32 h) {
     SetGeomScreen(h);
 }
 
-/* Stub: here both matrices become the identity. The PS1's GsInit3D (gs_104.s) touches neither: it sets the screen
- * offset (GsSetDrawBuffOffset) and LIBGS's Z range; its GsInitGraph makes the light matrix zero, and the world-screen
- * matrix stays zero until GsSetRefView2 (issue #19). */
+/* Real where the game can see it (gs_104.s): LIBGS's draw offset becomes the screen's centre and GsSetDrawBuffOffset
+ * (gs_0022.s) loads it into the GTE, SetGeomOffset(w / 2 + the draw buffer's x, h / 2 + its y) with the buffer at
+ * 0,0 (the game's intl has no GsOFSGPU bit, so the GTE gets the offset; the game sets it back to 0,0 right after,
+ * main.c's InitGeom and gfx.c's SetGeomOffset). Then the light mode is 0 and LIBGS's Z range 10..0x3FFF (only its
+ * own object sorting reads it). No matrix is touched: the light matrix stays GsInitGraph's zero and the world-screen
+ * matrix zero until GsSetRefView2. Left out: the PutDrawEnv of LIBGS's draw environment (the game draws with its
+ * own). */
 void GsInit3D(void) {
     PSYQ_TRACE("GsInit3D");
-    D_80081358 = psyq_gs_identity;
-    D_800812F8 = psyq_gs_identity;
-    psyq_gs.projection = 0;
+    SetGeomOffset(psyq_gs.w / 2, psyq_gs.h / 2);
+    psyq_gs.light_mode = 0;
 }
 
-/* Recorded: row `id` of the light matrix becomes the light's direction and its colour is kept.
- * Assumption to verify (M2): the PS1 normalises the direction to 4096 before storing it (gs_107.s computes
- * with shifts and a multiply; this stub stores the raw vector, which the game already gives at 4096 scale for its
- * battle lights or does not: check FIGHTSTG's light tables). Returns 0 (ok). */
+/* Real (gs_107.s): light `id`'s direction, normalised to 4096 and negated (the direction light travels becomes the
+ * direction to the light, which the GTE's lighting wants), is row id of the light matrix D_800812F8, and its colour,
+ * (c << 12) / 255, column id of the light colour matrix D_80081318, which is then loaded as the GTE's LCM. A zero
+ * direction returns -1 and changes nothing (FIGHTSTG's stage table has such lights: the row and column stay as they
+ * were). An id outside 0..2 changes neither matrix but still loads LCM and returns 0, as the PS1 does. The PS1 works
+ * on copies of both matrices and stores them back whole, so the translations are untouched. */
 s32 GsSetFlatLight(s32 id, GsF_LIGHT *lt) {
+    s32 r;
+
     PSYQ_TRACE("GsSetFlatLight %d dir %d,%d,%d rgb %u,%u,%u", id, lt->vx, lt->vy, lt->vz, lt->r, lt->g, lt->b);
-    if (id < 0 || id > 2) {
+    r = SquareRoot0((s32)((u32)lt->vx * (u32)lt->vx + (u32)lt->vy * (u32)lt->vy + (u32)lt->vz * (u32)lt->vz));
+    if (r == 0) {
         return -1;
     }
-    D_800812F8.m[id][0] = (s16)lt->vx;
-    D_800812F8.m[id][1] = (s16)lt->vy;
-    D_800812F8.m[id][2] = (s16)lt->vz;
-    psyq_gs.light_rgb[id][0] = lt->r;
-    psyq_gs.light_rgb[id][1] = lt->g;
-    psyq_gs.light_rgb[id][2] = lt->b;
+    if (id >= 0 && id <= 2) {
+        D_800812F8.m[id][0] = (s16)((s32)((0u - (u32)lt->vx) << 12) / r);
+        D_800812F8.m[id][1] = (s16)((s32)((0u - (u32)lt->vy) << 12) / r);
+        D_800812F8.m[id][2] = (s16)((s32)((0u - (u32)lt->vz) << 12) / r);
+        D_80081318.m[0][id] = (s16)(((s32)lt->r << 12) / 255);
+        D_80081318.m[1][id] = (s16)(((s32)lt->g << 12) / 255);
+        D_80081318.m[2][id] = (s16)(((s32)lt->b << 12) / 255);
+    }
+    SetColorMatrix(&D_80081318);
     return 0;
 }
 

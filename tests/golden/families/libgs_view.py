@@ -18,6 +18,13 @@ PSDCNT = up to date, anything else); GsGetLw on its own. The view points stay wi
 scale-down, so the sum of squares stays below 2^31 (a larger one makes SquareRoot0 read past its table on the PS1).
 LIBGTE: random and edge matrices, the aliased calls (MulMatrix(m, m), TransposeMatrix(m, m)), 32-bit vectors with
 large components for ApplyMatrixLV, SquareRoot0 of 0, 1, the table's edges and powers of two up to 2^31 - 1.
+GsSetFlatLight (issue #19: the battle's lights): each case is a run of calls on a 16-byte GsF_LIGHT buffer per light,
+starting from GsInitGraph's zero matrices (the case restores them). Reads: the light matrix D_800812F8 (row id = the
+direction normalised to 4096 and negated), the light colour matrix D_80081318 (column id = the colour, (c << 12) / 255)
+and the GTE registers (LCM, which the function loads). Cases: every distinct lighting of FIGHTSTG's stage table (disc
+file 0x1CB: directions at scale 12800..22170, several zero third lights, which return -1 and leave their row alone),
+a zero light over a set row, ids outside 0..2 (nothing changes, LCM still loaded, returns 0), unit and axis vectors,
+tiny and large directions (the sum of squares stays below 2^31: SquareRoot0's table), every colour edge, random lights.
 """
 import random
 import struct
@@ -26,7 +33,8 @@ from oracle import SCRATCH_BASE, Call, Case, Read, Write
 import gte
 
 COMMENT = ("LIBGS's GsSetRefView2 and GsGetLw (the battle camera's world-screen matrix D_80081358, its copy "
-           "D_80081338, the coordinate hierarchy's flg/workm) and the LIBGTE functions they call, each through "
+           "D_80081338, the coordinate hierarchy's flg/workm), GsSetFlatLight (the light matrix D_800812F8 and the "
+           "light colour matrix D_80081318, the GTE's LCM) and the LIBGTE functions they call, each through "
            "gte.py's wrapper: the GTE registers before and after are part of the golden.")
 RESIDENT = "CNTY_SEL loaded; the wrapper routine is the gte family's code in scratch RAM"
 SEED = 0x6E5F2003
@@ -36,6 +44,40 @@ WS_COPY_ADDR = 0x80081338  # D_80081338: GsSetRefView2's copy of it
 VIEW_BASE_ADDR = 0x80081398  # D_80081398: the view's base (GsInitGraph)
 PSDCNT_ADDR = 0x800812D8
 LW_STACK_ADDR = 0x800813B8   # GsGetLw's walk (100 pointers)
+LIGHT_ADDR = 0x800812F8    # D_800812F8: the light matrix (GsSetFlatLight's directions as rows)
+COLOR_ADDR = 0x80081318    # D_80081318: the light colour matrix (the colours as columns), right after it
+
+# FIGHTSTG's stage lighting (FightstgStageRecord.lights, disc file 0x1CB: the first record with each distinct setup):
+# three (vx, vy, vz, r, g, b) lights; the ambient colour goes to SetBackColor, not LIBGS.
+STAGE_LIGHTS = {
+    0: [(0, 12800, 0, 128, 128, 128), (-12800, 0, 0, 55, 55, 55), (12800, 0, 0, 55, 55, 55)],
+    2: [(6400, 12800, 6400, 141, 141, 141), (0, 6400, -12800, 77, 77, 77), (-6400, -12800, 0, 55, 53, 43)],
+    3: [(6400, 12800, 6400, 128, 128, 128), (0, 6400, -12800, 55, 55, 55), (-6400, -12800, 0, 55, 50, 43)],
+    4: [(6400, 12800, 6400, 90, 90, 90), (-12800, -12800, 0, 55, 50, 50), (12800, 6400, -12800, 31, 34, 38)],
+    5: [(-12800, 12800, 0, 204, 204, 204), (6400, 6400, -12800, 102, 102, 102), (6400, -12800, 12800, 51, 43, 31)],
+    6: [(6400, 12800, 6400, 90, 90, 90), (-12800, 0, -12800, 26, 43, 71), (-6400, -12800, 0, 23, 23, 23)],
+    7: [(12800, 12800, -6400, 77, 77, 77), (-12800, -12800, 12800, 23, 15, 26), (0, 0, 0, 0, 0, 0)],
+    8: [(-6400, 12800, 6400, 90, 90, 90), (12800, 6400, -12800, 55, 55, 55), (-12800, -12800, 0, 38, 38, 38)],
+    9: [(6400, 12800, -6400, 90, 90, 90), (-12800, -12800, 12800, 23, 15, 26), (0, 0, 0, 0, 0, 0)],
+    10: [(12800, 12800, 12800, 90, 90, 90), (-12800, -12800, 12800, 25, 50, 50), (0, 6400, -6400, 25, 25, 50)],
+    11: [(6400, 12800, 6400, 128, 128, 153), (-6400, -12800, 0, 12, 25, 25), (-6400, 6400, -12800, 50, 100, 87)],
+    12: [(-6400, 12800, 6400, 90, 90, 90), (6400, 12800, -6400, 71, 71, 71), (-12800, -12800, 0, 38, 38, 38)],
+    14: [(-6400, 12800, 6400, 128, 128, 128), (6400, 12800, -6400, 38, 38, 38), (-12800, -12800, 0, 55, 55, 55)],
+    15: [(-12800, 12800, 12800, 55, 55, 55), (6400, 12800, -6400, 102, 102, 102), (0, -12800, 0, 55, 55, 55)],
+    16: [(-6400, 12800, 6400, 90, 90, 90), (-12800, -12800, -12800, 23, 23, 23), (0, 0, 0, 0, 0, 0)],
+    17: [(12800, 12800, 0, 242, 242, 242), (-12800, -12800, 0, 25, 50, 102), (0, 0, 0, 0, 0, 0)],
+    18: [(0, 12800, 12800, 90, 90, 90), (6400, -12800, 0, 77, 41, 102), (-6400, 12800, -12800, 71, 69, 102)],
+    19: [(12800, 12800, 12800, 90, 90, 90), (-6400, 6400, -12800, 85, 61, 102), (-12800, -12800, 6400, 69, 69, 69)],
+    20: [(-6400, 12800, 6400, 102, 102, 102), (6400, 12800, -6400, 71, 71, 71), (-12800, -12800, 0, 38, 38, 38)],
+    22: [(12800, 12800, -6400, 242, 242, 242), (-12800, -12800, 6400, 25, 50, 102), (0, 0, 0, 0, 0, 0)],
+    23: [(12800, 12800, 12800, 128, 128, 128), (0, 0, -12800, 55, 55, 55), (-12800, -6400, 0, 20, 40, 51)],
+    24: [(6400, -12800, -12800, 178, 90, 90), (0, -6400, 12800, 77, 77, 77), (-6400, 12800, 0, 77, 69, 46)],
+    25: [(6400, -12800, 6400, 90, 90, 128), (-12800, 12800, -6400, 55, 55, 55), (6400, -6400, -12800, 38, 38, 38)],
+    26: [(6400, -12800, -6400, 128, 90, 90), (-6400, 12800, 0, 15, 15, 31), (6400, -6400, 12800, 69, 43, 69)],
+    27: [(6400, -12800, 6400, 90, 90, 128), (-6400, 12800, 0, 12, 25, 25), (6400, -6400, -12800, 38, 77, 69)],
+    55: [(-6400, -12800, 6400, 55, 77, 90), (6400, 12800, 6400, 128, 132, 128), (0, 0, -12800, 55, 55, 55)],
+    57: [(0, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0)],
+}
 
 # The view buffer: GsRVIEW2 at 0, GsCOORDINATE2 i at COORD_OFF + i * 0x50, a MATRIX at MATRIX_OFF.
 COORD_OFF, COORD_SIZE, COORDS, MATRIX_OFF, VIEW_SIZE = 0x20, 0x50, 4, 0x160, 0x180
@@ -246,11 +288,62 @@ def library_cases(ctx):
     return out
 
 
+def light_bytes(vx, vy, vz, r, g, b):
+    """A GsF_LIGHT: s32 vx, vy, vz; u8 r, g, b and a pad byte."""
+    return struct.pack("<3i3Bx", vx, vy, vz, r, g, b)
+
+
+def light_case(ctx, name, lights, comment):
+    """GsSetFlatLight for each (id, light) in order, one buffer per call, the matrices read after each call."""
+    reads = [Read(f"0x{LIGHT_ADDR:08X}", 0, 32, "D_800812F8: the light matrix"),
+             Read(f"0x{COLOR_ADDR:08X}", 0, 32, "D_80081318: the light colour matrix")]
+    calls, buffers = [], {}
+    for k, (lid, light) in enumerate(lights):
+        buffers[f"l{k}"] = light_bytes(*light)
+        calls.append(ctx.wrap([lid, ("buf", f"l{k}"), 0], "GsSetFlatLight", reads, "s32",
+                              f"id {lid}, direction {light[:3]}, colour {light[3:]}"))
+    return Case(name, calls, buffers=buffers, comment=comment)
+
+
+def light_cases(ctx):
+    out, r = [], ctx.r
+    for idx, lights in STAGE_LIGHTS.items():
+        out.append(light_case(ctx, f"stage_lights_{idx}", list(enumerate(lights)),
+                              f"FIGHTSTG's stage record {idx}: its three lights in order"
+                              + (" (a zero light leaves its row alone, returns -1)" if (0, 0, 0) in
+                                 [l[:3] for l in lights] else "")))
+    set_row = (6400, 12800, 6400, 90, 90, 90)
+    out.append(light_case(ctx, "zero_over_set_row", [(1, set_row), (1, (0, 0, 0, 200, 100, 50))],
+                          "a zero direction after a set row: returns -1, row and column stay"))
+    out.append(light_case(ctx, "id_out_of_range", [(0, set_row), (3, (100, 200, 300, 10, 20, 30)),
+                                                   (-1, (100, 200, 300, 10, 20, 30)), (7, (0, 0, 0, 1, 1, 1))],
+                          "ids 3 and -1 change nothing but load LCM and return 0; a zero light with id 7 returns -1"))
+    units = [(4096, 0, 0), (0, 4096, 0), (0, 0, 4096), (-4096, 0, 0), (0, -4096, 0), (0, 0, -4096), (1, 0, 0),
+             (0, 0, -1), (3, 4, 0), (-3, 0, 4), (1, 1, 1), (-1, -1, -1), (2365, 2365, 2365), (26000, 26000, 26000),
+             (-26000, 26000, -26000), (32767, 0, 0), (-32768, 0, 0), (0, 32767, 32767), (12800, 12800, 12800),
+             (0, 0, 7)]
+    out.append(light_case(ctx, "axes_and_sizes", [(k % 3, v + (255, 128, 0)) for k, v in enumerate(units)],
+                          "unit and axis vectors, tiny and large directions (the squares' sum below 2^31)"))
+    colours = [(0, 0, 0), (255, 255, 255), (1, 2, 3), (127, 128, 129), (254, 255, 0), (64, 32, 16), (200, 100, 50),
+               (255, 0, 255), (85, 170, 255)]
+    out.append(light_case(ctx, "colours", [(k % 3, (0, -12800, 0) + c) for k, c in enumerate(colours)],
+                          "every colour edge: (c << 12) / 255 into column id"))
+    for k in range(6):
+        lights = []
+        for j in range(6):
+            v = tuple(r.randint(-26000, 26000) if r.random() < 0.7 else r.choice([0, 1, -1, 12800, -12800])
+                      for _ in range(3))
+            lights.append((r.choice([0, 1, 2, 0, 1, 2, 3, -1]), v + tuple(r.randint(0, 255) for _ in range(3))))
+        out.append(light_case(ctx, f"random_lights_{k}", lights, "random lights, ids and colours"))
+    return out
+
+
 def cases(sym):
     ctx = Ctx(sym)
-    out = view_cases(ctx) + hierarchy_cases(ctx) + library_cases(ctx)
+    out = view_cases(ctx) + hierarchy_cases(ctx) + library_cases(ctx) + light_cases(ctx)
     fixture = [Write(f"0x{gte.CODE_ADDR:08X}", 0, ctx.code, "the gte family's routines (gte.py assemble: the wrapper)")]
-    saves = [(f"0x{gte.OUT_ADDR:08X}", 0x200), (f"0x{WS_COPY_ADDR:08X}", 0x40), (f"0x{LW_STACK_ADDR:08X}", 400)]
+    saves = [(f"0x{gte.OUT_ADDR:08X}", 0x200), (f"0x{WS_COPY_ADDR:08X}", 0x40), (f"0x{LW_STACK_ADDR:08X}", 400),
+             (f"0x{LIGHT_ADDR:08X}", 0x40)]
     for case in out:
         case.fixture = fixture
         case.saves = saves + case.saves
