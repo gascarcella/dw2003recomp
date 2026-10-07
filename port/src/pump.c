@@ -15,10 +15,11 @@
  * from a fast pace to a slow one never waits for the vsyncs "owed". Only the wall-clock time between vsyncs depends on
  * them; the headless run is never paced.
  *
- * The pause (window mode; the `pause` hotkey, input.c): at the end of the vsync on which it is pressed the game stops
- * between two vsyncs: the window keeps polling its events (the hotkeys, fullscreen, the close) and presenting the last
- * image, the audio device is paused, the watchdog re-armed; the pause key again goes on with the next vsync, the
- * schedule started over. Nothing of it reaches the game, the log or the record. */
+ * The pause (the `pause` hotkey, input.c, in window mode; the debug channel's pause/step/wait, debug.c, in any mode):
+ * at the end of the vsync on which it is asked for (pump_pause_wanted) the game stops between two vsyncs: the window
+ * keeps polling its events (the hotkeys, fullscreen, the close) and presenting the last image, the debug channel its
+ * socket, the audio device is paused, the watchdog re-armed; the pause key again (or the channel's resume/step) goes
+ * on with the next vsync, the schedule started over. Nothing of it reaches the game, the log or the record. */
 #include <errno.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -37,6 +38,7 @@ int port_script_active;
 long port_rate = 50;        /* the nominal rate (vsyncs per second): the audio's samples per vsync */
 static long pump_pace = 50; /* the pace (vsyncs per second of the wall clock); 0: unthrottled */
 static int pump_pace_restart;
+static int pump_pause_wanted; /* the game is to be held (is held) between two vsyncs: the pause key, the channel */
 static volatile sig_atomic_t port_watchdog_armed;
 static void port_frame(void);
 static void port_pace(void);
@@ -99,6 +101,9 @@ static void port_frame(void) {
     if (port_script_active) {
         port_script_frame();
     }
+    if (port_debug_active) {
+        port_debug_frame(); /* the channel's requests and its deferred ops, between the script and the video */
+    }
     port_video_frame();
     if (port_max_frames > 0 && port_frames >= port_max_frames) {
         port_exit(0, "frame cap");
@@ -107,9 +112,24 @@ static void port_frame(void) {
     if (port_window) {
         port_pace();
         if (port_input_pressed(port_action_pause)) {
-            port_pause();
+            pump_pause_wanted = 1;
         }
     }
+    if (pump_pause_wanted) {
+        port_pause();
+    }
+}
+
+void port_pump_pause_request(void) {
+    pump_pause_wanted = 1;
+}
+
+void port_pump_resume_request(void) {
+    pump_pause_wanted = 0;
+}
+
+int port_pump_paused(void) {
+    return pump_pause_wanted;
 }
 
 void port_pace_set(long fps) {
@@ -123,18 +143,29 @@ long port_pace_get(void) {
     return pump_pace;
 }
 
-/* The pause: between two vsyncs, until the pause key again (or the window's close, which exits). */
+/* The pause: between two vsyncs, until the pause key again, the channel's resume (or the window's close, which
+ * exits). The channel's reset, asked for while paused, runs once the loop is left (port_debug_resumed): the longjmp
+ * must not skip the audio's and the window's un-pause. */
 static void port_pause(void) {
     struct timespec tick = { 0, 20000000L }; /* 50 polls a second */
     port_log("pause at frame %ld", port_frames);
     port_video_set_paused(1);
     port_audio_pause(1);
-    for (;;) {
-        port_input_poll_paused();
-        if (port_input_pressed(port_action_pause)) {
-            break;
+    while (pump_pause_wanted) {
+        if (port_window) {
+            port_input_poll_paused();
+            if (port_input_pressed(port_action_pause)) {
+                pump_pause_wanted = 0;
+                break;
+            }
+            port_video_refresh();
         }
-        port_video_refresh();
+        if (port_debug_active) {
+            port_debug_poll_paused();
+            if (!pump_pause_wanted) {
+                break;
+            }
+        }
         if (port_watchdog_armed) {
             alarm((unsigned)port_watchdog_sec);
         }
@@ -144,6 +175,9 @@ static void port_pause(void) {
     port_video_set_paused(0);
     pump_pace_restart = 1;
     port_log("resume at frame %ld", port_frames);
+    if (port_debug_active) {
+        port_debug_resumed();
+    }
 }
 
 /* Real-time pacing (window mode): vsync n is due at start + n / pace seconds; a run more than 0.1 s late (a
@@ -203,6 +237,9 @@ void port_exit(int status, const char *reason) {
         port_audio_close();
         port_spu_trace_close();
         port_video_quit();
+        if (port_debug_active) {
+            port_debug_close();
+        }
     }
     port_log("exit %d after %ld frame(s): %s", status, port_frames, reason);
     fflush(NULL);

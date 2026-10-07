@@ -114,6 +114,7 @@ for L in $LAYERS; do
             "$PY" "$ROOT/tests/port/battle.py"     # the battle scripts on the disc, for battle_animations
             "$PY" "$ROOT/tests/port/mods.py"       # the mods that change the game, run with the mod on
             "$PY" "$ROOT/tests/port/vram.py"       # the first battle's textures in VRAM against the emulator's
+            "$PY" "$ROOT/tests/port/debug.py"      # the debug channel (--debug) and tools/mcp's offline self-test
         fi ;;
     *) echo "unknown layer $L" >&2; exit 2 ;;
     esac

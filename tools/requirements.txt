@@ -12,3 +12,5 @@ watchdog==6.0.0         # asm-differ
 levenshtein==0.27.5     # asm-differ, decomp-permuter
 cxxfilt==0.3.0          # asm-differ
 toml==0.10.2            # decomp-permuter
+# The MCP server for the PC port's debug channel (tools/mcp/server.py; mcp 2.x: MCPServer, the renamed FastMCP).
+mcp==2.3.0

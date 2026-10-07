@@ -84,6 +84,7 @@ void port_framelog_overlay_load(int tier, s32 file, const char *name, u32 word0,
 /* The pad the script holds this frame (psyq_pad_set's bits, active high): a change goes to the log and to the record's
  * `inputs` ({frame, buttons: [names]}, as run.lua's apply_pad); the record has `inputs` once this has been called. */
 void port_framelog_input(u16 buttons);
+u16 port_framelog_last_input(void); /* the buttons last given (0 before any): the debug channel's status */
 
 /* ---- The interrupt pump (pump.c) */
 extern long port_max_frames;  /* --max-frames: port_wait() exits 0 after this many vsync ticks (0: no cap) */

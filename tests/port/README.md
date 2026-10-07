@@ -120,6 +120,16 @@ gcc and the extracted disc) reads every battle script on the disc twice, with th
 own reading, and requires them to agree, every script to end, reactions without a child command and every KO script
 to end on animation 10. ~1 min together; in `scripts/test.sh --layer port`.
 
+## The debug channel (`debug.py`; docs/PORT.md "Debug channel and the MCP server")
+`tests/port/debug.py` drives one headless run (`--debug`, `--cd-speed instant`, ~2 s) through `tools/mcp/game.py`, the
+channel's plain client: `wait` on stage 22 (CNTY_SEL, `new_game.json`'s first `wait_stage`) hits and leaves the game
+paused; `step 10` advances the frame by exactly 10 and `pad START` with sync by frames + release; `overlay_module.stage`
+read by its PS1 address (the state map) and by the host global (`nm`) agree; a byte poked into the arena reads back by
+both routes; `screenshot` writes a P6 PPM 320 wide; `hash` gives two SHA-1s; `quit 3` exits with status 3. It also
+checks that the socket path fits `sun_path` (108 bytes). Then it runs `tools/mcp/selftest.py` (the client, the symbol
+lookup and the server's tools against `fake_game.py`, offline; skipped with a message when the `mcp` package is not
+installed). Needs `build/port/dw2003` (`run.py` builds it) and the disc. In `scripts/test.sh --layer port`.
+
 ## What it found (session 16)
 - **The overlay copy takes CPU time on the PS1.** The game copies FIELDSTG (0x19000 bytes) into its slot with LIBC2's
   byte-loop `memcpy`, about 1.8 frames, so the emulator samples FIELDSTG's stage with no stage file yet (`(2, -1)` in the

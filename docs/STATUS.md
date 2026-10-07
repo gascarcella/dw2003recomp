@@ -52,6 +52,9 @@ The plan's milestones (`docs/PORT.md`):
 - **M4 (saves):** memory cards as `.mcd` images; saves move both ways between the port and the emulator.
 - **M5 (full game):** the movies (our MDEC and XA decoder) are done; the rest of the game beyond the first battle has
   not been checked against the emulator.
+- **Debug channel and MCP server:** `dw2003 --debug SOCKET` lets a tool pause, step, press, read and write memory and
+  take screenshots between two vsyncs; `tools/mcp/` (registered by `.mcp.json`) is the MCP server over it, with symbol
+  names from `nm` and the config tables (`docs/PORT.md`; gate: `tests/port/debug.py`).
 - **Platforms:** Linux x86_64 only. Windows is planned; macOS is not.
 - **Play-tested** on a desktop (Wayland, NVIDIA, PipeWire) through the first battle, a save and its load:
   picture, sound and timing were right except for the battle camera, fixed since

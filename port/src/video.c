@@ -42,6 +42,7 @@ static struct {
     char *path;
 } video_shots[VIDEO_MAX_SHOTS];
 static int video_shot_count;
+static long video_converted_frame = -1; /* the frame video_pixels was converted at (the debug channel's screenshot) */
 
 static u32 video_rgb15(u16 c) {
     u32 r = c & 31, g = (c >> 5) & 31, b = (c >> 10) & 31;
@@ -70,6 +71,7 @@ static void video_convert(void) {
     h = h < VIDEO_MAX_H ? h : VIDEO_MAX_H;
     video_w = w;
     video_h = h;
+    video_converted_frame = port_frames;
     if (!d.enabled || d.w <= 0 || d.h <= 0) {
         for (x = 0; x < w * h; x++) {
             video_pixels[x] = 0xFF000000u;
@@ -105,11 +107,12 @@ int port_video_screenshot_add(const char *spec) {
     return 1;
 }
 
-static void video_write_ppm(const char *path) {
+/* video_pixels to `path` as a binary PPM; 0 when the file cannot be written. */
+static int video_try_ppm(const char *path) {
     FILE *f = fopen(path, "wb");
     int i;
     if (f == NULL) {
-        port_fatal("screenshot: cannot write %s", path);
+        return 0;
     }
     fprintf(f, "P6\n%d %d\n255\n", video_w, video_h);
     for (i = 0; i < video_w * video_h; i++) {
@@ -117,9 +120,25 @@ static void video_write_ppm(const char *path) {
         fwrite(rgb, 1, 3, f);
     }
     if (fclose(f) != 0) {
-        port_fatal("screenshot: cannot write %s", path);
+        return 0;
     }
     port_log("screenshot: frame %ld, %dx%d -> %s", port_frames, video_w, video_h, path);
+    return 1;
+}
+
+static void video_write_ppm(const char *path) {
+    if (!video_try_ppm(path)) {
+        port_fatal("screenshot: cannot write %s", path);
+    }
+}
+
+int port_video_screenshot_now(const char *path, int *w, int *h) {
+    if (video_converted_frame != port_frames) {
+        video_convert(); /* nothing of this frame was presented or shot: the VRAM as it is now */
+    }
+    *w = video_w;
+    *h = video_h;
+    return video_try_ppm(path);
 }
 
 #ifdef DW3_PORT_SDL

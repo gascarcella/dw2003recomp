@@ -18,6 +18,7 @@ build/port/dw2003 --trace                 # every tick, overlay load/resolve and
 build/port/dw2003 --max-frames 600 --log run.log --record run.json   # the per-frame log and the record (below)
 build/port/dw2003 --disc iso/dw2003.cue --script tests/replay/scripts/new_game.json --log run.log --record run.json
 build/port/dw2003 --help                  # every option (--cd-speed instant|realistic, --no-disc-check, ...)
+build/port/dw2003 --disc iso/dw2003.cue --debug /tmp/dw3.sock   # the debug channel (src/debug.c; tools/mcp drives it)
 ```
 Options: `-DDW3_PORT_SANITIZE=ON` (`-fsanitize=address,undefined`; needs libasan/libubsan installed),
 `-DDW3_PORT_M32=ON` (a 32-bit binary: `-m32` on every compile and link; needs gcc-multilib),
@@ -109,6 +110,10 @@ drawn at 4:3, nearest-neighbour, as tall as an integer multiple of its lines fit
 the window is smaller than the image). `--scale N` opens a 320N x 240N window (default 2; with an even N a 240-line and
 a 480-line display come out the same size), `--fullscreen` (F11 toggles). `--screenshot FRAME:PATH` (repeatable; any
 build, also headless) writes the image of vsync FRAME as a binary PPM: the texture's pixels, independent of the window.
+`--debug SOCKET` (any build) opens the debug channel on a Unix socket (`src/debug.c`'s header comment is the protocol;
+`tools/mcp/` drives it): pause, step, wait, the pad, memory by host or PS1 address, screenshots, the hash, reset, quit,
+each between two vsyncs; it turns the watchdog and the default frame cap off; `--debug-hold` starts the game paused at
+its first vsync until the client resumes it (docs/PORT.md "Debug channel").
 
 **Real time**: with a window the vsyncs are paced to `--fps N` per second (default 50, PAL; 60 for a later NTSC build;
 0: unthrottled) against `CLOCK_MONOTONIC`; a run more than 0.1 s late starts the pace over instead of hurrying. Only the

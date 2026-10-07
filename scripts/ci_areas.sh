@@ -30,9 +30,10 @@ area_of() {
         .github/workflows/release.yml|scripts/package_appimage.sh|packaging/*) echo none ;;
         # The launcher's own tree.
         launcher/*) echo launcher ;;
-        # The port: its sources (port/src/json.c, sha1.c are the launcher's too: port => launcher), its generator, and
-        # the tests that build or run its code.
-        port/*|tools/port_gen.py|tests/port/*|tests/spu/*|tests/xa/*|tests/saves/*|tests/host/*) echo port ;;
+        # The port: its sources (port/src/json.c, sha1.c are the launcher's too: port => launcher), its generator, the
+        # MCP server that drives it (tools/mcp, .mcp.json; tests/port/debug.py runs its self-test), and the tests that
+        # build or run its code.
+        port/*|tools/port_gen.py|tools/mcp/*|.mcp.json|tests/port/*|tests/spu/*|tests/xa/*|tests/saves/*|tests/host/*) echo port ;;
         # Everything else: the game's C and headers, config/, configure.py, tools/, the other tests, scripts/ (setup.sh
         # pins every tool), .claude/hooks/, and anything new.
         *) echo game ;;

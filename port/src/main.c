@@ -40,7 +40,7 @@ static void usage(const char *argv0) {
             "          [--script JSON]\n"
             "          [--log FILE] [--record FILE] [--max-frames N] [--watchdog SEC] [--trace]\n"
             "          [--window] [--scale N] [--fullscreen] [--fps N] [--input-test] [--screenshot FRAME:PATH]\n"
-            "          [--spu-trace FILE] [--wav FILE] [--mute]\n"
+            "          [--spu-trace FILE] [--wav FILE] [--mute] [--debug SOCKET] [--debug-hold]\n"
             "  --config JSON    the settings file (docs/LAUNCHER.md; what the launcher starts the game\n"
             "                   with): the disc, the window, the memory cards (default card1.mcd and card2.mcd beside\n"
             "                   the file), the watchdog (default off); the options below override it\n"
@@ -75,7 +75,12 @@ static void usage(const char *argv0) {
             "  --screenshot F:P write the display at vsync F to P (binary PPM); repeatable; any build\n"
             "  --spu-trace FILE every SPU write and DMA block, per vsync (tests/sound's trace format)\n"
             "  --wav FILE       the audio output as a 44.1 kHz stereo WAV (any build, headless too)\n"
-            "  --mute           no audio device in window mode\n",
+            "  --mute           no audio device in window mode\n"
+            "  --debug SOCKET   the debug channel (port/src/debug.c): a Unix socket at SOCKET taking newline-delimited\n"
+            "                   JSON requests (pause, step, wait, pad, peek/poke, screenshot, hash, reset, quit),\n"
+            "                   polled once per vsync; turns the watchdog and the default frame cap off\n"
+            "  --debug-hold     with --debug: hold the game paused at its first vsync until the client resumes it\n"
+            "                   (a run reproducible from frame 1: the client connects before anything happened)\n",
             argv0);
 }
 
@@ -94,8 +99,8 @@ static long number(const char *s, const char *opt) {
 int main(int argc, char **argv) {
     const char *disc = NULL, *script = NULL, *log = NULL, *record = NULL, *speed = NULL;
     const char *memcard[2] = { NULL, NULL };
-    const char *spu_trace = NULL, *wav = NULL;
-    int mute = 0;
+    const char *spu_trace = NULL, *wav = NULL, *debug = NULL;
+    int mute = 0, debug_hold = 0;
     int memcard_given[2] = { 0, 0 };
     int disc_check = 1, max_frames_given = 0;
     int window = 0, scale = 2, fullscreen = 0, input_test = 0;
@@ -190,6 +195,10 @@ int main(int argc, char **argv) {
             wav = argv[++i];
         } else if (strcmp(argv[i], "--mute") == 0) {
             mute = 1;
+        } else if (strcmp(argv[i], "--debug") == 0 && i + 1 < argc) {
+            debug = argv[++i];
+        } else if (strcmp(argv[i], "--debug-hold") == 0) {
+            debug_hold = 1;
         } else if (strcmp(argv[i], "--screenshot") == 0 && i + 1 < argc) {
             if (!port_video_screenshot_add(argv[++i])) {
                 fprintf(stderr, "port: --screenshot: FRAME:PATH (FRAME >= 1; at most 64): %s\n", argv[i]);
@@ -292,6 +301,18 @@ int main(int argc, char **argv) {
         }
         port_video_open(scale, fullscreen);
         port_input_init(input_test);
+    }
+    if (debug != NULL) {
+        /* a driven run: the tool decides when it ends, and may hold the game paused for as long as it likes */
+        port_watchdog_sec = 0;
+        if (!max_frames_given) {
+            port_max_frames = 0;
+        }
+        port_debug_open(debug);
+        if (debug_hold) {
+            port_pump_pause_request(); /* the pump holds the game at the end of its first vsync; the channel's poll
+                                        * accepts the client there (pump.c port_pause) */
+        }
     }
     port_pump_init();
     port_log("start: max-frames %ld, watchdog %d s, %ld Hz", port_max_frames, port_watchdog_sec, port_rate);
