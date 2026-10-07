@@ -262,7 +262,7 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup
         with:
-          tools: venv cmake mkpsxiso sdl3 imgui ccache
+          tools: venv cmake mkpsxiso sdl3 imgui ccache dxc
           cache: launcher
           ccache: "true"
           disc: "true"
