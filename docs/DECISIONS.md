@@ -243,7 +243,8 @@ _Decided: 2026-10-06_
 (`paths-ignore`), and a newer push to a pull request cancels the older run. `scripts/ci_areas.sh` sorts the changed
 files into areas, each implying the next: **game** (the build `--check`, every test layer, and everything below),
 **port**, **launcher**; an unknown path counts as `game`, and changes to the CI itself run everything. A docs-only pull
-request shows no checks; "CI green" means green when a run started.
+request shows no checks; "CI green" means green when a run started. Draft pull requests run nothing: marking one
+ready for review starts the run (saves runner minutes on work in progress).
 
 ## Releases: tagged drafts, published by hand
 _Decided: 2026-10-06_

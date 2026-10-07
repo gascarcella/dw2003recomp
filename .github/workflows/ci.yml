@@ -7,7 +7,8 @@
 # they only get the disc-free part: the toolchain is built and smoke-tested, the scripts parse, the Python compiles, and
 # every game unit compiles for the host at -m64 (tools/port_inventory.py probe and link, the PC port's gate).
 #
-# When it runs (DECISIONS "CI per area"): on pull requests and on pushes to main, not on changes that
+# When it runs (DECISIONS "CI per area"): on pull requests (not while they are drafts: marking one ready for review
+# starts the run) and on pushes to main, not on changes that
 # touch only documentation (paths-ignore: no step reads those files), and a newer push to a pull request cancels the
 # run of the older one. A branch without a pull request: `gh workflow run CI --ref <branch>`. release.yml calls this
 # workflow (workflow_call) before it builds a release.
@@ -37,6 +38,7 @@ on:
       - ".gitignore"
       - ".github/ISSUE_TEMPLATE/**"
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]   # a draft runs nothing (the job's `if`) until it is ready
     paths-ignore:
       - "docs/**"
       - "**/*.md"
@@ -58,6 +60,7 @@ concurrency:
 
 jobs:
   build:
+    if: ${{ !github.event.pull_request.draft }}   # draft pull requests are skipped; pushes, manual runs and calls run
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
