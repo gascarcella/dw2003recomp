@@ -41,7 +41,8 @@
  *     CIRCLE, CROSS, SQUARE=15; active high), frames (>= 0; 0 = hold until the next pad op), release (>= 0, default
  *     0: frames of 0 after `frames`), sync (bool, default false) -> frame. The channel owns the pad from the first
  *     pad op until pad_free (window input no longer reaches it; a script keeps precedence: "script owns the pad");
- *     each vsync it calls psyq_pad_set(0, 1, value). With sync the answer waits until frames + release vsyncs ran.
+ *     each vsync it calls psyq_pad_set(0, 1, value). With sync the answer waits until frames + release vsyncs ran,
+ *     and a game that was paused when the op arrived is paused again then (a driven run stays at a known frame).
  *     pad_free: releases the pad to the window (or none).
  *   wait: one of addr (host) / ps1 (PS1 address) / ps1_stage / ps1_map, with size (1/2/4), signed (bool), value,
  *     timeout (frames, default 600) -> frame, hit (0/1). Runs until the read equals value (checked once before
@@ -125,6 +126,7 @@ static DebugWait debug_wait;
 static u16 debug_pad_buttons;
 static long debug_pad_hold, debug_pad_release;
 static int debug_pad_forever;
+static int debug_pad_repause; /* the sync pad op found the game paused: pause it again when done */
 static long debug_pad_applied_frame = -1;
 
 static int debug_reset_pending, debug_reset_repause; /* a reset asked for; it was asked for while paused */
@@ -461,6 +463,10 @@ static void debug_pad_frame(void) {
     }
     if (debug_pending == DEBUG_PAD_SYNC && !debug_pad_forever && debug_pad_hold == 0 && debug_pad_release == 0) {
         debug_pending = DEBUG_NONE;
+        if (debug_pad_repause) {
+            port_pump_pause_request(); /* a press from the paused game leaves it paused: the tool's next call finds
+                                        * the frame it was answered at, not thousands of unthrottled frames later */
+        }
         debug_ok(&debug_pending_req, "\"frame\": %ld", port_frames);
     }
     if (debug_pad_applied_frame != port_frames) {
@@ -562,6 +568,7 @@ static void debug_op_pad(const DebugReq *req, const PortJson *obj) {
     if (sync && !debug_pad_forever) {
         debug_pending = DEBUG_PAD_SYNC;
         debug_pending_req = *req;
+        debug_pad_repause = port_pump_paused();
         port_pump_resume_request();
         return;
     }
