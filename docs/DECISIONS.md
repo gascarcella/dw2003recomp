@@ -308,9 +308,14 @@ _Decided: 2026-10-06_
 Players get one Linux x86_64 AppImage (the launcher, the game, the mods' manifests) and supply their own disc. A pushed
 tag `vX.Y.Z` runs `release.yml`: the whole CI, the port's test on the Release build, the AppImage and its smoke test,
 then a **draft** GitHub release. Publishing a release (binaries built from the decompiled code, no game data) is the
-owner's explicit decision each time. Built on `ubuntu-24.04`; both programs depend only on the C library. Windows
-comes later. The owner may build the same draft locally instead (`scripts/release_local.sh`, 2026-10-06: Docker
-`ubuntu:24.04`, the appimage job's steps, release.yml's run cancelled), after `main`'s CI is green: ~6 min, not ~30.
+owner's explicit decision each time. Built on `ubuntu-24.04`; both programs depend only on the C library. The owner
+may build the same draft locally instead (`scripts/release_local.sh`, 2026-10-06: Docker `ubuntu:24.04`, the
+appimage job's steps, release.yml's run cancelled), after `main`'s CI is green: ~6 min, not ~30.
+Since 2026-10-07 the same draft also carries **the Windows x86_64 zip** (the launcher, the game, the mods' manifests,
+licences and a README in one folder) and its PDB symbols zip, cross-built on the same runner by a `windows` job
+beside `appimage` (`scripts/package_windows.sh --test`: the unzipped package's self-test and a forced crash under
+Wine), so one tag releases both platforms at once; the notes say the Windows build was tested under Wine and Proton
+only until real-Windows reports come in. `release_local.sh` builds both too (its container has `wine64`).
 
 ## Windows: cross-built from Linux with llvm-mingw, tested under Wine and Proton
 _Decided: 2026-10-07_

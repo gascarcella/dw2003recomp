@@ -21,7 +21,9 @@ Code cites this file as `docs/LAUNCHER.md "<heading>"`; keep the headings stable
 - The disc's SHA-1 check stays the game's (`port/src/disc.c`, `sha1.c`). The launcher compiles `port/src/sha1.c` and
   `port/src/json.c` in as they are, to verify the disc before storing it and to read JSON with the same parser.
 - Exit statuses the launcher reports: 0 normal, 1 a fatal error, 4 the watchdog, 64 bad options or settings, a
-  signal. On any of them but 0 the game may have written a crash report ("Crash report").
+  signal; on Windows an unhandled exception's code instead of a signal (`0xC0000005` an access violation, ..., named
+  by `game_exit_text`), and `abort()` is status 3 there too. On any of them but 0 the game may have written a crash
+  report ("Crash report").
 - The launcher's screens use the same SDL3 + `SDL_Renderer` as the game, so they could later be drawn inside the
   game's window.
 
@@ -249,7 +251,8 @@ previous run's kept as `last-run.1.log`) and, when the game ends with an error, 
 (`port: crash report: PATH`) and shows its path on the Play screen. **Copy** puts on the clipboard, in this order: the
 launcher's version and the platform, the game's path and version, the command, the result in words, the report's
 text, the last 40 lines of the output and the log file's path: what to paste into an issue. **Open folder** opens the
-crash directory. A game too old for `--crash-dir` is reported as too old, like one without `--config`.
+crash directory. A game too old for `--crash-dir` is reported as too old, like one without `--config`. On Windows the
+same, with the minidump (`crash-<date>.dmp`) beside the report in `%APPDATA%\dw2003\crashes\` for a tester to attach.
 
 ## Built-in mods
 

@@ -55,15 +55,18 @@ The plan's milestones (`docs/PORT.md`):
 - **Debug channel and MCP server:** `dw2003 --debug SOCKET` lets a tool pause, step, press, read and write memory and
   take screenshots between two vsyncs; `tools/mcp/` (registered by `.mcp.json`) is the MCP server over it, with symbol
   names from `nm` and the config tables (`docs/PORT.md`; gate: `tests/port/debug.py`).
-- **Platforms:** Linux x86_64. Windows is in progress (the board's Windows track, [#37](https://github.com/gascarcella/dw2003recomp/issues/37)):
+- **Platforms:** Linux x86_64 and Windows x86_64 (cross-built from Linux; the board's Windows track,
+  [#37](https://github.com/gascarcella/dw2003recomp/issues/37)):
   the cross toolchain (llvm-mingw, SDL3 for Windows, `scripts/build_windows.sh`) builds `dw2003.exe` and the
   launcher, which passes its self-test under Wine; the arena needs no alignment, fixed link address or linker-script
   symbols, the overlay sections no linker script (the units' sections go to their overlay's: objcopy after each
   compile on ELF, `#pragma clang section` on PE, which keeps the units' unwind tables),
   the state tables no `nm -S`; the runtime's system calls are split into POSIX and Windows halves
   (`port/src/platform.c`). Under Wine, headless, the game replays both layer-2 scripts with the Linux build's log,
-  record and SPU trace byte for byte (`tests/port/run.py --exe build/port-win/dw2003.exe --wine`). Nothing has run on
-  real Windows yet. macOS is not planned.
+  record and SPU trace byte for byte (`tests/port/run.py --exe build/port-win/dw2003.exe --wine`). The release's
+  Windows zip (`scripts/package_windows.sh`) was play-tested on this desktop under Wine 11.17 and GE-Proton 10-25:
+  the launcher and the game draw, the game plays sound (WASAPI) at 50 frames a second through the `new_game` route.
+  Nothing has run on real Windows yet (testers: the board's Windows 9). macOS is not planned.
 - **Play-tested** on a desktop (Wayland, NVIDIA, PipeWire) through the first battle, a save and its load:
   picture, sound and timing were right except for the battle camera, fixed since
   ([#7](https://github.com/gascarcella/dw2003recomp/issues/7)); the battle has not been play-tested again.
@@ -85,8 +88,9 @@ The plan's milestones (`docs/PORT.md`):
   not fight get a share of the battle's experience; optional catch-up bonus), XP boost (a battle's experience, form
   experience and Bits multiplied, up to 5x on sliders or 10x typed; presets Boost, Turbo, Ultra). With mods off, the
   binary's logs, records and audio are unchanged.
-- **Release:** `scripts/package_appimage.sh` builds one Linux AppImage; a tag `vX.Y.Z` produces a draft release
-  (`docs/RELEASE.md`). Publishing it is a maintainer decision.
+- **Release:** `scripts/package_appimage.sh` builds one Linux AppImage, `scripts/package_windows.sh` the Windows zip
+  (and its PDB symbols zip); a tag `vX.Y.Z` produces a draft release with both (`docs/RELEASE.md`). Publishing it
+  is a maintainer decision.
 
 ## Infrastructure
 - **CI** (`.github/workflows/ci.yml`) runs per area (game, port, launcher; `scripts/ci_areas.sh`) on pull requests
