@@ -219,6 +219,11 @@ void port_global_save_open(void);
 s32 port_global_save_map_name(s32 map_name);
 void port_global_save_record(void *slot);
 void port_global_save_restore(const void *slot);
+/* port_mod_preset_language: preset_language is on ("Preset language"): CNTY_SEL's root object (src/cnty_sel), once the
+ * screen's sound bank is in, sets records_language to port_preset_language (0 JPN, 1 USA, 2-6 Europe) and goes on to
+ * the opening as the menu would, without drawing the screen. */
+extern int port_mod_preset_language;
+extern s32 port_preset_language;
 
 #endif /* PC_PORT */
 

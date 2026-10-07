@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "id": "preset_language",
+  "name": "Preset language",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "Starts the game in the chosen language and skips the language select screen. USA and Japanese are on the disc but the screen never offers them; Japanese also shows the Japanese release's intro screen.",
+  "options": [
+    { "id": "language", "name": "Language", "description": "The game's text language. Takes effect at the next start.",
+      "type": "enum", "default": "english", "applies": "restart",
+      "values": [
+        { "id": "english", "label": "English" }, { "id": "french", "label": "French" },
+        { "id": "german", "label": "German" }, { "id": "italian", "label": "Italian" },
+        { "id": "spanish", "label": "Spanish" }, { "id": "usa", "label": "English (USA)" },
+        { "id": "japanese", "label": "Japanese" }
+      ] }
+  ]
+}

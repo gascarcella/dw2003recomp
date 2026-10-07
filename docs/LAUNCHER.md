@@ -319,6 +319,24 @@ the mod off, the binary is the plain game: the menu has no SAVE and a load resto
 `tests/port/mods.py` saves from the lab (map 0x206), returns, reboots and loads, with `restore_map_state` on and off,
 and with the mod off; `tests/saves/run.py` loads the card it writes in the emulator.
 
+### Preset language
+
+`preset_language`. Option: `language` (enum `english french german italian spanish usa japanese`, default `english`,
+`applies: restart`). No hotkey: it acts at boot whenever enabled (`port_mod_preset_language`).
+
+The game boots into CNTY_SEL (map 0x1600), whose menu sets `records_language` (the offset of every localized text
+file ID: 0 JPN, 1 USA, 2 ENG, 3 FRA, 4 ITA, 5 GER, 6 SPN) and goes on to the opening, map 0xE02 (0xE01 for Japanese).
+With the mod on, CNTY_SEL's root object (`src/cnty_sel/cnty_sel_80082CE8.c`), once the screen's sound bank is in, sets
+`records_language` to the option's code and makes that map change itself: the screen's image, menu, music and fade
+are never loaded. Nothing else on the EU disc reads the choice; the title's New Game builds the new game's records
+(`gamestate_init_records`) in that language. A reset goes through CNTY_SEL again, so the language stays. The screen
+offers only the five EU languages, but the USA and Japanese text sets are on the disc too (`docs/DISC_LAYOUT.md`) and
+the EU code handles them: Japanese takes the opening's 0xE01 path, with the Japanese release's intro art (both
+play-tested to the memory card screen).
+
+`tests/port/mods.py` boots each language (the opening's map and `records_language`, and the mod off still at the
+screen) and runs `new_game`'s route from the opening in French, whose new game has the French deck names.
+
 ## 50/60 Hz
 
 A setting, not a mod: `video.refresh: 60` or `--refresh 60` (default 50, PAL). It sets, before `port_overlay_init()`
