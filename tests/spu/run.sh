@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The SPU core's host tests (docs/SOUND.md section 6): builds tests/spu/spu_test (and the trace renderer, for
-# render_trace.py) from port/runtime/spu.c, spu_dsp.c and sha1.c with the port's flags into build/spu_test/<variant>/, and
+# render_trace.py) from psxstack/runtime/spu.c, spu_dsp.c and sha1.c with the port's flags into build/spu_test/<variant>/, and
 # replays tests/spu/goldens.txt through it. About a second per variant; needs only the host gcc.
 # Usage: tests/spu/run.sh [--m32] [--sanitize] [--all] [-v]
 #   --m32       a 32-bit build (gcc-multilib), --sanitize ASan + UBSan, --all the three builds one after the other
@@ -18,9 +18,9 @@ for a in "$@"; do
     esac
 done
 [[ ${#VARIANTS[@]} -eq 0 ]] && VARIANTS=(m64)
-SRCS=("$ROOT/port/runtime/spu.c" "$ROOT/port/runtime/spu_dsp.c" "$ROOT/port/runtime/sha1.c")
+SRCS=("$ROOT/psxstack/runtime/spu.c" "$ROOT/psxstack/runtime/spu_dsp.c" "$ROOT/psxstack/runtime/sha1.c")
 CFLAGS=(-std=gnu99 -O2 -fwrapv -fsigned-char -fno-strict-aliasing -Wall -Wextra -Werror
-        -I"$ROOT/port/include" -I"$ROOT/port/runtime")
+        -I"$ROOT/psxstack/include" -I"$ROOT/psxstack/include/psxstack" -I"$ROOT/psxstack/runtime")
 for v in "${VARIANTS[@]}"; do
     out="$ROOT/build/spu_test/$v"
     mkdir -p "$out"

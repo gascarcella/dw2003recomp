@@ -1,4 +1,4 @@
-/* tests/host/gpu_harness.c: the port's LIBGPU and software GPU (port/psyq/libgpu.c, gpu.c) driven line by line from
+/* tests/host/gpu_harness.c: the port's LIBGPU and software GPU (psxstack/psyq/libgpu.c, gpu.c) driven line by line from
  * stdin by tests/host/gpu_replay.py, which mirrors the calls of the gpu golden family (tests/golden/gpu.json). One
  * command per line, one answer line each:
  *   R                       the console's reset (psyq_gpu_reset: VRAM zero)               -> ok
@@ -11,7 +11,7 @@
  *   D HEX_ENV x y w h       SetDefDrawEnv(DRAWENV with these bytes, x, y, w, h)           -> the DRAWENV's bytes
  *   V HEX_DRMOVE x y w h dx dy  SetDrawMove(DR_MOVE with these bytes, RECT, dx, dy)       -> the DR_MOVE's bytes
  *   B                       BreakDraw                                                     -> 0 for NULL, else 1
- * Built with -DGPU_HW (tests/host/gpu_hw_replay.py: with port/runtime/render_gpu.c and SDL3) the hardware renderer's
+ * Built with -DGPU_HW (tests/host/gpu_hw_replay.py: with psxstack/runtime/render_gpu.c and SDL3) the hardware renderer's
  * rasteriser listens to the software GPU from the start, and:
  *   H                       its whole VRAM target against the software VRAM -> "ok", or "diff N x y SW HW" (the
  *                           count, the first differing pixel, both values), after which the target is set to the

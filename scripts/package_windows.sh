@@ -28,6 +28,7 @@ log() { printf '\033[1;34m[windows-package]\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m[windows-package]\033[0m %s\n' "$*" >&2; exit 1; }
 
 version="${DW3_VERSION:-}" out="$ROOT/build/release" test=0
+export PSXSTACK_VERSION="$version"   # psxstack/cmake/version.cmake reads it (DW3_VERSION stays the release's input)
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --version) version="$2"; shift 2 ;;
@@ -74,7 +75,7 @@ pkg="$ROOT/packaging/windows"
 log "dw2003 $version for Windows: llvm-mingw at $llvm, SDL3 at $sdl, Dear ImGui at $imgui"
 
 # ---- The two programs, in Release (build_windows.sh's own build directories: build/port-win, build/launcher-win),
-# the version stamped into both (port/cmake/version.cmake reads DW3_VERSION).
+# the version stamped into both (psxstack/cmake/version.cmake reads PSXSTACK_VERSION).
 work="$ROOT/build/release/windows"
 mkdir -p "$work" "$out"
 log "building the game and the launcher (scripts/build_windows.sh --launcher; log: $work/build.log)"
@@ -86,7 +87,7 @@ for f in "$game_dir/dw2003.exe" "$game_dir/dw2003.pdb" "$launcher_dir/dw2003-lau
          "$launcher_dir/dw2003-launcher.pdb"; do
     [[ -f "$f" ]] || die "the build made no $f"
 done
-[[ -d "$game_dir/mods" ]] || die "the game's build has no mods/ (port/CMakeLists.txt copies port/mods there)"
+[[ -d "$game_dir/mods" ]] || die "the game's build has no mods/ (psxstack copies its mods/ and port/mods there)"
 
 # ---- Checks on the executables: GUI subsystem (no console window), the manifest resource, static (no DLL of the
 # toolchain's or SDL's: only Windows' own libraries are imported).

@@ -251,7 +251,7 @@ jobs:
             build/**/crash-*.txt
           if-no-files-found: ignore
 
-  # The PC port's window (-DDW3_PORT_SDL=ON, SDL3 from tools/sdl3) and the launcher (launcher/README.md; Dear ImGui on
+  # The PC port's window (-DPSXSTACK_SDL=ON, SDL3 from tools/sdl3) and the launcher (launcher/README.md; Dear ImGui on
   # SDL3), disc-free, both on SDL's offscreen video driver (no display): the port's input self-test (injected key and
   # virtual-gamepad events reach the pad, hotkeys never do, the pause stops and gives back the game; SDL's dummy audio
   # driver takes the audio device's path), also with rebound keys and pads, chord hotkeys and a mod's bindings
@@ -277,7 +277,7 @@ jobs:
 
       - name: PC port with the window (SDL3)
         run: |
-          cmake -S port -B build/port-sdl -G Ninja -DDW3_PORT_SDL=ON
+          cmake -S port -B build/port-sdl -G Ninja -DPSXSTACK_SDL=ON
           cmake --build build/port-sdl -j "$DW3_JOBS"
 
       - name: PC port, input self-test

@@ -1,5 +1,5 @@
 /* tests/host/gte_harness.c: runs the gte golden family's cases (tests/golden/families/gte.py) through the port's
- * software GTE and LIBGTE (port/psyq/gte.c, libgte.c); tests/host/gte_replay.py builds it and drives it over stdin,
+ * software GTE and LIBGTE (psxstack/psyq/gte.c, libgte.c); tests/host/gte_replay.py builds it and drives it over stdin,
  * one command per line, one answer line each (hex bytes):
  *   G <word|-> <in: 64 words, 512 hex digits>   the PS1 routine: ctc2 every control register, mtc2 the data registers
  *                                                but 15, 28, 29, 31, the command (- none) -> the 64 words read back

@@ -15,11 +15,11 @@
 #define WEAK __attribute__((weak))
 /* FIELDSTG's .data section (the names tools/port_gen.py `rename` gives the units' sections: game_section), not its
  * .bss: GCC gives a zero-initialised variable in a section not named .bss* a PROGBITS section, and GNU ld would then
- * make a second, PROGBITS dw3_bss_fieldstg beside the units' NOBITS one. 280 bytes of zeros in the file. */
+ * make a second, PROGBITS dw2003_bss_fieldstg beside the units' NOBITS one. 280 bytes of zeros in the file. */
 #ifdef _WIN32
-#define FIELDSTG_BSS __attribute__((section(".dw3data$fieldstg_1")))
+#define FIELDSTG_BSS __attribute__((section(".psxdata$fieldstg_1")))
 #else
-#define FIELDSTG_BSS __attribute__((section("dw3_data_fieldstg")))
+#define FIELDSTG_BSS __attribute__((section("dw2003_data_fieldstg")))
 #endif
 
 WEAK MATRIX D_800812F8;

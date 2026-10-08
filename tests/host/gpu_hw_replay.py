@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The hardware renderer's exactness at internal scale 1 (port/runtime/render_gpu.c; issue #31): the gpu golden family's
+"""The hardware renderer's exactness at internal scale 1 (psxstack/runtime/render_gpu.c; issue #31): the gpu golden family's
 715 command lists (tests/golden/gpu.json, as tests/host/gpu_replay.py replays them) through the software GPU with the
 rasteriser listening, and after every case the whole 1024x512 VRAM target read back and compared with the software
 VRAM, pixel for pixel. The reference is gpu.c, not the PS1: gpu.c's own differences from the emulator are
@@ -11,7 +11,7 @@ software VRAM again, so every case starts equal.
 
 Needs a GPU device (Vulkan; --lavapipe uses Mesa's software driver) and SDL's offscreen video driver; without a device
 it prints why and exits 0 (skipped), as CI does. It builds build/port-sdl first (the shaders' headers; tools/sdl3 and
-tools/dxc), then the harness (tests/host/gpu_harness.c with -DGPU_HW, port/runtime/render_gpu.c, SDL3).
+tools/dxc), then the harness (tests/host/gpu_harness.c with -DGPU_HW, psxstack/runtime/render_gpu.c, SDL3).
 Exit codes: 0 pass or skipped (no device, no tools/sdl3 or tools/dxc: said so), 1 a difference the ledger does not
 list (or a ledger entry that no longer differs), 2 --lavapipe without lavapipe."""
 import argparse
@@ -53,7 +53,7 @@ def build(out, env):
         raise Missing("no tools/dxc (scripts/setup.sh dxc)")
     if shutil.which("pkg-config") is None:
         raise Missing("no pkg-config (SDL3's static link flags)")
-    build_port("build/port-sdl", ["-DDW3_PORT_SDL=ON"], 0, env)   # the shaders' generated headers
+    build_port("build/port-sdl", ["-DPSXSTACK_SDL=ON"], 0, env)   # the shaders' generated headers
     out.mkdir(parents=True, exist_ok=True)
     inc = out / "include"
     inc.mkdir(exist_ok=True)
@@ -62,13 +62,13 @@ def build(out, env):
     libs = subprocess.run(["pkg-config", "--static", "--libs", "sdl3"], capture_output=True, text=True,
                           env=dict(env, PKG_CONFIG_PATH=str(sdl / "lib/pkgconfig")), check=True).stdout.split()
     binary = out / "gpu_hw_harness"
-    psyq = ROOT / "port/psyq"
+    psyq = gpu_replay.PSXSTACK / "psyq"
     cmd = (["gcc", "-std=gnu99", "-O1", "-fsigned-char", "-fwrapv", "-fno-strict-aliasing", "-DPC_PORT",
-            "-DNON_MATCHING", "-DGPU_HW", "-DDW3_PORT_SDL", "-Wall", "-Wextra", "-Werror", f"-I{inc}",
-            f"-I{ROOT / 'include'}", f"-I{ROOT}", f"-I{psyq}", f"-I{ROOT / 'port/include'}", f"-I{ROOT / 'port/runtime'}", f"-I{ROOT / 'build/port-sdl/gen/include'}",
+            "-DNON_MATCHING", "-DGPU_HW", "-DPSXSTACK_SDL", "-Wall", "-Wextra", "-Werror", f"-I{inc}",
+            f"-I{ROOT / 'include'}", f"-I{ROOT}", f"-I{psyq}", f"-I{gpu_replay.PSXSTACK / 'include'}", f"-I{gpu_replay.PSXSTACK / 'include/psxstack'}", f"-I{gpu_replay.PSXSTACK / 'runtime'}", f"-I{ROOT / 'build/port-sdl/gen/include'}",
             f"-I{ROOT / 'build/port-sdl/gen/shaders'}", f"-I{sdl / 'include'}",
             str(ROOT / "tests/host/gpu_harness.c"), str(psyq / "libgpu.c"), str(psyq / "gpu.c"), str(psyq / "psyq.c"),
-            str(ROOT / "port/runtime/render_gpu.c"), "-ffunction-sections", "-Wl,--gc-sections", "-o", str(binary)]
+            str(gpu_replay.PSXSTACK / "runtime/render_gpu.c"), "-ffunction-sections", "-Wl,--gc-sections", "-o", str(binary)]
            + libs)
     subprocess.run(cmd, check=True)
     return binary

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """A reference model of the PS1 SPU in Python, written from psx-spx "Sound Processing Unit (SPU)" (and its CD-ROM page
-for the ADPCM filter tables) independently of the port's C core (port/runtime/spu.c, spu_dsp.c), plus the generator of the
+for the ADPCM filter tables) independently of the port's C core (psxstack/runtime/spu.c, spu_dsp.c), plus the generator of the
 unit goldens that the C core must reproduce (tests/spu/goldens.txt, run by tests/spu/run.sh).
 
   tools/venv/bin/python tests/spu/spu_ref.py gen      # regenerate tests/spu/goldens.txt (~1 min)

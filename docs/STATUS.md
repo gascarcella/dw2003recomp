@@ -60,10 +60,16 @@ The plan's milestones (`docs/PORT.md`):
   internal scale of 1 equals the software VRAM (all 715 gpu golden lists, every 10th vsync of both replays; NVIDIA and
   lavapipe). Without a usable device it falls back to the software path. Internal resolutions (phase 3) are next; the
   software GPU stays the default.
-- **The port stack (psxstack):** the port is split in place into a generic runtime (`port/runtime/`, no fact about
-  this game) and a game adapter (`port/game/`: `game.json`, the probes, the mods) behind the adapter interface
-  `port/include/psxstack/game.h` (phase 1 of the extraction into the `psxstack` repository, its `GAME_CONTRACT.md`;
-  DECISIONS "The port is split into runtime and game adapter"). Phase 2 moves the runtime, the shim and the tools there.
+- **The port stack (psxstack):** the runtime, the Psy-Q shim, the build (`psxstack_add_game()`), the launcher and the
+  debug tools live in the `psxstack` repository (gascarcella/psxstack; its `docs/PORT.md`, `docs/RUNTIME.md`,
+  `docs/LAUNCHER.md`), linked at `psxstack/` from the sibling clone by `scripts/worktree_init.sh` (the submodule
+  comes with phase 4). This repository keeps the game's side: `include/port.h` (the hooks' PS1 side and the game's own
+  hooks), `port/game/` (the adapter: `game.json`, the probes, the six mods, the asm stand-ins), `port/mods/`,
+  `tools/port_inputs.py` (the build inputs the stack takes), `tools/port_inventory.py` (the stack's inventory
+  configured here), `tools/mcp_game.py` and `.mcp.json` (the debug tools' configuration); the launcher is built from
+  `psxstack/launcher` with `port/game/game.json`. Phases 0 to 3 of the extraction are done (`docs/DECISIONS.md` "The
+  port is split into runtime and game adapter", "The PC port is built on psxstack"); phase 4 (the submodule, CI, the
+  release scripts against the pin) and phase 5 (psxstack public, `v0.1.0`) are next.
 - **Debug channel and MCP server:** `dw2003 --debug SOCKET` lets a tool pause, step, press, read and write memory and
   take screenshots between two vsyncs; `tools/mcp/` (registered by `.mcp.json`) is the MCP server over it, with symbol
   names from `nm` and the config tables (`docs/PORT.md`; gate: `tests/port/debug.py`).

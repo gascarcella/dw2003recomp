@@ -253,7 +253,7 @@ static void call(const Item *it) {
     const char *n = it->name;
 
     fprintf(out, "# %ld call %s\n", cur_tick, n);
-    if (strcmp(n, "reset") == 0) { /* the console's reset: the shim's LIBSND, then the SPU (port/runtime/reset.c) */
+    if (strcmp(n, "reset") == 0) { /* the console's reset: the shim's LIBSND, then the SPU (psxstack/runtime/reset.c) */
         psyq_snd_reset();
         spu_reset();
     } else if (strcmp(n, "SsInit") == 0) {

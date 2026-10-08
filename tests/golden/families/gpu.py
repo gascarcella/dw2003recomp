@@ -1,5 +1,5 @@
-"""The GPU (GP0 drawing into VRAM) and LIBGPU's VRAM functions, for the port's software GPU (port/psyq/gpu.c,
-port/psyq/libgpu.c; tests/host/gpu_replay.py replays these cases through it).
+"""The GPU (GP0 drawing into VRAM) and LIBGPU's VRAM functions, for the port's software GPU (psxstack/psyq/gpu.c,
+psxstack/psyq/libgpu.c; tests/host/gpu_replay.py replays these cases through it).
 
 A case fills VRAM rectangles with a known pattern (a MIPS routine of this module writes xorshift32 pixels into scratch
 RAM, the EXE's own LoadImage sends them), runs a GP0 list through the EXE's DrawOTag (or calls MoveImage, ClearImage,

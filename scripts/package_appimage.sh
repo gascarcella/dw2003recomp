@@ -28,6 +28,7 @@ log() { printf '\033[1;34m[package]\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m[package]\033[0m %s\n' "$*" >&2; exit 1; }
 
 version="${DW3_VERSION:-}" out="$ROOT/build/release" sdl="${DW3_SDL3_DIR:-}" test=0 shared_cxx=0
+export PSXSTACK_VERSION="$version"   # psxstack/cmake/version.cmake reads it (DW3_VERSION stays the release's input)
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --version) version="$2"; shift 2 ;;
@@ -102,11 +103,12 @@ quiet() { # quiet LOG CMD...: the command's output into LOG, its end shown when 
 rm -f "$work/port-sdl.log" "$work/launcher.log"
 log "building the game (SDL)"
 quiet "$work/port-sdl.log" cmake -S "$ROOT/port" -B "$work/port-sdl" -G Ninja -DCMAKE_BUILD_TYPE=Release \
-    -DDW3_PORT_SDL=ON -DSDL3_DIR="$sdl/lib/cmake/SDL3"
+    -DPSXSTACK_SDL=ON -DSDL3_DIR="$sdl/lib/cmake/SDL3" -DPSXSTACK_TOOLS_DIR="$ROOT/tools"
 quiet "$work/port-sdl.log" cmake --build "$work/port-sdl" -j "$JOBS"
 log "building the launcher"
-quiet "$work/launcher.log" cmake -S "$ROOT/launcher" -B "$work/launcher" -G Ninja -DCMAKE_BUILD_TYPE=Release \
-    -DDW3_LAUNCHER_STATIC_RUNTIME="$static_cxx" -DSDL3_DIR="$sdl/lib/cmake/SDL3" -DDW3_IMGUI_DIR="$imgui"
+quiet "$work/launcher.log" cmake -S "$ROOT/psxstack/launcher" -B "$work/launcher" -G Ninja -DCMAKE_BUILD_TYPE=Release \
+    -DPSXSTACK_LAUNCHER_STATIC_RUNTIME="$static_cxx" -DSDL3_DIR="$sdl/lib/cmake/SDL3" -DPSXSTACK_IMGUI_DIR="$imgui" \
+    -DPSXSTACK_GAME_JSON="$ROOT/port/game/game.json" -DPSXSTACK_VERSION_ROOT="$ROOT" -DPSXSTACK_TOOLS_DIR="$ROOT/tools"
 quiet "$work/launcher.log" cmake --build "$work/launcher" -j "$JOBS"
 
 # ---- The AppDir.
@@ -121,7 +123,7 @@ strip -o "$appdir/usr/bin/dw2003" "$work/port-sdl/dw2003"
 rm -f "$out/$debug"
 objcopy --only-keep-debug "$work/port-sdl/dw2003" "$out/$debug"
 strip -o "$appdir/usr/bin/dw2003-launcher" "$work/launcher/dw2003-launcher"
-[[ -d "$work/port-sdl/mods" ]] || die "the game's build has no mods/ (port/CMakeLists.txt copies port/mods there)"
+[[ -d "$work/port-sdl/mods" ]] || die "the game's build has no mods/ (psxstack copies its mods/ and port/mods there)"
 cp -r "$work/port-sdl/mods" "$appdir/usr/bin/mods"
 ln -s usr/bin/dw2003-launcher "$appdir/AppRun"
 cp "$pkg/dw2003recomp.desktop" "$appdir/dw2003recomp.desktop"

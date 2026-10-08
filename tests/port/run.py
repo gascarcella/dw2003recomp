@@ -13,12 +13,12 @@ checkpoints (name, stage, map, stable gamestate hash) and the same overlay and m
 The sound (tests/port/sound.py): once, LIBSND replayed on the emulator's timeline must give the committed emulator SPU
 traces exactly (tests/sound/expected/*.trace, tests/port/sound/*.trace.gz); per script, the runs' SPU traces
 (--spu-trace) must be identical too, the run's trace must equal LIBSND's replay of its own calls (skipped while
-port/runtime/audio.c is the stub that renders nothing), and where an emulator trace is committed the game must make the
+psxstack/runtime/audio.c is the stub that renders nothing), and where an emulator trace is committed the game must make the
 same LIBSND calls (the segments between them are reported: docs/SOUND.md section 7).
-  --m32       also build build/port-m32 (-DDW3_PORT_M32=ON, needs gcc-multilib) and require its cross-core view to equal
+  --m32       also build build/port-m32 (-DPSXSTACK_M32=ON, needs gcc-multilib) and require its cross-core view to equal
               the 64-bit build's, and for new_game its log and record byte for byte (the layout check: pointers are 4
               bytes there, as on the PS1; M32_LOG_EXACT says why the other scripts' frames may differ)
-  --sanitize  also build build/port-san (-DDW3_PORT_SANITIZE=ON), run it once, and fail on any ASan/UBSan report
+  --sanitize  also build build/port-san (-DPSXSTACK_SANITIZE=ON), run it once, and fail on any ASan/UBSan report
               (its log and record must equal the plain build's too)
   --cd-speed  the port's CD timing (default: the port's, realistic)
   --exe PATH  run this binary instead of building build/port; build/port is only configured (the run's own sound
@@ -191,7 +191,7 @@ def check_script(name, args, env, out):
         else:
             print(f"  cross-core view: matches {expected_path.relative_to(ROOT)}")
         if args.m32:
-            m32 = build("build/port-m32", ["-DDW3_PORT_M32=ON"], args.jobs, env)
+            m32 = build("build/port-m32", ["-DPSXSTACK_M32=ON"], args.jobs, env)
             run = run_port(m32, script, out, "m32", args.cd_speed)
             diffs = compare(cross_core_view(rec), cross_core_view(run[2]))
             failures += [f"-m32: {d}" for d in diffs]
@@ -204,7 +204,7 @@ def check_script(name, args, env, out):
                 print("  -m32: the same cross-core view; the frames differ (FIELDSTG's free_above keeps other files "
                       "cached at another heap layout: CD timing only): " + log_diffs[0].split(": ", 1)[1][:120])
         if args.sanitize:
-            san = build("build/port-san", ["-DDW3_PORT_SANITIZE=ON"], args.jobs, env)
+            san = build("build/port-san", ["-DPSXSTACK_SANITIZE=ON"], args.jobs, env)
             san_env = dict(os.environ, UBSAN_OPTIONS=f"print_stacktrace=1:suppressions={UBSAN_SUPPRESSIONS}",
                            ASAN_OPTIONS=os.environ.get("ASAN_OPTIONS", "detect_leaks=1"))
             run = run_port(san, script, out, "san", args.cd_speed, san_env)
@@ -228,7 +228,7 @@ def check_script(name, args, env, out):
 
 
 def audio_renders(binary, out):
-    """Whether the port's audio output renders the SPU (port/runtime/audio.c past its M3 step-0 stub, which refuses --wav):
+    """Whether the port's audio output renders the SPU (psxstack/runtime/audio.c past its M3 step-0 stub, which refuses --wav):
     LIBSND's replay of a run is exact only if the run rendered 882 samples a vsync, as the replay does."""
     proc = subprocess.run([*RUNNER, str(binary), "--max-frames", "1", "--wav", str(out / "audio_probe.wav")], cwd=ROOT,
                           env=dict(os.environ, **RUNNER_ENV), capture_output=True, text=True, timeout=120)

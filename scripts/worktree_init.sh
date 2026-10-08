@@ -21,6 +21,16 @@ if [[ "$MAIN" != "$ROOT" && -f "$MAIN/extracted/disc/SLES_039.36" && ! -e "$ROOT
     exit 0
 fi
 "$ROOT/scripts/setup.sh" link gamedata disc
+# psxstack (the PC port's runtime, shim and launcher): the submodule when the checkout has one, else the sibling
+# clone of gascarcella/psxstack beside the main checkout, linked at psxstack/ (port/CMakeLists.txt's default).
+if [[ ! -e "$ROOT/psxstack/cmake/psxstack.cmake" ]]; then
+    if [[ -f "$MAIN/../psxstack/cmake/psxstack.cmake" ]]; then
+        ln -sfn "$(cd "$MAIN/../psxstack" && pwd)" "$ROOT/psxstack"
+        echo "psxstack -> $(readlink "$ROOT/psxstack") (the sibling clone)"
+    else
+        echo "psxstack: not found (clone gascarcella/psxstack beside the main checkout, or -DPSXSTACK_DIR=<path>)"
+    fi
+fi
 if [[ -f "$ROOT/extracted/disc/SLES_039.36" ]]; then
     # Already extracted (re-extracting would pull files from under worktrees that link to it).
     echo "extracted/ already present; rm -rf extracted and rerun to re-extract"

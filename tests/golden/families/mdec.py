@@ -1,5 +1,5 @@
-"""LIBPRESS and the MDEC (the PS1's macroblock decoder), for the port's movie decoder (port/psyq/libpress.c,
-port/psyq/mdec.c; tests/host/mdec_replay.py replays these cases through it).
+"""LIBPRESS and the MDEC (the PS1's macroblock decoder), for the port's movie decoder (psxstack/psyq/libpress.c,
+psxstack/psyq/mdec.c; tests/host/mdec_replay.py replays these cases through it).
 
 STDWTITL.PRO (the title overlay, which links LIBPRESS: stdwtitl_80082D70.c's movie player) is put in the overlay slot by
 a kept setup case. Then:
@@ -72,7 +72,7 @@ def frame_sectors(name):
 
 
 def frame_bitstream(name, frame):
-    """A frame's MDEC data as StGetNext hands it to the player (port/psyq/libcd.c does the same), and its header."""
+    """A frame's MDEC data as StGetNext hands it to the player (psxstack/psyq/libcd.c does the same), and its header."""
     hdr, parts = frame_sectors(name)[frame]
     assert len(parts) == hdr["sectors"], (name, frame)
     return b"".join(parts), hdr

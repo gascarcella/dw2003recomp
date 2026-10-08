@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cross-builds the PC port and the launcher for Windows x86_64 from Linux (cmake/windows-x86_64.cmake: llvm-mingw's
+# Cross-builds the PC port and the launcher for Windows x86_64 from Linux (psxstack/cmake/windows-x86_64.cmake: llvm-mingw's
 # clang and lld, SDL3 for Windows; DECISIONS "Windows: cross-built from Linux").
 #
 # Usage: scripts/build_windows.sh [--launcher] [--configure-only] [--test] [--jobs N]
@@ -50,7 +50,8 @@ PATH="$PATH:$(tool venv)/bin"
 for t in cmake ninja; do
     command -v "$t" >/dev/null || die "no $t on PATH (scripts/setup.sh cmake)"
 done
-toolchain="$ROOT/cmake/windows-x86_64.cmake"
+toolchain="$ROOT/psxstack/cmake/windows-x86_64.cmake"   # psxstack's (PSXSTACK_TOOLS_DIR names our tools/)
+export PSXSTACK_TOOLS_DIR="$(dirname "$(tool llvm-mingw)")"
 status=0
 mkdir -p "$ROOT/build"   # a fresh checkout has none: the logs below go beside the build directories
 
@@ -58,7 +59,7 @@ mkdir -p "$ROOT/build"   # a fresh checkout has none: the logs below go beside t
 port_dir="$ROOT/build/port-win"
 log "game: configuring $port_dir"
 cmake -S "$ROOT/port" -B "$port_dir" -G Ninja -DCMAKE_TOOLCHAIN_FILE="$toolchain" -DCMAKE_BUILD_TYPE=Release \
-    -DDW3_PORT_SDL=ON >"$port_dir.configure.log" 2>&1 || die "game: configure failed (see $port_dir.configure.log)"
+    -DPSXSTACK_SDL=ON -DPSXSTACK_TOOLS_DIR="$PSXSTACK_TOOLS_DIR" >"$port_dir.configure.log" 2>&1 || die "game: configure failed (see $port_dir.configure.log)"
 if [[ $configure_only -eq 0 ]]; then
     log "game: building every object with $JOBS jobs (ninja -k 0; log: $port_dir.build.log)"
     if ninja -C "$port_dir" -k 0 -j"$JOBS" >"$port_dir.build.log" 2>&1; then
@@ -66,10 +67,10 @@ if [[ $configure_only -eq 0 ]]; then
     else
         status=1
         failed="$(grep '^FAILED: ' "$port_dir.build.log" | sed 's/^FAILED: //; s/^\[code=[0-9]*\] //; s/ *$//' || true)"
-        units_failed="$(grep -c 'dw3_game.dir' <<<"$failed" || true)"
+        units_failed="$(grep -c 'dw2003_game.dir' <<<"$failed" || true)"
         runtime_failed="$(grep 'dw2003.dir' <<<"$failed" | sed 's|.*dw2003.dir/||; s|\.obj$||' | tr '\n' ' ' || true)"
         objs="$(find "$port_dir/CMakeFiles" -name '*.obj' | wc -l)"
-        units="$(find "$port_dir/CMakeFiles/dw3_game.dir" -name '*.obj' 2>/dev/null | wc -l)"
+        units="$(find "$port_dir/CMakeFiles/dw2003_game.dir" -name '*.obj' 2>/dev/null | wc -l)"
         log "game: did not link. $units of 388 units compiled ($units_failed failed); $objs objects in all"
         [[ -z "$runtime_failed" ]] || log "game: runtime and shim files that do not compile: $runtime_failed"
         if grep -q '^FAILED: dw2003.exe' "$port_dir.build.log"; then
@@ -87,8 +88,9 @@ if [[ $launcher -eq 1 ]]; then
     [[ -f "$imgui/imgui.cpp" ]] || die "no Dear ImGui: scripts/setup.sh imgui"
     launcher_dir="$ROOT/build/launcher-win"
     log "launcher: configuring $launcher_dir"
-    cmake -S "$ROOT/launcher" -B "$launcher_dir" -G Ninja -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
-        -DCMAKE_BUILD_TYPE=Release -DDW3_LAUNCHER_STATIC_RUNTIME=ON -DDW3_IMGUI_DIR="$imgui" \
+    cmake -S "$ROOT/psxstack/launcher" -B "$launcher_dir" -G Ninja -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
+        -DCMAKE_BUILD_TYPE=Release -DPSXSTACK_LAUNCHER_STATIC_RUNTIME=ON -DPSXSTACK_IMGUI_DIR="$imgui" \
+        -DPSXSTACK_GAME_JSON="$ROOT/port/game/game.json" -DPSXSTACK_VERSION_ROOT="$ROOT" -DPSXSTACK_TOOLS_DIR="$PSXSTACK_TOOLS_DIR" \
         >"$launcher_dir.configure.log" 2>&1 || die "launcher: configure failed (see $launcher_dir.configure.log)"
     if [[ $configure_only -eq 0 ]]; then
         log "launcher: building"

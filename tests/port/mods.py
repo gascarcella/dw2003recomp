@@ -285,12 +285,12 @@ NG_EXPECTED = ROOT / "tests/replay/expected/new_game.json"
 def pl_boot(binary, out, lang):
     """One boot through the debug channel with preset_language on (lang) or off (None): (map, records_language,
     frame) once the opening's map is reached, or after 600 frames on the language select screen."""
-    sys.path.insert(0, str(ROOT / "tools/mcp"))
-    from game import Game  # the debug channel's client (stdlib only)
-    from symbols import Symbols
+    sys.path.insert(0, str(ROOT / "tools"))
+    import mcp_game  # noqa: E402
+    from mcp_game import Game  # the debug channel's client (stdlib only)
     mods = {"preset_language": {"enabled": True, "language": lang}} if lang else {}
     cfg = settings(out, f"pl_{lang or 'off'}", mods)
-    rl = Symbols(ROOT, binary).host("records_language").addr
+    rl = mcp_game.symbols(binary).host("records_language").addr
     g = Game.spawn([str(binary), "--config", str(cfg), "--cd-speed", "instant"], cwd=str(ROOT), hold=True)
     try:
         r = g.wait(ps1_map=0xE01 if lang == "japanese" else 0xE02, timeout=600)

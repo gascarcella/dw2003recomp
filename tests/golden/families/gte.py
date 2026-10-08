@@ -1,5 +1,5 @@
 """The GTE (the PS1's geometry coprocessor, COP2) and LIBGTE's matrix functions, for the port's software GTE
-(port/psyq/gte.c, port/psyq/libgte.c; tests/host/gte_replay.py replays these cases through it).
+(psxstack/psyq/gte.c, psxstack/psyq/libgte.c; tests/host/gte_replay.py replays these cases through it).
 
 The game's code is not called for the GTE cases: small MIPS routines written into scratch RAM (this module assembles
 them) load every GTE register from a case's `in` buffer (32 data words, then 32 control words: ctc2 for all 32 control

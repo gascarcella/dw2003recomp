@@ -15,7 +15,7 @@
 #          shaders (issue #31)
 #   imgui: Dear ImGui at its pinned tag into tools/imgui, for the launcher (launcher/README.md; needs sdl3 too)
 #   sdl3:  SDL3 built from its pinned source tarball into tools/sdl3 (static), for the PC port's window
-#          (cmake -DDW3_PORT_SDL=ON; port/README.md "The window"); its backends follow the -dev headers present
+#          (cmake -DPSXSTACK_SDL=ON; port/README.md "The window"); its backends follow the -dev headers present
 #   sdl3-desktop: the same SDL into tools/sdl3-desktop, with the desktop backends required (the release's);
 #          `scripts/setup.sh --sdl3-desktop-apt` prints the Ubuntu -dev packages it needs
 #   appimage: appimagetool and the static AppImage runtime, pinned, into tools/appimage (scripts/package_appimage.sh)

@@ -1,5 +1,5 @@
 /* tests/host/libgs_harness.c: runs the libgs_view golden family's cases (tests/golden/families/libgs_view.py) through
- * the port's LIBGS and LIBGTE (port/psyq/libgs.c, libgte.c, gte.c); tests/host/libgs_replay.py builds it and drives it
+ * the port's LIBGS and LIBGTE (psxstack/psyq/libgs.c, libgte.c, gte.c); tests/host/libgs_replay.py builds it and drives it
  * over stdin, one command per line, one answer line each (hex bytes, space-separated fields):
  *   S                                       the state after GsInitGraph(320, 240, ...), as the boot leaves it:
  *                                           -> D_80081398 (32 bytes), PSDCNT (4)
@@ -23,7 +23,7 @@
 #include "psyq_internal.h"
 #include "psyq/libgs.h"
 
-/* port/psyq/libgs.c and libgte.c: what the game does not call (no header declares them). */
+/* psxstack/psyq/libgs.c and libgte.c: what the game does not call (no header declares them). */
 extern MATRIX D_80081358, D_80081338, D_80081398, D_800812F8, D_80081318;
 extern u32 D_800812D8;
 void GsGetLw(GsCOORDINATE2 *coord, MATRIX *m);
