@@ -60,6 +60,7 @@ static struct {
 static int video_shot_count;
 static long video_converted_frame = -1; /* the frame video_pixels was converted at (the debug channel's screenshot) */
 static int video_gpu_wanted;            /* --renderer gpu / video.renderer "gpu" */
+static int video_internal_scale = 1;    /* --internal-scale / video.internal_scale: the rasteriser's, 1..8 */
 static struct {
     long frame;
     int w, h; /* the output's size; 0: the image's own */
@@ -170,6 +171,10 @@ int port_video_set_renderer(const char *name) {
     return 0;
 }
 
+void port_video_set_internal_scale(int scale) {
+    video_internal_scale = scale < 1 ? 1 : scale > 8 ? 8 : scale;
+}
+
 int port_video_gpu_screenshot_add(const char *spec) {
     char *end;
     long frame = strtol(spec, &end, 0);
@@ -241,7 +246,7 @@ void port_video_open(int scale, int fullscreen) {
         video_gpu = render_gpu_open(video_window, why, sizeof(why));
         if (!video_gpu) {
             port_log("renderer: gpu unavailable (%s); software", why);
-        } else if (!render_gpu_raster_start(why, sizeof(why))) {
+        } else if (!render_gpu_raster_start(video_internal_scale, why, sizeof(why))) {
             port_log("renderer: gpu: no rasteriser (%s); the software image through SDL_GPU", why);
         }
     }
@@ -430,8 +435,9 @@ static void video_gpu_shots_due(void) {
         if (video_gpu_shots[i].frame != port_frames) {
             continue;
         }
-        w = video_gpu_shots[i].w > 0 ? video_gpu_shots[i].w : video_w;
-        h = video_gpu_shots[i].h > 0 ? video_gpu_shots[i].h : video_h;
+        /* the image: a display from the rasteriser's target at its internal scale */
+        w = video_gpu_shots[i].w > 0 ? video_gpu_shots[i].w : video_w * (video_vram ? render_gpu_scale() : 1);
+        h = video_gpu_shots[i].h > 0 ? video_gpu_shots[i].h : video_h * (video_vram ? render_gpu_scale() : 1);
         buf = malloc((size_t)w * (size_t)h * 4);
         if (!render_gpu_active() || buf == NULL ||
             !render_gpu_readback(video_pixels, video_w, video_h, video_vram ? video_vram_xy : NULL, w, h,
@@ -476,7 +482,7 @@ static void video_vram_check(void) {
 
 void port_video_gpu_headless(void) {
     char why[256];
-    if (video_gpu_shot_count == 0 || render_gpu_active()) {
+    if ((video_gpu_shot_count == 0 && !video_gpu_wanted) || render_gpu_active()) {
         return;
     }
     if (!SDL_WasInit(SDL_INIT_VIDEO) && !SDL_InitSubSystem(SDL_INIT_VIDEO)) {
@@ -487,10 +493,28 @@ void port_video_gpu_headless(void) {
         port_log("renderer: gpu unavailable (%s)", why);
         return;
     }
-    if (!render_gpu_raster_start(why, sizeof(why))) {
+    if (!render_gpu_raster_start(video_internal_scale, why, sizeof(why))) {
         port_log("renderer: gpu: no rasteriser (%s); the software image through SDL_GPU", why);
     }
     port_log("renderer: gpu for the screenshots (%s)", render_gpu_describe());
+}
+
+int port_video_gpu_screenshot_now(const char *path, int *w, int *h) {
+    u32 *buf;
+    int ok, s = render_gpu_scale();
+    if (!render_gpu_active()) {
+        return -1;
+    }
+    if (video_converted_frame != port_frames) {
+        video_convert();
+    }
+    *w = video_w * (video_vram ? s : 1);
+    *h = video_h * (video_vram ? s : 1);
+    buf = malloc((size_t)*w * (size_t)*h * 4);
+    ok = buf != NULL && render_gpu_readback(video_pixels, video_w, video_h, video_vram ? video_vram_xy : NULL, *w, *h,
+                                            NULL, buf) && video_ppm(path, buf, *w, *h);
+    free(buf);
+    return ok;
 }
 #else
 int port_video_available(void) {
@@ -498,6 +522,13 @@ int port_video_available(void) {
 }
 
 void port_video_gpu_headless(void) {
+}
+
+int port_video_gpu_screenshot_now(const char *path, int *w, int *h) {
+    (void)path;
+    (void)w;
+    (void)h;
+    return -1;
 }
 
 static void video_gpu_shots_due(void) {

@@ -88,10 +88,14 @@ int port_video_screenshot_add(const char *spec); /* "FRAME:PATH"; 0 when malform
 /* The renderer: "software" or "gpu" (--renderer, video.renderer; video.c); 0 for another name. port_video_open uses it.
  * --gpu-screenshot "FRAME[@WxH]:PATH" (SDL build): the hardware renderer's picture; 0 when malformed (or too many). */
 int port_video_set_renderer(const char *name);
+void port_video_set_internal_scale(int scale); /* --internal-scale / video.internal_scale: the rasteriser's, 1..8 */
 int port_video_gpu_screenshot_add(const char *spec);
 /* A run without a window that has --gpu-screenshot: the GPU device and the rasteriser opened now, before the game
  * draws (SDL build; logged and skipped without a device). */
 void port_video_gpu_headless(void);
+/* The hardware renderer's picture now (the display at its internal scale) as a PPM: the debug channel's screenshot
+ * with "renderer": "gpu". 1 written, 0 the file cannot be written, -1 no GPU renderer in this run. */
+int port_video_gpu_screenshot_now(const char *path, int *w, int *h);
 /* The current display image (converted at this frame already, or now) to `path` as --screenshot writes it; its size
  * in *w, *h; 0 when the file cannot be written (the debug channel's screenshot). */
 int port_video_screenshot_now(const char *path, int *w, int *h);

@@ -63,7 +63,7 @@ static void remove_tree(const std::string &path) {
 static const char SAMPLE_SETTINGS[] = R"({
   "schema": 1,
   "disc": { "path": "/games/dw2003.cue", "sha1": "457cb233349ba841e03b33d8060f8fbcadd45cb3" },
-  "video": { "window": true, "scale": 4, "fullscreen": true, "refresh": 60, "renderer": "gpu" },
+  "video": { "window": true, "scale": 4, "fullscreen": true, "refresh": 60, "renderer": "gpu", "internal_scale": 3 },
   "audio": { "mute": true },
   "memcard1": "cards/card1.mcd",
   "memcard2": null,
@@ -184,7 +184,7 @@ static void test_settings_file(const std::string &root) {
     const Settings &v = s.values;
     check(s.state() == SettingsFile::State::Loaded && s.messages().empty(), "the sample loads without a warning");
     check(v.disc_path == "/games/dw2003.cue" && v.scale == 4 && v.fullscreen && v.refresh == 60 &&
-              v.renderer == "gpu" && v.mute &&
+              v.renderer == "gpu" && v.internal_scale == 3 && v.mute &&
               v.memcard[0].present && v.memcard[0].path == "cards/card1.mcd" && !v.memcard[1].present,
           "the sample's values");
     s.values.scale = 2;
@@ -199,12 +199,14 @@ static void test_settings_file(const std::string &root) {
     const std::string bad = path_join(root, "bad");
     path_make_dir(bad, nullptr);
     write(path_join(bad, SETTINGS_FILE),
-          R"({"schema":1,"video":{"scale":99,"refresh":55,"fullscreen":"yes","renderer":"vulkan"},"audio":3,)"
+          R"({"schema":1,"video":{"scale":99,"refresh":55,"fullscreen":"yes","renderer":"vulkan","internal_scale":9},)"
+          R"("audio":3,)"
           R"("memcard1":7,"memcard2":""})");
     SettingsFile b;
     b.load(bad);
-    check(b.state() == SettingsFile::State::Loaded && b.messages().size() == 7, "seven warnings for seven bad values");
+    check(b.state() == SettingsFile::State::Loaded && b.messages().size() == 8, "eight warnings for eight bad values");
     check(b.values.scale == 2 && b.values.refresh == 50 && !b.values.fullscreen && b.values.renderer == "software" &&
+              b.values.internal_scale == 1 &&
               b.values.memcard[0].path == "card1.mcd" && b.values.memcard[1].path == "card2.mcd",
           "bad values fall back to the defaults");
 
@@ -1067,6 +1069,15 @@ static void test_play(SDL_Window *window, const std::string &root) {
     pump(app, 2);
     png = path_join(shots, "9-Settings.png");
     app.frame(png.c_str());
+    // The GPU renderer shows its internal-resolution slider (a picture), then back to the default.
+    app.settings().values.renderer = "gpu";
+    app.settings().values.internal_scale = 4;
+    pump(app, 2);
+    png = path_join(shots, "9b-Settings-gpu.png");
+    app.frame(png.c_str());
+    app.settings().values.renderer = "software";
+    app.settings().values.internal_scale = 1;
+    pump(app, 2);
 
     // A wrong file dropped on the window: checked, refused, the verified disc stays.
     write(path_join(dir, "wrong.bin"), "abc");

@@ -22,10 +22,13 @@ int render_gpu_open(SDL_Window *window, char *why, size_t why_size);
 int render_gpu_active(void);
 /* "vulkan, NVIDIA GeForce ..." for the log; "" when closed. */
 const char *render_gpu_describe(void);
-/* The rasteriser: its VRAM target (1024x512), the copy of the software VRAM it samples, its pipeline, and gpu.c's
- * listener installed; the target starts as the VRAM is now. 0 on failure (why says it; nothing is installed). */
-int render_gpu_raster_start(char *why, size_t why_size);
+/* The rasteriser: its VRAM target (1024 x 512 at the internal scale 1..8: a VRAM pixel is scale x scale target
+ * pixels; a lower scale when the device cannot allocate it, logged), the copy of the software VRAM it samples, its
+ * pipeline, and gpu.c's listener installed; the target starts as the VRAM is now. 0 on failure (why says it). */
+int render_gpu_raster_start(int scale, char *why, size_t why_size);
 int render_gpu_rasterising(void);
+/* The internal scale in use (1 when not rasterising). */
+int render_gpu_scale(void);
 /* Runs the units recorded since the last call (once per vsync: the target is state, so every vsync's units run, also
  * when no picture is presented). */
 void render_gpu_frame(void);
@@ -38,7 +41,7 @@ int render_gpu_present(const u32 *pixels, int w, int h, const int *vram_xy, Rend
 int render_gpu_readback(const u32 *pixels, int w, int h, const int *vram_xy, int ow, int oh, RenderDestFn dest,
                         u32 *out);
 /* The whole target as gpu.c's 16-bit pixels (1024x512: the exactness test's comparison with the software VRAM), after
- * the recorded units ran. 0 when not rasterising or on failure. */
+ * the recorded units ran. 0 when not rasterising, at an internal scale above 1, or on failure. */
 int render_gpu_read_vram(u16 *out);
 /* The target set to the VRAM as it is now (tests/host/gpu_hw_replay.py, after a case that differed). */
 void render_gpu_raster_resync(void);

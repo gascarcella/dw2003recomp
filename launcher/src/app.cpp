@@ -849,10 +849,18 @@ void App::draw_settings() {
         dirty_ = true;
     }
     if (s.renderer == "gpu") {
+        char res[64];
+        ImGui::TextDisabled("Resolution");
+        ImGui::SameLine(label_w);
+        ImGui::SetNextItemWidth(260 * ImGui::GetStyle().FontScaleDpi);
+        SDL_snprintf(res, sizeof(res), "x%d  (%d x %d)", s.internal_scale, 320 * s.internal_scale,
+                     240 * s.internal_scale);
+        dirty_ |= ImGui::SliderInt("##internal_scale", &s.internal_scale, 1, 8, res, ImGuiSliderFlags_AlwaysClamp);
         ImGui::Indent(label_w);
         ImGui::PushTextWrapPos(0);
-        ImGui::TextDisabled("SDL_GPU (Vulkan). For now it shows the same picture as Software; higher internal "
-                            "resolutions come later. Without a usable GPU the game falls back to Software.");
+        ImGui::TextDisabled("SDL_GPU (Vulkan). x1 is the Software picture, pixel for pixel; above it the game is drawn "
+                            "at that resolution, without dithering, in 8-bit colour. Without a usable GPU the game "
+                            "falls back to Software.");
         ImGui::PopTextWrapPos();
         ImGui::Unindent(label_w);
     }

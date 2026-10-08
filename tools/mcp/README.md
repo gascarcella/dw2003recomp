@@ -30,7 +30,7 @@ tests everything offline against `fake_game.py` (the protocol double; `DW3_MCP_G
 | `mem_read(target, size, count, signed, fmt)`, `mem_write(target, values, size)` | Memory by target (below); `fmt` int/hex/str; `values` a list of ints or a hex string. |
 | `symbol_lookup(name)`, `symbol_search(pattern, limit)` | Host address and size (`nm` on the ELF, cached by mtime), PS1 address/size/type (`config/symbol_addrs.txt`, the overlays' `config/*.symbols.txt`). |
 | `wait_until(target, value, size, signed, timeout_frames)`, `wait_stage(stage, timeout_frames)`, `wait_map(map, timeout_frames)` | Run until a read, the stage (overlay slot, as the pad scripts' `wait_stage`) or the map matches, or the timeout; leaves the game paused; returns `{frame, hit}`. |
-| `screenshot(path)` | The current display as a PNG image (and saved to `path` if given). |
+| `screenshot(path, renderer)` | The current display as a PNG image (and saved to `path` if given); `renderer="gpu"`: the hardware renderer's picture at its internal resolution (a game started with `extra_args=["--renderer", "gpu", "--internal-scale", "N"]`, windowed or headless). |
 | `state_hash()` | The SHA-1 of `gamestate_data`'s PS1 image, as a replay checkpoint. |
 
 Errors from the game (an unmapped address, "script owns the pad", ...) come back as tool errors with the game's
