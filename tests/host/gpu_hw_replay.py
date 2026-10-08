@@ -68,7 +68,8 @@ def build(out, env):
             f"-I{ROOT / 'include'}", f"-I{ROOT}", f"-I{psyq}", f"-I{gpu_replay.PSXSTACK / 'include'}", f"-I{gpu_replay.PSXSTACK / 'include/psxstack'}", f"-I{gpu_replay.PSXSTACK / 'runtime'}", f"-I{ROOT / 'build/port-sdl/gen/include'}",
             f"-I{ROOT / 'build/port-sdl/gen/shaders'}", f"-I{sdl / 'include'}",
             str(ROOT / "tests/host/gpu_harness.c"), str(psyq / "libgpu.c"), str(psyq / "gpu.c"), str(psyq / "psyq.c"),
-            str(psyq / "gte_shadow.c"), str(gpu_replay.PSXSTACK / "runtime/render_gpu.c"), "-ffunction-sections", "-Wl,--gc-sections", "-o", str(binary)]
+            str(psyq / "gte_shadow.c"), str(gpu_replay.PSXSTACK / "runtime/render_gpu.c"),
+            str(gpu_replay.PSXSTACK / "runtime/render_gpu_subpixel.c"), "-ffunction-sections", "-Wl,--gc-sections", "-o", str(binary)]
            + libs)
     subprocess.run(cmd, check=True)
     return binary
