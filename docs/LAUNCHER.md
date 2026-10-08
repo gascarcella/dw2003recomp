@@ -18,8 +18,8 @@ Code cites this file as `docs/LAUNCHER.md "<heading>"`; keep the headings stable
   check of the file. The game stays startable without the launcher (`--config`, or plain options).
 - A game started with `--config` has, by default: a window, memory card files beside the settings file, and the
   watchdog off.
-- The disc's SHA-1 check stays the game's (`port/src/disc.c`, `sha1.c`). The launcher compiles `port/src/sha1.c` and
-  `port/src/json.c` in as they are, to verify the disc before storing it and to read JSON with the same parser.
+- The disc's SHA-1 check stays the game's (`port/runtime/disc.c`, `sha1.c`). The launcher compiles `port/runtime/sha1.c` and
+  `port/runtime/json.c` in as they are, to verify the disc before storing it and to read JSON with the same parser.
 - Exit statuses the launcher reports: 0 normal, 1 a fatal error, 4 the watchdog, 64 bad options or settings, a
   signal; on Windows an unhandled exception's code instead of a signal (`0xC0000005` an access violation, ..., named
   by `game_exit_text`), and `abort()` is status 3 there too. On any of them but 0 the game may have written a crash
@@ -43,7 +43,7 @@ chose and why. The game itself never looks for a settings directory: it reads on
 
 ## Settings file
 
-Schema 1, read by `port/src/settings.c` (the top level), `port/src/input.c` (`input`) and `port/src/mods.c` (`mods`).
+Schema 1, read by `port/runtime/settings.c` (the top level), `port/runtime/input.c` (`input`) and `port/runtime/mods.c` (`mods`).
 `dw2003 --config FILE --print-settings` prints the effective settings (the file, then the command line) with every key
 and absolute paths and exits 0, or exits 64 naming the bad key. `tests/port/settings.py` checks the round trip, the
 defaults, the overrides and the errors.
@@ -116,7 +116,7 @@ defaults, the overrides and the errors.
   rightstick leftshoulder rightshoulder dpup dpdown dpleft dpright misc1 paddle1 paddle2 paddle3 paddle4 touchpad`,
   and the axes past half way: `lefttrigger righttrigger leftx- leftx+ lefty- lefty+ rightx- rightx+ righty- righty+`
   (`lefty-` is the left stick up). Every connected gamepad is ORed into pad 1.
-- **Default map** (`port/src/input.c`): arrows the D-pad, `X` cross, `C` circle, `Z` square, `S` triangle, `Return`
+- **Default map** (`port/runtime/input.c`): arrows the D-pad, `X` cross, `C` circle, `Z` square, `S` triangle, `Return`
   and `Keypad Enter` START, `Backspace` and `Right Shift` SELECT, `Q`/`E` L1/R1, `1`/`3` L2/R2; gamepads: south
   cross, east circle, west square, north triangle, back SELECT, start START, the shoulders L1/R1, the triggers L2/R2,
   the D-pad and the left stick the D-pad. The launcher mirrors these defaults for display (`launcher/src/input.cpp`).
@@ -130,7 +130,7 @@ defaults, the overrides and the errors.
   are masked out of the pad while latched: a single-key hotkey is never seen by the game. The first input of a chord
   made only of game buttons does reach the pad until the chord is complete, so chords should start with an input the
   pad map does not use (`pad:guide`, the stick clicks).
-- **The pause** (`port/src/pump.c`) takes effect at the end of the vsync where its key is pressed: the window keeps
+- **The pause** (`port/runtime/pump.c`) takes effect at the end of the vsync where its key is pressed: the window keeps
   polling and presenting the last image, the audio device is paused, the watchdog is re-armed, and no vsync runs (so
   nothing reaches the game, the log or the record). The key again resumes, with the pace's schedule started over.
 - With `--script` the script owns the pad: the keyboard and gamepads are read but never sent to the game (the hotkeys
@@ -168,7 +168,7 @@ live in the settings file, never in the manifest.
 | `version` | no | A string |
 | `description` | no | Shown on the mod's page |
 | `kind` | yes | `builtin` (the only kind supported; `data` is reserved for data-override mods) |
-| `requires_port` | no | Integer: the game's mod interface the mod needs (`PORT_MODS_API` in `port/src/mods.c`, 1 now) |
+| `requires_port` | no | Integer: the game's mod interface the mod needs (`PSXSTACK_API` in `port/include/psxstack/game.h`, 1 now) |
 | `options` | no | A list of options |
 | `presets` | no | A list of presets: `{ "id", "name", "description" (optional), "values": { "<option id>": value } }`. The launcher shows a button per preset (pressed while all its values are in place) that sets those values; the game never sees a preset, only the values |
 
@@ -210,7 +210,8 @@ launcher cannot use (not JSON, another schema, an `id` that is not its directory
 
 ## Mod runtime
 
-`port/src/mods.c` holds the registry of built-in mods (ids, versions, option types, defaults, ranges), reads their
+`port/runtime/mods.c` (the engine) holds the registry of built-in mods (ids, versions, option types, defaults, ranges: its own
+fast_forward, then the game's `PortMod` records from `port/game/game_mods.c`, `psxstack/game.h` `game_mods`), reads their
 values from `mods.<id>`, registers each enabled mod's `binding` options as hotkey actions (named `<id>.<option>`), and
 runs `port_mods_frame()` from `port_frame` at every vsync. `dw2003 --print-mods` prints the registry as JSON;
 `tests/port/settings.py` requires every `port/mods/<id>/mod.json` to agree with it.
@@ -228,7 +229,7 @@ runs `port_mods_frame()` from `port_frame` at every vsync. `dw2003 --print-mods`
 5. A run with a mod on needs its own expected results: the random generator steps once a frame, so any skipping
    shifts later rolls (as a faster player would). `tests/port/mods.py` holds those runs.
 
-**The pace split** (`port/src/pump.c`): `port_rate` is the nominal rate (50 or 60: the vsyncs per second the game is
+**The pace split** (`port/runtime/pump.c`): `port_rate` is the nominal rate (50 or 60: the vsyncs per second the game is
 made for, which sets the audio's samples per vsync); the pace (`port_pace_set`; 0 = unthrottled) is the wall clock's
 vsyncs per second. Every change of the pace starts the schedule over, so lowering it does not stall the game.
 `--fps N` sets both.
@@ -302,7 +303,7 @@ Test hook: `DW3_PORT_SKIP_DIALOGUES=1` (only while the mod is enabled) starts it
 The battle's rules (every roll, damage, HP) run before an action's animation script starts; the scripts only present
 them. The hook sits in `fightstg_script_update`'s INIT step 0 (`src/fightstg/fightstg_8008B630.c`), after the script's
 stream is found and before script 12's sound-bank load. For scripts 5 and up (attacks, techniques, items) it asks
-`port_battle_cut` (`port/src/mods.c`), which scans the stream (`port/src/battle_scan.c`) and returns:
+`port_battle_cut` (`port/game/game_mods.c`), which scans the stream (`port/game/battle_scan.c`) and returns:
 
 - **-1, run it:** a stream that does not scan to its end (none on the disc).
 - **1-4, the target's reaction** (`results[3] + 1`: flinch, heavy hit, KO, dodge) for a script with a child command
@@ -333,7 +334,7 @@ it by one row.
 A load returns to the saved map at the saved position but as a fresh entry (`map_is_new`): the attribute layer, the
 player's depth and height, the per-visit flags and a few more fields after the slot's 0x26C4 bytes are reset, which is
 right at an inn but can put the player on the wrong floor of a multi-layer map. So the save also writes those
-(`GsRecord`, `port/src/mods.c`) into the slot's unused tail (slot offset 0x26C4, 0x28 bytes, written to the card with
+(`GsRecord`, `port/game/game_mods.c`) into the slot's unused tail (slot offset 0x26C4, 0x28 bytes, written to the card with
 the slot and outside the game's checksum: a PS1 or an emulator ignores it and loads the save as a fresh entry), and a
 load with `restore_map_state` puts them back and marks the map as revisited (`field_last_map`), so FIELDSTG resumes it
 as after a Back from the save screen. A save without the record (an inn save of the plain game) loads as before. With
@@ -368,7 +369,7 @@ default false). No hotkey: it acts whenever enabled (`port_mod_party_xp`).
 The game splits a won battle's experience among the party members that took part (one fighter: all of it, two: 60%
 each, three: a third each) and gives the others nothing, knocked-out members included (`docs/MECHANICS.md` section 6,
 "Who gets a battle's experience"). With the mod on, STFGTREP's report (`stfgtrep_main_update`, after it creates the
-members' panels) asks `port_party_xp_share` (`port/src/mods.c`) for each member's experience:
+members' panels) asks `port_party_xp_share` (`port/game/game_mods.c`) for each member's experience:
 
 - **A member that took part** keeps the game's share.
 - **A member that did not** gets `share` percent of one fighter's share (at least 1 when both are above 0). A member at
@@ -390,7 +391,7 @@ and knocked-out members are not reached by a scripted run.
 (all 2x, the defaults), Turbo (all 3x), Ultra (all 5x). No hotkey: it acts whenever enabled (`port_mod_xp_boost`).
 
 A won battle's rewards come from one row of `stfgtrep_rewards` (`docs/MECHANICS.md` section 6, "Who gets a battle's
-experience"). With the mod on, STFGTREP's report passes each through `port_xp_boost` (`port/src/mods.c`), which
+experience"). With the mod on, STFGTREP's report passes each through `port_xp_boost` (`port/game/game_mods.c`), which
 multiplies it by the option's value (in tenths, rounded down, at most 9,999,999):
 
 - **`exp`**: one fighter's split share, in `stfgtrep_main_update` before the members' panels are created; party_xp's

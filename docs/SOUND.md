@@ -189,12 +189,12 @@ game's own driver, but no pad route reaches it.
 
 Not traced: the 60 Hz mode (`SsSetTickMode(0x1000)`, the NTSC patch).
 
-## 6. The SPU core (`port/src/spu.c`, `spu_dsp.c`)
+## 6. The SPU core (`port/runtime/spu.c`, `spu_dsp.c`)
 Our own, written from psx-spx "Sound Processing Unit (SPU)" and, for the ADPCM filter tables, its CD-ROM page
 ("XA-ADPCM", which psx-spx names as the same algorithm). psx-spx's source, where its site is unreachable:
 `https://raw.githubusercontent.com/psx-spx/psx-spx.github.io/master/docs/ps1/spu/soundprocessingunitspu.md`
 (and `.../ps1/cdr/cdromformat.md`). No emulator source was read; PCSX-Redux served as an oracle only. It implements
-`port/include/spu.h`; the pure pieces and a read-only view of the voices are in `port/src/spu_internal.h`
+`port/include/spu.h`; the pure pieces and a read-only view of the voices are in `port/runtime/spu_internal.h`
 (for the tests and tools). Section 3's reverb values check out against psx-spx (**verified**): the 32 registers
 `SsUtSetReverbType(3)` writes are psx-spx's "Studio Medium" preset word for word, its size `4840h` gives the base
 `F6F8h`, and `18040h`, SsInit's cleared area, is the size of the two largest presets ("Chaos Echo", "Delay").
@@ -305,7 +305,7 @@ that the SPU sees what it sees on the PS1: the same stores in the same order at 
 `libsnd.c` has the public calls, start-up and the VABs; `libsnd_seq.c` the score table and the sequencer;
 `libsnd_voice.c` the voice manager; `libsnd_spu.c` the SPU side (what LIBSPU does on the PS1: the game never calls
 LIBSPU, so the port has no LIBSPU API); `libsnd_internal.h` the shared state. LIBCD's `CdInit` makes its five SPU
-stores (`port/psyq/libcd.c`). `--spu-trace FILE` (`port/src/spu_trace.c`) writes the port's trace in section 4's format,
+stores (`port/psyq/libcd.c`). `--spu-trace FILE` (`port/runtime/spu_trace.c`) writes the port's trace in section 4's format,
 with the game's LIBSND calls as comments (`# <tick> call SsSepPlay(2, 2, 1, 1)`, a SEP's pointer as its offset from the
 VAB header, the console's reset as `reset()`).
 
@@ -379,7 +379,7 @@ compared tick for tick with the emulator's (2 below). The exact check takes the 
 1. **LIBSND on the emulator's timeline.** `sound.py` turns an emulator trace (recorded with `spu_trace.py run --calls`)
    into a replay script: every LIBSND call the game made with its arguments (pointers resolved to the bank files on the
    disc, the bank found by its body DMA's SHA-1), and the emulator's vsyncs (one inside `SsInit`). `sound_replay`,
-   built from `port/psyq/libsnd*.c` and `port/src/spu*.c`, makes those calls at those ticks, rendering 877.3 samples per
+   built from `port/psyq/libsnd*.c` and `port/runtime/spu*.c`, makes those calls at those ticks, rendering 877.3 samples per
    vsync, and writes its trace, which must equal the emulator's: every store and DMA block, in order, at the same tick.
    **Result: identical** for the committed `cnty_sel` (6,672 events) and `new_game` (20,204;
    `tests/port/sound/new_game.trace.gz`, 70 KB), and for `first_battle_save` to `battle_won` (214,956 events over
@@ -412,7 +412,7 @@ compared tick for tick with the emulator's (2 below). The exact check takes the 
 
 ### Rendering order and rate
 - **The audio renders before the vsync handler** (check 3 above): the samples for a frame must come after that
-  frame's game code and before the next flush, so `port/src/audio.c` renders a vsync's 882 samples in the vsync
+  frame's game code and before the next flush, so `port/runtime/audio.c` renders a vsync's 882 samples in the vsync
   pre-hook (`psyq_set_vsync_pre_hook`), before the game's handler, every vsync, headless too (LIBSND reads the
   envelopes).
 - **882 vs 877.3 samples per vsync**: the PAL rate the port renders (`SPU_RATE` / 50) is not the emulator's pace; a note

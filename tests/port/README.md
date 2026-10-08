@@ -42,16 +42,16 @@ an expected file (`new_game`, `first_battle_save`), or the names given; its sani
 else.
 
 ## The script engine
-`port/src/script.c` runs `tests/replay/scripts/*.json` with `tests/replay/run.lua`'s semantics, frame for frame: the step
+`port/runtime/script.c` runs `tests/replay/scripts/*.json` with `tests/replay/run.lua`'s semantics, frame for frame: the step
 runs after the frame log's sample on every vsync tick, instant steps (a checkpoint, a wait already satisfied, a `press`
 whose `until` holds, a `walk` that arrived) chain within the frame (at most 100), the held buttons go to the pad
 (`psyq_pad_set`, the physical buttons in the PS1 pad's bit order; the game rotates the face buttons itself) and to the
 record's `inputs`. Every step type is implemented: `walk` reads the player actor from `heap_objects` on the host, and
 `reset` restarts `game_main` with the game's data, the arena and the shim at power-on, the memory cards kept
-(`port/src/reset.c`). Exit status: 0 "script complete", 5 a step's timeout or `max_frames` (run.lua's message), 1 a bad
-script or a `wait_mem` address the port does not map (`port/src/state.c`: layout-identical ranges and an explicit
+(`port/runtime/reset.c`). Exit status: 0 "script complete", 5 a step's timeout or `max_frames` (run.lua's message), 1 a bad
+script or a `wait_mem` address the port does not map (`port/game/state.c`: layout-identical ranges and an explicit
 field table). The JSON reader is
-`port/src/json.c` (strict RFC 8259).
+`port/runtime/json.c` (strict RFC 8259).
 
 `DW3_PORT_CHECKPOINT_DIR=<dir>` makes every checkpoint also write the image it hashes to `<dir>/cpNN_<name>.bin`, as
 run.lua names its dumps (`run.py` sets it: `build/port-test/run1_checkpoints/`). When a stable hash differs, diff it with
@@ -70,10 +70,10 @@ The port does not reproduce the frames at which the game calls LIBSND (the PS1 d
 taps land elsewhere), so its own trace cannot equal the emulator's tick for tick. `sound.py` turns an emulator SPU
 trace (with the `--calls` comments) into a replay script: the game's LIBSND calls, their pointers resolved to the sound
 bank files on the disc, and the emulator's vsyncs at its ticks; `sound_replay` (built with the host gcc from
-`port/psyq/libsnd*.c` and `port/src/spu*.c` into `build/port-sound/`) makes them and must write the emulator's trace:
+`port/psyq/libsnd*.c` and `port/runtime/spu*.c` into `build/port-sound/`) makes them and must write the emulator's trace:
 every store and DMA block at the same tick. `run.py` runs it once on the committed traces (`tests/sound/expected/`,
 `tests/port/sound/new_game.trace.gz`), then on each script's run: the three builds' SPU traces identical, the run's
-trace equal to the replay of its own calls (once `port/src/audio.c` renders), and for `new_game` the same LIBSND calls
+trace equal to the replay of its own calls (once `port/runtime/audio.c` renders), and for `new_game` the same LIBSND calls
 as the emulator's, with a report of where the two games' frames differ.
 
 ## The settings file (`settings.py`; docs/LAUNCHER.md "Settings file")
@@ -166,7 +166,7 @@ list and the crashing thread's context. Needs `wine` and `tools/llvm-mingw` (~15
   byte-loop `memcpy`, about 1.8 frames, so the emulator samples FIELDSTG's stage with no stage file yet (`(2, -1)` in the
   overlay sequence) and takes the `new_game_field` checkpoint there, before FIELDSTG's start-up writes `map_is_new`,
   `field_last_map` and `meter_random_count` (`gamestate_data` + 0x26D8, 0x26DC, 0x26F8). The port's copy was instant:
-  no `(2, -1)`, and those three fields already set. `port/src/overlay.c` now runs the whole frames a copy takes (12
+  no `(2, -1)`, and those three fields already set. `port/runtime/overlay.c` now runs the whole frames a copy takes (12
   cycles a byte, 677,376 cycles a PAL frame) after it.
 - **Primitive padding.** A textured polygon's third and fourth texture words carry padding in their high half, which the
   game never writes (it holds the packet buffer's previous contents); the -m32 and -m64 builds' heaps differ, so the

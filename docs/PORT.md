@@ -7,7 +7,7 @@ formats are in `port/README.md`; the shim's per-function behaviour is in `port/p
 
 ## Overview
 - The game's C (`src/`, all 388 units) is compiled for the host with `-DPC_PORT -DNON_MATCHING` and linked with the
-  port runtime (`port/src/`) and our own Psy-Q shim (`port/psyq/`) into one 64-bit executable, `dw2003`.
+  port runtime (`port/runtime/`) and our own Psy-Q shim (`port/psyq/`) into one 64-bit executable, `dw2003`.
 - No emulator is linked and no Sony code is used: the game code runs natively, and the PS1 hardware the game reaches
   through Sony's libraries (GPU, GTE, SPU, MDEC, CD drive, pads, memory cards) is reimplemented in C behind the shim.
   Emulators (PCSX-Redux) serve only as external test oracles.
@@ -20,8 +20,10 @@ formats are in `port/README.md`; the shim's per-function behaviour is in `port/p
 ## Source layout
 | Path | Role |
 |---|---|
-| `include/port.h` | The hook macros (both sides) and the `port_*` interface the game C calls |
-| `port/src/` | The runtime: `main.c` (options, setup), `arena.c`, `overlay.c`, `pump.c`, `reset.c`, `disc.c`, `memcard.c`, `video.c`, `input.c`, `audio.c` and `spu*.c`, `script.c`, `framelog.c`, `state.c`, `settings.c`, `mods.c` |
+| `include/port.h` | The hook macros' PS1 side (the original code), and under `PC_PORT` the game's own hooks (`WSTAG_ENTRY`, `OVERLAY_ENTRY`, the mods' flags) over the stack's `psxstack/hooks.h` |
+| `port/include/psxstack/` | The stack's headers (psxstack's `GAME_CONTRACT.md`): `hooks.h` (the host side of the macros, the `port_*` interface), `game.h` (the adapter interface the game implements), `mods.h` (a mod's shape), `desc.h` (the description's types), `types.h` |
+| `port/runtime/` | The runtime, generic (no fact about this game: its constants come from the generated `port_game_gen.h`): `main.c` (options, setup), `arena.c`, `overlay.c`, `pump.c`, `reset.c`, `disc.c`, `memcard.c`, `video.c`, `input.c`, `audio.c` and `spu*.c`, `script.c`, `framelog.c`, `settings.c`, `mods.c` (the engine and fast_forward), `game_defaults.c` (the adapter's weak defaults) |
+| `port/game/` | The game adapter: `game.json` (the description: identity, discs, rate, slots, heap), `state.c` (the probes, the checkpoint image), `game_mods.c` (the six mods that change the game), `battle_scan.c`, `asmdata.c`, `game.c` (the rate) |
 | `port/psyq/` | The Psy-Q shim: one file per library, plus the hardware models `gpu.c`, `gte.c`, `mdec.c`, `xa.c` |
 | `port/CMakeLists.txt` | The port's own CMake project; builds out of tree into `build/port*/` |
 | `tools/port_gen.py` | Generators CMake runs: the unit list, the override headers, the overlay and state tables; the units' compile launcher (the overlay sections) |
@@ -51,7 +53,9 @@ formats are in `port/README.md`; the shim's per-function behaviour is in `port/p
   are named in `tests/port/ubsan.supp` and nowhere else.
 
 ## Hook macros (`include/port.h`)
-`common.h` includes `port.h`; no unit includes it directly. Each macro is the original code without `PC_PORT`:
+`common.h` includes `port.h`; no unit includes it directly. Each macro is the original code without `PC_PORT`; with it,
+`port.h` includes the stack's `port/include/psxstack/hooks.h`, where the host side lives (the PS1 build never needs
+that path). `tier` is a slot's 1-based index in `port/game/game.json`'s `memory.slots`:
 
 | Macro | Where the game uses it | Host meaning |
 |---|---|---|
@@ -67,14 +71,23 @@ formats are in `port/README.md`; the shim's per-function behaviour is in `port/p
 | `PTR_ADD(type, ofs, base)` | Offset-table resolves, written on the PS1 as `ofs + (s32)base` | Pointer arithmetic |
 | `PTR_TO_S32` / `S32_TO_PTR` | A pointer kept in an `s32` field or argument | The pointer's PS1-style address in the arena, and back (fatal outside the arena) |
 | `PTR_TO_U32(p)` | The 24-bit ordering-table tags (`setaddr`, `gfx_compact_ot`) | The pointer's word offset in the tag window (the game's data and the arena; fatal outside it) |
-| `BIOS_PTR(type, addr)` | STAGSLCT's read of the BIOS version string | A 256-byte stand-in region (`arena.c`) |
+| `BIOS_PTR(type, addr)` | STAGSLCT's read of the BIOS version string | A stand-in region holding `game.json`'s `bios_standin` texts (`arena.c`) |
 
 `tools/port_inventory.py counts` lists every use of every macro, and every fixed PS1 address left in the C (all are
 wrapped). The mods' flags (`port_mod_skip_dialogues`, `port_mod_battle_animations`, `port_battle_cut`) are also
 declared there; they are read only inside `#ifdef PC_PORT` blocks.
 
+**The runtime and the game adapter** (DECISIONS "The port is split into runtime and game adapter"): the runtime reaches
+the game only through `psxstack/game.h`, the adapter interface (`game_main`, `game_apply_rate`, the `game_state_*`
+probes and checkpoint image, `game_state_read`/`game_state_host` for PS1 addresses outside the arena, `game_mods`),
+implemented in `port/game/` with a weak default for each in `port/runtime/game_defaults.c`. The runtime's game facts
+come from `port_game_gen.h`, generated at configure time from `port/game/game.json` (`tools/port_gen.py game-header`):
+`PSXSTACK_GAME_ID`/`_TITLE`/`_ENV_PREFIX`/`_RATE`, `PORT_SLOT_COUNT` and `PORT_SLOT<n>_BASE/SIZE/NAME`, the heap, the
+accepted discs (`PSXSTACK_GAME_DISCS`) and the BIOS stand-ins. The brand strings (`--version`, the window title, the
+crash report's header, the cache directory `<id>-port`, the disc error) read them.
+
 ## Memory arena
-One static block, `port_arena`, stands for the PS1 RAM from the tier-1 slot up (`port/src/arena.c`; the sizes are
+One static block, `port_arena`, stands for the PS1 RAM from the tier-1 slot up (`port/runtime/arena.c`; the sizes are
 macros in `include/port.h`, and `tools/port_gen.py` generates the same numbers into `port_arena_gen.h`, which
 `arena.c` checks against the macros with `_Static_assert`s):
 
@@ -133,7 +146,7 @@ macros in `include/port.h`, and `tools/port_gen.py` generates the same numbers i
 
 ## Overlays
 All 19 tier-1 overlays, WFIGHTMN/WFIGHTTS and the WSTAG files are **linked statically** into the binary (the naming
-convention's module prefixes leave no duplicate global). The overlay manager (`port/src/overlay.c`) stands in for the
+convention's module prefixes leave no duplicate global). The overlay manager (`port/runtime/overlay.c`) stands in for the
 PS1's copy into the slot:
 
 - **Data reset:** on the PS1 every load also resets the overlay's `.data`/`.bss`, because the file contains them.
@@ -165,7 +178,7 @@ PS1's copy into the slot:
   `PLATFORM_WAIT()` (`port_wait`), or from LIBCD's `StGetNext` once per 5000 empty polls (the movie player spins with
   no wait hook).
 - Each tick renders the vsync's audio, runs the game's vsync callback (frame counters, play time, the display flip,
-  LIBSND's sequencer tick), then `port_frame` (`port/src/pump.c`): the CD tick, the frame log, the window's input or
+  LIBSND's sequencer tick), then `port_frame` (`port/runtime/pump.c`): the CD tick, the frame log, the window's input or
   the script's step, screenshots and the window's present.
 - **CD timing** is modelled in vsync ticks (`--cd-speed realistic`: 3 sectors per tick at double speed after a seek;
   `instant`: no seek, up to 75 per tick).
@@ -177,12 +190,12 @@ PS1's copy into the slot:
 - **Pause:** the pump can hold the game between two vsyncs (the window's pause key; the debug channel's pause, step
   and wait). Nothing of it reaches the game, the log or the record.
 - **Debug channel** (`--debug SOCKET`): a tool drives the running game between two vsyncs (below).
-- **Console reset** (`port/src/reset.c`): a script's `reset` step longjmps from the vsync tick back to `main()`,
+- **Console reset** (`port/runtime/reset.c`): a script's `reset` step longjmps from the vsync tick back to `main()`,
   restores every game section from the startup snapshot, zeroes the arena and resets the shim, then runs the game's
   `main()` again. `DW3_PORT_RESET_CHECK=1` verifies the restore.
 
 ## Debug channel and the MCP server
-`--debug SOCKET` (`port/src/debug.c`, whose header comment is the protocol, v1) opens a Unix stream socket of
+`--debug SOCKET` (`port/runtime/debug.c`, whose header comment is the protocol, v1) opens a Unix stream socket of
 newline-delimited JSON requests (`{"id", "op", ...}`), answered in order, on which a tool drives and inspects the
 running game, headless or in a window. Without the option nothing of it exists (`port_frame` pays one branch): the
 bare binary, the replays and the goldens are unchanged. The ops:
@@ -239,12 +252,12 @@ PS1 or the emulator) are listed in `port/psyq/README.md` "Behaviour assumed".
   the four blend modes, dithering, mask bits, lines, rectangles, fills, VRAM copies and transfers, the draw area and
   offset. Exact VRAM semantics matter: the game reuses VRAM (FIELDSTG's shatter effect, `MoveImage`, FIGHTSTG's
   `DR_MOVE` cursor with `BreakDraw`/`ContinueDraw`). It is built at `-O3` in every build.
-- **Video output** (`port/src/video.c`): every vsync the display area set by `PutDispEnv` is read from the VRAM in 15-
+- **Video output** (`port/runtime/video.c`): every vsync the display area set by `PutDispEnv` is read from the VRAM in 15-
   or 24-bit mode (movies and the title are 24-bit; 320x480 interlaced frames are shown whole) and converted to 32-bit
   pixels. `--screenshot` writes it as a PPM in any build.
 - **Window** (SDL3, static, pinned in `scripts/setup.sh`): the image at 4:3, nearest-neighbour, integer-scaled;
   fullscreen toggle. SDL selects X11/Wayland and the audio backend at run time.
-- **Hardware renderer** (`port/src/render_gpu.c`, issue #31; DECISIONS "The hardware renderer"): SDL_GPU on Vulkan,
+- **Hardware renderer** (`port/runtime/render_gpu.c`, issue #31; DECISIONS "The hardware renderer"): SDL_GPU on Vulkan,
   only in the SDL build, chosen by `--renderer gpu` or `video.renderer` (default `software`). Its shaders
   (`port/shaders/*.hlsl`) are compiled to SPIR-V at build time by the pinned DXC (`scripts/setup.sh dxc`) and embedded
   in the binary. **Phase 1, now:** it opens the device and the window's swapchain, and presents the same software image
@@ -261,26 +274,26 @@ FLAG and the saturations, in the PS1's fixed point. The game's GTE code (all in 
 `fightstg_8008D3B4.c`) reaches it through the generated `gtemac.h`; LIBGTE's functions call it too.
 
 ## Input
-- **Window input** (`port/src/input.c`): the keyboard and every gamepad SDL sees are ORed into pad 1, a digital pad,
+- **Window input** (`port/runtime/input.c`): the keyboard and every gamepad SDL sees are ORed into pad 1, a digital pad,
   once per vsync. Bindings are by key position and SDL's positional (PlayStation-layout) gamepad buttons, rebindable
   in the settings file; hotkeys (fullscreen, pause, the mods') never reach the pad. The mapping and defaults are in
   `port/README.md` "The window".
-- **Scripted input** (`port/src/script.c`): `--script` replays a layer-2 pad script (`tests/replay/scripts/*.json`)
+- **Scripted input** (`port/runtime/script.c`): `--script` replays a layer-2 pad script (`tests/replay/scripts/*.json`)
   with the same step engine as the emulator's `tests/replay/run.lua`; the script then owns the pad.
 - `--input-test` injects every binding through SDL (keys, a virtual gamepad, chords, hotkeys) and checks what reaches
   the pad.
 
 ## Sound
-The SPU core (`port/src/spu.c`, `spu_dsp.c`), LIBSND (`port/psyq/libsnd*.c`), the XA path and the audio output
-(`port/src/audio.c`: rendered once per vsync, `--wav`, the SDL3 audio stream with drift correction) are described in
+The SPU core (`port/runtime/spu.c`, `spu_dsp.c`), LIBSND (`port/psyq/libsnd*.c`), the XA path and the audio output
+(`port/runtime/audio.c`: rendered once per vsync, `--wav`, the SDL3 audio stream with drift correction) are described in
 `docs/SOUND.md`. The audio is a function of the SPU writes and the vsync count, so it is deterministic and identical
 with or without an output device.
 
 ## Disc, memory cards and movies
-- **Disc** (`port/src/disc.c`): the user's BIN/CUE, its SHA-1 checked against the unpatched EU image (cached with a
+- **Disc** (`port/runtime/disc.c`): the user's BIN/CUE, its SHA-1 checked against the unpatched EU image (cached with a
   stamp; `--no-disc-check` skips it). LIBCD reads it at sector level, so the file table's LBAs, `cdload`'s 2340-byte
   mode and movie streaming work unchanged.
-- **Memory cards** (`port/src/memcard.c`, `port/psyq/libmcrd.c`): raw 128 KB `.mcd` images (the usual emulator
+- **Memory cards** (`port/runtime/memcard.c`, `port/psyq/libmcrd.c`): raw 128 KB `.mcd` images (the usual emulator
   format), one per slot; every change is written back to the file. A new card is formatted as PCSX-Redux formats
   one. Saves move both ways between the port and the emulator.
 - **Movies:** the 14 `MOVIE*.STR` files play through the movie stream (`libcd.c`), MDEC decoding (`mdec.c`) and the
@@ -288,7 +301,7 @@ with or without an output device.
 
 ## Settings and mods
 `dw2003 --config FILE` reads the settings file the launcher writes (disc, window, audio, memory cards, input bindings,
-mods); without `--config` the binary depends on nothing on the machine. Built-in mods (`port/src/mods.c`, manifests in
+mods); without `--config` the binary depends on nothing on the machine. Built-in mods (`port/runtime/mods.c`, manifests in
 `port/mods/<id>/mod.json`) are off under `--script` unless `--script-mods`. Formats and behaviour: `port/README.md`
 "The settings file" and "The mods", `launcher/README.md`.
 
@@ -319,7 +332,7 @@ findings are filed as issues.
 ## Crash report
 
 When the game dies of a signal (SIGSEGV, SIGBUS, SIGFPE, SIGILL, SIGABRT) or stops on a fatal error, a halt, an
-unimplemented part or the watchdog, `port/src/crash.c` writes one text file, `crash-<YYYYMMDD-HHMMSS>.txt` (UTC), into
+unimplemented part or the watchdog, `port/runtime/crash.c` writes one text file, `crash-<YYYYMMDD-HHMMSS>.txt` (UTC), into
 `--crash-dir DIR` (the launcher passes `<settings dir>/crashes/`; default: the current directory), and names it on its
 last stderr line: `port: crash report: PATH`. The report holds the kind and status, the build (`port_version` and the
 commit: `dw2003 --version`; `port/cmake/version.cmake` stamps every build from `git describe`), the platform, the vsync
@@ -380,7 +393,7 @@ stack overflow gets the text (the filter runs on what the guard page leaves) and
   refill or drop, 49.97 frames a second, the `new_game` route to the first field map. Nothing has run on real Windows
   yet (the board's Windows 9); the SDL window is 64-bit only; macOS
   is not planned. The launcher links and passes its self-test under Wine. The runtime's operating-system calls are in one
-  file with a POSIX and a Windows half, `port/src/platform.c` (`port/include/platform.h`: paths with drive letters
+  file with a POSIX and a Windows half, `port/runtime/platform.c` (`port/include/platform.h`: paths with drive letters
   and `\`, a replacing rename for the memory cards and the stamp cache, the per-user cache directory, positional
   reads of the disc image, a monotonic clock and a high-resolution sleep for the pace, the watchdog as a thread), the
   frame log, the record and the SPU trace are written in binary mode (the same bytes on both), stderr is unbuffered
@@ -391,7 +404,7 @@ stack overflow gets the text (the filter runs on what the guard page leaves) and
   plus a minidump ("Crash report" above; `tests/port/crash.py --wine` checks both under Wine).
 - **`long` on Windows (LLP64) was audited (2026-10-07):** `long` is 32-bit there, 64-bit on Linux x86_64. The game's
   structs and headers use the sized types (`s32`, `u32`, `s64`); the `long`s left are Psy-Q prototypes (`CdRead2`,
-  `MemCardInit`) and counters and option values in `port/src` (`port_frames`, `port_max_frames`, the pace, the step
+  `MemCardInit`) and counters and option values in `port/runtime` (`port_frames`, `port_max_frames`, the pace, the step
   counts), none of which holds a pointer or a byte count over 2 GB. The pointer-to-`unsigned long` casts went: the
   shim's `PSYQ_PTR` and `VSyncCallback` use `uintptr_t`, and the three `bzero` offsets of `gfx.c`, `pad.c` and
   `gamestate.c` use `OFFSETOF` (the PS1 bytes unchanged). The `-m32` build, where `long` is 32-bit too, replays with
