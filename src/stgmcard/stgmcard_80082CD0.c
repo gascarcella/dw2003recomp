@@ -958,6 +958,7 @@ void stgmcard_screen_close(StgmcardScreen *obj) {
  * card after an error, 0x1F4-0x1F6 show the result. */
 void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
     s32 prev;
+    s32 status;
 
     switch (obj->base.step) {
     case 0:
@@ -1272,18 +1273,15 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
             data->no->set_visible(data->no, 0);
             data->cursor->show(data->cursor, 0);
             sound_module.play(0x8004503C);
+            /* FAKE: the next step goes through status, the local case 0x190 keeps the card's state in (the US
+             * decomp's shape). Shared with that case, the pseudo is global-alloc's, which places it after
+             * question_cursor's load has taken v0 (the original's v0/v1); stored directly, or through a local of
+             * its own, the constant wins v0. Replaces a repeated store that reorg deleted. */
+            status = 0x190;
             obj->question_shown = 0;
-            obj->base.step = 0x190;
+            obj->base.step = status;
             if (obj->question_cursor == 0) {
                 obj->base.substep = 0x32;
-                /* FAKE: a repeated store (reorg deletes it, redundant with the branch's delay-slot store). Its use of
-                 * the 0x190 register makes that register live into this branch, so global-alloc (not local-alloc)
-                 * places it, after unk_2804's load has taken v0 (the original's v0/v1). Without it the constant's
-                 * shorter life wins v0 (99.9%).
-                 * No natural form found: store orders, `!obj->unk_2804`, swapped branches, a switch, unk_10 per
-                 * branch, the test value or the state in a local (wip-7, final-rest); found by the permuter on
-                 * this block alone. */
-                obj->base.step = 0x190;
             } else {
                 obj->base.substep = 0x20;
                 data->slots->base.step = 6;
@@ -1563,8 +1561,8 @@ void stgmcard_screen_run(StgmcardScreen *obj, StgmcardScreenData *data) {
         break;
     }
     case 0x190:
-        obj->status = STGMCARD_MEMCARD_FUNCS.wait_exist(obj->port);
-        if (obj->status != 0) {
+        status = obj->status = STGMCARD_MEMCARD_FUNCS.wait_exist(obj->port);
+        if (status != 0) {
             obj->base.step++;
         }
         break;
