@@ -316,7 +316,7 @@ typedef struct CardgameDisplay {
     /* 0x50 */ s32 substep;  /* the game phases' sub-step (cardgame_game_close_panels, ...) */
 } CardgameDisplay; /* size 0x54 */
 
-/* CardgameGame.effect (0x420): the effect running and its state. The in-game menu copies it whole
+/* The effect running and its state (CardgameGame 0x420, member effect). The in-game menu copies it whole
  * (CardgameGameMenu.saved) while it runs, so it was one struct in the original too. */
 typedef struct CardgameEffectState {
     /* 0x00 */ u8 id; /* the effect running (cardgame_run_effect) */
@@ -336,7 +336,7 @@ typedef struct CardgameEffectState {
 /* CardgameGame.menu (0x4EC): the in-game menu (cardgame_game_run_menu). */
 typedef struct CardgameGameMenu {
     /* 0x00 */ s32 timer;
-    /* 0x04 */ CardgameEffectState saved; /* CardgameGame.effect while the menu runs */
+    /* 0x04 */ CardgameEffectState saved; /* the game's effect state while the menu runs */
     /* 0x7C */ u8 state;
     /* 0x7D */ u8 sel;
 } CardgameGameMenu; /* size 0x80 with padding */

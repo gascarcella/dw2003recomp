@@ -277,7 +277,10 @@ def main():
             n = rename_declaration(files, struct, old, new) if plain else 0
             if plain and n == 0 and not declarations(files, new):
                 report.append(f"{where}: {struct}.{old}: no declaration found (nothing renamed)")
-            dotted = re.compile(rf"\b{re.escape(struct)}\.{re.escape(old)}\b")
+            # A field nested under its own old name (effect -> effect.id): the new text starts with the old one, so
+            # `Struct.old.` is already renamed; matching it again would make Struct.effect.id.id on a replay.
+            tail = r"(?!\.)" if new.startswith(old + ".") else ""
+            dotted = re.compile(rf"\b{re.escape(struct)}\.{re.escape(old)}\b{tail}")
             for p, t in list(files.text.items()):
                 if dotted.search(t):
                     files.set(p, dotted.sub(f"{struct}.{new}", t))
