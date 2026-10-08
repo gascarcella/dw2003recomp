@@ -416,5 +416,6 @@ pins must stay equal to ours. The release's version is `DW3_VERSION` in release.
 as `PSXSTACK_VERSION` by the packaging scripts for psxstack's `version.cmake`. While psxstack is private, CI and
 release.yml fetch it with a read-only deploy key on psxstack stored as the secret `PSXSTACK_DEPLOY_KEY` here (the data
 checkout's pattern); a fork pull request has no secrets, so the areas job then skips the port and launcher areas with a
-warning and a maintainer's run tests them. The key and that gate go when psxstack is public (phase 5): the submodule
-is then a plain HTTPS fetch for everyone.
+warning and a maintainer's run tests them. **2026-10-08, phase 5:** psxstack is public and tagged `v0.1.0`, the pin
+is on the tag, the key, the secret and that gate are gone: the submodule is a plain HTTPS fetch for everyone, fork
+pull requests included.

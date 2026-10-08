@@ -34,9 +34,8 @@ v0.1.0`), tag the fixed commit and push again.
 ## The port stack in a release
 
 The port and the launcher are built from the `psxstack` submodule at its pin (`.gitmodules`; DECISIONS "The port stack
-lives in psxstack"). release.yml checks it out with the maintainers' read-only deploy key (`PSXSTACK_DEPLOY_KEY`, as
-`GAMEDATA_DEPLOY_KEY` does the data checkout) until psxstack is public; `release_local.sh` fetches it on the host
-with your own access. The release's tag is the input in one place, `DW3_VERSION` (release.yml, `release_local.sh`);
+lives in psxstack"). release.yml checks it out with a plain `git submodule update --init` (psxstack is public);
+`release_local.sh` fetches it on the host. The release's tag is the input in one place, `DW3_VERSION` (release.yml, `release_local.sh`);
 `package_appimage.sh` and `package_windows.sh` export it as `PSXSTACK_VERSION`, which psxstack's `cmake/version.cmake`
 stamps into both programs (over `git describe` of this repository: `-DPSXSTACK_VERSION_ROOT`). A new runtime or
 launcher reaches a release by bumping the pin.

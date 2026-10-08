@@ -49,14 +49,11 @@ jobs:
           fetch-depth: 0   # git describe: a manual run's version
 
       # A release is built only after the tests with the disc, and its smoke test needs the disc too; the port and
-      # the launcher are built from the psxstack submodule (private until it goes public: its deploy key).
-      - name: The data checkout and psxstack are required
+      # the launcher are built from the psxstack submodule (public, fetched at its pin).
+      - name: The data checkout is required
         run: |
           if [[ "${{ secrets.GAMEDATA_DEPLOY_KEY != '' }}" != true ]]; then
             echo "::error::no GAMEDATA_DEPLOY_KEY: a release needs the data checkout (the disc for the tests)"; exit 1
-          fi
-          if [[ "${{ secrets.PSXSTACK_DEPLOY_KEY != '' }}" != true ]]; then
-            echo "::error::no PSXSTACK_DEPLOY_KEY: a release needs the psxstack submodule (the port and the launcher)"; exit 1
           fi
 
       - name: Data checkout
@@ -67,15 +64,8 @@ jobs:
           path: dw2003-gamedata
 
       - name: psxstack submodule (as .github/actions/setup)
-        env:
-          PSXSTACK_KEY: ${{ secrets.PSXSTACK_DEPLOY_KEY }}
         run: |
-          key="$RUNNER_TEMP/psxstack_deploy_key"
-          printf '%s\n' "$PSXSTACK_KEY" > "$key" && chmod 600 "$key"
-          mkdir -p ~/.ssh && ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
-          GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes" \
-            git -c url.git@github.com:.insteadOf=https://github.com/ submodule update --init psxstack
-          rm -f "$key"
+          git submodule update --init psxstack
           echo "psxstack at $(git -C psxstack describe --tags --always)"
 
       # The desktop SDL's -dev packages (X11, Wayland, PipeWire, PulseAudio, ALSA, ...): setup.sh lists them.
@@ -149,13 +139,10 @@ jobs:
         with:
           fetch-depth: 0   # git describe: a manual run's version
 
-      - name: The data checkout and psxstack are required
+      - name: The data checkout is required
         run: |
           if [[ "${{ secrets.GAMEDATA_DEPLOY_KEY != '' }}" != true ]]; then
             echo "::error::no GAMEDATA_DEPLOY_KEY: a release needs the data checkout (the disc for the tests)"; exit 1
-          fi
-          if [[ "${{ secrets.PSXSTACK_DEPLOY_KEY != '' }}" != true ]]; then
-            echo "::error::no PSXSTACK_DEPLOY_KEY: a release needs the psxstack submodule (the port and the launcher)"; exit 1
           fi
 
       - name: Data checkout
@@ -166,15 +153,8 @@ jobs:
           path: dw2003-gamedata
 
       - name: psxstack submodule (as .github/actions/setup)
-        env:
-          PSXSTACK_KEY: ${{ secrets.PSXSTACK_DEPLOY_KEY }}
         run: |
-          key="$RUNNER_TEMP/psxstack_deploy_key"
-          printf '%s\n' "$PSXSTACK_KEY" > "$key" && chmod 600 "$key"
-          mkdir -p ~/.ssh && ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
-          GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes" \
-            git -c url.git@github.com:.insteadOf=https://github.com/ submodule update --init psxstack
-          rm -f "$key"
+          git submodule update --init psxstack
           echo "psxstack at $(git -C psxstack describe --tags --always)"
 
       # wine64 alone: no 32-bit multiarch (the binaries are x86_64; `wine` is the launcher script the tests call).
