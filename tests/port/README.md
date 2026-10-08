@@ -156,6 +156,15 @@ internal scales with that binary under Wine (`scripts/build_windows.sh`; the pre
 Vulkan with `SDL_GPU_DRIVER=vulkan`; ~3 min. Skipped without a device (CI's Wine 9.0 has none: issue #67). In `scripts/test.sh --layer port`, followed by `tests/host/gpu_hw_replay.py` (the gpu golden
 family's 715 lists through the rasteriser, the whole target after each; `tests/README.md`).
 
+## Sub-pixel precision (`subpixel_jitter.py`; psxstack docs/PORT.md "Sub-pixel precision", issue #68)
+`tests/port/subpixel_jitter.py run` replays `first_battle_save` to the end of its first battle with
+`DW3_PORT_SUBPIXEL_LOG` (the GTE shadow on from boot, every RTPS vertex of the battle logged) and checks that at least
+90 % of the polygon vertices gpu.c drew in the battle found their sub-pixel value, that no 16.16 sum disagrees with
+the integer the game got, and that the shadow's positions move smoothly: at scale 4, at most 5 % of the vertices'
+frame-to-frame motions are off from the float projection's by a target pixel or more (the integer SXY: about 20 %;
+the shadow: about 2 %). `analyze LOG` prints the same numbers for a kept log (`--keep`). Needs `build/port/dw2003` and
+the disc; ~40 s. In `scripts/test.sh --layer port`.
+
 ## The crash report (`crash.py`; docs/PORT.md "Crash report")
 `tests/port/crash.py` runs the headless build three times (~3 s): with `DW3_PORT_CRASH_AT=30` it must die of SIGSEGV
 (status -11), name its report on the last stderr line, and the report must carry the build of `--version`, the

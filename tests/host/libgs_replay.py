@@ -43,7 +43,7 @@ def build(out, m32=False, cflags=""):
             "-DPC_PORT", "-DNON_MATCHING", "-Wall", "-Wextra", "-Werror", f"-I{inc}", f"-I{ROOT / 'include'}", f"-I{ROOT}", f"-I{PSXSTACK / 'include'}", f"-I{PSXSTACK / 'include/psxstack'}",
             f"-I{PSXSTACK / 'psyq'}"] + cflags.split()
            + [str(ROOT / "tests/host/libgs_harness.c"), str(PSXSTACK / "psyq/libgs.c"), str(PSXSTACK / "psyq/libgte.c"),
-              str(PSXSTACK / "psyq/gte.c"), "-o", str(binary)])
+              str(PSXSTACK / "psyq/gte.c"), str(PSXSTACK / "psyq/gte_shadow.c"), "-o", str(binary)])
     subprocess.run(cmd, check=True)
     return binary
 

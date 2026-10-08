@@ -69,6 +69,10 @@ The plan's milestones (`docs/PORT.md`):
   SDL's backend order, `SDL_GPU_DRIVER=vulkan` switches): under Wine (its vkd3d and vkd3d-proton) the pictures are the
   Vulkan build's byte for byte, scale 1 the software image (`tests/port/render_gpu.py --exe build/port-win/dw2003.exe
   --wine`); not yet seen on real Windows.
+- **Sub-pixel precision** ([#68](https://github.com/gascarcella/dw2003recomp/issues/68)): psxstack's GTE shadow keeps
+  the fractions RTPS cuts from the screen coordinates and finds them again for 98 % of the first battle's drawn polygon
+  vertices (`tests/port/subpixel_jitter.py`: at scale 4 the vertices' motion is off by a target pixel or more 2 % of
+  the time instead of 21 %); the frame hash is the same with it on.
 - **The port stack (psxstack):** the runtime, the Psy-Q shim, the build (`psxstack_add_game()`), the launcher and the
   debug tools live in the `psxstack` repository (gascarcella/psxstack; its `docs/PORT.md`, `docs/RUNTIME.md`,
   `docs/LAUNCHER.md`), consumed as the `psxstack` submodule pinned at its tag `v0.1.0` (`scripts/worktree_init.sh`

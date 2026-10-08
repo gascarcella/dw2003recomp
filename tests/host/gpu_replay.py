@@ -47,7 +47,7 @@ def build(out, m32=False, cflags=""):
             "-DPC_PORT", "-DNON_MATCHING", "-Wall", "-Wextra", "-Werror", f"-I{inc}", f"-I{ROOT / 'include'}", f"-I{ROOT}", f"-I{PSXSTACK / 'include'}", f"-I{PSXSTACK / 'include/psxstack'}",
             f"-I{psyq}"] + cflags.split()
            + [str(ROOT / "tests/host/gpu_harness.c"), str(psyq / "libgpu.c"), str(psyq / "gpu.c"), str(psyq / "psyq.c"),
-              "-ffunction-sections", "-Wl,--gc-sections", "-o", str(binary)])
+              str(psyq / "gte_shadow.c"), "-ffunction-sections", "-Wl,--gc-sections", "-o", str(binary)])
     subprocess.run(cmd, check=True)
     return binary
 
