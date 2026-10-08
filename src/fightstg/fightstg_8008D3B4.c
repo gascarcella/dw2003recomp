@@ -3480,12 +3480,10 @@ void fightstg_digivolve_menu_show_names(FightstgDigivolveMenu *obj) {
     }
 }
 
-/* Forced match (FAKE, DECISIONS "Match status and forced (FAKE) matches"). Natural C reaches 99.5%: data and changed get
- * s3/s2 (original s2/s3). Cause (-dl): data has 15 refs over 382 insns (3*15/382 = 0.118) and changed 7 over 94
- * (2*7/94 = 0.149), so changed is allocated first. Tried without success: a second LOOP_BLOCK (class B only), repeating
- * the sel expression, a ternary for cur, `changed` initialised at the top (wip-6/9), inline helpers for the status
- * swap, block-local case-1 variables in any declaration order (final-fight). */
-void fightstg_digivolve_menu_update(FightstgDigivolveMenu *obj, FightstgDigivolveMenuData *data) {
+/* The data block comes in untyped and is read through a typed local (the US decomp's shape): with a typed parameter,
+ * data takes the argument's slot, its longer life puts it after `changed` in global-alloc (s3/s2, 99.5%). */
+void fightstg_digivolve_menu_update(FightstgDigivolveMenu *obj, void *arg) {
+    FightstgDigivolveMenuData *data = arg;
     s32 member;
     s32 i;
     s32 n;
@@ -3495,7 +3493,6 @@ void fightstg_digivolve_menu_update(FightstgDigivolveMenu *obj, FightstgDigivolv
     FightstgMember *m;
     s32 cur;
     s32 sel;
-    FightstgDigivolveMenuData *d;
 
     switch (obj->base.state) {
     case OBJECT_STATE_INIT:
@@ -3518,9 +3515,6 @@ void fightstg_digivolve_menu_update(FightstgDigivolveMenu *obj, FightstgDigivolv
         obj->base.next_state(obj);
         break;
     case OBJECT_STATE_RUN:
-        /* FAKE: a copy of data for all of case 1, only so that case 1's data pointer is allocated before `changed`
-         * (s2/s3 as in the original). No natural shape found (see the note above). */
-        d = data;
         changed = 0;
         open = 1;
         /* Class C (block placement; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the confirm branch goes out of line. */
@@ -3546,11 +3540,11 @@ void fightstg_digivolve_menu_update(FightstgDigivolveMenu *obj, FightstgDigivolv
             } else {
                 cur = m->digimon;
             }
-            sel = obj->digimon[d->cursor->sel];
+            sel = obj->digimon[data->cursor->sel];
             if (cur != sel) {
                 *obj->result = sel;
                 obj->base.set_state(obj, OBJECT_STATE_END);
-                d->cursor->locked = 1;
+                data->cursor->locked = 1;
             } else if (pad & 0x4000) {
                 *obj->result = -2;
                 obj->base.set_state(obj, OBJECT_STATE_END);
@@ -3562,27 +3556,27 @@ void fightstg_digivolve_menu_update(FightstgDigivolveMenu *obj, FightstgDigivolv
             sound_module.play(0x800450BD);
         }
         );
-        if (d->cursor->sel != obj->cursor) {
-            obj->cursor = d->cursor->sel;
+        if (data->cursor->sel != obj->cursor) {
+            obj->cursor = data->cursor->sel;
             changed = 1;
         }
         if (changed) {
             if (open) {
-                if (d->status != NULL) {
-                    d->status->base.set_state(d->status, OBJECT_STATE_DONE);
-                    d->status_2 = fightstg_status_create(obj->member, obj->status_page, d->cursor->sel);
+                if (data->status != NULL) {
+                    data->status->base.set_state(data->status, OBJECT_STATE_DONE);
+                    data->status_2 = fightstg_status_create(obj->member, obj->status_page, data->cursor->sel);
                 } else {
-                    if (d->status_2 != NULL) {
-                        d->status_2->base.set_state(d->status_2, OBJECT_STATE_DONE);
+                    if (data->status_2 != NULL) {
+                        data->status_2->base.set_state(data->status_2, OBJECT_STATE_DONE);
                     }
-                    d->status = fightstg_status_create(obj->member, obj->status_page, d->cursor->sel);
+                    data->status = fightstg_status_create(obj->member, obj->status_page, data->cursor->sel);
                 }
             } else {
-                if (d->status != NULL) {
-                    d->status->base.set_state(d->status, OBJECT_STATE_DONE);
+                if (data->status != NULL) {
+                    data->status->base.set_state(data->status, OBJECT_STATE_DONE);
                 }
-                if (d->status_2 != NULL) {
-                    d->status_2->base.set_state(d->status_2, OBJECT_STATE_DONE);
+                if (data->status_2 != NULL) {
+                    data->status_2->base.set_state(data->status_2, OBJECT_STATE_DONE);
                 }
             }
         }
