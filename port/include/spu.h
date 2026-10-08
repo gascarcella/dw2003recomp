@@ -1,4 +1,4 @@
-/* The SPU core's interface (M3; docs/SOUND.md section 6): port/src/spu.c implements it (T-spu), LIBSND
+/* The SPU core's interface (M3; docs/SOUND.md section 6): port/runtime/spu.c implements it (T-spu), LIBSND
  * (port/psyq/libsnd*.c, T-libsnd) and LIBCD's CdInit drive it, the audio output (SDL3) and the tests read it.
  * Registers are addressed by their offset from 0x1F801C00 (0x000..0x1FF), 16 bits wide, as on the PS1. */
 #ifndef PORT_SPU_H
@@ -27,7 +27,7 @@ void spu_render(int16_t *out, int frames);
 /* CD audio into the SPU's CD input (M5: XA from the movies): `frames` stereo frames at SPU_RATE, mixed by the CD volume. */
 void spu_cd_input(const int16_t *samples, int frames);
 
-/* The trace hook (port/src/spu_trace.c): every register write (dma = NULL) and every DMA block (offset = the transfer
+/* The trace hook (port/runtime/spu_trace.c): every register write (dma = NULL) and every DMA block (offset = the transfer
  * address in bytes, data/halfwords the block). NULL: none. */
 typedef void (*SpuWriteHook)(uint32_t offset, uint16_t value, const uint16_t *dma, uint32_t halfwords);
 void spu_set_write_hook(SpuWriteHook hook);

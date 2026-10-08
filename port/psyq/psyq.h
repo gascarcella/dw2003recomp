@@ -1,9 +1,11 @@
-/* port/psyq/psyq.h: the Psy-Q shim's interface to the port runtime (port/src/, T8). */
+/* port/psyq/psyq.h: the Psy-Q shim's interface to the port runtime (port/runtime/, T8). Includes no game header:
+ * the shim's C files include the game's recovered psyq headers themselves (DECISIONS "Psy-Q headers: the game's, for now"). */
 #ifndef PORT_PSYQ_H
 #define PORT_PSYQ_H
 
 #include <stdio.h>             /* FILE */
-#include "common.h"            /* the game's types (u8, s32, ...), include/port.h's port_* declarations */
+#include "psxstack/types.h"    /* the PS1-style type names (the game's common.h defines the same, guarded) */
+#include "psxstack/hooks.h"    /* the port_* interface (port_wait, the tag window, ...) */
 
 /* Runs the handler VSyncCallback registered (if any) once and advances the frame counter VSync() reports. */
 void psyq_vsync_tick(void);
@@ -32,7 +34,7 @@ void psyq_cd_set_vsync_hz(int hz);
  * which psyq_reset calls. */
 void psyq_reset(void);
 void psyq_mcrd_reset(void);
-/* LIBMCRD's card store (port/src/memcard.c owns the images and their files): card `slot` (0, 1) is the 128 KB image
+/* LIBMCRD's card store (port/runtime/memcard.c owns the images and their files): card `slot` (0, 1) is the 128 KB image
  * at `image` (NULL: no card); `written` is called after every change to it (to write the file back). */
 void psyq_mcrd_set_card(int slot, u8 *image, void (*written)(int slot));
 /* A freshly formatted card, as PCSX-Redux creates one ("MC" frame, 15 free directory frames, ...). */
@@ -40,7 +42,7 @@ void psyq_mcrd_format_image(u8 *image);
 /* Tracing: on/off and the stream (stderr by default). */
 void psyq_set_trace(int on, FILE *stream);
 
-/* Provided by the port runtime (port/src/), not by the shim: a function the game needs that the skeleton does
+/* Provided by the port runtime (port/runtime/), not by the shim: a function the game needs that the skeleton does
  * not implement: prints `fn` and exits with status 3. A stub calls it only when it cannot fake a result. */
 void port_unimplemented(const char *fn);
 
@@ -68,7 +70,7 @@ u16 psyq_pad_get(int port); /* the buttons last set (0 when none, or the port is
  * the previous call (and the number of them in *count, if not NULL), then resets both. */
 u32 psyq_gpu_take_hash(u32 *count);
 
-/* ---- The video output (M2: T9's software GPU in libgpu.c, read by T10's window in port/src/video.c) ----
+/* ---- The video output (M2: T9's software GPU in libgpu.c, read by T10's window in port/runtime/video.c) ----
  * psyq_gpu_vram: the 1024x512 VRAM, 16-bit pixels (row-major, 1024 per row), as the GPU leaves it after every command.
  * psyq_gpu_display: what the TV shows: the display area PutDispEnv set (DISPENV.disp as given: x, y in VRAM pixels,
  * w, h in screen pixels, so a 24-bit area spans w * 3 / 2 VRAM pixels), 24-bit colour, interlace, and whether

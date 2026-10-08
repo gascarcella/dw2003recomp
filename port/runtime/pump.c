@@ -33,8 +33,8 @@ long port_max_frames = 600;
 long port_frames;
 int port_watchdog_sec = 10;
 int port_script_active;
-long port_rate = 50;        /* the nominal rate (vsyncs per second): the audio's samples per vsync */
-static long pump_pace = 50; /* the pace (vsyncs per second of the wall clock); 0: unthrottled */
+long port_rate = PSXSTACK_GAME_RATE;        /* the nominal rate (vsyncs per second): the audio's samples per vsync */
+static long pump_pace = PSXSTACK_GAME_RATE; /* the pace (vsyncs per second of the wall clock); 0: unthrottled */
 static int pump_pace_restart;
 static int pump_pause_wanted; /* the game is to be held (is held) between two vsyncs: the pause key, the channel */
 static int port_watchdog_armed;
@@ -54,7 +54,7 @@ void port_pump_init(void) {
     port_reset_check("startup");
 }
 
-/* The console's reset (port/src/reset.c): the frame count goes on; the watchdog starts over (the longjmp left the
+/* The console's reset (port/runtime/reset.c): the frame count goes on; the watchdog starts over (the longjmp left the
  * tick that re-armed it), the per-frame hook stays the runtime's. */
 void port_pump_reset(void) {
     psyq_set_vsync_pre_hook(port_audio_frame);

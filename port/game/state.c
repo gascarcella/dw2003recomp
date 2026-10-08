@@ -1,8 +1,9 @@
-/* The game-state probes (port_harness.h): what tests/replay/run.lua reads from PS1 RAM, read from the host's objects,
- * and gamestate_data's PS1 image, which a checkpoint hashes.
+/* The game-state probes (psxstack/game.h, the adapter interface): what tests/replay/run.lua reads from PS1 RAM, read
+ * from the host's objects, and gamestate_data's PS1 image, which a checkpoint hashes (the runtime hashes it:
+ * port/runtime/framelog.c port_state_sha1).
  *
  * A host object has the PS1's layout only up to its first pointer (pointers are 8 bytes at -m64; OverlayModule is 0x10
- * bytes on the PS1 and 0x18 here). port_state_read maps a PS1 address to a host byte only inside a layout-identical
+ * bytes on the PS1 and 0x18 here). game_state_read maps a PS1 address to a host byte only inside a layout-identical
  * range: the whole object for the EXE's sized data symbols whose -m64 size is their PS1 size (port_gen.py state
  * decides it the same way in the -m32 build), or the prefix listed below for the pointer-bearing objects the scripts
  * read, each checked by _Static_assert, or a field of the field table below (objects whose fields after a pointer the
@@ -10,12 +11,11 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "port_harness.h"
 #include "port_runtime.h"
-#include "sha1.h"
 
 #include "fieldstg.h"
 #include "gamestate.h"
+#include "heap.h"
 #include "memcard.h"
 #include "overlay.h"
 #include "pad.h"
@@ -36,6 +36,7 @@ _Static_assert(offsetof(GamestateData, meter_random_count) == 0x26F8, "Gamestate
 _Static_assert(sizeof(((GamestateData *)0)->meter_random_count) == 4, "GamestateData.meter_random_count is an s32");
 _Static_assert(offsetof(GamestateData, funcs) >= PORT_GAMESTATE_FUNCS, "GamestateData.funcs moved");
 _Static_assert(sizeof(GamestateFuncs) == PORT_GAMESTATE_FUNC_COUNT * sizeof(PortFn), "GamestateFuncs: 24 pointers");
+#define PORT_GAMESTATE_PS1_SIZE 0x275C /* gamestate_data on the PS1: what a checkpoint hashes */
 _Static_assert(PORT_GAMESTATE_FUNCS + PORT_GAMESTATE_FUNC_COUNT * 4 == PORT_GAMESTATE_PS1_SIZE,
                "gamestate_data's PS1 size");
 /* pad_random: index (an s32 at 0), then seed and next. */
@@ -198,23 +199,19 @@ static void port_state_init(void) {
 
 /* ---- The probes */
 
-s32 port_state_stage(void) {
+int32_t game_state_stage(void) {
     return overlay_module.stage;
 }
 
-s32 port_state_file(void) {
+int32_t game_state_file(void) {
     return overlay_module.file;
 }
 
-s32 port_state_map(void) {
+int32_t game_state_map(void) {
     return gamestate_data.map;
 }
 
-u32 port_state_slot1_word0(void) {
-    return port_overlay_word0(1);
-}
-
-s32 port_state_random_index(void) {
+int32_t game_state_random_index(void) {
     return pad_random.index;
 }
 
@@ -247,7 +244,7 @@ static const u8 *port_state_map_addr(u32 addr, u32 size) {
     return NULL;
 }
 
-void *port_state_host(u32 addr, int size) {
+void *game_state_host(uint32_t addr, int size) {
     if (size != 1 && size != 2 && size != 4) {
         return NULL;
     }
@@ -255,7 +252,7 @@ void *port_state_host(u32 addr, int size) {
     return (void *)(uintptr_t)port_state_map_addr(addr, (u32)size);
 }
 
-int port_state_read(u32 addr, int size, int is_signed, s32 *out) {
+int game_state_read(uint32_t addr, int size, int is_signed, int32_t *out) {
     const u8 *p;
     if (size != 1 && size != 2 && size != 4) {
         return 0;
@@ -278,7 +275,7 @@ int port_state_read(u32 addr, int size, int is_signed, s32 *out) {
     return 1;
 }
 
-/* ---- gamestate_data's PS1 image and its hashes */
+/* ---- gamestate_data's PS1 image (the runtime hashes it) */
 
 /* The PS1 address of an EXE function (port_exe_funcs, generated), 0 for NULL; fatal for anything else. */
 static u32 port_state_exe_addr(PortFn fn, int index) {
@@ -294,7 +291,19 @@ static u32 port_state_exe_addr(PortFn fn, int index) {
     port_fatal("state: gamestate_data.funcs[%d] is not an EXE function of config/symbol_addrs.txt", index);
 }
 
-void port_state_gamestate_image(u8 out[PORT_GAMESTATE_PS1_SIZE]) {
+uint32_t game_state_image_size(void) {
+    return PORT_GAMESTATE_PS1_SIZE;
+}
+
+int game_state_volatile_count(void) {
+    return port_gamestate_volatile_count;
+}
+
+const PortRange *game_state_volatile(void) {
+    return port_gamestate_volatile;
+}
+
+void game_state_image(uint8_t *out) {
     const u8 *funcs = (const u8 *)&gamestate_data.funcs;
     int i;
     port_state_init();
@@ -312,27 +321,20 @@ void port_state_gamestate_image(u8 out[PORT_GAMESTATE_PS1_SIZE]) {
     }
 }
 
-static void port_sha1_of(const u8 *data, size_t n, char hex[41]) {
-    PortSha1 c;
-    uint8_t digest[20];
-    port_sha1_init(&c);
-    port_sha1_update(&c, data, n);
-    port_sha1_final(&c, digest);
-    port_sha1_hex(digest, hex);
-}
+/* ---- The field player's position in pixels (run.lua player_pos): the heap_objects entry of kind 5, key2 0, a
+ * FieldstgActor, its pos (24.8) / 256. 0 outside the field / before the actor exists. */
+#define STATE_PLAYER_KIND 5
 
-void port_state_gamestate_sha1(char full[41], char stable[41]) {
-    static u8 image[PORT_GAMESTATE_PS1_SIZE];
+int game_state_player_pos(double *x, double *y) {
     int i;
-    port_state_gamestate_image(image);
-    port_sha1_of(image, sizeof(image), full);
-    for (i = 0; i < port_gamestate_volatile_count; i++) {
-        const PortRange *r = &port_gamestate_volatile[i];
-        if (r->lo < r->hi && r->hi <= sizeof(image)) {
-            memset(image + r->lo, 0, r->hi - r->lo);
-        } else {
-            port_fatal("state: volatile range 0x%X..0x%X is outside gamestate_data", r->lo, r->hi);
+    for (i = 0; i < (int)(sizeof(heap_objects.objects) / sizeof(heap_objects.objects[0])); i++) {
+        Object *obj = heap_objects.objects[i];
+        if (obj != NULL && obj->kind == STATE_PLAYER_KIND && obj->key2 == 0) {
+            const FieldstgActor *actor = (const FieldstgActor *)obj;
+            *x = actor->pos.x / 256.0;
+            *y = actor->pos.y / 256.0;
+            return 1;
         }
     }
-    port_sha1_of(image, sizeof(image), stable);
+    return 0;
 }

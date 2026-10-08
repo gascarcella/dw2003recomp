@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "port_arena_gen.h"
 #include "port_harness.h"
 #include "port_runtime.h"
 #include "spu.h"
@@ -54,7 +53,7 @@ static int port_reset_check_on(void) {
     return port_trace || (env != NULL && env[0] != '\0' && strcmp(env, "0") != 0);
 }
 
-/* The game's data as at startup, and the arena zero (port/src/overlay.c port_overlay_check); fatal otherwise. */
+/* The game's data as at startup, and the arena zero (port/runtime/overlay.c port_overlay_check); fatal otherwise. */
 void port_reset_check(const char *when) {
     const u8 *arena = port_arena_base();
     size_t checked, bad, i, arena_bad = 0;

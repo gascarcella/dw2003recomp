@@ -287,7 +287,7 @@ static void test_input(const std::string &root) {
     check(!names_from_json(Json::string("south"), false, &names, &err) &&
               names_from_json(Json::string("south"), true, &names, &err),
           "a gamepad name is not a key name");
-    // The game's defaults (port/src/input.c) are what an empty file means.
+    // The game's defaults (port/runtime/input.c) are what an empty file means.
     Settings d;
     check(d.keys_for("start") == std::vector<std::string>({ "Return", "Keypad Enter" }) &&
               d.pad_for("up") == std::vector<std::string>({ "dpup", "lefty-" }) &&
@@ -899,9 +899,11 @@ static void test_game(const std::string &root) {
     for (int i = 0; i < 120000 / 10 && game.poll(); i++) {
         SDL_Delay(10);
     }
+    // The game's own disc line: "disc: PATH: N sectors, SHA-1 <hash> (<the disc's label>)" (port/runtime/disc.c); the
+    // label comes from the game description, so the check keys on the hash.
     bool disc_ok = false;
     for (const std::string &l : game.lines()) {
-        disc_ok |= l.find("(the EU disc)") != std::string::npos;
+        disc_ok |= l.find("disc: ") != std::string::npos && l.find(std::string("SHA-1 ") + DISC_SHA1) != std::string::npos;
     }
     check(!game.running() && game.exit_code() == 0 && disc_ok,
           "the real game runs 300 frames from the launcher's command: it " + game_exit_text(game.exit_code()) +

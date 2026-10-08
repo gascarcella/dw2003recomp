@@ -86,7 +86,7 @@ void port_spu_trace_open(const char *path) {
     if (trace_file == NULL) {
         port_fatal("--spu-trace %s: cannot write it", path);
     }
-    fprintf(trace_file, "# dw2003 spu trace v1\n# the PC port (port/), its frame as the tick\n");
+    fprintf(trace_file, "# " PSXSTACK_GAME_ID " spu trace v1\n# the PC port (port/), its frame as the tick\n");
     trace_writes = trace_dma = trace_dma_bytes = 0;
     spu_set_write_hook(trace_hook);
     psyq_snd_set_call_hook(trace_call);

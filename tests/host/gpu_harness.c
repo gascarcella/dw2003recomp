@@ -11,7 +11,7 @@
  *   D HEX_ENV x y w h       SetDefDrawEnv(DRAWENV with these bytes, x, y, w, h)           -> the DRAWENV's bytes
  *   V HEX_DRMOVE x y w h dx dy  SetDrawMove(DR_MOVE with these bytes, RECT, dx, dy)       -> the DR_MOVE's bytes
  *   B                       BreakDraw                                                     -> 0 for NULL, else 1
- * Built with -DGPU_HW (tests/host/gpu_hw_replay.py: with port/src/render_gpu.c and SDL3) the hardware renderer's
+ * Built with -DGPU_HW (tests/host/gpu_hw_replay.py: with port/runtime/render_gpu.c and SDL3) the hardware renderer's
  * rasteriser listens to the software GPU from the start, and:
  *   H                       its whole VRAM target against the software VRAM -> "ok", or "diff N x y SW HW" (the
  *                           count, the first differing pixel, both values), after which the target is set to the

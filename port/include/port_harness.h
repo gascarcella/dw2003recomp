@@ -10,7 +10,7 @@
 #include <setjmp.h>
 #include <stdio.h>
 
-#include "common.h"
+#include "psxstack/types.h"
 
 /* ---- disc.c: LIBCD's sector source over the user's BIN/CUE (docs/PORT.md "Disc, memory cards and movies"; DECISIONS "PC port architecture") ----
  * port_disc_open: `path` is the .cue (its first FILE line names the BIN, relative to the cue) or the .bin itself
@@ -29,17 +29,9 @@ void port_framelog_frame(void);                 /* once per vsync, before the sc
 void port_framelog_checkpoint(const char *name); /* a script checkpoint: hashes gamestate_data's PS1 image */
 void port_framelog_close(int status, const char *reason); /* from port_exit: flushes the log, writes the record */
 
-/* Game-state probes for the script (state.c): what run.lua reads from PS1 RAM, read from the host's objects. */
-s32 port_state_stage(void);        /* overlay_module.stage */
-s32 port_state_file(void);         /* overlay_module.file */
-s32 port_state_map(void);          /* gamestate_data.map */
-u32 port_state_slot1_word0(void);  /* the first word of the file last loaded into the tier-1 slot */
-/* A `size`-byte (1, 2, 4) read at PS1 address `addr`, sign-extended if `is_signed`, into *out: 1, or 0 when the
- * address is not one the port maps (fatal to the caller). */
-int port_state_read(u32 addr, int size, int is_signed, s32 *out);
-/* The host bytes a `size`-byte (1, 2, 4) access at PS1 address `addr` maps to (the same ranges as port_state_read),
- * writable: the debug channel's poke_ps1; NULL when unmapped. */
-void *port_state_host(u32 addr, int size);
+/* The game-state probes for the script are the game adapter's (psxstack/game.h game_state_*: what run.lua reads from
+ * PS1 RAM, read from the host's objects); this one is the runtime's. */
+u32 port_state_slot1_word0(void);  /* the first word of the file last loaded into slot 1 (overlay.c) */
 
 /* ---- script.c: the input script (tests/replay/scripts/<name>.json, the layer-2 format) ----
  * port_script_load: parses the script (fatal on error). port_script_frame: once per vsync: advances the steps, sets
@@ -87,6 +79,9 @@ extern int port_window; /* a window is open: pump.c paces the vsyncs to real tim
  * never paced). port_pace_set starts the schedule over when the pace changes (fast-forward and back). */
 extern long port_rate;
 void port_pace_set(long fps);
+/* mods.c: a game mod asks for fast-forward (skip_dialogues' fast_forward_waits while a cutscene runs): on or off,
+ * with fast_forward's speed and mute. */
+void port_fast_forward_request(int on);
 long port_pace_get(void);
 int port_video_available(void);
 int port_video_screenshot_add(const char *spec); /* "FRAME:PATH"; 0 when malformed (or too many) */

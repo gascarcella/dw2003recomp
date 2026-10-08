@@ -34,7 +34,7 @@
  *     /proc/self/maps: the game's globals, the arena, anything the process maps), else "unmapped": a bad address never
  *     faults the game. poke: addr, data (hex) -> len; the range must be mapped writable.
  *   peek_ps1: addr (PS1), len -> data. An arena address (>= 0x80082CB0, inside the arena: the slots and the heap)
- *     reads directly, any length; any other PS1 address only through the state map (port_state_read's ranges:
+ *     reads directly, any length; any other PS1 address only through the state map (game_state_read's ranges:
  *     layout-identical EXE objects, the prefixes, the field table), len 1, 2 or 4; else "unmapped".
  *     poke_ps1: addr, data -> len; the same mapping, written.
  *   pad: buttons (u16, PS1 bit order: SELECT=0, L3, R3, START, UP, RIGHT, DOWN, LEFT, L2, R2, L1, R1, TRIANGLE,
@@ -47,7 +47,7 @@
  *   wait: one of addr (host) / ps1 (PS1 address) / ps1_stage / ps1_map, with size (1/2/4), signed (bool), value,
  *     timeout (frames, default 600) -> frame, hit (0/1). Runs until the read equals value (checked once before
  *     running, then after each vsync) or timeout frames passed; deferred; leaves the game paused. ps1_stage and
- *     ps1_map take only value (port_state_stage / port_state_map).
+ *     ps1_map take only value (game_state_stage / game_state_map).
  *   screenshot: path -> w, h, path. The current display image (the one port_video_frame last converted, or
  *     converted now) as a binary PPM (P6), the bytes --screenshot writes; headless too.
  *   hash: -> frame, sha1, stable_sha1: gamestate_data's PS1 image, as a checkpoint hashes it.
@@ -95,7 +95,6 @@ void port_debug_close(void) {
 #include <unistd.h>
 
 #include "json.h"
-#include "port_arena_gen.h"
 #include "port_harness.h"
 #include "port_runtime.h"
 #include "psyq.h"
@@ -413,7 +412,7 @@ static u8 *debug_ps1_ptr(u32 addr, size_t len) {
         return (u8 *)port_arena_base() + (addr - PORT_SLOT1_BASE);
     }
     if (len == 1 || len == 2 || len == 4) {
-        return port_state_host(addr, (int)len);
+        return game_state_host(addr, (int)len);
     }
     return NULL;
 }
@@ -423,11 +422,11 @@ static int debug_wait_read(const DebugWait *w, long long *out) {
     u8 buf[4];
     const u8 *p;
     if (w->kind == DEBUG_WAIT_STAGE) {
-        *out = port_state_stage();
+        *out = game_state_stage();
         return 1;
     }
     if (w->kind == DEBUG_WAIT_MAP) {
-        *out = (u32)port_state_map();
+        *out = (u32)game_state_map();
         return 1;
     }
     if (w->kind == DEBUG_WAIT_HOST) {
@@ -514,7 +513,7 @@ static void debug_op_status(const DebugReq *req) {
     debug_ok(req,
              "\"frame\": %ld, \"stage\": %d, \"file\": %d, \"map\": %u, \"slot1_word0\": %u, \"paused\": %d, "
              "\"pace\": %ld, \"rate\": %ld, \"window\": %d, \"script\": %d, \"pad_owner\": \"%s\", \"pad\": %u",
-             port_frames, port_state_stage(), port_state_file(), (u32)port_state_map(), port_state_slot1_word0(),
+             port_frames, game_state_stage(), game_state_file(), (u32)game_state_map(), port_state_slot1_word0(),
              port_pump_paused(), port_pace_get(), port_rate, port_window != 0, port_script_active != 0,
              debug_pad_owner(), port_framelog_last_input());
 }
@@ -683,7 +682,7 @@ static void debug_op_screenshot(const DebugReq *req, const PortJson *obj) {
 
 static void debug_op_hash(const DebugReq *req) {
     char full[41], stable[41];
-    port_state_gamestate_sha1(full, stable);
+    port_state_sha1(full, stable);
     debug_ok(req, "\"frame\": %ld, \"sha1\": \"%s\", \"stable_sha1\": \"%s\"", port_frames, full, stable);
 }
 

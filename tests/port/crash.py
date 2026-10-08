@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The crash report (port/src/crash.c; docs/PORT.md "Crash report"): what a tester's report must hold.
+"""The crash report (port/runtime/crash.c; docs/PORT.md "Crash report"): what a tester's report must hold.
 
 Usage: tests/port/crash.py [--out DIR] [--wine [--exe PATH]]
 

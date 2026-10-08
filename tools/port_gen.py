@@ -2,6 +2,7 @@
 """Generators for the PC port's build (port/CMakeLists.txt runs them; docs/PORT.md "Overlays").
 
   tools/port_gen.py units --out build/port/gen/units.cmake          # the game's C units, as CMake variables
+  tools/port_gen.py game-header --out build/port/gen/include/port_game_gen.h   # the game's description as macros
   tools/port_gen.py overrides --out build/port/gen/include            # include_asm.h and psyq/gtemac.h (the GTE
                                                                       # macros on port/psyq/gte.c) for the host
   tools/port_gen.py rename --objcopy objcopy --objdump objdump --units build/port/gen/unit_overlays.txt -- cc ...
@@ -11,7 +12,7 @@
   tools/port_gen.py sections --objdump objdump --objects objs.rsp     # after the link: no game data outside them
   tools/port_gen.py tables --nm nm --objects objs.rsp --out build/port/gen/overlay_tables.c   # address -> function
   tools/port_gen.py state --nm nm --cc cc --gen-include build/port/gen/include --objects objs.rsp \
-      --out build/port/gen/port_state_tables.c     # the EXE's functions and data symbols (port/src/state.c)
+      --out build/port/gen/port_state_tables.c     # the EXE's functions and data symbols (port/game/state.c)
 
 Everything comes from tracked sources only (no disc, no splat output), so the port configures from a fresh clone:
   - the unit list: src/<target>/*.c for the EXE and the tier-1/tier-2 overlays (the same set configure.py compiles:
@@ -26,7 +27,7 @@ Everything comes from tracked sources only (no disc, no splat output), so the po
 `tables` also checks every tag site in the C (WSTAG_ENTRY, OVERLAY_ENTRY, SLOT_FUNC, LATE_FUNC) against the tables and
 fails when an address no overlay defines is used where the overlay is known.
 `state` lists the EXE's functions (`type:func` lines of config/symbol_addrs.txt) and its data symbols with a `size:`
-there, as nm finds them in the EXE's objects, for the game-state probes and the checkpoint hash (port/src/state.c);
+there, as nm finds them in the EXE's objects, for the game-state probes and the checkpoint hash (port/game/state.c);
 the stable hash's VOLATILE_RANGES come from tests/replay/replay.py.
 """
 import argparse
@@ -37,17 +38,43 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SLOT1_BASE, SLOT2_BASE, HEAP_START, HEAP_END = 0x80082CB0, 0x800A5DE0, 0x800AB800, 0x801FF000
-# The arena's regions (port/src/arena.c, docs/PORT.md "Memory arena") mirror the PS1's layout: slot 1, slot 2 and the heap are
-# contiguous at the PS1's distances, so a pointer's PS1-style address is SLOT1_BASE + its offset into the arena (a
-# sector-rounded copy that runs past a slot's end lands where it does on the PS1: in the next region). The heap is
-# larger than the PS1's (64-bit structs); the whole arena fits the tag window (PTR_TO_U32's 24-bit word offsets in the
-# game's data and the arena). include/port.h holds the same numbers (its macros on port_arena); arena.c ties the two.
-SLOT1_SIZE = SLOT2_BASE - SLOT1_BASE   # 0x23130
-SLOT2_SIZE = HEAP_START - SLOT2_BASE   # 0x5A20
-HEAP_SIZE = 4 << 20
-TAG_LIMIT = 0xFFFFFF << 2   # a 24-bit ordering-table tag of words (include/port.h PORT_TAG_SHIFT)
-assert SLOT1_SIZE + SLOT2_SIZE + HEAP_SIZE < TAG_LIMIT
+GAME_JSON = ROOT / "port/game/game.json"   # the game's description (psxstack's schema/game.schema.json)
+
+
+def _addr(v):
+    return int(v, 0) if isinstance(v, str) else int(v)
+
+
+def load_game():
+    """port/game/game.json, with the addresses as ints. The arena's regions (port/runtime/arena.c, docs/PORT.md "Memory
+    arena") mirror the PS1's layout: the slots and the heap are contiguous at the PS1's distances, so a pointer's
+    PS1-style address is slots[0].base + its offset into the arena (a sector-rounded copy that runs past a slot's end
+    lands where it does on the PS1: in the next region). The heap is larger than the PS1's (64-bit structs: host_size);
+    the whole arena fits the tag window (PTR_TO_U32's 24-bit word offsets in the game's data and the arena)."""
+    import json
+    g = json.loads(GAME_JSON.read_text())
+    m = g["memory"]
+    slots = [{"name": sl["name"], "base": _addr(sl["base"]), "size": _addr(sl["size"])} for sl in m["slots"]]
+    heap = {"start": _addr(m["heap"]["start"]), "end": _addr(m["heap"]["end"]),
+            "host_size": _addr(m["heap"].get("host_size", 0x400000))}
+    for a, b in zip(slots, slots[1:]):
+        if a["base"] + a["size"] != b["base"]:
+            sys.exit(f"{GAME_JSON.name}: slot {a['name']} ends at 0x{a['base'] + a['size']:X}, {b['name']} starts at "
+                     f"0x{b['base']:X}: the slots must be contiguous")
+    if slots[-1]["base"] + slots[-1]["size"] != heap["start"]:
+        sys.exit(f"{GAME_JSON.name}: the heap must start where the last slot ends")
+    g["_slots"], g["_heap"] = slots, heap
+    g["_ram"] = {"base": _addr(m["ram"]["base"]), "size": _addr(m["ram"]["size"])}
+    return g
+
+
+GAME = load_game()
+SLOT1_BASE, HEAP_START, HEAP_END = GAME["_slots"][0]["base"], GAME["_heap"]["start"], GAME["_heap"]["end"]
+SLOT2_BASE = GAME["_slots"][1]["base"] if len(GAME["_slots"]) > 1 else HEAP_START   # tier 2: WFIGHTMN/WFIGHTTS, WSTAG
+HEAP_SIZE = GAME["_heap"]["host_size"]
+ARENA_SIZE = HEAP_START - SLOT1_BASE + HEAP_SIZE
+TAG_LIMIT = 0xFFFFFF << 2   # a 24-bit ordering-table tag of words (psxstack/hooks.h PORT_TAG_SHIFT)
+assert ARENA_SIZE < TAG_LIMIT
 
 TIER1 = ["FIELDSTG", "FIGHTSTG", "CARDGAME", "CNTY_SEL", "SHOCKTST", "SOUNDTST", "STAGSLCT", "STCRDABM", "STCRDDEK",
          "STCRDSHP", "STDGNAME", "STDWTITL", "STFGTREP", "STGDGLAB", "STGMCARD", "STGTRAIN", "STITSHOP", "STPLNMET",
@@ -374,7 +401,7 @@ def section_name(name):
 # The per-overlay data sections (docs/PORT.md "Overlays", port/README.md): every unit's writable sections are renamed,
 # right after its compile (`rename`, the units' compile launcher), into its overlay's, so that the linker collects them
 # per overlay without a script, bracketed by __start_dw3_{data,bss}_<ovl> / __stop_... for the overlay manager's
-# snapshot (port/src/overlay.c; the EXE's units are the overlay "main").
+# snapshot (port/runtime/overlay.c; the EXE's units are the overlay "main").
 #   ELF: an orphan output section whose name is a C identifier (dw3_data_<ovl>, dw3_bss_<ovl>) gets GNU ld's
 #        __start_/__stop_ symbols by itself, and lands after .data/.bss, outside GNU_RELRO (a PIE link is fine).
 #   PE:  one .dw3data and one .dw3bss output section; lld sorts their chunks by the `$` suffix, so the generated
@@ -496,7 +523,7 @@ GAME_OBJECT_DIR = "/dw3_game.dir/"   # CMake's object directory of the game's un
 def cmd_sections(args):
     """Checks the game's objects after the link: every writable section of a game object (.data*, .bss*, COMMON, ...)
     must be a renamed one (`rename`), i.e. inside the ranges the overlay manager snapshots and the console's reset
-    restores (port/src/overlay.c). A section left out would keep its value across a reset: a game global the reset
+    restores (port/runtime/overlay.c). A section left out would keep its value across a reset: a game global the reset
     misses. .data.rel.ro* (PIE: const after relocation) is allowed as is. Lists, with -v, the other writable sections
     (asan_globals, .init_array: the runtime's, not game data)."""
     objects = read_objects(args.objects)
@@ -530,16 +557,62 @@ def cmd_sections(args):
                  f"tools/port_gen.py rename must cover them")
 
 
-def cmd_arena_header(args):
-    """port_arena_gen.h: the arena's layout for port/src/arena.c, which checks it against include/port.h's macros
-    (the regions' offsets, PORT_HEAP_SIZE, PORT_ARENA_SIZE) with _Static_asserts: one set of numbers here, one there,
-    tied at compile time."""
-    text = ["/* Generated by tools/port_gen.py arena-header; do not edit. */", "#ifndef PORT_ARENA_GEN_H",
-            "#define PORT_ARENA_GEN_H",
-            f"#define PORT_SLOT1_SIZE 0x{SLOT1_SIZE:X}", f"#define PORT_SLOT2_SIZE 0x{SLOT2_SIZE:X}",
-            f"#define PORT_HEAP_GEN_SIZE 0x{HEAP_SIZE:X}",
-            f"#define PORT_ARENA_GEN_SIZE 0x{SLOT1_SIZE + SLOT2_SIZE + HEAP_SIZE:X}", "#endif", ""]
-    write(args.out, "\n".join(text))
+def c_string(text):
+    return '"' + text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
+
+
+def game_header_text(g=None):
+    """port_game_gen.h: the game's description as C macros (psxstack/hooks.h includes it; GAME_CONTRACT.md "1.
+    game.json"): the identity and brand (PSXSTACK_GAME_*), the rate, the RAM, the slots (PORT_SLOT_COUNT,
+    PORT_SLOT<n>_BASE/SIZE/NAME/OFS, port_slot<n> on port_arena), the heap (PORT_HEAP_START_ADDR/END_ADDR/SIZE/OFS,
+    PORT_ARENA_SIZE), the discs (a PortGameDisc initializer list) and the BIOS stand-ins. One source of numbers for the
+    game's C, the runtime and this script. psxstack's game_gen.py will write the same header from the same file."""
+    g = g or GAME
+    slots, heap, ram = g["_slots"], g["_heap"], g["_ram"]
+    rates = g["video"].get("rates", [g["video"]["rate"]])
+    out = ["/* Generated by tools/port_gen.py game-header from port/game/game.json; do not edit. */",
+           "#ifndef PORT_GAME_GEN_H", "#define PORT_GAME_GEN_H", "",
+           f"#define PSXSTACK_GAME_ID {c_string(g['id'])}", f"#define PSXSTACK_GAME_TITLE {c_string(g['title'])}",
+           f"#define PSXSTACK_GAME_ENV_PREFIX {c_string(g.get('env_prefix', g['id'].upper()))}",
+           f"#define PSXSTACK_GAME_RATE {g['video']['rate']}", f"#define PSXSTACK_GAME_RATE_COUNT {len(rates)}",
+           f"#define PSXSTACK_GAME_RATES {{ {', '.join(str(r) for r in rates)} }}",
+           f"#define PSXSTACK_GAME_RATE_NOTE {c_string(g['video'].get('rate_note', ''))}", "",
+           f"#define PSXSTACK_GAME_RAM_BASE 0x{ram['base']:08X}u", f"#define PSXSTACK_GAME_RAM_SIZE 0x{ram['size']:X}u", "",
+           f"/* The overlay slots, in address order, contiguous with each other and with the heap: `tier` n in the hook",
+           f" * macros is slot n (1-based); port_slot<n> is its buffer in the arena. */",
+           f"#define PORT_SLOT_COUNT {len(slots)}"]
+    for n, sl in enumerate(slots, 1):
+        out += [f"#define PORT_SLOT{n}_NAME {c_string(sl['name'])}", f"#define PORT_SLOT{n}_BASE 0x{sl['base']:08X}",
+                f"#define PORT_SLOT{n}_SIZE 0x{sl['size']:X}", f"#define PORT_SLOT{n}_OFS 0x{sl['base'] - slots[0]['base']:X}",
+                f"#define port_slot{n} (port_arena + PORT_SLOT{n}_OFS)"]
+    out += ["", "/* The heap: the PS1's bounds, and the host region's size (larger: 64-bit structs). */",
+            f"#define PORT_HEAP_START_ADDR 0x{heap['start']:08X}", f"#define PORT_HEAP_END_ADDR 0x{heap['end']:08X}",
+            f"#define PORT_HEAP_OFS 0x{heap['start'] - slots[0]['base']:X}", f"#define PORT_HEAP_SIZE 0x{heap['host_size']:X}u",
+            "#define PORT_ARENA_SIZE (PORT_HEAP_OFS + PORT_HEAP_SIZE)", "",
+            "/* The discs the port accepts (PortGameDisc, psxstack/desc.h): the whole BIN's SHA-1 must be one of these. */",
+            f"#define PSXSTACK_GAME_DISC_COUNT {len(g['discs'])}", "#define PSXSTACK_GAME_DISCS { \\"]
+    for d in g["discs"]:
+        out.append(f"    {{ {c_string(d['label'])}, {c_string(d['serial'])}, {c_string(d['sha1'])}, {d['size']}ull, "
+                   f"{c_string(d['region'])}, {c_string(d.get('cue', ''))} }}, \\")
+    out.append("}")
+    standins = g["memory"].get("bios_standin", [])
+    out += ["", "/* Reads the game makes from the BIOS ROM (PortGameBiosStandin): the stand-in holds the text there. */",
+            f"#define PSXSTACK_GAME_BIOS_STANDIN_COUNT {len(standins)}"]
+    if standins:
+        out.append("#define PSXSTACK_GAME_BIOS_STANDINS { \\")
+        out += [f"    {{ 0x{_addr(b['address']):08X}u, {c_string(b['text'])} }}, \\" for b in standins]
+        out.append("}")
+    else:
+        out.append("#define PSXSTACK_GAME_BIOS_STANDINS { { 0u, \"\" } }")
+    la = g.get("launcher", {})
+    out += ["", f"#define PSXSTACK_GAME_LAUNCHER_ABOUT {c_string(la.get('about', ''))}",
+            f"#define PSXSTACK_GAME_LAUNCHER_DISC_HINT {c_string(la.get('disc_hint', ''))}",
+            f"#define PSXSTACK_GAME_LAUNCHER_WEBSITE {c_string(la.get('website', ''))}", "", "#endif /* PORT_GAME_GEN_H */", ""]
+    return "\n".join(out)
+
+
+def cmd_game_header(args):
+    write(args.out, game_header_text())
 
 
 # --------------------------------------------------------------------------------------------------------------- tables
@@ -719,7 +792,8 @@ def probe_sizes(cc, cflags, gen_include, by_unit):
     from concurrent.futures import ThreadPoolExecutor
     ver = subprocess.run([cc, "-dumpversion"], capture_output=True, text=True).stdout.strip()
     flags = [cc, *cflags, "-S", "-o", "-", "-w", "-x", "c", "-std=gnu99", "-DPC_PORT", "-DNON_MATCHING",
-             "-fsigned-char", "-fno-builtin", "-fno-common", f"-I{gen_include}", f"-I{ROOT / 'include'}", f"-I{ROOT}"]
+             "-fsigned-char", "-fno-builtin", "-fno-common", f"-I{gen_include}", f"-I{ROOT / 'include'}", f"-I{ROOT}",
+             f"-I{ROOT / 'port/include'}"]
     is_gcc = "clang" not in subprocess.run([cc, "--version"], capture_output=True, text=True).stdout.lower()
     if is_gcc and ver.split(".")[0].isdigit() and int(ver.split(".")[0]) >= 14:
         flags.append("-fpermissive")
@@ -746,11 +820,11 @@ def probe_sizes(cc, cflags, gen_include, by_unit):
 
 
 def cmd_state(args):
-    """port_state_tables.c for port/src/state.c and framelog.c: the EXE's functions ({PS1 address, host function}:
+    """port_state_tables.c for port/game/state.c and framelog.c: the EXE's functions ({PS1 address, host function}:
     gamestate_data.funcs's PS1 image), the EXE's sized data symbols ({PS1 address, PS1 size, host object, the length of
     the layout-identical prefix by the default rule}: port_state_read), and VOLATILE_RANGES (the stable hash).
     The default rule: a whole object is layout-identical when its -m64 sizeof equals its PS1 size (any pointer, or
-    long, makes it larger at -m64); its prefix is 0 otherwise (port/src/state.c lists the pointer-bearing objects'
+    long, makes it larger at -m64); its prefix is 0 otherwise (port/game/state.c lists the pointer-bearing objects'
     identical prefixes, with _Static_asserts). Only symbols that nm shows as globals of the EXE's objects are listed;
     their sizes come from compiling the defining units (probe_sizes), not from the objects."""
     objects = read_objects(args.objects)
@@ -778,8 +852,8 @@ def cmd_state(args):
         sys.exit("port_gen state: layout differs between -m32 and -m64 for a pointer-free object:\n  " + "\n  ".join(bad))
     vol = volatile_ranges()
     out = ["/* Generated by tools/port_gen.py state from config/symbol_addrs.txt, nm of the EXE's objects and",
-           " * tests/replay/replay.py's VOLATILE_RANGES; do not edit. port/src/state.c uses it. */",
-           "#include <stddef.h>", "#include \"port_runtime.h\"", ""]
+           " * tests/replay/replay.py's VOLATILE_RANGES; do not edit. port/game/state.c uses it. */",
+           "#include <stddef.h>", "#include \"psxstack/game.h\"", ""]
     out += [f"void {s}(void);" for _, s in frows]
     out += [f"extern char {s}[];" for _, _, s, _ in drows]
     out += ["", "const PortExeFunc port_exe_funcs[] = {"]
@@ -830,9 +904,9 @@ def main():
     p.add_argument("--objects", required=True, help="a file listing the game's objects (one per line or ;-separated)")
     p.add_argument("-v", "--verbose", action="store_true", help="also list the other writable sections")
     p.set_defaults(fn=cmd_sections)
-    p = sub.add_parser("arena-header", help="the arena's sizes as a header")
+    p = sub.add_parser("game-header", help="port_game_gen.h: the game's description (port/game/game.json) as C macros")
     p.add_argument("--out", required=True)
-    p.set_defaults(fn=cmd_arena_header)
+    p.set_defaults(fn=cmd_game_header)
     p = sub.add_parser("tables", help="the overlay address tables (needs the compiled objects)")
     p.add_argument("--nm", default=os.environ.get("NM", "nm"))
     p.add_argument("--objects", required=True, help="a file listing the game's objects (one per line or ;-separated)")

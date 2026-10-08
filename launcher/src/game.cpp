@@ -127,7 +127,7 @@ std::string game_exit_text(int code) {
     }
 #ifdef SDL_PLATFORM_WINDOWS
     // SDL_WaitProcess hands out GetExitCodeProcess's DWORD as an int: an unhandled exception's NTSTATUS code (what the
-    // game's crash handler ends the process with, port/src/crash.c) comes out negative.
+    // game's crash handler ends the process with, port/runtime/crash.c) comes out negative.
     const unsigned status = (unsigned)code;
     if (status >= 0x80000000u) {
         const char *name = status == 0xC0000005u   ? "access violation"

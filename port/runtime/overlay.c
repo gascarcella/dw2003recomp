@@ -9,13 +9,14 @@
  * log.
  *
  * The EXE's units (src/main/) have their .data/.bss in their own sections too (tools/port_gen.py ldscript:
- * .dw3.data.main, .dw3.bss.main), snapshotted at startup with the overlays': the console's reset (port/src/reset.c)
+ * .dw3.data.main, .dw3.bss.main), snapshotted at startup with the overlays': the console's reset (port/runtime/reset.c)
  * puts every game global back with port_overlay_reset, and port_overlay_check proves it (DW3_PORT_RESET_CHECK). The
  * link map check (port_gen.py sections, after every link) proves that no game object's writable data is outside
  * these sections. */
 #include <stdlib.h>
 #include <string.h>
 
+#include "port_harness.h"
 #include "port_runtime.h"
 
 
@@ -32,8 +33,8 @@ typedef struct PortRegion {
 
 static void port_tag_window_init(void);
 
-static const PortOverlay *port_current[3]; /* per tier (index 1, 2) */
-static u32 port_word0[3];                  /* per tier: the first word of the file last loaded */
+static const PortOverlay *port_current[PORT_SLOT_COUNT + 1]; /* per tier (slot index 1..PORT_SLOT_COUNT) */
+static u32 port_word0[PORT_SLOT_COUNT + 1];                  /* per tier: the first word of the file last loaded */
 /* [0] the EXE's .data, [1] its .bss, then [2 + 2 * i] overlay i's .data and [3 + 2 * i] its .bss */
 static PortRegion *port_regions;
 static int port_region_count;
@@ -94,7 +95,7 @@ void port_overlay_init(void) {
     port_tag_window_init();
 }
 
-/* The tag window (include/port.h, port/src/arena.c): every region above and the arena, so that a static ordering
+/* The tag window (include/port.h, port/runtime/arena.c): every region above and the arena, so that a static ordering
  * table or primitive (FIGHTSTG's cursor OT) tags like a heap one. */
 static void port_tag_window_init(void) {
     const u8 *lo = port_arena, *hi = port_arena + PORT_ARENA_SIZE;
@@ -114,7 +115,7 @@ static void port_tag_window_init(void) {
     port_tag_window_set(lo, hi);
 }
 
-/* The console's reset (port/src/reset.c): every game unit's .data and .bss back to their startup contents, the EXE's
+/* The console's reset (port/runtime/reset.c): every game unit's .data and .bss back to their startup contents, the EXE's
  * and every overlay's (static locals included: they are in the same sections), and no overlay current in either
  * tier, as after power-on (the slots' first words are 0 again: the arena is cleared too). */
 void port_overlay_reset(void) {
@@ -122,7 +123,7 @@ void port_overlay_reset(void) {
     for (i = 0; i < port_region_count; i++) {
         port_region_restore(&port_regions[i]);
     }
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i <= PORT_SLOT_COUNT; i++) {
         port_current[i] = NULL;
         port_word0[i] = 0;
     }
@@ -153,7 +154,7 @@ __attribute__((no_sanitize_address)) static size_t port_region_diff(const PortRe
     return count;
 }
 
-/* The proof that a reset restored every game global (port/src/reset.c, DW3_PORT_RESET_CHECK): compares every game
+/* The proof that a reset restored every game global (port/runtime/reset.c, DW3_PORT_RESET_CHECK): compares every game
  * unit's .data and .bss with their startup contents, the EXE's and every overlay's. Returns the number of bytes that
  * differ (0: all as at startup); *checked gets the number of bytes compared. */
 size_t port_overlay_check(size_t *checked) {
@@ -181,11 +182,15 @@ static const PortOverlay *port_overlay_find(int tier, s32 file) {
 }
 
 const PortOverlay *port_overlay_current(int tier) {
-    return (tier == 1 || tier == 2) ? port_current[tier] : NULL;
+    return (tier >= 1 && tier <= PORT_SLOT_COUNT) ? port_current[tier] : NULL;
 }
 
 u32 port_overlay_word0(int tier) {
-    return (tier == 1 || tier == 2) ? port_word0[tier] : 0;
+    return (tier >= 1 && tier <= PORT_SLOT_COUNT) ? port_word0[tier] : 0;
+}
+
+u32 port_state_slot1_word0(void) {
+    return port_overlay_word0(1);
 }
 
 /* The copy's CPU time on the PS1 (session 16, found by tests/port's new_game run): the game copies a file into its slot
@@ -218,7 +223,7 @@ static u32 port_first_word(const void *src, u32 size) {
 
 void *port_overlay_load(int tier, s32 file, void *dst, const void *src, u32 size) {
     const PortOverlay *o;
-    if (tier != 1 && tier != 2) {
+    if (tier < 1 || tier > PORT_SLOT_COUNT) {
         port_fatal("overlay: load tier %d", tier);
     }
     o = port_overlay_find(tier, file);
@@ -255,7 +260,7 @@ void (*port_overlay_resolve(int tier, uintptr_t addr))(void) {
     if (addr < 0x80000000u || addr >= 0x80200000u) {
         return (PortFn)addr; /* a host function pointer already */
     }
-    if (tier != 1 && tier != 2) {
+    if (tier < 1 || tier > PORT_SLOT_COUNT) {
         port_fatal("overlay: resolve tier %d", tier);
     }
     o = port_current[tier];

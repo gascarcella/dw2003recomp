@@ -15,6 +15,7 @@
 #include "port_harness.h"
 #include "port_runtime.h"
 #include "psyq.h"
+#include "sha1.h"
 
 typedef struct PortOverlayStep {
     long frame;
@@ -89,7 +90,7 @@ void port_framelog_open(const char *log_path, const char *record_path) {
             port_fatal("framelog: --log %s: cannot open", log_path);
         }
         port_file_line_buffered(port_log_file); /* a crashed run's log ends at its last line */
-        port_logf("# dw2003 port frame log 1 (port/README.md)");
+        port_logf("# " PSXSTACK_GAME_ID " port frame log 1 (port/README.md)");
     }
     if (record_path != NULL) {
         FILE *f = fopen(record_path, "wb"); /* fail now rather than at exit */
@@ -105,8 +106,8 @@ void port_framelog_open(const char *log_path, const char *record_path) {
 }
 
 void port_framelog_frame(void) {
-    s32 stage = port_state_stage(), file = port_state_file();
-    u32 map = (u32)port_state_map();
+    s32 stage = game_state_stage(), file = game_state_file();
+    u32 map = (u32)game_state_map();
     u32 prims;
     u32 hash = psyq_gpu_take_hash(&prims);
     port_logf("F %ld st %d fl %d map 0x%X prims %u hash %08x", port_frames, stage, file, map, prims, hash);
@@ -139,15 +140,63 @@ void port_framelog_checkpoint(const char *name) {
         port_fatal("framelog: out of memory");
     }
     c->frame = port_frames;
-    c->stage = port_state_stage();
-    c->map = (u32)port_state_map();
-    c->random_index = port_state_random_index();
-    port_state_gamestate_sha1(c->sha1, c->stable);
+    c->stage = game_state_stage();
+    c->map = (u32)game_state_map();
+    c->random_index = game_state_random_index();
+    port_state_sha1(c->sha1, c->stable);
     port_logf("C %ld %s stage %d map 0x%X rnd %d sha1 %s stable %s", c->frame, c->name, c->stage, c->map,
               c->random_index, c->sha1, c->stable);
 }
 
-/* The console's reset (port/src/reset.c): an event line; the sequences go on (run.lua's listener keeps its last
+/* ---- The checkpoint image (psxstack/game.h): the game's state bytes in a buffer kept for the run, and their SHA-1s:
+ * whole, and with the game's volatile ranges zeroed (the stable hash the records compare). */
+const u8 *port_state_image(void) {
+    static u8 *image;
+    if (image == NULL) {
+        u32 size = game_state_image_size();
+        image = malloc(size ? size : 1);
+        if (image == NULL) {
+            port_fatal("framelog: out of memory");
+        }
+    }
+    game_state_image(image);
+    return image;
+}
+
+static void port_sha1_of(const u8 *data, size_t n, char hex[41]) {
+    PortSha1 c;
+    uint8_t digest[20];
+    port_sha1_init(&c);
+    port_sha1_update(&c, data, n);
+    port_sha1_final(&c, digest);
+    port_sha1_hex(digest, hex);
+}
+
+void port_state_sha1(char full[41], char stable[41]) {
+    static u8 *copy;
+    u32 size = game_state_image_size();
+    const u8 *image = port_state_image();
+    const PortRange *vol = game_state_volatile();
+    int i;
+    port_sha1_of(image, size, full);
+    if (copy == NULL) {
+        copy = malloc(size ? size : 1);
+        if (copy == NULL) {
+            port_fatal("framelog: out of memory");
+        }
+    }
+    memcpy(copy, image, size);
+    for (i = 0; i < game_state_volatile_count(); i++) {
+        if (vol[i].lo < vol[i].hi && vol[i].hi <= size) {
+            memset(copy + vol[i].lo, 0, vol[i].hi - vol[i].lo);
+        } else {
+            port_fatal("state: volatile range 0x%X..0x%X is outside the game-state image", vol[i].lo, vol[i].hi);
+        }
+    }
+    port_sha1_of(copy, size, stable);
+}
+
+/* The console's reset (port/runtime/reset.c): an event line; the sequences go on (run.lua's listener keeps its last
  * stage/file/map across PCSX-Redux's hardResetEmulator, so the next frame records the cleared RAM's (0, 0) and map 0
  * as a change), and so do the checkpoints and the input trace. */
 void port_framelog_reset(void) {

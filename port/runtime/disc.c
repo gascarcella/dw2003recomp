@@ -3,15 +3,16 @@
  * port_disc_open takes the .cue (its first FILE line names the BIN, relative to the cue's directory; the disc is one
  * track, MODE2/2352, INDEX 01 00:00:00) or the .bin itself. Sector `lba` is the 2352 bytes at lba * 2352 in the BIN:
  * LBA 0 is the BIN's first sector, as CdIntToPos counts (it adds the 150-sector lead-in). The reader (a positional
- * read on a file descriptor kept open for the run; port/src/platform.c) is handed to the shim with
+ * read on a file descriptor kept open for the run; port/runtime/platform.c) is handed to the shim with
  * psyq_cd_set_reader; a sector past the BIN's end reads as missing (0).
  *
- * The SHA-1 check is the matching build's (scripts/setup.sh DISC_SHA1): the whole BIN must hash to the unpatched EU
- * disc's 457cb233..., else the run stops with status 1, naming both digests. --no-disc-check (check_sha1 0) skips it
- * and says so. Hashing the 692 MB costs ~4.5 s of CPU (~25 s from a cold page cache), so a successful check leaves a
- * stamp: one line "<sha1> <size> <mtime s>.<ns> <inode> <device> <canonical path>" per verified BIN in
- * $XDG_CACHE_HOME/dw2003-port/disc-stamps (~/.cache/dw2003-port/ without XDG_CACHE_HOME; Windows:
- * %LOCALAPPDATA%\dw2003-port\; port_cache_dir), outside the repository.
+ * The SHA-1 check is the game's (PSXSTACK_GAME_DISCS, from the game's game.json: the matching build's disc,
+ * scripts/setup.sh DISC_SHA1): the whole BIN must hash to one of the accepted discs', else the run stops with status 1,
+ * naming the digest and the discs. --no-disc-check (check_sha1 0) skips it and says so. Hashing the 692 MB costs
+ * ~4.5 s of CPU (~25 s from a cold page cache), so a successful check leaves a stamp: one line
+ * "<sha1> <size> <mtime s>.<ns> <inode> <device> <canonical path>" per verified BIN in
+ * $XDG_CACHE_HOME/<id>-port/disc-stamps (~/.cache/<id>-port/ without XDG_CACHE_HOME; Windows:
+ * %LOCALAPPDATA%\<id>-port\; port_cache_dir), outside the repository.
  * A run whose BIN has the same canonical path, size, mtime (with nanoseconds), inode and device skips the hash;
  * anything else hashes again (and a failed check never writes a stamp). The log line is the same either way, so a
  * run's output does not depend on the cache. An unwritable cache directory only costs the next run its shortcut.
@@ -30,11 +31,23 @@
 
 #define DISC_PATH_MAX 4096
 
-#define DISC_SHA1 "457cb233349ba841e03b33d8060f8fbcadd45cb3"
 #define DISC_RAW_SECTOR 2352
 
+static const PortGameDisc disc_accepted[] = PSXSTACK_GAME_DISCS;
+static const PortGameDisc *disc_matched; /* the accepted disc the BIN hashed to; the first one when unchecked */
 static int disc_fd = -1;
 static unsigned disc_sectors;
+
+/* The accepted disc with this digest (40 hex digits), or NULL. */
+static const PortGameDisc *disc_find(const char *hex) {
+    int i;
+    for (i = 0; i < PSXSTACK_GAME_DISC_COUNT; i++) {
+        if (strncmp(disc_accepted[i].sha1, hex, 40) == 0) {
+            return &disc_accepted[i];
+        }
+    }
+    return NULL;
+}
 
 static int disc_read(unsigned lba, u8 *sector) {
     long long n;
@@ -103,7 +116,7 @@ static void disc_parse_cue(const char *cue, char *out, size_t out_size) {
         port_fatal("disc: %s: no FILE line", cue);
     }
     if (tracks != 1 || !track_ok) {
-        port_log("disc: warning: %s: expected one MODE2/2352 track (the EU disc), found %d track(s)%s", cue, tracks,
+        port_log("disc: warning: %s: expected one MODE2/2352 track, found %d track(s)%s", cue, tracks,
                  track_ok ? "" : " and no MODE2/2352");
     }
 }
@@ -129,7 +142,7 @@ static void disc_stamp_key(const PortFileInfo *st, const char *canon, char *out,
              st->device, canon);
 }
 
-/* 1 if the stamp file holds `key` with the expected digest. */
+/* 1 if the stamp file holds `key` with an accepted digest (disc_matched: that disc). */
 static int disc_stamp_hit(const char *key) {
     char path[DISC_PATH_MAX], line[DISC_PATH_MAX + 128];
     FILE *f;
@@ -140,7 +153,10 @@ static int disc_stamp_hit(const char *key) {
     }
     while (!hit && fgets(line, sizeof(line), f) != NULL) {
         line[strcspn(line, "\n")] = '\0';
-        hit = strncmp(line, DISC_SHA1 " ", 41) == 0 && strcmp(line + 41, key) == 0;
+        if (strlen(line) > 41 && line[40] == ' ' && strcmp(line + 41, key) == 0) {
+            disc_matched = disc_find(line);
+            hit = disc_matched != NULL;
+        }
     }
     fclose(f);
     return hit;
@@ -182,7 +198,7 @@ static void disc_stamp_write(const char *key) {
         }
         fclose(in);
     }
-    fprintf(out, "%s %s\n", DISC_SHA1, key);
+    fprintf(out, "%s %s\n", disc_matched->sha1, key);
     if (fclose(out) != 0 || port_file_replace(tmp, path) != 0) {
         remove(tmp);
     }
@@ -219,10 +235,17 @@ static void disc_check_sha1(const char *bin, const PortFileInfo *st) {
     }
     port_sha1_final(&c, digest);
     port_sha1_hex(digest, hex);
-    if (strcmp(hex, DISC_SHA1) != 0) {
-        port_fatal("disc: %s is not the unpatched EU disc (SLES-03936): SHA-1 %s, expected %s "
+    disc_matched = disc_find(hex);
+    if (disc_matched == NULL) {
+        char expected[PSXSTACK_GAME_DISC_COUNT * 96];
+        int i, n = 0;
+        for (i = 0; i < PSXSTACK_GAME_DISC_COUNT; i++) {
+            n += snprintf(expected + n, sizeof(expected) - (size_t)n, "%s%s (%s)", i ? ", " : "",
+                          disc_accepted[i].sha1, disc_accepted[i].label);
+        }
+        port_fatal("disc: %s is not an accepted " PSXSTACK_GAME_TITLE " disc: SHA-1 %s, expected %s "
                    "(--no-disc-check runs it anyway)",
-                   bin, hex, DISC_SHA1);
+                   bin, hex, expected);
     }
     disc_stamp_write(key);
 }
@@ -267,7 +290,7 @@ void port_disc_open(const char *path, int check_sha1) {
     disc_sectors = (unsigned)(st.size / DISC_RAW_SECTOR);
     if (check_sha1) {
         disc_check_sha1(bin, &st);
-        port_log("disc: %s: %u sectors, SHA-1 %s (the EU disc)", bin, disc_sectors, DISC_SHA1);
+        port_log("disc: %s: %u sectors, SHA-1 %s (%s)", bin, disc_sectors, disc_matched->sha1, disc_matched->label);
     } else {
         port_log("disc: %s: %u sectors, SHA-1 not checked (--no-disc-check)", bin, disc_sectors);
     }

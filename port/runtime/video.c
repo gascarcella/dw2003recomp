@@ -232,7 +232,7 @@ void port_video_open(int scale, int fullscreen) {
         port_fatal("SDL_Init: %s (a host without a display: SDL_VIDEO_DRIVER=offscreen)", SDL_GetError());
     }
     atexit(SDL_Quit);
-    video_window = SDL_CreateWindow("dw2003", 320 * scale, 240 * scale, flags);
+    video_window = SDL_CreateWindow(PSXSTACK_GAME_ID, 320 * scale, 240 * scale, flags);
     if (video_window == NULL) {
         port_fatal("SDL_CreateWindow: %s", SDL_GetError());
     }
@@ -373,7 +373,7 @@ static char video_status[64]; /* fast-forward's, or "" */
 static void video_title(void) {
     char title[96];
     if (video_window != NULL) {
-        snprintf(title, sizeof(title), "dw2003%s%s%s%s", video_paused ? " (paused)" : "",
+        snprintf(title, sizeof(title), PSXSTACK_GAME_ID "%s%s%s%s", video_paused ? " (paused)" : "",
                  video_status[0] ? " (" : "", video_status, video_status[0] ? ")" : "");
         SDL_SetWindowTitle(video_window, title);
     }

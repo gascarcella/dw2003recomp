@@ -1,6 +1,6 @@
 // The disc check (DECISIONS "Launcher and mods"): the launcher's own .cue reader
-// (the same rules as port/src/disc.c: the first FILE line names the BIN, relative to the cue's directory) and the
-// port's SHA-1 (port/src/sha1.c) over the whole BIN, on a worker thread. The game checks the disc again itself: the
+// (the same rules as port/runtime/disc.c: the first FILE line names the BIN, relative to the cue's directory) and the
+// port's SHA-1 (port/runtime/sha1.c) over the whole BIN, on a worker thread. The game checks the disc again itself: the
 // launcher's check is there to tell the user early, and to keep a wrong file out of the settings.
 #pragma once
 
@@ -13,7 +13,7 @@
 
 namespace dw3 {
 
-// The unpatched EU disc (SLES-03936; scripts/setup.sh DISC_SHA1, port/src/disc.c) and its BIN's size.
+// The unpatched EU disc (SLES-03936; scripts/setup.sh DISC_SHA1, port/runtime/disc.c) and its BIN's size.
 constexpr const char *DISC_SHA1 = "457cb233349ba841e03b33d8060f8fbcadd45cb3";
 constexpr uint64_t DISC_BIN_SIZE = 692146560; // 294,280 sectors of 2352 bytes
 

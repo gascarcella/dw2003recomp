@@ -222,7 +222,7 @@ the textures and CLUTs (`tests/port/vram.py`).
 ## The port's debug channel and the MCP server
 _Decided: 2026-10-06_
 
-A tool inspects and drives the running port through an in-process channel (`--debug SOCKET`, `port/src/debug.c`),
+A tool inspects and drives the running port through an in-process channel (`--debug SOCKET`, `port/runtime/debug.c`),
 not through ptrace or gdb: the game thread polls the socket at the vsync boundary, so every read, write and press
 lands between two frames and a driven run stays deterministic, and nothing depends on Yama or a debugger. Without
 `--debug` nothing of it exists. One Python server, `tools/mcp/`, registered by `.mcp.json`, speaks MCP over it;
@@ -278,7 +278,7 @@ Linux first; Windows after the launcher works on Linux.
 ## Crash reports are one text file, named on stderr, kept by the launcher
 _Decided: 2026-10-07_
 
-A crash or a fatal stop of the port writes one text report (`port/src/crash.c`: the build, the vsync, the overlays, the
+A crash or a fatal stop of the port writes one text report (`port/runtime/crash.c`: the build, the vsync, the overlays, the
 log's tail, the registers and a stack of executable-relative addresses) and names it on its last stderr line, which
 is the launcher's only contract with it. The launcher owns where things go (`<settings dir>/crashes/`, `logs/`) and
 what a tester pastes (its Copy text). Every build is stamped from `git describe` (`port/cmake/version.cmake`) so a
@@ -372,3 +372,17 @@ writes DXIL for D3D12) and embedded; DXC writes the same bytes on every machine,
 Blending is done in the shader from a copy of the target, not by the fixed-function blender: on this machine NVIDIA's
 blender gets the PS1's (B+F)/2 wrong for a quarter of the values, stacked halvings drift on every device, and the
 PS1's dither after the blend cannot be expressed at all.
+
+## The port is split into runtime and game adapter (phase 1 of psxstack)
+_Decided: 2026-10-08_
+
+The PC port stack (the runtime, the Psy-Q shim, the launcher, the build and packaging) is being extracted into its own
+repository, [psxstack](https://github.com/gascarcella/psxstack), to be reused by ports of other PS1 decompilations;
+its `docs/GAME_CONTRACT.md` says what a game provides and what the stack provides. Phase 1, here: `port/runtime/` is
+generic (it includes no game header and names no game symbol; its game facts are macros generated from
+`port/game/game.json`), `port/game/` is this game's adapter behind `port/include/psxstack/game.h` (`game_main`,
+`game_apply_rate`, the `game_state_*` probes and checkpoint image, `game_mods`), with a weak default for each function.
+The game's `include/port.h` keeps the PS1 side of every hook macro itself and includes the stack's `psxstack/hooks.h`
+only under `PC_PORT`, so the matching build never needs the stack. The overlay manager and the arena take the slot table
+from the description (N slots; the macros' `tier` is the slot's 1-based index), so the game's C did not change. The
+`DW3_*` CMake names, the `dw3_data_*` section names and `tools/port_gen.py`'s place stay until the move (phase 2).

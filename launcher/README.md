@@ -25,7 +25,7 @@ to them yet, the main checkout's are used. For a desktop window, SDL3 needs the 
 build (`scripts/setup.sh` "sdl3"); without them only the offscreen driver exists (the self-test's).
 
 Two files of the port's runtime are compiled into the launcher as they are, never changed for it:
-`port/src/json.c` (the strict JSON reader) and `port/src/sha1.c`.
+`port/runtime/json.c` (the strict JSON reader) and `port/runtime/sha1.c`.
 
 ## The settings directory
 
@@ -42,7 +42,7 @@ The status bar and the Settings screen show the directory and which rule chose i
 
 ## settings.json
 
-Schema 1, as settled by the game's side (`docs/LAUNCHER.md` "Settings file": `port/src/settings.c` reads it, `dw2003
+Schema 1, as settled by the game's side (`docs/LAUNCHER.md` "Settings file": `port/runtime/settings.c` reads it, `dw2003
 --config FILE --print-settings` validates it). The launcher edits these members and **keeps every other one as it was**
 (order included): `input`, `mods`, `watchdog`, `video.window` and keys it does not know.
 
@@ -62,7 +62,7 @@ Schema 1, as settled by the game's side (`docs/LAUNCHER.md` "Settings file": `po
 | `launcher.last_dir` | string | none | The launcher's own state: where the file dialog opens. The game never reads `launcher` |
 
 **Only the bindings the user changed are written.** A button or action absent from `input` keeps the game's default
-(`src/input.cpp` mirrors `port/src/input.c`'s defaults for display), so a default changed in a later game reaches
+(`src/input.cpp` mirrors `port/runtime/input.c`'s defaults for display), so a default changed in a later game reaches
 everyone who never rebound it; **Default** removes the entry again, and an `input` object the launcher emptied is
 removed.
 
@@ -76,7 +76,7 @@ default used.
 The Disc screen takes the image three ways: **Choose a file...** (`SDL_ShowOpenFileDialog`: the XDG portal, else
 `zenity`, on Linux; when neither is there it says so), **dropping** the `.cue` or `.bin` on the window, or **typing**
 its path. The launcher reads the `.cue` itself (the first `FILE` line, relative to the cue: the rules of
-`port/src/disc.c`) and hashes the whole BIN with `port/src/sha1.c` on a worker thread (~4 s warm, longer from a cold
+`port/runtime/disc.c`) and hashes the whole BIN with `port/runtime/sha1.c` on a worker thread (~4 s warm, longer from a cold
 disk), with a progress bar and Cancel. Only the European disc (SHA-1 `457cb233...`) is stored, with its SHA-1; a wrong
 file is refused and the previous disc stays. A stored disc is not hashed again while its SHA-1 matches and its BIN has
 the expected size (692,146,560 bytes); a disc set by hand without a SHA-1 is checked at start.

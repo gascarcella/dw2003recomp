@@ -52,7 +52,7 @@ void gpu_load_image(int x, int y, int w, int h, const u16 *pixels);
 const u16 *gpu_vram_pixels(void);
 void gpu_draw_state(u32 *e1, u32 *e3, u32 *e4, u32 *e5);
 
-/* gpu.c's decoded commands for the hardware renderer (port/src/render_gpu.c; issue #31): an optional listener, called
+/* gpu.c's decoded commands for the hardware renderer (port/runtime/render_gpu.c; issue #31): an optional listener, called
  * synchronously for every triangle (a quad is two: (1, 2, 3) then (0, 1, 2)), rectangle, line segment, fill, VRAM copy
  * and finished CPU-to-VRAM transfer gpu.c executes, and at the power-on. A triangle, rectangle or segment is reported
  * before its pixels are drawn (the VRAM is then what its texels come from), only when gpu.c draws it (a triangle past
@@ -115,7 +115,7 @@ u32 mdec_decode_out(u32 *dst, u32 words);
 /* libpad.c: the controllers were polled again (run by the vsync tick). */
 void psyq_pad_vsync(void);
 
-/* libsnd.c, for the SPU write trace (port/src/spu_trace.c): psyq_snd_in_vsync is 1 while the vsync handler's
+/* libsnd.c, for the SPU write trace (port/runtime/spu_trace.c): psyq_snd_in_vsync is 1 while the vsync handler's
  * sequencer tick runs (its stores belong to the vsync being run, which the runtime's frame count counts only after the
  * handler); the call hook gets one line per LIBSND call the game makes (the oracle's `--calls` comments). */
 int psyq_snd_in_vsync(void);

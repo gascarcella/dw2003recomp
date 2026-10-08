@@ -8,7 +8,6 @@
 #include "platform.h"
 #include "port_harness.h"
 #include "port_runtime.h"
-#include "records.h"
 #include "settings.h"
 #include "spu.h"
 #include "psyq.h"
@@ -74,7 +73,7 @@ static void usage(const char *argv0) {
             "  --trace          log every tick, overlay resolve and Psy-Q stub call\n"
             "  --window         show the display in a window (SDL3; a build with -DDW3_PORT_SDL=ON), real time;\n"
             "                   keys: arrows, X cross, C circle, Z square, S triangle, Enter START, Backspace SELECT,\n"
-            "                   Q/E L1/R1, 1/3 L2/R2, F11 fullscreen, P pause; gamepads too (port/src/input.c;\n"
+            "                   Q/E L1/R1, 1/3 L2/R2, F11 fullscreen, P pause; gamepads too (port/runtime/input.c;\n"
             "                   rebindable in the settings); with --script the script owns the pad\n"
             "  --scale N        the window's size: 320*N x 240*N (default 2; implies --window)\n"
             "  --fullscreen     a fullscreen window (implies --window)\n"
@@ -91,7 +90,7 @@ static void usage(const char *argv0) {
             "  --spu-trace FILE every SPU write and DMA block, per vsync (tests/sound's trace format)\n"
             "  --wav FILE       the audio output as a 44.1 kHz stereo WAV (any build, headless too)\n"
             "  --mute           no audio device in window mode\n"
-            "  --debug SOCKET   the debug channel (port/src/debug.c): a Unix socket at SOCKET taking newline-delimited\n"
+            "  --debug SOCKET   the debug channel (port/runtime/debug.c): a Unix socket at SOCKET taking newline-delimited\n"
             "                   JSON requests (pause, step, wait, pad, peek/poke, screenshot, hash, reset, quit),\n"
             "                   polled once per vsync; turns the watchdog and the default frame cap off\n"
             "  --debug-hold     with --debug: hold the game paused at its first vsync until the client resumes it\n"
@@ -221,7 +220,7 @@ int main(int argc, char **argv) {
         } else if (strcmp(argv[i], "--crash-dir") == 0 && i + 1 < argc) {
             crash_dir = argv[++i];
         } else if (strcmp(argv[i], "--version") == 0) {
-            printf("dw2003 %s (%s)\n", port_version, port_commit);
+            printf(PSXSTACK_GAME_ID " %s (%s)\n", port_version, port_commit);
             return 0;
         } else if (strcmp(argv[i], "--screenshot") == 0 && i + 1 < argc) {
             if (!port_video_screenshot_add(argv[++i])) {
@@ -258,7 +257,7 @@ int main(int argc, char **argv) {
     if (fps >= 0) {
         /* --fps N: the pace; without a refresh also the nominal rate (as before: 0 is unthrottled at PAL's rate) */
         if (refresh == 0) {
-            port_rate = fps > 0 ? fps : 50;
+            port_rate = fps > 0 ? fps : PSXSTACK_GAME_RATE;
         }
         port_pace_set(fps);
     }
@@ -306,11 +305,11 @@ int main(int argc, char **argv) {
     }
     port_arena_init();
     spu_init();
+    /* the game's own response to the rate (psxstack/game.h game_apply_rate: dw2003's 60 Hz mode, the NTSC patch's
+     * flag; docs/LAUNCHER.md "50/60 Hz"), before the snapshot (port_overlay_init) so that the reset restores it and the
+     * reset check holds; the CD's ticks follow the rate too */
+    game_apply_rate(port_rate);
     if (refresh == 60) {
-        /* the game's own 60 Hz mode (the NTSC patch's records_60hz; docs/LAUNCHER.md "50/60 Hz"), set before the
-         * snapshot (port_overlay_init) so that the reset restores it and the reset check holds; main_screen_pos stays
-         * 1 (the PAL screen offset, which the port's video ignores, and the card game's PAL layout) */
-        records_60hz = 1;
         psyq_cd_set_vsync_hz(60);
     }
     port_overlay_init();

@@ -1,5 +1,6 @@
 # The PC port (docs/PORT.md; DECISIONS "PC port architecture"): the game's 388 C units, the port
-# runtime (port/src/) and the Psy-Q shim (port/psyq/) linked into one host binary, build/port/dw2003.
+# runtime (port/runtime/), the game adapter (port/game/) and the Psy-Q shim (port/psyq/) linked into one host binary,
+# build/port/dw2003.
 #
 #   cmake -S port -B build/port -G Ninja && cmake --build build/port && build/port/dw2003 --max-frames 60
 #
@@ -13,8 +14,8 @@ project(dw2003port C)
 option(DW3_PORT_ALLOW_UNRESOLVED "Link with --unresolved-symbols=ignore-all (a private build without port/psyq/)" OFF)
 option(DW3_PORT_SANITIZE "Build with -fsanitize=address,undefined" OFF)
 option(DW3_PORT_M32 "Build a 32-bit binary (-m32, gcc-multilib): its --log must equal the 64-bit build's" OFF)
-option(DW3_PORT_SDL "The window (port/src/video.c, input.c) over SDL3 (tools/sdl3: scripts/setup.sh sdl3)" OFF)
-option(DW3_PORT_PSYQ_WERROR "-Werror for port/psyq/ too (port/src/ always has it; port/psyq/check.sh uses it)" ON)
+option(DW3_PORT_SDL "The window (port/runtime/video.c, input.c) over SDL3 (tools/sdl3: scripts/setup.sh sdl3)" OFF)
+option(DW3_PORT_PSYQ_WERROR "-Werror for port/psyq/ too (port/runtime/ always has it; port/psyq/check.sh uses it)" ON)
 set(DW3_PORT_PSYQ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/psyq" CACHE PATH "The Psy-Q shim's sources (psyq.h and *.c)")
 set(DW3_PORT_UNIT_OVERRIDES "" CACHE STRING
     "Experiments: units to build from another file, as src/<t>/<unit>.c=<path> entries (the game's tree is untouched)")
@@ -29,7 +30,8 @@ else()
     find_program(DW3_PYTHON NAMES python3 python REQUIRED)
 endif()
 
-# ---- Configure-time generation: the unit list, the override headers, the arena's layout.
+# ---- Configure-time generation: the unit list, the override headers, the game's description (port/game/game.json ->
+# port_game_gen.h: the slots, the heap, the brand; psxstack's GAME_CONTRACT.md).
 function(dw3_generate)
     execute_process(COMMAND "${DW3_PYTHON}" "${DW3_PORT_GEN}" ${ARGN} RESULT_VARIABLE r OUTPUT_VARIABLE out
                     ERROR_VARIABLE err)
@@ -41,7 +43,7 @@ function(dw3_generate)
 endfunction()
 dw3_generate(units --out "${DW3_GEN}/units.cmake")
 dw3_generate(overrides --out "${DW3_GEN}/include")
-dw3_generate(arena-header --out "${DW3_GEN}/include/port_arena_gen.h")
+dw3_generate(game-header --out "${DW3_GEN}/include/port_game_gen.h")
 include("${DW3_GEN}/units.cmake")
 foreach(override IN LISTS DW3_PORT_UNIT_OVERRIDES)
     string(REPLACE "=" ";" parts "${override}")
@@ -67,22 +69,24 @@ endforeach()
 file(WRITE "${DW3_GEN}/unit_overlays.txt" "${DW3_UNIT_OVERLAYS}")
 file(GLOB DW3_CONFIG_DEPS "${DW3_ROOT}/config/*.symbols.txt" "${DW3_ROOT}/config/wstag/*.symbols.txt")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-             "${DW3_PORT_GEN}" "${DW3_ROOT}/config/wstag.txt" "${DW3_ROOT}/config/wstag_c.txt"
+             "${DW3_PORT_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}/game/game.json" "${DW3_ROOT}/config/wstag.txt"
+             "${DW3_ROOT}/config/wstag_c.txt"
              "${DW3_ROOT}/include/psyq/gtemac.h" "${DW3_ROOT}/include/asm_generated/include_asm.h"
              "${DW3_ROOT}/src/main/overlay.c" "${DW3_ROOT}/src/fieldstg/fieldstg_80087DB0.c")
 
 # ---- Flags shared by everything that includes the game's headers (the units, the runtime, the shim).
 set(DW3_GAME_DEFINES PC_PORT NON_MATCHING)
-set(DW3_GAME_INCLUDES "${DW3_GEN}/include" "${DW3_ROOT}/include" "${DW3_ROOT}")
+# port/include: the game's include/port.h includes the stack's psxstack/hooks.h under PC_PORT (GAME_CONTRACT.md).
+set(DW3_GAME_INCLUDES "${DW3_GEN}/include" "${DW3_ROOT}/include" "${DW3_ROOT}" "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(DW3_COMMON_FLAGS -fsigned-char -fwrapv -fno-strict-aliasing)
 if(DW3_PORT_SANITIZE)
     list(APPEND DW3_COMMON_FLAGS -fsanitize=address,undefined -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address,undefined)
 endif()
-# Non-PIE on ELF, for the debug channel's sake: the channel (port/src/debug.c), the MCP server (tools/mcp) and the
+# Non-PIE on ELF, for the debug channel's sake: the channel (port/runtime/debug.c), the MCP server (tools/mcp) and the
 # tests over them (tests/port/mods.py) resolve host symbols with nm's link-time addresses of build/port/dw2003, which
 # a PIE would relocate at load (Ubuntu's GCC links PIE by default; CI, 2026-10-07). Nothing else needs it: the arena
-# needs no link address (port/src/arena.c) and the overlay sections are orphan sections the linker places after
+# needs no link address (port/runtime/arena.c) and the overlay sections are orphan sections the linker places after
 # .data/.bss, outside GNU_RELRO, so a PIE link works for everything but the channel (DECISIONS "Overlay sections by
 # renaming, no linker script"). PE has no such flag (ASLR relocates the image; --debug is refused there).
 if(NOT WIN32)
@@ -101,12 +105,12 @@ endif()
 # ---- The game's units: one object library. Each unit is compiled through port_gen.py rename (C_COMPILER_LAUNCHER),
 # which renames the object's .data/.bss sections into its overlay's (ELF: dw3_data_<ovl>/dw3_bss_<ovl>, whose
 # __start_/__stop_ symbols GNU ld makes by itself; PE: the .dw3data$<ovl>_1/.dw3bss$<ovl>_1 chunk groups between the
-# generated markers), so that the overlay manager can snapshot and restore them (port/src/overlay.c) with no linker
+# generated markers), so that the overlay manager can snapshot and restore them (port/runtime/overlay.c) with no linker
 # script. On ELF GNU objcopy renames the sections after the compile; on PE (clang) the launcher forces the overlay's
 # `#pragma clang section` into the compile instead (GNU objcopy drops the COMDAT flag of the COFF sections it
 # rewrites, and lld then discards the units' .pdata/.xdata unwind tables; llvm-objcopy cannot rename COFF sections
 # at all). GNU objdump reads both formats for the checks. A launcher of the user's (ccache) still runs, after the
-# rename's. The game's own main() becomes game_main (port/src/main.c has the host's).
+# rename's. The game's own main() becomes game_main (port/runtime/main.c has the host's).
 find_program(DW3_OBJCOPY NAMES objcopy NO_CMAKE_FIND_ROOT_PATH)
 find_program(DW3_OBJDUMP NAMES objdump NO_CMAKE_FIND_ROOT_PATH)
 if(NOT DW3_OBJCOPY OR NOT DW3_OBJDUMP)
@@ -156,7 +160,7 @@ add_custom_command(OUTPUT "${DW3_GEN}/overlay_tables.c"
                            "${DW3_ROOT}/src/fieldstg/fieldstg_80087DB0.c"
                    COMMENT "port_gen.py tables (the overlay address tables)" VERBATIM)
 
-# ---- The game-state tables (port/src/state.c): the EXE's functions and sized data symbols, from nm of the EXE's
+# ---- The game-state tables (port/game/state.c): the EXE's functions and sized data symbols, from nm of the EXE's
 # objects and config/symbol_addrs.txt; the pointer test compiles the defining units at -m64 (port_gen.py state).
 add_custom_command(OUTPUT "${DW3_GEN}/port_state_tables.c"
                    COMMAND "${DW3_PYTHON}" "${DW3_PORT_GEN}" state --nm "${CMAKE_NM}" --cc "${CMAKE_C_COMPILER}"
@@ -186,14 +190,17 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT CMAKE_C_FLAGS_RELEASE MATCHES "(^
     string(APPEND CMAKE_C_FLAGS_RELEASE " -g")
 endif()
 
-# ---- The binary: the runtime, the tables, the shim, the units (and on PE the overlay sections' bracket symbols).
-file(GLOB DW3_RUNTIME_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
+# ---- The binary: the runtime (port/runtime/: generic, no fact about this game), the game adapter (port/game/: the
+# probes, the mods, the asm data stand-ins; psxstack/game.h), the tables, the shim, the units (and on PE the overlay
+# sections' bracket symbols).
+file(GLOB DW3_RUNTIME_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/runtime/*.c")
+file(GLOB DW3_ADAPTER_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/game/*.c")
 set(DW3_PLATFORM_SRCS "")
 if(WIN32)
     dw3_generate(markers --out "${DW3_GEN}/dw3_markers.c")
     list(APPEND DW3_PLATFORM_SRCS "${DW3_GEN}/dw3_markers.c")
 endif()
-add_executable(dw2003 ${DW3_RUNTIME_SRCS} "${DW3_GEN}/overlay_tables.c" "${DW3_GEN}/port_state_tables.c"
+add_executable(dw2003 ${DW3_RUNTIME_SRCS} ${DW3_ADAPTER_SRCS} "${DW3_GEN}/overlay_tables.c" "${DW3_GEN}/port_state_tables.c"
                "${DW3_GEN}/port_version.c" ${DW3_PLATFORM_SRCS} ${DW3_PSYQ_SRCS} $<TARGET_OBJECTS:dw3_game>)
 add_dependencies(dw2003 dw3_version)
 set_target_properties(dw2003 PROPERTIES C_STANDARD 99 C_EXTENSIONS ON C_STANDARD_REQUIRED ON)
@@ -201,7 +208,7 @@ target_compile_definitions(dw2003 PRIVATE ${DW3_GAME_DEFINES})
 target_include_directories(dw2003 BEFORE PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${DW3_PORT_PSYQ_DIR}"
                            ${DW3_GAME_INCLUDES})
 target_compile_options(dw2003 PRIVATE ${DW3_COMMON_FLAGS} -Wall -Wextra)
-set_source_files_properties(${DW3_RUNTIME_SRCS} "${DW3_GEN}/overlay_tables.c" "${DW3_GEN}/port_state_tables.c"
+set_source_files_properties(${DW3_RUNTIME_SRCS} ${DW3_ADAPTER_SRCS} "${DW3_GEN}/overlay_tables.c" "${DW3_GEN}/port_state_tables.c"
                             PROPERTIES COMPILE_OPTIONS "-Werror")
 if(DW3_PORT_PSYQ_WERROR AND DW3_PSYQ_SRCS)
     set_source_files_properties(${DW3_PSYQ_SRCS} PROPERTIES COMPILE_OPTIONS "-Werror")
@@ -209,11 +216,11 @@ endif()
 # The software GPU runs every frame: optimised in every build (-O3: its span loops rely on inlining and on the
 # vectorised select loops; port/psyq/gpu.c, "Speed").
 set_property(SOURCE "${DW3_PORT_PSYQ_DIR}/gpu.c" APPEND PROPERTY COMPILE_OPTIONS -O3)
-# The SPU core renders every audio frame: -O2 in every build (about 4x the port's default; port/src/spu.c).
-file(GLOB DW3_SPU_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/spu*.c")
+# The SPU core renders every audio frame: -O2 in every build (about 4x the port's default; port/runtime/spu.c).
+file(GLOB DW3_SPU_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/runtime/spu*.c")
 set_property(SOURCE ${DW3_SPU_SRCS} APPEND PROPERTY COMPILE_OPTIONS -O2)
 # The link map, for reading. After every link the game's objects are checked: a writable section the compile launcher
-# did not rename would survive the console's reset (port/src/reset.c; port_gen.py sections).
+# did not rename would survive the console's reset (port/runtime/reset.c; port_gen.py sections).
 target_link_options(dw2003 PRIVATE "-Wl,-Map,${CMAKE_BINARY_DIR}/dw2003.map")
 add_custom_command(TARGET dw2003 POST_BUILD
                    COMMAND "${DW3_PYTHON}" "${DW3_PORT_GEN}" sections --objdump "${DW3_OBJDUMP}"
@@ -259,7 +266,7 @@ if(DW3_PORT_SDL)
     target_link_libraries(dw2003 PRIVATE SDL3::SDL3)
     target_compile_definitions(dw2003 PRIVATE DW3_PORT_SDL)
 
-    # The hardware renderer's shaders (port/src/render_gpu.c; issue #31): port/shaders/<name>.<vert|frag>.hlsl compiled
+    # The hardware renderer's shaders (port/runtime/render_gpu.c; issue #31): port/shaders/<name>.<vert|frag>.hlsl compiled
     # by DXC to SPIR-V for SDL_GPU's Vulkan backend at build time, then embedded as C arrays (port/cmake/embed.cmake)
     # under gen/shaders/<name>_<stage>_spv.h. DXC is the pinned one (scripts/setup.sh dxc: tools/dxc of this checkout
     # or the main one) unless DW3_DXC names another; it writes the same SPIR-V on every machine, so nothing compiled

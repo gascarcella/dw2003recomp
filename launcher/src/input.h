@@ -1,5 +1,5 @@
 // The controls (docs/LAUNCHER.md "Input bindings"): the PS1 pad's buttons, the game's default keys
-// and gamepad inputs (port/src/input.c), the port's hotkey actions, and the binding grammar shared with the mods'
+// and gamepad inputs (port/runtime/input.c), the port's hotkey actions, and the binding grammar shared with the mods'
 // `binding` options:
 //   a binding = a string or a list; each element is one trigger, any of which fires; "" or [] = unbound
 //   a trigger = one input (a string) or a chord (a list of inputs, all held)
@@ -16,7 +16,7 @@
 
 namespace dw3 {
 
-// The game's limits (port/src/input.c INPUT_CHORD, INPUT_MAX_TRIGGERS): a longer chord or binding is refused.
+// The game's limits (port/runtime/input.c INPUT_CHORD, INPUT_MAX_TRIGGERS): a longer chord or binding is refused.
 constexpr size_t CHORD_MAX_INPUTS = 4;
 constexpr size_t BINDING_MAX_TRIGGERS = 8;
 
@@ -29,7 +29,7 @@ struct PadButton {
 };
 // The 14 buttons in the order the screen shows them.
 const std::vector<PadButton> &pad_buttons();
-// The game's defaults for a button (port/src/input.c's tables): key names, gamepad input names.
+// The game's defaults for a button (port/runtime/input.c's tables): key names, gamepad input names.
 std::vector<std::string> default_keys(const std::string &button);
 std::vector<std::string> default_pad_inputs(const std::string &button);
 

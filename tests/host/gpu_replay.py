@@ -36,10 +36,15 @@ def build(out, m32=False, cflags=""):
     inc.mkdir(exist_ok=True)
     (inc / "include_asm.h").write_text("#ifndef INCLUDE_ASM_H\n#define INCLUDE_ASM_H\n#define INCLUDE_ASM(FOLDER, NAME)\n"
                                        "#define INCLUDE_RODATA(FOLDER, NAME)\n#endif\n")
+    # port_game_gen.h: the game's description, which port/include/psxstack/hooks.h includes (the shim's psyq.h
+    # includes that): the same header the port's build generates (tools/port_gen.py game-header).
+    sys.path.insert(0, str(ROOT / "tools"))
+    import port_gen  # noqa: E402
+    (inc / "port_game_gen.h").write_text(port_gen.game_header_text())
     binary = out / ("gpu_harness_m32" if m32 else "gpu_harness")
     psyq = ROOT / "port/psyq"
     cmd = (["gcc", "-m32" if m32 else "-m64", "-std=gnu99", "-O1", "-fsigned-char", "-fwrapv", "-fno-strict-aliasing",
-            "-DPC_PORT", "-DNON_MATCHING", "-Wall", "-Wextra", "-Werror", f"-I{inc}", f"-I{ROOT / 'include'}", f"-I{ROOT}",
+            "-DPC_PORT", "-DNON_MATCHING", "-Wall", "-Wextra", "-Werror", f"-I{inc}", f"-I{ROOT / 'include'}", f"-I{ROOT}", f"-I{ROOT / 'port/include'}",
             f"-I{psyq}"] + cflags.split()
            + [str(ROOT / "tests/host/gpu_harness.c"), str(psyq / "libgpu.c"), str(psyq / "gpu.c"), str(psyq / "psyq.c"),
               "-ffunction-sections", "-Wl,--gc-sections", "-o", str(binary)])

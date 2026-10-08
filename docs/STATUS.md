@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 2026-10-07_
+_Last updated: 2026-10-08_
 
 Every game file of the EU disc (SLES-03936) rebuilds byte-identical from this repository, and all of the game's code
 compiles from matching C (Psy-Q's libraries stay split assembly). The PC port, built from the same C, runs on
@@ -60,6 +60,10 @@ The plan's milestones (`docs/PORT.md`):
   internal scale of 1 equals the software VRAM (all 715 gpu golden lists, every 10th vsync of both replays; NVIDIA and
   lavapipe). Without a usable device it falls back to the software path. Internal resolutions (phase 3) are next; the
   software GPU stays the default.
+- **The port stack (psxstack):** the port is split in place into a generic runtime (`port/runtime/`, no fact about
+  this game) and a game adapter (`port/game/`: `game.json`, the probes, the mods) behind the adapter interface
+  `port/include/psxstack/game.h` (phase 1 of the extraction into the `psxstack` repository, its `GAME_CONTRACT.md`;
+  DECISIONS "The port is split into runtime and game adapter"). Phase 2 moves the runtime, the shim and the tools there.
 - **Debug channel and MCP server:** `dw2003 --debug SOCKET` lets a tool pause, step, press, read and write memory and
   take screenshots between two vsyncs; `tools/mcp/` (registered by `.mcp.json`) is the MCP server over it, with symbol
   names from `nm` and the config tables (`docs/PORT.md`; gate: `tests/port/debug.py`).
@@ -70,7 +74,7 @@ The plan's milestones (`docs/PORT.md`):
   symbols, the overlay sections no linker script (the units' sections go to their overlay's: objcopy after each
   compile on ELF, `#pragma clang section` on PE, which keeps the units' unwind tables),
   the state tables no `nm -S`; the runtime's system calls are split into POSIX and Windows halves
-  (`port/src/platform.c`). Under Wine, headless, the game replays both layer-2 scripts with the Linux build's log,
+  (`port/runtime/platform.c`). Under Wine, headless, the game replays both layer-2 scripts with the Linux build's log,
   record and SPU trace byte for byte (`tests/port/run.py --exe build/port-win/dw2003.exe --wine`). The release's
   Windows zip (`scripts/package_windows.sh`) was play-tested on this desktop under Wine 11.17 and GE-Proton 10-25:
   the launcher and the game draw, the game plays sound (WASAPI) at 50 frames a second through the `new_game` route.

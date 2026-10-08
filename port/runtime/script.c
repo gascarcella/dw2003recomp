@@ -9,7 +9,7 @@
  *   then, past the last step, the run ends with status 0, "script complete".
  * - A step that times out (or `max_frames`) ends the run with status 5 and run.lua's message, naming the step.
  * - `reset` (a hard reset of the console: PCSX-Redux hardResetEmulator in run.lua) releases the pad, ends the frame and
- *   resets (port_reset_request, port/src/reset.c): the game starts over from main() with its data, the arena and the
+ *   resets (port_reset_request, port/runtime/reset.c): the game starts over from main() with its data, the arena and the
  *   shim at power-on, the memory cards kept; the frame count, the record and the script's next step go on.
  *
  * The buttons are the physical pad's (PCSX.CONSTS.PAD.BUTTON numbers them as the PS1 pad's bits, which psyq_pad_set
@@ -17,7 +17,7 @@
  * pass through unchanged. Numbers in a script may be JSON numbers or hex strings ("0x2D7"). Anything a step does not
  * define (`comment`, ...) is ignored, as run.lua ignores it; everything it defines is checked when the script is
  * loaded (run.lua would fail only on reaching the step), except a wait_mem address, which is fatal (status 1) only when
- * its step runs if port_state_read does not map it, so the steps before it still run. A step's start goes to stderr. */
+ * its step runs if game_state_read does not map it, so the steps before it still run. A step's start goes to stderr. */
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,11 +28,7 @@
 #include "port_runtime.h"
 #include "psyq.h"
 
-#include "fieldstg.h"
-#include "heap.h"
-
 #define SCRIPT_STEP_BUDGET 100 /* instant steps chained in one frame (run.lua's budget) */
-#define SCRIPT_PLAYER_KIND 5   /* the field's player: the heap_objects entry of kind 5, key2 0 (run.lua player_pos) */
 
 typedef enum ScriptStepType {
     SCRIPT_WAIT_STAGE,
@@ -207,7 +203,7 @@ static void script_load_cond(const PortJson *obj, ScriptCond *c, int step) {
         c->addr = (u32)addr;
         c->size = (int)size;
         c->is_signed = sg != NULL && sg->boolean;
-        /* an address the port does not map (port/src/state.c maps only layout-identical ranges) is fatal when the step
+        /* an address the port does not map (port/game/state.c maps only layout-identical ranges) is fatal when the step
          * runs, not here: a script's steps before it still run, as in run.lua */
         break;
     }
@@ -374,8 +370,8 @@ void port_script_load(const char *path) {
 /* ---- Running */
 
 static void script_state(char *buf, size_t size) {
-    snprintf(buf, size, "frame=%ld stage=%d file=%d map=0x%X rnd=%d held=0x%04X", port_frames, port_state_stage(),
-             port_state_file(), (u32)port_state_map(), port_state_random_index(), script_held);
+    snprintf(buf, size, "frame=%ld stage=%d file=%d map=0x%X rnd=%d held=0x%04X", port_frames, game_state_stage(),
+             game_state_file(), (u32)game_state_map(), game_state_random_index(), script_held);
 }
 
 /* run.lua's fail(): the run ends with status 5 and the message. */
@@ -395,12 +391,12 @@ static int script_cond_met(const ScriptCond *c) {
     s32 v;
     switch (c->type) {
     case SCRIPT_WAIT_STAGE:
-        return port_state_stage() == c->stage && (!c->has_word0 || port_state_slot1_word0() == c->word0);
+        return game_state_stage() == c->stage && (!c->has_word0 || port_state_slot1_word0() == c->word0);
     case SCRIPT_WAIT_MAP:
-        return (u32)port_state_map() == c->map;
+        return (u32)game_state_map() == c->map;
     case SCRIPT_WAIT_MEM:
-        if (!port_state_read(c->addr, c->size, c->is_signed, &v)) {
-            port_fatal("script: step %d: wait_mem: 0x%08X (size %d) is not an address the port maps (port/src/state.c "
+        if (!game_state_read(c->addr, c->size, c->is_signed, &v)) {
+            port_fatal("script: step %d: wait_mem: 0x%08X (size %d) is not an address the port maps (port/game/state.c "
                        "maps only the layout-identical ranges)", script_index + 1, c->addr, c->size);
         }
         /* a 4-byte unsigned read is a u32 in run.lua (read_mem), the others fit an s32 either way */
@@ -410,22 +406,23 @@ static int script_cond_met(const ScriptCond *c) {
     }
 }
 
-/* With DW3_PORT_CHECKPOINT_DIR set, a checkpoint also writes gamestate_data's PS1 image (the bytes it hashes) to
+/* With DW3_PORT_CHECKPOINT_DIR set, a checkpoint also writes the game-state image (the bytes it hashes) to
  * <dir>/cpNN_<name>.bin, as run.lua names its dumps: a stable-hash mismatch is then a byte diff away. */
 static void script_dump_checkpoint(const char *name) {
     static int count;
     const char *dir = getenv("DW3_PORT_CHECKPOINT_DIR");
-    u8 image[PORT_GAMESTATE_PS1_SIZE];
+    const u8 *image;
+    size_t size = game_state_image_size();
     char path[4096];
     FILE *f;
     count++;
     if (dir == NULL || dir[0] == '\0') {
         return;
     }
-    port_state_gamestate_image(image);
+    image = port_state_image();
     snprintf(path, sizeof(path), "%s/cp%02d_%s.bin", dir, count, name);
     f = fopen(path, "wb");
-    if (f == NULL || fwrite(image, 1, sizeof(image), f) != sizeof(image) || fclose(f) != 0) {
+    if (f == NULL || fwrite(image, 1, size, f) != size || fclose(f) != 0) {
         port_fatal("script: DW3_PORT_CHECKPOINT_DIR: cannot write %s", path);
     }
 }
@@ -445,22 +442,6 @@ static void script_dump_vram(const char *name, int first) {
     if (f == NULL || fwrite(psyq_gpu_vram(), 2, 1024 * 512, f) != 1024 * 512 || fclose(f) != 0) {
         port_fatal("script: DW3_PORT_CHECKPOINT_DIR: cannot write %s", path);
     }
-}
-
-/* The field player's position in pixels (run.lua player_pos): the heap_objects entry of kind 5, key2 0, a
- * FieldstgActor, its pos (24.8) / 256. 0 outside the field / before the actor exists. */
-static int script_player_pos(double *x, double *y) {
-    int i;
-    for (i = 0; i < (int)(sizeof(heap_objects.objects) / sizeof(heap_objects.objects[0])); i++) {
-        Object *obj = heap_objects.objects[i];
-        if (obj != NULL && obj->kind == SCRIPT_PLAYER_KIND && obj->key2 == 0) {
-            const FieldstgActor *actor = (const FieldstgActor *)obj;
-            *x = actor->pos.x / 256.0;
-            *y = actor->pos.y / 256.0;
-            return 1;
-        }
-    }
-    return 0;
 }
 
 /* Runs the current step for this frame (run.lua run_step): 1 when it is complete; *instant: the next step may run in
@@ -515,7 +496,7 @@ static int script_run_step(const ScriptStep *s, int *instant) {
     }
     case SCRIPT_WALK: {
         double x, y;
-        int found = script_player_pos(&x, &y);
+        int found = game_state_player_pos(&x, &y); /* run.lua player_pos, the adapter's */
         script_held = 0;
         if (found && fabs(s->x - x) <= s->tol && fabs(s->y - y) <= s->tol) {
             *instant = 1;

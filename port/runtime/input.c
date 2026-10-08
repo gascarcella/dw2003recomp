@@ -517,7 +517,7 @@ static void input_test_attach(void) {
     desc.type = SDL_JOYSTICK_TYPE_GAMEPAD;
     desc.nbuttons = INPUT_PAD_BUTTONS;
     desc.naxes = SDL_GAMEPAD_AXIS_COUNT;
-    desc.name = "dw2003 input test";
+    desc.name = PSXSTACK_GAME_ID " input test";
     input_test_pad = SDL_AttachVirtualJoystick(&desc);
     if (input_test_pad == 0) {
         port_fatal("input test: SDL_AttachVirtualJoystick: %s", SDL_GetError());

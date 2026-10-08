@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The hardware renderer (port/src/render_gpu.c; issue #31): the device, the present, the fallback, and the rasteriser
+"""The hardware renderer (port/runtime/render_gpu.c; issue #31): the device, the present, the fallback, and the rasteriser
 at internal scale 1. CI only compiles the renderer and runs the fallback part; the rest needs a GPU device and runs
 locally.
 

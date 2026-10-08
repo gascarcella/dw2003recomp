@@ -1,6 +1,10 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+/* The PC port's runtime defines the same names (port/include/psxstack/types.h) under this guard, so that either header
+ * may come first in a host translation unit; the PS1 build never sees that header. */
+#ifndef PSXSTACK_TYPES_H
+#define PSXSTACK_TYPES_H
 typedef signed char s8;
 typedef unsigned char u8;
 typedef signed short s16;
@@ -11,6 +15,7 @@ typedef signed long long s64;
 typedef unsigned long long u64;
 typedef float f32;
 typedef double f64;
+#endif
 
 #ifndef NULL
 #define NULL 0
