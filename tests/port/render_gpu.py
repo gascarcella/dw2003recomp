@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""The hardware renderer (port/runtime/render_gpu.c; issue #31): the device, the present, the fallback, and the rasteriser
+"""The hardware renderer (psxstack/runtime/render_gpu.c; issue #31): the device, the present, the fallback, and the rasteriser
 at internal scale 1. CI only compiles the renderer and runs the fallback part; the rest needs a GPU device and runs
 locally.
 
 Usage: tests/port/render_gpu.py [--out DIR] [-j N] [--lavapipe]
 
-Builds build/port-sdl if needed (-DDW3_PORT_SDL=ON: tools/sdl3 and tools/dxc), then:
+Builds build/port-sdl if needed (-DPSXSTACK_SDL=ON: tools/sdl3 and tools/dxc), then:
   - the fallback (no device, no disc needed): `--window --renderer gpu --input-test` with a Vulkan loader that finds
     no driver (VK_DRIVER_FILES naming none) must log why and pass the input self-test on SDL_Renderer; the options'
     errors (a bad --renderer, a bad --gpu-screenshot, --gpu-screenshot in the headless build);
@@ -230,8 +230,8 @@ def scaled(sdl, env, out):
 
 def debug_channel(sdl, env, out):
     print("render_gpu: the debug channel's screenshot, renderer gpu (a headless --renderer gpu --internal-scale 2)")
-    sys.path.insert(0, str(ROOT / "tools/mcp"))
-    from game import Game, GameError  # noqa: E402  (the MCP server's client of the channel)
+    sys.path.insert(0, str(ROOT / "tools"))
+    from mcp_game import Game, GameError  # noqa: E402  (psxstack's MCP client of the channel, configured for this game)
     old = dict(os.environ)
     os.environ.update(env)
     try:
@@ -288,7 +288,7 @@ def main():
             if not (ROOT / "tools" / tool).exists():
                 print(f"render_gpu: no tools/{tool} (scripts/setup.sh {tool}): skipped")
                 return 0
-        sdl = build("build/port-sdl", ["-DDW3_PORT_SDL=ON"], args.jobs, env)
+        sdl = build("build/port-sdl", ["-DPSXSTACK_SDL=ON"], args.jobs, env)
     except Missing as e:
         print(f"render_gpu: {e}")
         return 2

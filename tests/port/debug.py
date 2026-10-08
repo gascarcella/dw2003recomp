@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The port's debug channel (`--debug SOCKET`, port/runtime/debug.c) and the MCP server's offline self-test (tools/mcp).
+"""The port's debug channel (`--debug SOCKET`, psxstack/runtime/debug.c) and the MCP server's offline self-test (tools/mcp).
 
 Usage: tests/port/debug.py [--out DIR] [--no-selftest]
 
@@ -23,13 +23,13 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "tools/mcp"))
-from game import Game, GameError, GameExited  # noqa: E402  (the debug channel's client; stdlib only)
-from symbols import Symbols  # noqa: E402
+sys.path.insert(0, str(ROOT / "tools"))
+import mcp_game  # noqa: E402
+from mcp_game import Game, GameError, GameExited  # noqa: E402  (the debug channel's client; stdlib only)
 
 BINARY = ROOT / "build/port/dw2003"
 DISC = ROOT / "iso/dw2003.cue"
-SELFTEST = ROOT / "tools/mcp/selftest.py"
+SELFTEST = ROOT / "psxstack/tools/mcp/selftest.py"
 STAGE_CNTY_SEL = 22  # new_game.json's first wait_stage
 SUN_PATH_MAX = 108  # sizeof(sockaddr_un.sun_path), NUL included
 
@@ -44,7 +44,7 @@ def check(cond, what):
 
 def channel(out):
     """One game through the channel's ops."""
-    syms = Symbols(ROOT, BINARY)
+    syms = mcp_game.symbols(BINARY)
     ps1_stage = syms.ps1("overlay_module")
     host_stage = syms.host("overlay_module")
     if ps1_stage is None or host_stage is None:

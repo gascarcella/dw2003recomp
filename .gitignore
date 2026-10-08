@@ -79,3 +79,4 @@ __pycache__
 
 # Agent worktrees (Claude Code isolation: worktree)
 /.claude/worktrees
+# The stack, a symlink to the sibling clone until the submodule (phase 4; scripts/worktree_init.sh)

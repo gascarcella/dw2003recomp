@@ -2,7 +2,10 @@
   "mcpServers": {
     "dw2003": {
       "command": "tools/venv/bin/python",
-      "args": ["tools/mcp/server.py"]
+      "args": ["psxstack/tools/mcp/server.py", "--root", ".", "--game-json", "port/game/game.json",
+               "--binary", "build/port/dw2003", "--binary-sdl", "build/port-sdl/dw2003", "--source-dir", "port",
+               "--exe-symbols", "config/symbol_addrs.txt", "--overlay-symbols", "config/*.symbols.txt",
+               "--disc", "iso/dw2003.cue"]
     }
   }
 }

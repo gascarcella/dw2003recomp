@@ -1,0 +1,3 @@
+[submodule "psxstack"]
+	path = psxstack
+	url = https://github.com/gascarcella/psxstack.git

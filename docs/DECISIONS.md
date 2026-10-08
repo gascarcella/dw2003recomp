@@ -389,3 +389,32 @@ The game's `include/port.h` keeps the PS1 side of every hook macro itself and in
 only under `PC_PORT`, so the matching build never needs the stack. The overlay manager and the arena take the slot table
 from the description (N slots; the macros' `tier` is the slot's 1-based index), so the game's C did not change. The
 `DW3_*` CMake names, the `dw3_data_*` section names and `tools/port_gen.py`'s place stay until the move (phase 2).
+
+## The PC port is built on psxstack (2026-10-08)
+Phase 2 of the extraction (DECISIONS "The port is split into runtime and game adapter"): the runtime, the Psy-Q
+shim, the shaders, the CMake build, the launcher, `tools/port_gen.py`'s generic half, the inventory's generic half and
+the MCP tools moved to gascarcella/psxstack. `port/CMakeLists.txt` finds the stack at `psxstack/` (the sibling clone
+linked by `scripts/worktree_init.sh`; the submodule in phase 4) and calls `psxstack_add_game()` with this game's
+inputs, which `tools/port_inputs.py` writes from the tracked sources (the units, the overlays with their slot, file
+ID and symbol file, the known tag sites, the volatile ranges): the stack reads no game C. Its names won where the two
+had diverged: the generated header is `psxstack_game_gen.h` from psxstack's `game_gen.py` (`PsxstackGameDisc`,
+`PSXSTACK_GAME_ABOUT`), the sections are `dw2003_data_<ovl>` on ELF and `.psxdata$<ovl>` on PE, the CMake options
+`PSXSTACK_*`, the hook `port_file_wait_read`. The `DW3_PORT_*` environment variables keep their names (the
+description's `env_prefix`). The tests that compile the shim or the runtime on their own (`tests/host/*_replay.py`,
+`tests/spu`, `tests/xa`, `tests/port/sound.py`) take them from `psxstack/`; `tests/port/settings.py` reads the
+manifests of both `psxstack/mods/` and `port/mods/`.
+
+## The port stack lives in psxstack, consumed as a pinned submodule (2026-10-08)
+Phase 4 of the extraction: `psxstack/` is a git submodule of gascarcella/psxstack pinned by commit (`.gitmodules`), no
+longer a link to a sibling clone. What a pin buys: this repository's `main` always names the exact runtime, shim and
+launcher its tests passed against, a stack change reaches the game as a reviewable pin bump, and other games pin their
+own. `scripts/worktree_init.sh` checks the submodule out in a worktree (from the main checkout's copy when it has one;
+offline it links the sibling clone and says so, so a session without network still builds). The tools are one tree,
+this repository's `tools/` (its `setup.sh` installs SDL3, DXC, ImGui, llvm-mingw, the AppImage tools), handed to the
+stack's CMake as `PSXSTACK_TOOLS_DIR`; psxstack's own `setup.sh` is for its own CI and for a stack developer, and its
+pins must stay equal to ours. The release's version is `DW3_VERSION` in release.yml and `release_local.sh`, exported
+as `PSXSTACK_VERSION` by the packaging scripts for psxstack's `version.cmake`. While psxstack is private, CI and
+release.yml fetch it with a read-only deploy key on psxstack stored as the secret `PSXSTACK_DEPLOY_KEY` here (the data
+checkout's pattern); a fork pull request has no secrets, so the areas job then skips the port and launcher areas with a
+warning and a maintainer's run tests them. The key and that gate go when psxstack is public (phase 5): the submodule
+is then a plain HTTPS fetch for everyone.

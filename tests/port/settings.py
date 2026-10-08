@@ -59,7 +59,7 @@ def printed(binary, config, *extra):
     return out, json.loads(out), err
 
 
-MODS = ROOT / "port/mods"
+MODS = [ROOT / "psxstack/mods", ROOT / "port/mods"]   # the stack's (fast_forward) and the game's
 REBOUND = ROOT / "tests/port/settings/rebound.json"
 OPTION_KEYS = {"id", "name", "description", "type", "default", "group", "applies", "min", "max", "step", "values",
                "slider_max", "input_toggle"}
@@ -99,7 +99,7 @@ def mods_check(binary):
     registry = {m["id"]: m for m in json.loads(out)} if rc == 0 else {}
     check(rc == 0 and registry, f"--print-mods: exit {rc}, {len(registry)} mod(s)")
     manifests = {}
-    for path in sorted(MODS.glob("*/mod.json")):
+    for path in sorted(p for d in MODS for p in d.glob("*/mod.json")):
         man = json.loads(path.read_text())
         manifests[man.get("id")] = man
         problems = []

@@ -5,6 +5,10 @@
 # Usage: scripts/setup.sh [--disc /path/to/disc.bin] [step...]
 #        scripts/setup.sh --pins      print the pinned versions, tags, hashes and URLs (CI's tool-cache key)
 #   steps: binutils venv cmake mkpsxiso gcc objdiff ext redux link gamedata disc  (default: all)
+#   The PC port's tools (sdl3, sdl3-desktop, imgui, llvm-mingw, sdl3-windows, dxc, appimage, ccache) are installed by
+#   THIS script into tools/, one tree for the game and the stack: psxstack's build reads them through
+#   PSXSTACK_TOOLS_DIR (port/CMakeLists.txt and the scripts pass $ROOT/tools); psxstack's own scripts/setup.sh is not
+#   run here. Its pins must stay equal to these (psxstack's CI builds its own copy from its pins).
 #          optional: psyq sdl3 imgui sdl3-desktop appimage llvm-mingw sdl3-windows ccache dxc
 #   ccache: the pinned static ccache binary into tools/ccache (CI's host builds of the port and the launcher:
 #          .github/actions/setup; no apt package, the runners' mirror stalls)
@@ -15,7 +19,7 @@
 #          shaders (issue #31)
 #   imgui: Dear ImGui at its pinned tag into tools/imgui, for the launcher (launcher/README.md; needs sdl3 too)
 #   sdl3:  SDL3 built from its pinned source tarball into tools/sdl3 (static), for the PC port's window
-#          (cmake -DDW3_PORT_SDL=ON; port/README.md "The window"); its backends follow the -dev headers present
+#          (cmake -DPSXSTACK_SDL=ON; port/README.md "The window"); its backends follow the -dev headers present
 #   sdl3-desktop: the same SDL into tools/sdl3-desktop, with the desktop backends required (the release's);
 #          `scripts/setup.sh --sdl3-desktop-apt` prints the Ubuntu -dev packages it needs
 #   appimage: appimagetool and the static AppImage runtime, pinned, into tools/appimage (scripts/package_appimage.sh)

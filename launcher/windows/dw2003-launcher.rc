@@ -1,3 +1,0 @@
-// The launcher's resources (the Windows build; launcher/CMakeLists.txt): the application manifest as resource 1 of type
-// RT_MANIFEST (24), which the loader reads at process creation (dw2003-launcher.manifest says what it sets).
-1 24 "dw2003-launcher.manifest"

@@ -76,7 +76,7 @@ launcher checks the SHA-1 once and remembers the disc; then press **Play**.
 - Settings and memory cards (`card1.mcd`, `card2.mcd`, the same format as PCSX-Redux's) are kept in
   `~/.local/share/dw2003/`. A `portable.txt` file beside the launcher keeps them beside it instead.
 
-Details: [`launcher/README.md`](launcher/README.md) and [`docs/LAUNCHER.md`](docs/LAUNCHER.md).
+Details: [`docs/LAUNCHER.md`](docs/LAUNCHER.md) and psxstack's `launcher/README.md`.
 
 ## Reporting an issue
 
@@ -158,9 +158,14 @@ cp tools/local.env.example tools/local.env   # set DW3_DISC_BIN to your disc ima
 scripts/setup.sh                             # mipsel binutils, mkpsxiso, Python venv, old GCCs, objdiff, decomp tools; links the disc into iso/
 ```
 
+**The psxstack submodule.** The PC port's runtime, Psy-Q shim and launcher are
+[psxstack](https://github.com/gascarcella/psxstack), pinned as the `psxstack` submodule: clone with `--recursive`, or
+run `git submodule update --init psxstack` (until psxstack is public, that needs access to it; the PS1 build needs no
+submodule). `scripts/worktree_init.sh` does it in a worktree.
+
 **Git worktrees.** A worktree has only tracked files. Run `scripts/worktree_init.sh` in a new worktree: it links the
-main checkout's built tools and `tools/local.env`, links the disc and extracts it (about a second, no rebuild).
-`scripts/setup.sh` always installs tools into the main checkout and links them into worktrees.
+main checkout's built tools and `tools/local.env`, links the disc and extracts it, and checks the submodule out (about
+a second, no rebuild). `scripts/setup.sh` always installs tools into the main checkout and links them into worktrees.
 
 **Optional data checkout.** Maintainers may keep a separate, private checkout (`DW3_GAMEDATA` in `tools/local.env`,
 default `../dw2003-gamedata`; `scripts/gamedata_dir.sh`) from which `setup.sh gamedata` and `setup.sh redux` take
@@ -199,12 +204,12 @@ pad scripts from boot with hashes at checkpoints, and save **round trips**. The 
 scripts/setup.sh sdl3 imgui
 cmake -S port -B build/port-sdl -G Ninja -DDW3_PORT_SDL=ON && cmake --build build/port-sdl
 build/port-sdl/dw2003 --disc iso/dw2003.cue --window                 # the game in a window
-cmake -S launcher -B build/launcher -G Ninja && cmake --build build/launcher
+cmake -S psxstack/launcher -B build/launcher -G Ninja -DPSXSTACK_GAME_JSON=$PWD/port/game/game.json -DPSXSTACK_VERSION_ROOT=$PWD -DPSXSTACK_TOOLS_DIR=$PWD/tools && cmake --build build/launcher
 build/launcher/dw2003-launcher                                        # the launcher
 scripts/setup.sh imgui sdl3-desktop appimage && scripts/package_appimage.sh --test   # the release AppImage
 ```
 
-See [`port/README.md`](port/README.md), [`launcher/README.md`](launcher/README.md) and
+See [`port/README.md`](port/README.md), psxstack's `docs/RUNTIME.md` and `launcher/README.md`, and
 [`docs/RELEASE.md`](docs/RELEASE.md).
 
 ### Documentation

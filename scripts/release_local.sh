@@ -61,6 +61,10 @@ if [[ ! -d "$WORK/src/.git" ]]; then
 fi
 git -C "$WORK/src" fetch -q origin
 git -C "$WORK/src" checkout -q --detach "$commit"
+# The psxstack submodule at the commit's pin (fetched here, with this machine's access to the repository; the
+# container never talks to GitHub). --reference: this checkout's copy, when it has one.
+ref=(); [[ -e "$ROOT/psxstack/.git" ]] && ref=(--reference "$ROOT/psxstack")
+git -C "$WORK/src" submodule update --init "${ref[@]}" psxstack
 git -C "$WORK/src" clean -qfdx -e tools/ -e .home/   # the container's tools are kept between runs
 echo 'DW3_DISC_BIN="/disc/dw2003.bin"' > "$WORK/src/tools/local.env"
 

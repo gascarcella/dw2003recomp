@@ -1,5 +1,5 @@
 """LIBGS's view: GsSetRefView2 and GsGetLw, and the LIBGTE functions they call (MulMatrix, MulMatrix2, ApplyMatrixLV,
-TransposeMatrix, SquareRoot0), for the port's port/psyq/libgs.c and libgte.c (issue #7: the battle camera;
+TransposeMatrix, SquareRoot0), for the port's psxstack/psyq/libgs.c and libgte.c (issue #7: the battle camera;
 tests/host/libgs_replay.py replays these cases).
 
 Every call goes through the gte family's "wrap" routine (tests/golden/families/gte.py: its code is this family's fixture

@@ -306,7 +306,7 @@ void cdload_free_file(s32 id) {
  * flight that high; the port's 4 MB one keeps every file it loaded, high up. Wait for the read before freeing. */
 static void cdload_wait_read(CdloadEntry *entry) {
     if (entry->state == 2 && cdload_is_busy() != 0) {
-        port_cdload_wait_read(entry->id);
+        port_file_wait_read(entry->id);
         while (cdload_is_busy() != 0) {
             PLATFORM_WAIT(); /* the CD interrupt ends this loop */
         }

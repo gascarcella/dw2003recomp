@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """The gte golden family (tests/golden/gte.json, made by tests/golden/families/gte.py) through the port's software GTE
-and LIBGTE (port/psyq/gte.c, libgte.c): every case's 64 registers (or sweep, or LIBGTE output) must equal what the PS1
+and LIBGTE (psxstack/psyq/gte.c, libgte.c): every case's 64 registers (or sweep, or LIBGTE output) must equal what the PS1
 left in the emulator. tests/host/replay.py runs it for the gte family (its cases call MIPS routines, not game
 functions); standalone:
 
@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+PSXSTACK = ROOT / "psxstack"   # the stack: the submodule (scripts/worktree_init.sh checks it out)
 GOLDEN = ROOT / "tests/golden/gte.json"
 OUT_DEFAULT = ROOT / "build/host_gte"
 sys.path.insert(0, str(ROOT / "tests/golden"))
@@ -38,16 +39,15 @@ def build(out, m32=False, cflags=""):
     inc.mkdir(exist_ok=True)
     (inc / "include_asm.h").write_text("#ifndef INCLUDE_ASM_H\n#define INCLUDE_ASM_H\n#define INCLUDE_ASM(FOLDER, NAME)\n"
                                        "#define INCLUDE_RODATA(FOLDER, NAME)\n#endif\n")
-    # port_game_gen.h: the game's description, which port/include/psxstack/hooks.h includes (the shim's psyq.h
-    # includes that): the same header the port's build generates (tools/port_gen.py game-header).
-    sys.path.insert(0, str(ROOT / "tools"))
-    import port_gen  # noqa: E402
-    (inc / "port_game_gen.h").write_text(port_gen.game_header_text())
+    # psxstack_game_gen.h: the game's description, which psxstack's hooks.h includes (the shim's psyq.h includes
+    # that): the same header the port's build generates (psxstack/tools/game_gen.py).
+    subprocess.run([sys.executable, str(PSXSTACK / "tools/game_gen.py"), str(ROOT / "port/game/game.json"),
+                    "--out", str(inc / "psxstack_game_gen.h")], check=True)
     binary = out / ("gte_harness_m32" if m32 else "gte_harness")
     cmd = (["gcc", "-m32" if m32 else "-m64", "-std=gnu99", "-O1", "-fsigned-char", "-fwrapv", "-fno-strict-aliasing",
-            "-DPC_PORT", "-DNON_MATCHING", "-Wall", "-Wextra", "-Werror", f"-I{inc}", f"-I{ROOT / 'include'}", f"-I{ROOT}", f"-I{ROOT / 'port/include'}",
-            f"-I{ROOT / 'port/psyq'}"] + cflags.split()
-           + [str(ROOT / "tests/host/gte_harness.c"), str(ROOT / "port/psyq/gte.c"), str(ROOT / "port/psyq/libgte.c"),
+            "-DPC_PORT", "-DNON_MATCHING", "-Wall", "-Wextra", "-Werror", f"-I{inc}", f"-I{ROOT / 'include'}", f"-I{ROOT}", f"-I{PSXSTACK / 'include'}", f"-I{PSXSTACK / 'include/psxstack'}",
+            f"-I{PSXSTACK / 'psyq'}"] + cflags.split()
+           + [str(ROOT / "tests/host/gte_harness.c"), str(PSXSTACK / "psyq/gte.c"), str(PSXSTACK / "psyq/libgte.c"),
               "-o", str(binary)])
     subprocess.run(cmd, check=True)
     return binary

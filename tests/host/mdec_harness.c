@@ -1,4 +1,4 @@
-/* tests/host/mdec_harness.c: the port's LIBPRESS and MDEC (port/psyq/libpress.c, mdec.c) driven line by line from
+/* tests/host/mdec_harness.c: the port's LIBPRESS and MDEC (psxstack/psyq/libpress.c, mdec.c) driven line by line from
  * stdin by tests/host/mdec_replay.py, which mirrors the calls of the mdec golden family (tests/golden/mdec.json). One
  * command per line, one answer line each:
  *   V HEX_FRAME N           DecDCTvlc2 on the frame HEX_FRAME into a buffer filled with 0xA5 -> the return value and

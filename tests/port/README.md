@@ -42,16 +42,16 @@ an expected file (`new_game`, `first_battle_save`), or the names given; its sani
 else.
 
 ## The script engine
-`port/runtime/script.c` runs `tests/replay/scripts/*.json` with `tests/replay/run.lua`'s semantics, frame for frame: the step
+`psxstack/runtime/script.c` runs `tests/replay/scripts/*.json` with `tests/replay/run.lua`'s semantics, frame for frame: the step
 runs after the frame log's sample on every vsync tick, instant steps (a checkpoint, a wait already satisfied, a `press`
 whose `until` holds, a `walk` that arrived) chain within the frame (at most 100), the held buttons go to the pad
 (`psyq_pad_set`, the physical buttons in the PS1 pad's bit order; the game rotates the face buttons itself) and to the
 record's `inputs`. Every step type is implemented: `walk` reads the player actor from `heap_objects` on the host, and
 `reset` restarts `game_main` with the game's data, the arena and the shim at power-on, the memory cards kept
-(`port/runtime/reset.c`). Exit status: 0 "script complete", 5 a step's timeout or `max_frames` (run.lua's message), 1 a bad
+(`psxstack/runtime/reset.c`). Exit status: 0 "script complete", 5 a step's timeout or `max_frames` (run.lua's message), 1 a bad
 script or a `wait_mem` address the port does not map (`port/game/state.c`: layout-identical ranges and an explicit
 field table). The JSON reader is
-`port/runtime/json.c` (strict RFC 8259).
+`psxstack/runtime/json.c` (strict RFC 8259).
 
 `DW3_PORT_CHECKPOINT_DIR=<dir>` makes every checkpoint also write the image it hashes to `<dir>/cpNN_<name>.bin`, as
 run.lua names its dumps (`run.py` sets it: `build/port-test/run1_checkpoints/`). When a stable hash differs, diff it with
@@ -70,10 +70,10 @@ The port does not reproduce the frames at which the game calls LIBSND (the PS1 d
 taps land elsewhere), so its own trace cannot equal the emulator's tick for tick. `sound.py` turns an emulator SPU
 trace (with the `--calls` comments) into a replay script: the game's LIBSND calls, their pointers resolved to the sound
 bank files on the disc, and the emulator's vsyncs at its ticks; `sound_replay` (built with the host gcc from
-`port/psyq/libsnd*.c` and `port/runtime/spu*.c` into `build/port-sound/`) makes them and must write the emulator's trace:
+`psxstack/psyq/libsnd*.c` and `psxstack/runtime/spu*.c` into `build/port-sound/`) makes them and must write the emulator's trace:
 every store and DMA block at the same tick. `run.py` runs it once on the committed traces (`tests/sound/expected/`,
 `tests/port/sound/new_game.trace.gz`), then on each script's run: the three builds' SPU traces identical, the run's
-trace equal to the replay of its own calls (once `port/runtime/audio.c` renders), and for `new_game` the same LIBSND calls
+trace equal to the replay of its own calls (once `psxstack/runtime/audio.c` renders), and for `new_game` the same LIBSND calls
 as the emulator's, with a report of where the two games' frames differ.
 
 ## The settings file (`settings.py`; docs/LAUNCHER.md "Settings file")
@@ -83,7 +83,7 @@ printed again: the same text), the defaults of an empty file, relative paths fro
 the command line overriding the file, the errors (exit 64 naming the key) and unknown keys (logged, ignored). With the
 disc, a headless run under `--config` must replay `new_game` with the bare binary's log and record byte for byte and
 create the two card files beside the settings, and with a mod enabled under `--script` the mod stays off (the same log)
-unless `--script-mods`. The mods: each `port/mods/<id>/mod.json` must equal the game's registry (`--print-mods`: ids,
+unless `--script-mods`. The mods: each `port/mods/<id>/mod.json` (and psxstack's `mods/`) must equal the game's registry (`--print-mods`: ids,
 types, defaults, ranges, enum ids; names, descriptions and labels present) and be copied beside the binary. With
 `build/port-sdl`, the window's `--input-test` (offscreen) runs with the defaults and with
 `tests/port/settings/rebound.json` (rebound keys and pads, chord hotkeys, a mod's bindings, the pause's round trip).
@@ -125,12 +125,12 @@ own reading, and requires them to agree, every script to end, reactions without 
 to end on animation 10. ~1 min together; in `scripts/test.sh --layer port`.
 
 ## The debug channel (`debug.py`; docs/PORT.md "Debug channel and the MCP server")
-`tests/port/debug.py` drives one headless run (`--debug`, `--cd-speed instant`, ~2 s) through `tools/mcp/game.py`, the
+`tests/port/debug.py` drives one headless run (`--debug`, `--cd-speed instant`, ~2 s) through psxstack's `tools/mcp/game.py` (through `tools/mcp_game.py`), the
 channel's plain client: `wait` on stage 22 (CNTY_SEL, `new_game.json`'s first `wait_stage`) hits and leaves the game
 paused; `step 10` advances the frame by exactly 10 and `pad START` with sync by frames + release; `overlay_module.stage`
 read by its PS1 address (the state map) and by the host global (`nm`) agree; a byte poked into the arena reads back by
 both routes; `screenshot` writes a P6 PPM 320 wide; `hash` gives two SHA-1s; `quit 3` exits with status 3. It also
-checks that the socket path fits `sun_path` (108 bytes). Then it runs `tools/mcp/selftest.py` (the client, the symbol
+checks that the socket path fits `sun_path` (108 bytes). Then it runs psxstack's `tools/mcp/selftest.py` (the client, the symbol
 lookup and the server's tools against `fake_game.py`, offline; skipped with a message when the `mcp` package is not
 installed). Needs `build/port/dw2003` (`run.py` builds it) and the disc. In `scripts/test.sh --layer port`.
 
@@ -171,11 +171,11 @@ list and the crashing thread's context. Needs `wine` and `tools/llvm-mingw` (~15
   byte-loop `memcpy`, about 1.8 frames, so the emulator samples FIELDSTG's stage with no stage file yet (`(2, -1)` in the
   overlay sequence) and takes the `new_game_field` checkpoint there, before FIELDSTG's start-up writes `map_is_new`,
   `field_last_map` and `meter_random_count` (`gamestate_data` + 0x26D8, 0x26DC, 0x26F8). The port's copy was instant:
-  no `(2, -1)`, and those three fields already set. `port/runtime/overlay.c` now runs the whole frames a copy takes (12
+  no `(2, -1)`, and those three fields already set. `psxstack/runtime/overlay.c` now runs the whole frames a copy takes (12
   cycles a byte, 677,376 cycles a PAL frame) after it.
 - **Primitive padding.** A textured polygon's third and fourth texture words carry padding in their high half, which the
   game never writes (it holds the packet buffer's previous contents); the -m32 and -m64 builds' heaps differ, so the
-  primitive hash differed from frame 1,649 on. The shim's hash (`port/psyq/libgpu.c`) now hashes that padding as 0.
+  primitive hash differed from frame 1,649 on. The shim's hash (`psxstack/psyq/libgpu.c`) now hashes that padding as 0.
 - **-m32 build:** `src/main/heap.c`'s `PC_PORT` static assertion required an 8-byte multiple header, which the 12-byte
   -m32 header is not; it now requires a pointer-aligned one.
 
