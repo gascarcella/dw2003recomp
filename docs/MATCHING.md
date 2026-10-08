@@ -2,9 +2,8 @@
 
 The practical guide to turning a function's assembly into C that rebuilds byte-identical, for contributors and
 agents. The rules behind it are in `docs/DECISIONS.md` ("Match status and forced (FAKE) matches", "Naming
-conventions", "LOOP_BLOCK"); the compiler evidence is in `docs/TOOLCHAIN.md`. Every game function is already C except a
-few holdouts (`grep -rn "^#ifdef NON_MATCHING" src`), so this guide serves retries of holdouts and FAKE matches,
-new splits, and anyone checking how a shape was found.
+conventions", "LOOP_BLOCK"); the compiler evidence is in `docs/TOOLCHAIN.md`. Every game function is matching C (no
+holdouts are left), so this guide serves retries of FAKE matches, new splits, and anyone checking how a shape was found.
 
 ## Setup
 

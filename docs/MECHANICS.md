@@ -18,9 +18,8 @@ the end says what to fetch from an unblocked machine. Where a guide and the C di
 
 Provenance of the golden values: goldens come from the emulator-run original (the oracle runs the disc's own code), never
 from this document's hand arithmetic; the hand-computed numbers below check that a harness is wired right.
-`fightstg_rules_get_stats` is still under `#ifdef NON_MATCHING` in `src/fightstg/fightstg_8008D3B4.c` (the build links the
-original asm); its WIP C reproduces every `fightstg_rules` golden on the host and the first battle's replay
-(`tests/holdouts/`).
+`fightstg_rules_get_stats` (`src/fightstg/fightstg_8008D3B4.c`) is matching C since 2026-10-07, so the host replays
+the original's code too.
 
 ## 0. Shared conventions
 
