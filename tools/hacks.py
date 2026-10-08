@@ -34,6 +34,7 @@ docs/THIRD_PARTY.md); this tool is our own.
 import argparse
 import bisect
 import re
+import subprocess
 import sys
 from collections import Counter
 from pathlib import Path
@@ -76,6 +77,16 @@ DOC = {
 DOC_RX = {k: re.compile(re.escape(v).replace("N", r"(\d+)", 1)) for k, v in DOC.items()}
 DOC_CLASSES = re.compile(r"by evidence class: ((?:[A-Z][A-Z0-9]* \d+(?:, )?)+)")
 
+
+
+def tracked(*dirs):
+    """The tracked files under dirs: configure.py's generated headers (include/asm_generated/) and other build output
+    are not the game's source. Without git (an exported tree), every file but include/asm_generated/."""
+    try:
+        out = subprocess.run(["git", "-C", str(ROOT), "ls-files", "-z", "--", *dirs], capture_output=True, check=True)
+        return [ROOT / f for f in out.stdout.decode().split("\0") if f]
+    except (OSError, subprocess.CalledProcessError):
+        return [p for d in dirs for p in (ROOT / d).rglob("*") if p.is_file() and "asm_generated" not in p.parts]
 
 class Source:
     """One C file: its code with comments and strings blanked (offsets and lines kept), its comments, its functions."""
@@ -195,7 +206,7 @@ class Census:
 
     # -- the scan --
     def scan(self):
-        files = sorted(p for d in ("src", "include") for p in (ROOT / d).rglob("*") if p.suffix in (".c", ".h"))
+        files = sorted(p for p in tracked("src", "include") if p.suffix in (".c", ".h"))
         asm_macros = {}
         sources = [Source(p) for p in files]
         for s in sources:
