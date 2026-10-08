@@ -54,12 +54,14 @@ The plan's milestones (`docs/PORT.md`):
 - **M4 (saves):** memory cards as `.mcd` images; saves move both ways between the port and the emulator.
 - **M5 (full game):** the movies (our MDEC and XA decoder) are done; the rest of the game beyond the first battle has
   not been checked against the emulator.
-- **Hardware renderer** ([#31](https://github.com/gascarcella/dw2003recomp/issues/31), the plan there): built, not yet
-  play-tested. `--renderer gpu` (`video.renderer`, the launcher's Renderer choice) draws the game through SDL_GPU on
+- **Hardware renderer** ([#31](https://github.com/gascarcella/dw2003recomp/issues/31), the plan there): done and
+  play-tested (internal scale 4: the field, a battle, a memory card load; 50 frames a second, no audio drop).
+  `--renderer gpu` (`video.renderer`, the launcher's Renderer choice) draws the game through SDL_GPU on
   Vulkan: a rasteriser of the software GPU's command stream into a VRAM of its own, presented from there. At the
   internal scale of 1 it equals the software VRAM (all 715 gpu golden lists, every 10th vsync of both replays; NVIDIA
   and lavapipe); `--internal-scale 2..8` (the launcher's Resolution slider) draws at N times the resolution. Without a
-  usable device it falls back to the software path. The software GPU stays the default until the play-test.
+  usable device it falls back to the software path. The software GPU stays the default (DECISIONS); the follow-ups
+  (texture replacement, widescreen, post-processing, sub-pixel precision, D3D12) are on the board.
 - **The port stack (psxstack):** the port is split in place into a generic runtime (`port/runtime/`, no fact about
   this game) and a game adapter (`port/game/`: `game.json`, the probes, the mods) behind the adapter interface
   `port/include/psxstack/game.h` (phase 1 of the extraction into the `psxstack` repository, its `GAME_CONTRACT.md`;
