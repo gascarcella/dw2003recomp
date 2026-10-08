@@ -54,6 +54,8 @@
 #define TILES_Y (VRAM_H / TILE)
 #define BLOCKS 16 /* gpu.c's write-stamp blocks per row (64 pixels each) */
 #define STAMP_NONE 0xFFFFFFFFu
+#define RENDER_MAX_SCALE 8
+#define RENDER_INFLIGHT 3 /* frames the GPU may lag behind: a slow device (software Vulkan) holds the game back */
 
 /* ---- The units (raster.vert.hlsl's and raster.frag.hlsl's uniforms) ---- */
 
@@ -75,7 +77,8 @@ typedef struct {
 } RasterGeometry;
 
 typedef struct {
-    Sint32 kind[4], a[4], col[4], nrg[4], nbu[4], nva[4], tex[4], win[4], s01[4], s2[4];
+    Sint32 kind[4], a[4], col[4], nrg[4], nbu[4], nva[4], tex[4], win[4], s01[4], s2[4], res[4], uvr[4], cmin[4],
+        cmax[4];
 } RasterUnit;
 
 /* An entry of the frame's list, in stream order. */
@@ -107,9 +110,10 @@ static struct {
 
     /* The rasteriser. */
     int raster;
+    int scale;                             /* the internal scale: the target is 1024 scale x 512 scale */
     SDL_GPUShader *raster_vert, *raster_frag;
     SDL_GPUGraphicsPipeline *pipe_raster;
-    SDL_GPUTexture *vram_target;           /* RGBA8 1024x512: the rasteriser's VRAM */
+    SDL_GPUTexture *vram_target;           /* RGBA8 1024 scale x 512 scale: the rasteriser's VRAM */
     SDL_GPUTexture *background;            /* its copy, what units read */
     SDL_GPUTexture *mirror;                /* R16_UINT 1024x512: the software VRAM's copy */
     SDL_GPUTransferBuffer *staging_buf;    /* the frame's uploads */
@@ -122,6 +126,8 @@ static struct {
     u32 uploaded[VRAM_H][BLOCKS];          /* the stamp each block had at its last upload; STAMP_NONE: never */
     u32 generation;                        /* gpu.c's stamp generation at the last check */
     u8 dirty[TILES_Y][TILES_X];            /* drawn into since the tile's last background copy */
+    SDL_GPUFence *inflight[RENDER_INFLIGHT]; /* the last frames' fences: at most RENDER_INFLIGHT frames queued */
+    unsigned frame;
 } r;
 
 /* ---- Recording ---- */
@@ -284,9 +290,12 @@ static Record *draw_add(const RasterUnit *u, int vertices, int sx, int sy, int s
     e->y = sy;
     e->w = sw;
     e->h = sh;
-    e->geometry.target[0] = VRAM_W;
-    e->geometry.target[1] = VRAM_H;
-    e->geometry.target[2] = 1.0f;
+    e->unit.res[0] = r.scale;
+    e->unit.res[1] = VRAM_W * r.scale;
+    e->unit.res[2] = VRAM_H * r.scale;
+    e->geometry.target[0] = (float)(VRAM_W * r.scale);
+    e->geometry.target[1] = (float)(VRAM_H * r.scale);
+    e->geometry.target[2] = (float)r.scale;
     e->geometry.target[3] = vertices == 3 ? 0.5f : 0.0f;
     e->geometry.mode[0] = vertices == 3 ? 0 : 1;
     return e;
@@ -371,8 +380,8 @@ static void raster_triangle(const GpuEvent *ev) {
         return;
     }
     unit_mode(&u, OP_TRIANGLE, ev);
-    if (ev->gouraud && ev->textured && !ev->dither && !ev->semi && !ev->check_mask) {
-        u.kind[1] |= F_PAIRS;
+    if (ev->gouraud && ev->textured && !ev->dither && !ev->semi && !ev->check_mask && r.scale == 1) {
+        u.kind[1] |= F_PAIRS; /* gpu.c's colour per pair of pixels: a scale-1 rule (smooth above it) */
     }
     u.a[0] = a->x;
     u.a[1] = a->y;
@@ -412,6 +421,17 @@ static void raster_triangle(const GpuEvent *ev) {
     u.s2[1] = s[2]->y;
     vmin = SDL_min(vmin, SDL_min(b->v, c->v));
     vmax = SDL_max(vmax, SDL_max(b->v, c->v));
+    /* The vertices' ranges: above scale 1 a sample point may lie just outside the triangle (raster.frag.hlsl) */
+    u.uvr[0] = SDL_min(a->u, SDL_min(b->u, c->u));
+    u.uvr[1] = SDL_max(a->u, SDL_max(b->u, c->u));
+    u.uvr[2] = vmin;
+    u.uvr[3] = vmax;
+    u.cmin[0] = SDL_min(a->r, SDL_min(b->r, c->r));
+    u.cmin[1] = SDL_min(a->g, SDL_min(b->g, c->g));
+    u.cmin[2] = SDL_min(a->b, SDL_min(b->b, c->b));
+    u.cmax[0] = SDL_max(a->r, SDL_max(b->r, c->r));
+    u.cmax[1] = SDL_max(a->g, SDL_max(b->g, c->g));
+    u.cmax[2] = SDL_max(a->b, SDL_max(b->b, c->b));
     sync_texture(ev, vmin, vmax);
     if (u.kind[1] & F_BACKGROUND) {
         sync_background(x0, y0, x1 - x0 + 1, y1 - y0 + 1);
@@ -679,6 +699,14 @@ static void render_release(void) {
         gpu_set_listener(NULL);
     }
     if (r.device != NULL) {
+        size_t f;
+        for (f = 0; f < RENDER_INFLIGHT; f++) {
+            if (r.inflight[f] != NULL) {
+                SDL_ReleaseGPUFence(r.device, r.inflight[f]);
+            }
+        }
+    }
+    if (r.device != NULL) {
         SDL_GPUTexture *textures[] = { r.target, r.image, r.vram_target, r.background, r.mirror };
         SDL_GPUTransferBuffer *buffers[] = { r.download, r.upload, r.staging_buf, r.vram_download };
         SDL_GPUGraphicsPipeline *pipes[] = { r.pipe_off, r.pipe_swap, r.pipe_vram_off, r.pipe_vram_swap,
@@ -853,7 +881,7 @@ const char *render_gpu_describe(void) {
     return r.device != NULL ? r.describe : "";
 }
 
-int render_gpu_raster_start(char *why, size_t why_size) {
+int render_gpu_raster_start(int scale, char *why, size_t why_size) {
     if (r.device == NULL) {
         snprintf(why, why_size, "no device");
         return 0;
@@ -868,15 +896,37 @@ int render_gpu_raster_start(char *why, size_t why_size) {
         return 0;
     }
     r.pipe_raster = render_pipeline(r.raster_vert, r.raster_frag, SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM);
-    r.vram_target = render_texture(SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM, VRAM_W, VRAM_H,
-                                   SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER);
-    r.background = render_texture(SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM, VRAM_W, VRAM_H, SDL_GPU_TEXTUREUSAGE_SAMPLER);
     r.mirror = render_texture(SDL_GPU_TEXTUREFORMAT_R16_UINT, VRAM_W, VRAM_H, SDL_GPU_TEXTUREUSAGE_SAMPLER);
     r.vram_download = render_buffer(SDL_GPU_TRANSFERBUFFERUSAGE_DOWNLOAD, VRAM_W * VRAM_H * 4);
-    if (r.pipe_raster == NULL || r.vram_target == NULL || r.background == NULL || r.mirror == NULL ||
-        r.vram_download == NULL) {
+    if (r.pipe_raster == NULL || r.mirror == NULL || r.vram_download == NULL) {
         snprintf(why, why_size, "the rasteriser's pipeline and textures: %s", SDL_GetError());
         return 0;
+    }
+    /* The target and its background copy at the scale asked for (2 x 4 bytes x 1024 x 512 per scale squared: 256 MB
+     * at 8), or at the largest scale below it that the device can allocate (logged). */
+    scale = SDL_clamp(scale, 1, RENDER_MAX_SCALE);
+    for (r.scale = scale; r.scale >= 1; r.scale--) {
+        int w = VRAM_W * r.scale, h = VRAM_H * r.scale;
+        r.vram_target = render_texture(SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM, w, h,
+                                       SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER);
+        r.background = r.vram_target != NULL
+                           ? render_texture(SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM, w, h, SDL_GPU_TEXTUREUSAGE_SAMPLER)
+                           : NULL;
+        if (r.background != NULL) {
+            break;
+        }
+        port_log("renderer: gpu: no %dx%d target at internal scale %d (%s)", w, h, r.scale, SDL_GetError());
+        if (r.vram_target != NULL) {
+            SDL_ReleaseGPUTexture(r.device, r.vram_target);
+            r.vram_target = NULL;
+        }
+    }
+    if (r.vram_target == NULL) {
+        snprintf(why, why_size, "the rasteriser's target: %s", SDL_GetError());
+        return 0;
+    }
+    if (r.scale != scale) {
+        port_log("renderer: gpu: internal scale %d instead of %d", r.scale, scale);
     }
     r.generation = gpu_stamp_generation();
     memset(r.uploaded, 0xFF, sizeof(r.uploaded));
@@ -885,6 +935,10 @@ int render_gpu_raster_start(char *why, size_t why_size) {
     r.raster = 1;
     gpu_set_listener(raster_event);
     return 1;
+}
+
+int render_gpu_scale(void) {
+    return r.raster ? r.scale : 1;
 }
 
 int render_gpu_rasterising(void) {
@@ -952,10 +1006,10 @@ static void raster_run(SDL_GPUCommandBuffer *cb) {
                 bind[1].sampler = r.sampler;
                 SDL_BindGPUFragmentSamplers(pass, 0, bind, 2);
             }
-            scissor.x = e->x;
-            scissor.y = e->y;
-            scissor.w = e->w;
-            scissor.h = e->h;
+            scissor.x = e->x * r.scale;
+            scissor.y = e->y * r.scale;
+            scissor.w = e->w * r.scale;
+            scissor.h = e->h * r.scale;
             SDL_SetGPUScissor(pass, &scissor);
             SDL_PushGPUVertexUniformData(cb, 0, &e->geometry, sizeof(e->geometry));
             SDL_PushGPUFragmentUniformData(cb, 0, &e->unit, sizeof(e->unit));
@@ -991,9 +1045,10 @@ static void raster_run(SDL_GPUCommandBuffer *cb) {
             memset(&dst, 0, sizeof(dst));
             src.texture = r.vram_target;
             dst.texture = r.background;
-            src.x = dst.x = (Uint32)e->x;
-            src.y = dst.y = (Uint32)e->y;
-            SDL_CopyGPUTextureToTexture(copy, &src, &dst, (Uint32)e->w, (Uint32)e->h, 1, false);
+            src.x = dst.x = (Uint32)(e->x * r.scale);
+            src.y = dst.y = (Uint32)(e->y * r.scale);
+            SDL_CopyGPUTextureToTexture(copy, &src, &dst, (Uint32)(e->w * r.scale), (Uint32)(e->h * r.scale), 1,
+                                        false);
         }
     }
     if (pass != NULL) {
@@ -1008,16 +1063,26 @@ static void raster_run(SDL_GPUCommandBuffer *cb) {
 
 void render_gpu_frame(void) {
     SDL_GPUCommandBuffer *cb;
+    SDL_GPUFence **slot;
     if (!r.raster || r.nrecs == 0) {
         return;
+    }
+    /* The frame RENDER_INFLIGHT frames ago must be done: a run without a window (nothing else waits: no swapchain)
+     * never queues more than that, however slow the device. */
+    slot = &r.inflight[r.frame++ % RENDER_INFLIGHT];
+    if (*slot != NULL) {
+        SDL_WaitForGPUFences(r.device, true, slot, 1);
+        SDL_ReleaseGPUFence(r.device, *slot);
+        *slot = NULL;
     }
     cb = SDL_AcquireGPUCommandBuffer(r.device);
     if (cb == NULL) {
         port_fatal("renderer: gpu: SDL_AcquireGPUCommandBuffer: %s", SDL_GetError());
     }
     raster_run(cb);
-    if (!SDL_SubmitGPUCommandBuffer(cb)) {
-        port_fatal("renderer: gpu: SDL_SubmitGPUCommandBuffer: %s", SDL_GetError());
+    *slot = SDL_SubmitGPUCommandBufferAndAcquireFence(cb);
+    if (*slot == NULL) {
+        port_fatal("renderer: gpu: SDL_SubmitGPUCommandBufferAndAcquireFence: %s", SDL_GetError());
     }
 }
 
@@ -1030,7 +1095,7 @@ int render_gpu_read_vram(u16 *out) {
     const u8 *map;
     int i;
 
-    if (!r.raster) {
+    if (!r.raster || r.scale != 1) {
         return 0;
     }
     cb = SDL_AcquireGPUCommandBuffer(r.device);
@@ -1101,7 +1166,8 @@ static int render_upload(SDL_GPUCommandBuffer *cb, const u32 *pixels, int w, int
     return 1;
 }
 
-/* The present's render pass into `target`: black, then the picture at `rect` (from the VRAM target when vram_xy). */
+/* The present's render pass into `target`: black, then the picture at `rect`: the w x h image, or (vram_xy) the w x h
+ * display at that corner of the VRAM target, at the internal scale. */
 static void render_draw(SDL_GPUCommandBuffer *cb, SDL_GPUTexture *target, SDL_GPUGraphicsPipeline *pipe, int w, int h,
                         const int *vram_xy, const int rect[4]) {
     SDL_GPUColorTargetInfo ct;
@@ -1137,9 +1203,14 @@ static void render_draw(SDL_GPUCommandBuffer *cb, SDL_GPUTexture *target, SDL_GP
         u.dst[3] = rect[3];
         u.src[0] = w;
         u.src[1] = h;
-        if (vram_xy != NULL) {
+        if (vram_xy != NULL) { /* the display at the internal scale, in the 1024 N x 512 N target */
+            u.src[0] = w * r.scale;
+            u.src[1] = h * r.scale;
+            u.src[2] = VRAM_W * r.scale;
+            u.src[3] = VRAM_H * r.scale;
             u.disp[0] = vram_xy[0] & 1023;
             u.disp[1] = vram_xy[1] & 511;
+            u.disp[2] = r.scale;
         }
         SDL_PushGPUFragmentUniformData(cb, 0, &u, vram_xy != NULL ? sizeof(u) : sizeof(Sint32) * 8);
         SDL_DrawGPUPrimitives(pass, 3, 1, 0, 0);

@@ -416,15 +416,17 @@ def wait_map(map: int, timeout_frames: int = 3000) -> dict:
 # ---- observation ----
 
 @mcp.tool(structured_output=False)
-def screenshot(path: str | None = None) -> list:
+def screenshot(path: str | None = None, renderer: str = "software") -> list:
     """The current display (320x240 or the game's mode) as a PNG image; with `path`, also saved there (PNG;
-    relative to the repository root). Works headless: the frame the game last displayed."""
+    relative to the repository root). Works headless: the frame the game last displayed. renderer="gpu": the
+    hardware renderer's picture at its internal resolution instead (a game started with extra_args
+    ["--renderer", "gpu", "--internal-scale", "N"], windowed or headless)."""
     g = _require()
     with tempfile.NamedTemporaryFile(prefix="dw2003-shot-", suffix=".ppm", delete=False,
                                      dir=g.tmpdir) as f:
         ppm_path = f.name
     try:
-        r = _call(g.screenshot, ppm_path)
+        r = _call(g.screenshot, ppm_path, None if renderer == "software" else renderer)
         try:
             with open(ppm_path, "rb") as f:
                 data = png.ppm_to_png(f.read())

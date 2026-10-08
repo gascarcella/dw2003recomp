@@ -48,8 +48,10 @@
  *     timeout (frames, default 600) -> frame, hit (0/1). Runs until the read equals value (checked once before
  *     running, then after each vsync) or timeout frames passed; deferred; leaves the game paused. ps1_stage and
  *     ps1_map take only value (game_state_stage / game_state_map).
- *   screenshot: path -> w, h, path. The current display image (the one port_video_frame last converted, or
- *     converted now) as a binary PPM (P6), the bytes --screenshot writes; headless too.
+ *   screenshot: path, renderer ("software", the default, or "gpu") -> w, h, path. The current display image (the
+ *     one port_video_frame last converted, or converted now) as a binary PPM (P6), the bytes --screenshot writes;
+ *     headless too. "gpu": the hardware renderer's picture at its internal scale, as --gpu-screenshot writes it (a
+ *     run with --renderer gpu, windowed or headless; an error otherwise).
  *   hash: -> frame, sha1, stable_sha1: gamestate_data's PS1 image, as a checkpoint hashes it.
  *   pace: fps (0 = unthrottled) -> pace (port_pace_set; the headless run is never paced).
  *   reset: -> frame; answers, then the console resets (port_reset_request) from the pump; the channel survives it,
@@ -673,7 +675,22 @@ static void debug_op_screenshot(const DebugReq *req, const PortJson *obj) {
         debug_error(req, "path: no quotes, backslashes or control characters");
         return;
     }
-    if (!port_video_screenshot_now(path->string, &w, &h)) {
+    const PortJson *renderer = port_json_get(obj, "renderer");
+    int gpu = 0, ok;
+    if (renderer != NULL) {
+        if (renderer->type != PORT_JSON_STRING ||
+            (strcmp(renderer->string, "software") != 0 && strcmp(renderer->string, "gpu") != 0)) {
+            debug_error(req, "renderer: software or gpu");
+            return;
+        }
+        gpu = renderer->string[0] == 'g';
+    }
+    ok = gpu ? port_video_gpu_screenshot_now(path->string, &w, &h) : port_video_screenshot_now(path->string, &w, &h);
+    if (ok < 0) {
+        debug_error(req, "no GPU renderer in this run (start it with --renderer gpu)");
+        return;
+    }
+    if (!ok) {
         debug_error(req, "cannot write the file");
         return;
     }

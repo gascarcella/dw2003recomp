@@ -260,19 +260,30 @@ PS1 or the emulator) are listed in `port/psyq/README.md` "Behaviour assumed".
 - **Hardware renderer** (`port/runtime/render_gpu.c`, issue #31; DECISIONS "The hardware renderer"): SDL_GPU on Vulkan,
   only in the SDL build, chosen by `--renderer gpu` or `video.renderer` (default `software`). Its shaders
   (`port/shaders/*.hlsl`) are compiled to SPIR-V at build time by the pinned DXC (`scripts/setup.sh dxc`) and embedded
-  in the binary. **Phase 1, now:** it opens the device and the window's swapchain, and presents the same software image
-  pixel for pixel (an integer nearest mapping into video.c's 4:3 rectangle, equal to SDL_Renderer's output); when no
-  device can present (no Vulkan driver; NVIDIA on SDL's offscreen driver) the run logs why and uses SDL_Renderer.
-  `--gpu-screenshot FRAME[@WxH]:PATH` writes its picture (headless too). **Phase 2, now:** its rasteriser draws the
-  software GPU's decoded command stream (gpu.c's listener: every triangle, rectangle, line segment, fill, copy and
-  transfer) into a 1024x512 VRAM target of its own, and a 15-bit display is presented from it. Its pixel shader is
-  gpu.c's pixel pipeline in integers (attributes from gpu.c's plane equations, coverage by the GPU with vertices shifted
-  by half a pixel); blending, dithering and the mask test read a copy of the target refreshed per triangle or segment
-  where something was drawn since (no fixed-function blending); texels come from a copy of the software VRAM uploaded in
-  stream order from gpu.c's write stamps; an overlapping copy that smears takes its result from the VRAM. At internal
-  scale 1 the target equals the software VRAM: every one of the gpu golden family's 715 lists, and every 10th vsync of
-  `new_game` and `first_battle_save` (whole VRAM, NVIDIA and lavapipe). **Next** (phase 3, the plan on issue #31):
-  internal resolutions up to 8x. The software GPU stays the reference and the default; every existing test uses it.
+  in the binary. It presents into the window's swapchain with an integer nearest mapping into video.c's 4:3 rectangle
+  (the software image through it is SDL_Renderer's output, pixel for pixel); when no device can present (no Vulkan
+  driver; NVIDIA on SDL's offscreen driver) the run logs why and uses SDL_Renderer.
+  `--gpu-screenshot FRAME[@WxH]:PATH` writes its picture (headless too). Its rasteriser draws the software GPU's
+  decoded command stream (gpu.c's listener: every triangle, rectangle, line segment, fill, copy and transfer) into a
+  VRAM target of its own, and a 15-bit display is presented from it (24-bit displays stay the software image). Its
+  pixel shader is gpu.c's pixel pipeline in integers (attributes from gpu.c's plane equations, coverage by the GPU);
+  blending, dithering and the mask test read a copy of the target refreshed per triangle or segment where something was
+  drawn since (no fixed-function blending); texels come from a copy of the software VRAM uploaded in stream order from
+  gpu.c's write stamps; an overlapping copy that smears takes its result from the VRAM.
+  - **Internal scale 1** (the default): the target equals the software VRAM, so the picture is the software path's:
+    every one of the gpu golden family's 715 lists, and every 10th vsync of `new_game` and `first_battle_save` (whole
+    VRAM, NVIDIA and lavapipe).
+  - **Internal scale 2 to 8** (`--internal-scale N`, `video.internal_scale`, the launcher's Resolution slider): the
+    target is 1024N x 512N, each VRAM pixel N x N target pixels. Triangles are drawn at that resolution (a target pixel
+    samples coverage at its top-left corner, so straight edges on whole coordinates meet rectangles on block
+    boundaries; attributes are gpu.c's plane equations at the pixel's place, exact in 32-bit integers, texture
+    coordinates and colours kept within the vertices' range), without dithering, in 8-bit colour; rectangles, sprites,
+    lines, fills and transfers are N x N blocks. Texels still come from the 1x VRAM copy, so render-to-texture effects
+    (FIELDSTG's shatter, FIGHTSTG's cursor copies) keep 1x texels. The display is presented at that resolution, nearest
+    when the window is at least as large, averaged over N x N blocks when it is smaller (supersampling). The target and
+    its background copy take 8 MB times N squared (256 MB at 8); a device that cannot allocate them gets a lower scale
+    (logged). The game's own cost is unchanged: `first_battle_save` runs in the same time at 1, 4 and 8.
+  - The software GPU stays the reference and the default; every existing test uses it.
 
 ## GTE
 `port/psyq/gte.c` is the geometry coprocessor in software: the 64 registers with their read/write rules, every

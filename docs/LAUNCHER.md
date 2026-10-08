@@ -52,7 +52,8 @@ defaults, the overrides and the errors.
 {
   "schema": 1,
   "disc": { "path": "dw2003.cue", "sha1": "457cb233..." },
-  "video": { "window": true, "scale": 2, "fullscreen": false, "refresh": 50, "renderer": "software" },
+  "video": { "window": true, "scale": 2, "fullscreen": false, "refresh": 50, "renderer": "software",
+             "internal_scale": 1 },
   "audio": { "mute": false },
   "memcard1": "card1.mcd",
   "memcard2": "card2.mcd",
@@ -94,6 +95,7 @@ defaults, the overrides and the errors.
 | `video.fullscreen` | bool | false | |
 | `video.refresh` | 50 or 60 | 50 | PAL, or the game's own 60 Hz mode ("50/60 Hz") |
 | `video.renderer` | `"software"` or `"gpu"` | `"software"` | The window's renderer: SDL_Renderer, or the hardware renderer (SDL_GPU, issue #31; it falls back to software when no device can present). The launcher's "Renderer" choice. A game built before it logs the key and ignores it |
+| `video.internal_scale` | integer 1-8 | 1 | The hardware renderer's resolution, N times the PS1's (1: the software picture). The launcher's "Resolution" slider, shown for the GPU renderer |
 | `audio.mute` | bool | false | No audio device |
 | `memcard1`, `memcard2` | string or `null` | `"card1.mcd"`, `"card2.mcd"` | A `.mcd` image, created formatted when missing; `null`: no card in that slot. An empty string is an error |
 | `watchdog` | integer 0-3600 | 0 | Seconds without a vsync before the game exits 4; 0 is off. The bare binary (no `--config`) keeps its 10 s |

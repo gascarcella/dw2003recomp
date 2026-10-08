@@ -47,7 +47,7 @@ static void usage(const char *argv0) {
             "          [--script JSON]\n"
             "          [--log FILE] [--record FILE] [--max-frames N] [--watchdog SEC] [--trace]\n"
             "          [--window] [--scale N] [--fullscreen] [--fps N] [--input-test] [--screenshot FRAME:PATH]\n"
-            "          [--renderer software|gpu] [--gpu-screenshot FRAME[@WxH]:PATH]\n"
+            "          [--renderer software|gpu] [--internal-scale N] [--gpu-screenshot FRAME[@WxH]:PATH]\n"
             "          [--spu-trace FILE] [--wav FILE] [--mute] [--debug SOCKET] [--debug-hold] [--crash-dir DIR]\n"
             "          [--version]\n"
             "  --config JSON    the settings file (docs/LAUNCHER.md; what the launcher starts the game\n"
@@ -84,6 +84,9 @@ static void usage(const char *argv0) {
             "  --screenshot F:P write the display at vsync F to P (binary PPM); repeatable; any build\n"
             "  --renderer R     the window's renderer: software (default: SDL_Renderer) or gpu (SDL_GPU, the\n"
             "                   hardware renderer; software when no device can present; overrides video.renderer)\n"
+            "  --internal-scale N  the hardware renderer's resolution: 1 to 8 times the PS1's (default 1: the same\n"
+            "                   picture as software; above 1 without dithering, in 8-bit colour; overrides\n"
+            "                   video.internal_scale)\n"
             "  --gpu-screenshot F[@WxH]:P  the hardware renderer's picture of vsync F to P (binary PPM): the image, or\n"
             "                   with @WxH its present into a W x H output; repeatable; a build with -DDW3_PORT_SDL=ON;\n"
             "                   skipped (logged) when no GPU device opens\n"
@@ -120,7 +123,7 @@ int main(int argc, char **argv) {
     int mute = 0, debug_hold = 0;
     int memcard_given[2] = { 0, 0 };
     int disc_check = 1, max_frames_given = 0;
-    int window = 0, scale = 2, fullscreen = 0, input_test = 0, gpu = 0, gpu_shots = 0;
+    int window = 0, scale = 2, fullscreen = 0, input_test = 0, gpu = 0, gpu_shots = 0, internal_scale = 1;
     const char *config = NULL;
     int print_settings = 0, print_mods = 0, script_mods = 0;
     long fps = -1;
@@ -139,6 +142,7 @@ int main(int argc, char **argv) {
         scale = port_settings.scale;
         fullscreen = port_settings.fullscreen;
         gpu = port_settings.gpu;
+        internal_scale = port_settings.internal_scale;
         mute = port_settings.mute;
         port_watchdog_sec = port_settings.watchdog;
         for (i = 0; i < 2; i++) {
@@ -233,6 +237,13 @@ int main(int argc, char **argv) {
                 return 64;
             }
             gpu = argv[++i][0] == 'g';
+        } else if (strcmp(argv[i], "--internal-scale") == 0 && i + 1 < argc) {
+            internal_scale = (int)number(argv[i + 1], argv[i]);
+            i++;
+            if (internal_scale < 1 || internal_scale > 8) {
+                fprintf(stderr, "port: --internal-scale: 1 to 8\n");
+                return 64;
+            }
         } else if (strcmp(argv[i], "--gpu-screenshot") == 0 && i + 1 < argc) {
             if (!port_video_gpu_screenshot_add(argv[++i])) {
                 fprintf(stderr, "port: --gpu-screenshot: FRAME[@WxH]:PATH (FRAME >= 1; at most 64): %s\n", argv[i]);
@@ -281,6 +292,7 @@ int main(int argc, char **argv) {
         eff.watchdog = port_watchdog_sec;
         eff.refresh = refresh;
         eff.gpu = gpu;
+        eff.internal_scale = internal_scale;
         for (i = 0; i < 2; i++) {
             eff.memcard[i] = memcard_given[i] > 0 && memcard[i] != NULL ? port_settings_abspath(memcard[i]) : NULL;
         }
@@ -292,6 +304,7 @@ int main(int argc, char **argv) {
         return 64;
     }
     port_video_set_renderer(gpu ? "gpu" : "software");
+    port_video_set_internal_scale(internal_scale);
     if (window && !port_video_available()) {
         fprintf(stderr, "port: --window: this build has no window: configure with -DDW3_PORT_SDL=ON "
                         "(port/README.md \"The window\")\n");

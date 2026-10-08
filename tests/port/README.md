@@ -146,8 +146,10 @@ nearest mapping) pixel for pixel; where the device can present to the offscreen 
 cannot) the input self-test also runs with the window through SDL_GPU. **With the disc:** SDL_Renderer's own present
 (a 960x720 window, read back with `DW3_PORT_PRESENT_READBACK`) must be the same reference, so both present paths agree.
 **The rasteriser, with a device and the disc:** `new_game` and `first_battle_save` with its whole VRAM target compared
-with the software VRAM every 10 vsyncs (`DW3_PORT_GPU_VRAM_CHECK=10`): no difference. `--lavapipe` uses Mesa's software
-Vulkan driver. ~55 s. In `scripts/test.sh --layer port`, followed by `tests/host/gpu_hw_replay.py` (the gpu golden
+with the software VRAM every 10 vsyncs (`DW3_PORT_GPU_VRAM_CHECK=10`): no difference. At internal scales 2 and 4, field
+and battle frames of `first_battle_save` are the display's size times the scale and, averaged back over each block,
+within `SCALED_BUDGET` of the software image. The debug channel's screenshot with `"renderer": "gpu"` (a headless
+`--renderer gpu --internal-scale 2`) is 640x480. `--lavapipe` uses Mesa's software Vulkan driver. ~70 s. In `scripts/test.sh --layer port`, followed by `tests/host/gpu_hw_replay.py` (the gpu golden
 family's 715 lists through the rasteriser, the whole target after each; `tests/README.md`).
 
 ## The crash report (`crash.py`; docs/PORT.md "Crash report")

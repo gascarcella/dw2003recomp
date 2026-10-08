@@ -319,9 +319,12 @@ class Game:
             args.update(value=int(value), size=int(size), signed=bool(signed))
         return self.request("wait", timeout_s=timeout_s, **args)
 
-    def screenshot(self, path: str) -> dict:
-        """The game writes the current display as a binary PPM to `path`: {w, h, path}."""
-        return self.request("screenshot", path=path)
+    def screenshot(self, path: str, renderer: str | None = None) -> dict:
+        """The game writes the current display as a binary PPM to `path`: {w, h, path}. renderer="gpu": the hardware
+        renderer's picture at its internal scale (a run started with --renderer gpu)."""
+        if renderer is None:
+            return self.request("screenshot", path=path)
+        return self.request("screenshot", path=path, renderer=renderer)
 
     def hash(self) -> dict:
         return self.request("hash")

@@ -125,7 +125,9 @@ Vulkan); when it cannot present (no Vulkan driver, NVIDIA on the offscreen drive
 logs `renderer: gpu unavailable (<why>); software` and uses SDL_Renderer. Its rasteriser draws the game itself into a
 VRAM target of its own (`src/render_gpu.c`'s header comment) and a 15-bit display is presented from that target; 24-bit
 displays (the movies, the title) stay the software image. At the internal scale of 1 the picture is the software
-path's, pixel for pixel. Its shaders need DXC at build time (`scripts/setup.sh dxc`, or `-DDW3_DXC=<path>`):
+path's, pixel for pixel; `--internal-scale N` (2 to 8, or `video.internal_scale`) draws the game at N times the PS1's
+resolution (docs/PORT.md "Rendering"): `build/port-sdl/dw2003 --disc iso/dw2003.cue --window --renderer gpu
+--internal-scale 4 --scale 4`. Its shaders need DXC at build time (`scripts/setup.sh dxc`, or `-DDW3_DXC=<path>`):
 configuring the SDL build without it fails with that hint. `--gpu-screenshot FRAME[@WxH]:PATH` (repeatable) writes the hardware renderer's picture
 of vsync FRAME as a PPM: the image itself, or with `@WxH` its present into a W x H output, letterboxed as the window
 would be; a run that has no device opens one for it (headless too: `SDL_VIDEO_DRIVER=offscreen`), and logs the shot as
