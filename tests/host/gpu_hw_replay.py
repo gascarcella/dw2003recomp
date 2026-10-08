@@ -36,7 +36,7 @@ LAVAPIPE = Path("/usr/share/vulkan/icd.d/lvp_icd.x86_64.json")
 
 
 # The renderer's parts the harness stubs instead of compiling (tests/host/gpu_harness.c "texture keys").
-HARNESS_STUBS = ("render_gpu_textures.c",)
+HARNESS_STUBS = ("render_gpu_textures.c", "render_gpu_packs.c")
 
 def tool(name):
     """A built tool: this checkout's tools/<name>, else the main checkout's."""
@@ -73,7 +73,7 @@ def build(out, env):
             str(ROOT / "tests/host/gpu_harness.c"), str(psyq / "libgpu.c"), str(psyq / "gpu.c"), str(psyq / "psyq.c"),
             str(psyq / "gte_shadow.c"),
             # the renderer's files (render_gpu.c and its render_gpu_<part>.c) and the filters' names they log; the
-            # texture keys are off here (gpu_harness.c stubs the renderer's calls into them)
+            # texture keys and packs are off here (gpu_harness.c stubs the renderer's calls into them)
             *[str(p) for p in sorted((gpu_replay.PSXSTACK / "runtime").glob("render_gpu*.c"))
               if p.name not in HARNESS_STUBS],
             str(gpu_replay.PSXSTACK / "runtime/video_filter.c"),
