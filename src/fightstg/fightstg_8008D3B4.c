@@ -6624,19 +6624,15 @@ void fightstg_action_mark_critical_tech(void) {
     fightstg_action.effects[rec->kind] = rec->kind;
 }
 
-/* Forced match (FAKE, DECISIONS "Match status and forced (FAKE) matches"). Natural C reaches 97.4%: the original builds
- * &fightstg_rules in a register and loads roll_steal from it (lw 0xB8(v0)) after the branch, which is what combine
- * leaves when the load is volatile (it refuses to fold an address into a volatile MEM). A local pointer (at the top,
- * in the block, assigned in the condition), a block, a loop, a dead second use, a function-pointer local, the
- * siblings' state/rules locals, nested ifs or an early return don't (wip-6, wip-9, final-fight). Only this function
- * reads roll_steal. */
+/* rules is a const pointer (the US decomp's shape): the front end substitutes its value into the call, so the original's
+ * &fightstg_rules stays in a register and roll_steal is loaded from it after the branch (lw 0xB8(v0)). A plain pointer
+ * local or the direct call folds the address into the load (97.4%). Only this function reads roll_steal. */
 void fightstg_action_try_steal(void) {
+    FightstgRules *const rules = &fightstg_rules;
     FightstgMember *members = fightstg_battle.state.members[1];
     RecordsTechnique *rec;
 
-    if (members[fightstg_battle.state.current[1]].item > 0 &&
-        /* FAKE: volatile only keeps the rules address in a register (combine doesn't fold it into the load). */
-        ((volatile FightstgRules *)&fightstg_rules)->roll_steal(0, fightstg_action.tech) != 0) {
+    if (members[fightstg_battle.state.current[1]].item > 0 && rules->roll_steal(0, fightstg_action.tech) != 0) {
         rec = &records_techniques[fightstg_action.tech - 1];
         fightstg_action.effects[rec->kind] = 1;
         cdload_module.queue_file(records_language + 0x6A);
