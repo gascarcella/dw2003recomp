@@ -48,7 +48,7 @@ def fightstg_stats(level=0, stats=(1, 1, 1, 1, 1), resists=(100,) * 12, status=0
     names = ["attack_element", "attack_element_power", "poison_chance", "poison_power", "paralysis_chance",
              "paralysis_power", "confusion_chance", "confusion_power", "knockout_chance", "knockout_power",
              "drain_chance", "drain_power", "multi_hit", "critical", "counter", "accuracy", "evasion", "escape",
-             "no_escape", "steal", "unk_3F"]
+             "no_escape", "steal", "pad_3F"]
     tail = [u8s.pop(n, 0) for n in names]
     assert not u8s, u8s
     return struct.pack("<h5h12h4B3B21B", level, *stats, *resists, status, type_, power_up, guard, *strong_types, *tail)

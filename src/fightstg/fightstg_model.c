@@ -75,8 +75,8 @@ typedef union FightstgPrim {
  * from: one face of a model, its screen coordinates, texture and colours. */
 typedef struct FightstgDrawState {
     /* 0x00 */ s32 textured; /* textured */
-    /* 0x04 */ s32 unk_04;
-    /* 0x08 */ s32 unk_08;
+    /* 0x04 */ s32 unk_04; /* set by command 0xBn; nothing reads it */
+    /* 0x08 */ s32 unk_08; /* set by command 0xAn; nothing reads it */
     /* 0x0C */ s32 quad;   /* quad (else triangle) */
     /* 0x10 */ s32 lit; /* corner colours from the lit normals (vertex_colors) */
     /* 0x14 */ s32 gouraud; /* gouraud primitives (POLY_GT3/GT4), else flat */

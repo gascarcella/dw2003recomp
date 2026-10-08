@@ -15,7 +15,7 @@
 /* .bss, in address order. GCC 2.8 emits uninitialized definitions in the order of their first declaration
  * (fightstg_camera_setting's is in fightstg.h), so they are defined here, before the code's own externs. */
 FightstgCameraSetting fightstg_camera_setting;
-s32 D_FIGHTSTG_800A470C; /* unreferenced */
+s32 fightstg_unused_2; /* unreferenced */
 RECT fightstg_portrait_rect;
 DR_MOVE fightstg_cursor_moves[4];
 u32 fightstg_cursor_ot[2];

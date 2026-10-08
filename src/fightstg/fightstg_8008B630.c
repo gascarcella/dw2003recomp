@@ -938,4 +938,4 @@ OBJECT_V0(FightstgAttack *) fightstg_attack_create(s32 side) {
 
 /* .bss */
 s32 fightstg_script_saved_idle_anim;
-s32 D_FIGHTSTG_800A46D4; /* unreferenced */
+s32 fightstg_unused_1; /* unreferenced */
