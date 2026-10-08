@@ -78,7 +78,8 @@ The plan's milestones (`docs/PORT.md`):
 - **Present filters** ([#69](https://github.com/gascarcella/dw2003recomp/issues/69), the plan and the owner's
   decisions there): `--filter`, `video.filter`, `video.crt`, the launcher's Filter combo and sliders (GPU renderer
   only). Done: `none` (the default, the picture unchanged), `sharp` (sharp bilinear), `scanlines` and `crt` (beams,
-  aperture grille, curvature), one shader pass each in psxstack's present. Next: `smooth` (on the 1x software image).
+  aperture grille, curvature), `smooth` (xBR level 2 on the 1x software image at any internal scale), each a shader
+  pass in psxstack's present. The filters' look (the CRT's beams, grille, curvature) awaits the owner's play-test.
 - **Widescreen battles** ([#71](https://github.com/gascarcella/dw2003recomp/issues/71)): the `widescreen` mod shows
   the battle 16:9 through the GPU renderer's wide canvas (psxstack `render_gpu_wide.c`): more of the arena at the
   sides, the HUD centred as drawn, the game's output unchanged. Everything else stays 4:3 (the field: #78). Not
