@@ -59,7 +59,8 @@ mkdir -p "$ROOT/build"   # a fresh checkout has none: the logs below go beside t
 port_dir="$ROOT/build/port-win"
 log "game: configuring $port_dir"
 cmake -S "$ROOT/port" -B "$port_dir" -G Ninja -DCMAKE_TOOLCHAIN_FILE="$toolchain" -DCMAKE_BUILD_TYPE=Release \
-    -DPSXSTACK_SDL=ON -DPSXSTACK_TOOLS_DIR="$PSXSTACK_TOOLS_DIR" >"$port_dir.configure.log" 2>&1 || die "game: configure failed (see $port_dir.configure.log)"
+    -DPSXSTACK_SDL=ON -DPSXSTACK_TOOLS_DIR="$PSXSTACK_TOOLS_DIR" >"$port_dir.configure.log" 2>&1 ||
+    { tail -30 "$port_dir.configure.log" >&2; die "game: configure failed (see $port_dir.configure.log)"; }
 if [[ $configure_only -eq 0 ]]; then
     log "game: building every object with $JOBS jobs (ninja -k 0; log: $port_dir.build.log)"
     if ninja -C "$port_dir" -k 0 -j"$JOBS" >"$port_dir.build.log" 2>&1; then
@@ -91,7 +92,8 @@ if [[ $launcher -eq 1 ]]; then
     cmake -S "$ROOT/psxstack/launcher" -B "$launcher_dir" -G Ninja -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
         -DCMAKE_BUILD_TYPE=Release -DPSXSTACK_LAUNCHER_STATIC_RUNTIME=ON -DPSXSTACK_IMGUI_DIR="$imgui" \
         -DPSXSTACK_GAME_JSON="$ROOT/port/game/game.json" -DPSXSTACK_VERSION_ROOT="$ROOT" -DPSXSTACK_TOOLS_DIR="$PSXSTACK_TOOLS_DIR" \
-        >"$launcher_dir.configure.log" 2>&1 || die "launcher: configure failed (see $launcher_dir.configure.log)"
+        >"$launcher_dir.configure.log" 2>&1 ||
+        { tail -30 "$launcher_dir.configure.log" >&2; die "launcher: configure failed (see $launcher_dir.configure.log)"; }
     if [[ $configure_only -eq 0 ]]; then
         log "launcher: building"
         if ninja -C "$launcher_dir" -j"$JOBS" >"$launcher_dir.build.log" 2>&1; then
