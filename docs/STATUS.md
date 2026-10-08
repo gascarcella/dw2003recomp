@@ -86,7 +86,7 @@ The plan's milestones (`docs/PORT.md`):
   symbols, the overlay sections no linker script (the units' sections go to their overlay's: objcopy after each
   compile on ELF, `#pragma clang section` on PE, which keeps the units' unwind tables),
   the state tables no `nm -S`; the runtime's system calls are split into POSIX and Windows halves
-  (`port/runtime/platform.c`). Under Wine, headless, the game replays both layer-2 scripts with the Linux build's log,
+  (`psxstack/runtime/platform.c`). Under Wine, headless, the game replays both layer-2 scripts with the Linux build's log,
   record and SPU trace byte for byte (`tests/port/run.py --exe build/port-win/dw2003.exe --wine`). The release's
   Windows zip (`scripts/package_windows.sh`) was play-tested on this desktop under Wine 11.17 and GE-Proton 10-25:
   the launcher and the game draw, the game plays sound (WASAPI) at 50 frames a second through the `new_game` route.
@@ -96,7 +96,7 @@ The plan's milestones (`docs/PORT.md`):
   ([#7](https://github.com/gascarcella/dw2003recomp/issues/7)); the battle has not been play-tested again.
 
 ## Launcher and mods
-- **Launcher** (`launcher/README.md`): Dear ImGui on SDL3. Handles the disc (with a SHA-1 check), Play, settings,
+- **Launcher** (`psxstack/launcher/README.md`): Dear ImGui on SDL3. Handles the disc (with a SHA-1 check), Play, settings,
   controls (rebinding, hotkeys, chords) and the mods' pages. A headless self-test runs in CI.
 - **Crash report** (`docs/PORT.md` "Crash report"): the game writes one on a signal or a fatal stop (build, vsync,
   overlays, log tail, registers, stack); the launcher keeps the run's log and puts the report into its Copy text; the

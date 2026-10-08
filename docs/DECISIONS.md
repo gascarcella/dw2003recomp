@@ -222,7 +222,7 @@ the textures and CLUTs (`tests/port/vram.py`).
 ## The port's debug channel and the MCP server
 _Decided: 2026-10-06_
 
-A tool inspects and drives the running port through an in-process channel (`--debug SOCKET`, `port/runtime/debug.c`),
+A tool inspects and drives the running port through an in-process channel (`--debug SOCKET`, `psxstack/runtime/debug.c`),
 not through ptrace or gdb: the game thread polls the socket at the vsync boundary, so every read, write and press
 lands between two frames and a driven run stays deterministic, and nothing depends on Yama or a debugger. Without
 `--debug` nothing of it exists. One Python server, `tools/mcp/`, registered by `.mcp.json`, speaks MCP over it;
@@ -278,7 +278,7 @@ Linux first; Windows after the launcher works on Linux.
 ## Crash reports are one text file, named on stderr, kept by the launcher
 _Decided: 2026-10-07_
 
-A crash or a fatal stop of the port writes one text report (`port/runtime/crash.c`: the build, the vsync, the overlays, the
+A crash or a fatal stop of the port writes one text report (`psxstack/runtime/crash.c`: the build, the vsync, the overlays, the
 log's tail, the registers and a stack of executable-relative addresses) and names it on its last stderr line, which
 is the launcher's only contract with it. The launcher owns where things go (`<settings dir>/crashes/`, `logs/`) and
 what a tester pastes (its Copy text). Every build is stamped from `git describe` (`port/cmake/version.cmake`) so a
