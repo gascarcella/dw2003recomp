@@ -74,6 +74,10 @@ The plan's milestones (`docs/PORT.md`):
   vertices (`tests/port/subpixel_jitter.py`: at scale 4 the vertices' motion is off by a target pixel or more 2 % of
   the time instead of 21 %); the frame hash is the same with it on. Above internal scale 1 the hardware renderer draws
   the 3D at those positions (`--subpixel on|off`, `video.subpixel`, default on; the launcher's "3D vertices" choice).
+- **Present filters** ([#69](https://github.com/gascarcella/dw2003recomp/issues/69), the plan and the owner's
+  decisions there): `--filter`, `video.filter`, the launcher's Filter combo (GPU renderer only). Done: `none` (the
+  default, the picture unchanged) and `sharp` (sharp bilinear), one shader pass in psxstack's present. Next: `scanlines`
+  and `crt` (`video.crt`), then `smooth` (on the 1x software image).
 - **The port stack (psxstack):** the runtime, the Psy-Q shim, the build (`psxstack_add_game()`), the launcher and the
   debug tools live in the `psxstack` repository (gascarcella/psxstack; its `docs/PORT.md`, `docs/RUNTIME.md`,
   `docs/LAUNCHER.md`), consumed as the `psxstack` submodule pinned at its tag `v0.1.0` (`scripts/worktree_init.sh`
