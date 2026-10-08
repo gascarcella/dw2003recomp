@@ -20,6 +20,7 @@ Builds build/port-sdl if needed (-DPSXSTACK_SDL=ON: tools/sdl3 and tools/dxc), t
 Exit codes: 0 pass (parts may be skipped), 1 fail, 2 something missing for the build.
 """
 import argparse
+import json
 import math
 import os
 import shutil
@@ -29,7 +30,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tests/port"))
 from run import DISC, SCRIPTS, Missing, build, tool_env  # noqa: E402  (the port test's build)
-from render_gpu import LAVAPIPE, dest, ppm, run  # noqa: E402  (video.c's placement, the PPM reader)
+from render_gpu import LAVAPIPE, WIDE_BATTLE, dest, ppm, run  # noqa: E402  (video.c's placement, the PPM reader)
 
 # (internal scale, vsyncs, output sizes). The pictures: the title's menu (900) and the field (1800), both 320x240
 # 15-bit displays from the VRAM target, and the disabled display (2: black, the 32-bit image's path). At scale 1 every
@@ -63,10 +64,10 @@ class Frame:
     """The unfiltered picture (w x h at the internal scale) placed in an ow x oh output as video.c places it, with the
     present filters' sampling (psxstack/shaders/present_source.hlsli) in float64."""
 
-    def __init__(self, image, scale, ow, oh):
+    def __init__(self, image, scale, ow, oh, aspect=(4, 3)):
         self.w, self.h, self.px = image
         self.lines = self.h // scale   # the display's lines
-        self.x0, self.y0, self.dw, self.dh = dest(ow, oh, self.w // scale, self.lines)
+        self.x0, self.y0, self.dw, self.dh = dest(ow, oh, self.w // scale, self.lines, *aspect)
         self.shrink = self.dw < self.w or self.dh < self.h
 
     def fetch(self, x, y):
@@ -260,14 +261,14 @@ REFERENCES = {"sharp": (sharp, {}, 1), "scanlines": (scanlines, {"scanlines": 50
               "crt": (crt, {"scanlines": 50, "mask": 30, "curvature": 0}, 5), "smooth": (smooth, {}, 3)}
 
 
-def reference(spec, image, scale, ow, oh):
+def reference(spec, image, scale, ow, oh, aspect=(4, 3)):
     """{output row: its RGB bytes} of filter `spec` ("NAME[:KEY=V,...]") for the rows its entry compares."""
     name, _, rest = spec.partition(":")
     pixel, params, step = REFERENCES[name]
     params = dict(params, **{k: int(v) for k, v in (kv.split("=") for kv in rest.split(",") if kv)})
     if name == "smooth":   # the 1x software image whatever the internal scale (image is then --screenshot's)
         scale = 1
-    fr = Frame(image, scale, ow, oh)
+    fr = Frame(image, scale, ow, oh, aspect)
     rows = {}
     for y in range(0, oh, step):
         row = bytearray(ow * 3)
@@ -359,6 +360,38 @@ def pictures(sdl, env, out, spec):
                   f"{', '.join(f'{w}x{h}' for w, h in sizes)}" + (f" ({'; '.join(bad)})" if bad else ""))
 
 
+def widescreen_smooth(sdl, env, out):
+    """smooth on a wide picture (the widescreen mod's battle): the software image is 4:3, so the filter reads the wide
+    canvas at 1x (every N-th target pixel); the reference starts from the unfiltered wide picture taken the same way."""
+    worst_max, worst_share = TOLERANCE["smooth"]
+    print("render_filters: smooth on the widescreen mod's battle (the wide canvas at 1x)")
+    cfg = out / "wide.settings.json"
+    cfg.write_text(json.dumps({"schema": 1, "disc": {"path": str(DISC)}, "video": {"window": False, "renderer": "gpu"},
+                               "memcard1": None, "memcard2": None, "mods": {"widescreen": {"enabled": True}}}))
+    f = WIDE_BATTLE[1]
+    for scale in (1, 2):
+        sw, img, got = out / f"ws{scale}_sw.ppm", out / f"ws{scale}_img.ppm", out / f"ws{scale}_1920x1080.ppm"
+        rc, text = run([sdl, "--config", cfg, "--script", SCRIPTS / "first_battle_save.json", "--script-mods",
+                        "--max-frames", str(f + 1), "--internal-scale", str(scale), "--filter", "smooth",
+                        "--screenshot", f"{f}:{sw}", "--gpu-screenshot", f"{f}:{img}",
+                        "--gpu-screenshot", f"{f}@1920x1080:{got}"], env, timeout=900)
+        check(rc == 0 and "mods: widescreen on" in text, f"internal scale {scale}: the run (exit {rc})")
+        if rc != 0:
+            continue
+        w = ppm(sw)[0]
+        iw, ih, ipx = ppm(img)
+        W, H = iw // scale, ih // scale
+        one = bytearray(W * H * 3)   # the wide picture at 1x: every scale-th pixel
+        for y in range(H):
+            for x in range(W):
+                i = ((y * scale) * iw + x * scale) * 3
+                one[(y * W + x) * 3:(y * W + x) * 3 + 3] = ipx[i:i + 3]
+        g = ppm(got)
+        worst, share = compare(g[2], 1920, reference("smooth", (W, H, bytes(one)), 1, 1920, 1080, (4 * W, 3 * w)))
+        check(W > w and worst <= worst_max and share <= worst_share,
+              f"internal scale {scale}, vsync {f}: {W}x{H} (4:3: {w}) into 1920x1080, up to {worst} in {share:.2%}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", default=str(ROOT / "build/render-filters-test"), help="where the pictures go")
@@ -399,6 +432,8 @@ def main():
             for spec in SPECS:
                 if not args.filter or spec.split(":")[0] in args.filter:
                     pictures(sdl, env, out, spec)
+            if not args.filter or "smooth" in args.filter:
+                widescreen_smooth(sdl, env, out)
     print(f"render_filters test: {'FAIL (' + str(len(FAILURES)) + ')' if FAILURES else 'pass'}")
     return 1 if FAILURES else 0
 
