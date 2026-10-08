@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "psxstack/tools/replay"))
 import emulator  # noqa: E402  (psxstack's runner)
 from emulator import (CHECKPOINT_FIELDS, RUN_LUA, bios_path, check_tools, compare, cross_core_view,  # noqa: E402,F401
-                      emulator_info, load_script, lua_literal, parse_ints, run_once, sha1_file)
+                      emulator_info, load_script, lua_literal, parse_ints, replay_env, run_once, sha1_file)
 
 
 def gamedata_dir():
