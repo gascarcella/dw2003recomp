@@ -43,7 +43,8 @@ typedef struct PadState {
     /* 0x410 */ void (*stop_recording)(void);                /* pad_stop_recording: a stub; pad_update calls it at the
                                                            * buffer's end (0x707 frames) in the recording mode (flag
                                                            * 0x800000), which nothing enters */
-    /* 0x414 */ s32 (*check_playback)(s32);                  /* pad_check_playback */
+    /* 0x414 */ s32 (*is_recording_port)(s32);               /* pad_is_recording_port: 1 the recorded port, -1 another,
+                                                           * 0 not recording (flag 0x800000) */
     /* 0x418 */ s32 (*start_playback)(s16, u8 *);            /* pad_start_playback */
     /* 0x41C */ void (*stop_playback)(void);                 /* pad_stop_playback */
     /* 0x420 */ s32 (*is_playback_port)(s32);                /* pad_is_playback_port */

@@ -41,8 +41,8 @@ typedef struct GfxLayer {
     /* 0x84 */ s32 camera_saved; /* gfx_save_camera's flag: gfx_end_frame restores cameras[] before the callbacks */
     /* 0x88 */ s32 projection;   /* projection distance (GsSetProjection) */
     /* 0x8C */ MATRIX cameras[2]; /* per buffer, saved from / restored to GsWSMATRIX */
-    /* 0xCC */ s32 world_screen_saved; /* gfx_save_world_screen's flag: restored likewise */
-    /* 0xD0 */ MATRIX world_screens[2]; /* per buffer, saved from / restored to GsLIGHTWSMATRIX */
+    /* 0xCC */ s32 light_saved; /* gfx_save_light's flag: restored likewise */
+    /* 0xD0 */ MATRIX lights[2]; /* per buffer, saved from / restored to GsLIGHTWSMATRIX */
     /* 0x110 */ void (*set_clip_pos)(struct GfxLayer *, s32, s32);    /* gfx_set_clip_pos (s16 params; callers pass s32) */
     /* 0x114 */ void (*set_clip_size)(struct GfxLayer *, s32, s32);   /* gfx_set_clip_size (s16 params; callers pass s32) */
     /* 0x118 */ void (*set_draw_offset)(struct GfxLayer *, s32, s32); /* gfx_set_draw_offset (defined with u16 arguments; callers pass full words) */
@@ -63,8 +63,8 @@ typedef struct GfxLayer {
     /* 0x154 */ void (*run_callbacks)(struct GfxLayer *);             /* gfx_run_callbacks */
     /* 0x158 */ void (*restore_camera)(struct GfxLayer *);            /* gfx_restore_camera */
     /* 0x15C */ void (*save_camera)(struct GfxLayer *, s32, s32);     /* gfx_save_camera */
-    /* 0x160 */ void (*restore_world_screen)(struct GfxLayer *);      /* gfx_restore_world_screen */
-    /* 0x164 */ void (*save_world_screen)(struct GfxLayer *, s32);    /* gfx_save_world_screen */
+    /* 0x160 */ void (*restore_light)(struct GfxLayer *);      /* gfx_restore_light */
+    /* 0x164 */ void (*save_light)(struct GfxLayer *, s32);    /* gfx_save_light */
     /* 0x168 */ void (*free)(struct GfxLayer *);                      /* gfx_free_layer */
 } GfxLayer; /* size 0x16C */
 
@@ -111,9 +111,9 @@ typedef struct GfxModule {
 
 extern GfxModule gfx_module;
 
-/* Matrices in libgs's .bss (psyq/libgs/bss): GsWSMATRIX the world-screen matrix (GsSetRefView2; "cameras" here),
- * GsLIGHTWSMATRIX the flat-light matrix (GsSetFlatLight; "world_screens" here, port/psyq/libgs.c); gfx
- * saves and restores both per buffer (world_screens, cameras), FIGHTSTG composes its models with them. */
+/* Matrices in libgs's .bss (psyq/libgs/bss): GsWSMATRIX the world-screen matrix (GsSetRefView2; GfxLayer.cameras),
+ * GsLIGHTWSMATRIX the flat-light matrix (GsSetFlatLight, port/psyq/libgs.c; GfxLayer.lights); gfx saves and
+ * restores both per buffer, FIGHTSTG composes its models with them. */
 extern MATRIX GsLIGHTWSMATRIX;
 extern MATRIX GsWSMATRIX;
 

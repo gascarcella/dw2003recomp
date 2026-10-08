@@ -1,0 +1,15 @@
+# Review of #56's batches 1-3 (PR #64): names that said the wrong thing. Apply with tools/renames.py.
+# By hand (not a rename): CardgameGame 0x420..0x497 nested as CardgameEffect effect (see 5-cardgame-effect.txt).
+
+# gfx: the per-buffer copy of GsLIGHTWSMATRIX (the flat-light matrix) was named after the world-screen matrix,
+# which `cameras` holds (with the projection)
+gfx_save_world_screen gfx_save_light
+gfx_restore_world_screen gfx_restore_light
+GfxLayer.world_screen_saved light_saved
+GfxLayer.world_screens lights
+GfxLayer.save_world_screen save_light
+GfxLayer.restore_world_screen restore_light
+
+# pad: the recording mode's twin of pad_is_playback_port (flag 0x800000, not playback's 0x400000)
+pad_check_playback pad_is_recording_port
+PadState.check_playback is_recording_port

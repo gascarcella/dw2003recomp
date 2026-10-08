@@ -22,7 +22,7 @@ s32 pad_read(u8 id, u8 *data);
 s32 pad_align_actuators(u8 id);
 void pad_update_actuators(u8 id);
 void pad_stop_recording(void);
-s32 pad_check_playback(s32 arg0);
+s32 pad_is_recording_port(s32 arg0);
 
 /* Init: clears the state, resets the button maps, PadInitMtap (multitap != 0) or PadInitDirect,
  * button repeat interval `repeat` (0: 0x10), then pad_start_com. */
@@ -85,7 +85,7 @@ void pad_update(void) {
 
     if (r == 1) {
         pad_state.playback_frame++;
-        if (pad_state.playback_frame >= 0x707 && pad_check_playback(pad_state.playback_port) == r) {
+        if (pad_state.playback_frame >= 0x707 && pad_is_recording_port(pad_state.playback_port) == r) {
             pad_stop_recording();
             return;
         }
@@ -176,7 +176,7 @@ s32 pad_start_recording(void) {
 void pad_stop_recording(void) {
 }
 
-s32 pad_check_playback(s32 arg0) {
+s32 pad_is_recording_port(s32 arg0) {
     if (pad_state.flags & 0x800000) {
         if (pad_state.playback_port == arg0) {
             return 1;
@@ -424,7 +424,7 @@ PadState pad_state = {
     .get_button_map = (s32 (*)(s32, s32))pad_get_button_map,
     .start_recording = pad_start_recording,
     .stop_recording = pad_stop_recording,
-    .check_playback = pad_check_playback,
+    .is_recording_port = pad_is_recording_port,
     .start_playback = pad_start_playback,
     .stop_playback = pad_stop_playback,
     .is_playback_port = pad_is_playback_port,

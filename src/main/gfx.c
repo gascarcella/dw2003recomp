@@ -63,8 +63,8 @@ void gfx_end_frame(s32 arg0) {
                 if (obj->camera_saved != 0) {
                     obj->restore_camera(obj);
                 }
-                if (obj->world_screen_saved != 0) {
-                    obj->restore_world_screen(obj);
+                if (obj->light_saved != 0) {
+                    obj->restore_light(obj);
                 }
                 obj->run_callbacks(obj);
             }
@@ -518,15 +518,15 @@ void gfx_restore_camera(GfxLayer *obj) {
     GsWSMATRIX = obj->cameras[gfx_module.buffer];
 }
 
-void gfx_save_world_screen(GfxLayer *obj, s32 arg1) {
-    obj->world_screen_saved = arg1;
+void gfx_save_light(GfxLayer *obj, s32 arg1) {
+    obj->light_saved = arg1;
     if (arg1 != 0) {
-        obj->world_screens[gfx_module.buffer] = GsLIGHTWSMATRIX;
+        obj->lights[gfx_module.buffer] = GsLIGHTWSMATRIX;
     }
 }
 
-void gfx_restore_world_screen(GfxLayer *obj) {
-    GsLIGHTWSMATRIX = obj->world_screens[gfx_module.buffer];
+void gfx_restore_light(GfxLayer *obj) {
+    GsLIGHTWSMATRIX = obj->lights[gfx_module.buffer];
 }
 
 /* Creates a layer with this DRAWENV and two ordering tables of 2^bits entries. */
@@ -562,8 +562,8 @@ GfxLayer *gfx_new_layer(DRAWENV *env, s32 bits) {
     obj->run_callbacks = gfx_run_callbacks;
     obj->save_camera = gfx_save_camera;
     obj->restore_camera = gfx_restore_camera;
-    obj->save_world_screen = gfx_save_world_screen;
-    obj->restore_world_screen = gfx_restore_world_screen;
+    obj->save_light = gfx_save_light;
+    obj->restore_light = gfx_restore_light;
     return obj;
 }
 
