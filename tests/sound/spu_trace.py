@@ -2,7 +2,7 @@
 """SPU register-write traces of the original game: the oracle for the PC port's LIBSND and SPU (docs/SOUND.md).
 
 Runs a layer-2 pad script (tests/replay/scripts/*.json) in PCSX-Redux under -debugger -interpreter with
-tests/sound/spu_trace.lua loaded before tests/replay/run.lua: a write breakpoint over the SPU's registers
+tests/sound/spu_trace.lua loaded before psxstack/tools/replay/run.lua: a write breakpoint over the SPU's registers
 (0x1F801C00..0x1F801DFF) and DMA4's (0x1F8010C0..CF) records every CPU store with its vsync tick, in order; a DMA4 start
 from RAM records the block's SPU address, length and SHA-1.
 

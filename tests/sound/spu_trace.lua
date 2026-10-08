@@ -1,5 +1,5 @@
 -- SPU register-write trace recorder, loaded into PCSX-Redux before the layer-2 runner (tests/sound/spu_trace.py writes
--- a wrapper chunk that does dofile(this) and then dofile(tests/replay/run.lua)). Needs -debugger -interpreter: memory
+-- a wrapper chunk that does dofile(this) and then dofile(psxstack/tools/replay/run.lua)). Needs -debugger -interpreter: memory
 -- and exec breakpoints never fire under the dynarec (measured: 0 hits with -debugger alone).
 --
 -- Input (DW3_SPU_TRACE_SPEC, a Lua chunk spu_trace.py writes):

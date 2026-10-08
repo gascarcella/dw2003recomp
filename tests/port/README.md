@@ -42,7 +42,7 @@ an expected file (`new_game`, `first_battle_save`), or the names given; its sani
 else.
 
 ## The script engine
-`psxstack/runtime/script.c` runs `tests/replay/scripts/*.json` with `tests/replay/run.lua`'s semantics, frame for frame: the step
+`psxstack/runtime/script.c` runs `tests/replay/scripts/*.json` with `psxstack/tools/replay/run.lua`'s semantics, frame for frame: the step
 runs after the frame log's sample on every vsync tick, instant steps (a checkpoint, a wait already satisfied, a `press`
 whose `until` holds, a `walk` that arrived) chain within the frame (at most 100), the held buttons go to the pad
 (`psyq_pad_set`, the physical buttons in the PS1 pad's bit order; the game rotates the face buttons itself) and to the

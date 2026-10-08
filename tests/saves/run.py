@@ -111,7 +111,7 @@ def run_emulator(script, card, out_dir):
     out_dir.mkdir(parents=True, exist_ok=True)
     lua_script = out_dir / "script.lua"
     lua_script.write_text("return " + replay.lua_literal(replay.parse_ints(script)) + "\n")
-    env = dict(os.environ, DW3_REPLAY_SCRIPT=str(lua_script), DW3_REPLAY_OUT=str(out_dir), DW3_REPLAY_SPEED="0")
+    env = replay.replay_env(lua_script, out_dir)   # the runner's environment (PSXSTACK_REPLAY_*, the DW3_ aliases)
     card2 = out_dir / "memcard2.mcd"
     card2.unlink(missing_ok=True)
     cmd = [str(replay.REDUX), "-no-ui", "-stdout", "-testmode", "-run", "-iso", str(DISC), "-bios", str(replay.OPENBIOS),

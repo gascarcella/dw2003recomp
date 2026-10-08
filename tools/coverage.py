@@ -6,7 +6,7 @@ Usage:
   tools/coverage.py report [--module NAME] [--report PATH]           # summarise the recorded runs
 
 `run` boots the disc once per source under PCSX-Redux with -debugger -interpreter and tools/coverage.lua loaded before
-the runner (tests/golden/oracle.lua or tests/replay/run.lua): one exec breakpoint per function start, deleted at its
+the runner (tests/golden/oracle.lua or psxstack/tools/replay/run.lua): one exec breakpoint per function start, deleted at its
 first hit, re-armed per overlay slot for the file resident there (the slots' files share addresses; the resident file
 is the one whose .text from the matching build equals RAM). Each source's hits go to build/coverage/<source>.json;
 the oracle's goldens and the replays' records are compared with the committed files on the way (coverage must not

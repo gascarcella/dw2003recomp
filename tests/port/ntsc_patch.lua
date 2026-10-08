@@ -3,7 +3,7 @@
 -- the time step, LIBSND's tick, actor speeds), and main_screen_pos at 0x8005CCB0, 1 -> 0 (the NTSC screen offset and the
 -- card game's NTSC layout). They are written at main's first instruction (an exec breakpoint, after the EXE is loaded
 -- and before main reads them), at every boot (a script's reset reloads the EXE).
--- Loaded before tests/replay/run.lua by `replay.py run --prelude` or `spu_trace.py run --prelude` (-debugger
+-- Loaded before psxstack/tools/replay/run.lua by `replay.py run --prelude` or `spu_trace.py run --prelude` (-debugger
 -- -interpreter). DW3_NTSC_SCREEN_POS=1 keeps main_screen_pos at 1, as the port's 60 Hz setting does.
 local ffi = require('ffi')
 local C = ffi.load('PCSX')
