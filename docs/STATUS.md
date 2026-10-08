@@ -95,7 +95,7 @@ The plan's milestones (`docs/PORT.md`):
   mods"). The `any`-CLUT replacement is [#77](https://github.com/gascarcella/dw2003recomp/issues/77).
 - **The port stack (psxstack):** the runtime, the Psy-Q shim, the build (`psxstack_add_game()`), the launcher and the
   debug tools live in the `psxstack` repository (gascarcella/psxstack; its `docs/PORT.md`, `docs/RUNTIME.md`,
-  `docs/LAUNCHER.md`), consumed as the `psxstack` submodule pinned at its tag `v0.2.0` (`scripts/worktree_init.sh`
+  `docs/LAUNCHER.md`), consumed as the `psxstack` submodule pinned at its tag `v0.2.1` (`scripts/worktree_init.sh`
   checks it out; CI and release.yml fetch it with a plain `git submodule update --init`: psxstack is public). This
   repository keeps the game's side: `include/port.h`
   (the hooks' PS1 side and the game's own hooks), `port/game/` (the adapter: `game.json`, the probes, the seven mods, the
