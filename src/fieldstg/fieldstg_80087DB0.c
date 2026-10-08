@@ -113,7 +113,8 @@ typedef struct FieldstgManagerData {
     /* 0x04 */ Fade *fade;         /* the fade (inn_fade_create) */
     /* 0x08 */ Object *warp_picture;  /* fieldstg_warp_picture_create's object */
     /* 0x0C */ FieldstgEvent *event;  /* the event running (fieldstg_start_indexed_event) */
-    /* 0x10 */ void *unk_10;         /* inn_create's object (fieldstg_open_inn), fieldstg_loader_create's */
+    /* 0x10 */ void *awaited;         /* the object the manager waits for until it ends: fieldstg_loader_create's
+                                        * (loading), inn_create's (fieldstg_open_inn) */
     /* 0x14 */ Object *map_title;  /* fieldstg_map_title_create's object */
     /* 0x18 */ FieldstgActor *party[4]; /* the player, then the partners */
     /* 0x28 */ struct FieldstgCamera *camera; /* fieldstg_camera_create's object */
@@ -211,7 +212,7 @@ typedef struct FieldstgCamera {
     /* 0x5C */ s32 shake; /* shake the screen (fieldstg_camera_set_shake) */
     /* 0x60 */ s32 shake_frame; /* shake frame, 0..3 */
     /* 0x64 */ s16 voice; /* voice of the shake sound, or -1 */
-    /* 0x66 */ u8 unk_66[0x2];
+    /* 0x66 */ u8 pad_66[0x2];
     /* 0x68 */ FieldstgPos pos; /* the smoothed centre */
     /* 0x70 */ s32 has_map_size; /* map_size is known */
     /* 0x74 */ FieldstgPos map_size; /* map size */
@@ -318,11 +319,11 @@ extern s32 fieldstg_shatter_state;
 extern s16 fieldstg_carry_voice;
 extern RECT fieldstg_shatter_rect;
 extern FieldstgShatterStep fieldstg_shatter_steps[];
-extern FieldstgSprite D_FIELDSTG_800996C4[];
-extern FieldstgMapEvent D_FIELDSTG_800997C0[];
-extern FieldstgVramPlace D_FIELDSTG_80097D0C[];
-extern FieldstgPlacedActor *D_FIELDSTG_800994F4[];
-extern FieldstgEventDef D_FIELDSTG_80099844[];
+extern FieldstgSprite fieldstg_stage_sprites[];
+extern FieldstgMapEvent fieldstg_stage_map_events[];
+extern FieldstgVramPlace fieldstg_stage_vram_places[];
+extern FieldstgPlacedActor *fieldstg_stage_actors[];
+extern FieldstgEventDef fieldstg_stage_events[];
 
 void fieldstg_icon_update(FieldstgIcon *obj);
 void fieldstg_map_events_update();
@@ -1749,11 +1750,11 @@ void fieldstg_manager_update(FieldstgManager *obj, FieldstgManagerData *data) {
             switch (obj->base.substep) {
             case 0:
             default:
-                data->unk_10 = fieldstg_loader_create(0);
+                data->awaited = fieldstg_loader_create(0);
                 obj->base.next_substep(obj);
                 break;
             case 1:
-                if (data->unk_10 == NULL) {
+                if (data->awaited == NULL) {
                     obj->base.next_step(obj);
                 }
                 break;
@@ -1790,7 +1791,7 @@ void fieldstg_manager_update(FieldstgManager *obj, FieldstgManagerData *data) {
             }
             break;
         case 2:
-            if (data->unk_10 == NULL) {
+            if (data->awaited == NULL) {
                 fieldstg_stage.menu_open = 0;
                 fieldstg_stage.event_running = 0;
                 obj->base.set_step(obj, 0);
@@ -4712,18 +4713,18 @@ void fieldstg_stage_setup(void) {
 
     fieldstg_stage.background_file = 0x1AC;
     fieldstg_stage.sprite_file = 0x01AD0000;
-    fieldstg_stage.sprites = D_FIELDSTG_800996C4;
-    fieldstg_stage.map_events = D_FIELDSTG_800997C0;
+    fieldstg_stage.sprites = fieldstg_stage_sprites;
+    fieldstg_stage.map_events = fieldstg_stage_map_events;
     fieldstg_stage.mask_file = 0x32C;
     fieldstg_stage.talk_file = records_language + 0xE8;
     fieldstg_stage.start_pos = (GamestatePos){ 0x6700, 0x12300 };
     fieldstg_stage.start_dir = 0;
-    fieldstg_stage.vram_places = D_FIELDSTG_80097D0C;
+    fieldstg_stage.vram_places = fieldstg_stage_vram_places;
     fieldstg_stage.music = 0x42;
-    fieldstg_stage.actors = D_FIELDSTG_800994F4;
+    fieldstg_stage.actors = fieldstg_stage_actors;
     fieldstg_stage.sound = 0x61080002;
     fieldstg_stage.color = color;
-    fieldstg_stage.events = D_FIELDSTG_80099844;
+    fieldstg_stage.events = fieldstg_stage_events;
     fieldstg_attr.set_file(0, 0x01AD0002);
     fieldstg_attr.set_file(1, 0x01AD0003);
     fieldstg_attr.set_file(7, 0x01AD0001);
@@ -4877,14 +4878,15 @@ void fieldstg_to_screen_pos(FieldstgPos *pos) {
     pos->y -= offset[1];
 }
 
-/* Clears unk_10C of the player (actor 1, else 2); fieldstg_event_funcs.player_clear_unk_10C, which nothing calls. */
-void fieldstg_player_clear_unk_10C(void) {
+/* Clears the player's script_flag (actor 1, else 2); fieldstg_event_funcs.player_clear_script_flag, which nothing
+ * calls. */
+void fieldstg_player_clear_script_flag(void) {
     FieldstgActor *obj = fieldstg_find_actor(1);
 
     if (obj == NULL) {
         obj = fieldstg_find_actor(2);
     }
-    obj->unk_10C = 0;
+    obj->script_flag = 0;
 }
 
 FieldstgScriptObject *fieldstg_find_script_object(s32 id) {
@@ -5165,27 +5167,32 @@ s16 fieldstg_inn_maps[22] = {
     710, 715, 726, 585, 691, 0,
 };
 
-FieldstgAnimFrame D_FIELDSTG_80097690[6] = { { 0x23, 8 }, { 0x24, 8 }, { 0x25, 8 }, { 0x26, 8 }, { 0xFF, 0 }, { 0, 0 } };
+FieldstgAnimFrame fieldstg_actor_effect_anim_0[6] = {
+    { 0x23, 8 }, { 0x24, 8 }, { 0x25, 8 }, { 0x26, 8 }, { 0xFF, 0 }, { 0, 0 },
+};
 
-FieldstgAnimFrame D_FIELDSTG_8009769C[24] = {
+FieldstgAnimFrame fieldstg_actor_effect_anim_1[24] = {
     { 0x23, 3 }, { 0x27, 4 }, { 0x28, 4 }, { 0x2D, 4 }, { 0x2E, 4 }, { 0x2F, 3 }, { 0x30, 2 }, { 0x2E, 2 },
     { 0x2D, 2 }, { 0x2E, 2 }, { 0x30, 2 }, { 0x2E, 2 }, { 0x2D, 2 }, { 0x2E, 2 }, { 0x30, 2 }, { 0x2E, 2 },
     { 0x2D, 2 }, { 0x2E, 2 }, { 0x30, 2 }, { 0x31, 2 }, { 0x2B, 2 }, { 0x29, 2 }, { 0x2A, 2 }, { 0xFF, 0x13 },
 };
 
-FieldstgAnimFrame D_FIELDSTG_800976CC[10] = {
+FieldstgAnimFrame fieldstg_actor_effect_anim_2[10] = {
     { 0x29, 6 }, { 0x2E, 3 }, { 0x30, 3 }, { 0x28, 6 }, { 0x2C, 8 }, { 0x23, 8 }, { 0x24, 8 }, { 0x25, 8 },
     { 0x26, 8 }, { 0xFF, 5 },
 };
 
-FieldstgAnimFrame D_FIELDSTG_800976E0[30] = {
+FieldstgAnimFrame fieldstg_actor_effect_anim_3[30] = {
     { 0x23, 3 }, { 0x27, 4 }, { 0x28, 4 }, { 0x2D, 4 }, { 0x2E, 4 }, { 0x2F, 3 }, { 0x30, 2 }, { 0x2E, 2 },
     { 0x2D, 2 }, { 0x2E, 2 }, { 0x30, 2 }, { 0x2E, 2 }, { 0x2D, 2 }, { 0x2E, 2 }, { 0x30, 2 }, { 0x2E, 2 },
     { 0x2D, 2 }, { 0x2E, 2 }, { 0x30, 2 }, { 0x2F, 2 }, { 0x2E, 2 }, { 0x2D, 2 }, { 0x28, 3 }, { 0x23, 3 },
     { 0x23, 8 }, { 0x24, 8 }, { 0x25, 8 }, { 0x26, 8 }, { 0xFF, 0x18 }, { 0, 0 },
 };
 
-FieldstgAnimFrame *fieldstg_actor_effect_anims[4] = { D_FIELDSTG_80097690, D_FIELDSTG_8009769C, D_FIELDSTG_800976CC, D_FIELDSTG_800976E0 };
+FieldstgAnimFrame *fieldstg_actor_effect_anims[4] = {
+    fieldstg_actor_effect_anim_0, fieldstg_actor_effect_anim_1, fieldstg_actor_effect_anim_2,
+    fieldstg_actor_effect_anim_3,
+};
 
 s16 fieldstg_ladder_offsets[16][2] = {
     { -5, -4 }, { -5, -4 }, { -5, -4 }, { -5, -9 }, { -6, -13 }, { -8, -17 }, { -10, -20 }, { -12, -23 },
@@ -5236,57 +5243,59 @@ FieldstgAnimFrame fieldstg_spots_open_anim[12] = {
     { 0x40, 8 }, { 0x38, 8 }, { 0xFF, 0 }, { 5, 0 },
 };
 
-FieldstgAnimFrame D_FIELDSTG_800979E8[8] = {
+FieldstgAnimFrame fieldstg_spots_effect_anim_0[8] = {
     { 0, 8 }, { 0x5B, 4 }, { 0x5C, 4 }, { 0x5D, 4 }, { 0x5E, 4 }, { 0x5F, 4 }, { 0xFF, 0 }, { 0, 0 },
 };
 
-FieldstgAnimFrame D_FIELDSTG_800979F8[8] = {
+FieldstgAnimFrame fieldstg_spots_effect_anim_1[8] = {
     { 0, 8 }, { 0x56, 4 }, { 0x57, 4 }, { 0x58, 4 }, { 0x59, 4 }, { 0x5A, 4 }, { 0xFF, 0 }, { 0, 0 },
 };
 
-FieldstgAnimFrame D_FIELDSTG_80097A08[8] = {
+FieldstgAnimFrame fieldstg_spots_effect_anim_2[8] = {
     { 0, 8 }, { 0x51, 4 }, { 0x52, 4 }, { 0x53, 4 }, { 0x54, 4 }, { 0x55, 4 }, { 0xFF, 0 }, { 0, 0 },
 };
 
-FieldstgAnimFrame D_FIELDSTG_80097A18[8] = {
+FieldstgAnimFrame fieldstg_spots_effect_anim_3[8] = {
     { 0, 8 }, { 0x4C, 4 }, { 0x4D, 4 }, { 0x4E, 4 }, { 0x4F, 4 }, { 0x50, 4 }, { 0xFF, 0 }, { 0, 0 },
 };
 
-FieldstgAnimFrame D_FIELDSTG_80097A28[8] = {
+FieldstgAnimFrame fieldstg_spots_effect_anim_4[8] = {
     { 0, 8 }, { 0x47, 4 }, { 0x48, 4 }, { 0x49, 4 }, { 0x4A, 4 }, { 0x4B, 4 }, { 0xFF, 0 }, { 0, 0 },
 };
 
-FieldstgAnimFrame D_FIELDSTG_80097A38[8] = {
+FieldstgAnimFrame fieldstg_spots_effect_anim_5[8] = {
     { 0, 8 }, { 0x14, 4 }, { 0x15, 4 }, { 0x16, 4 }, { 0x17, 4 }, { 0x18, 4 }, { 0xFF, 0 }, { 0, 0 },
 };
 
-FieldstgAnimFrame D_FIELDSTG_80097A48[8] = {
+FieldstgAnimFrame fieldstg_spots_effect_anim_6[8] = {
     { 0, 8 }, { 0x19, 4 }, { 0x1A, 4 }, { 0x1B, 4 }, { 0x1C, 4 }, { 0x1D, 4 }, { 0xFF, 0 }, { 0, 0 },
 };
 
-FieldstgAnimFrame D_FIELDSTG_80097A58[8] = {
+FieldstgAnimFrame fieldstg_spots_effect_anim_7[8] = {
     { 0, 8 }, { 0x1E, 4 }, { 0x1F, 4 }, { 0x20, 4 }, { 0x21, 4 }, { 0x22, 4 }, { 0xFF, 0 }, { 0, 0 },
 };
 
 FieldstgAnimFrame *fieldstg_spots_effect_anims[8] = {
-    D_FIELDSTG_800979E8, D_FIELDSTG_800979F8, D_FIELDSTG_80097A08, D_FIELDSTG_80097A18, D_FIELDSTG_80097A28,
-    D_FIELDSTG_80097A38, D_FIELDSTG_80097A48, D_FIELDSTG_80097A58,
+    fieldstg_spots_effect_anim_0, fieldstg_spots_effect_anim_1, fieldstg_spots_effect_anim_2,
+    fieldstg_spots_effect_anim_3, fieldstg_spots_effect_anim_4, fieldstg_spots_effect_anim_5,
+    fieldstg_spots_effect_anim_6, fieldstg_spots_effect_anim_7,
 };
 
 s32 fieldstg_spots_effect_depths[8] = { 1, 1, 1, -1, -1, -1, 1, 1 };
-u8 D_FIELDSTG_80097AA8[12] = { 0, 0, 0, 0, 0, 0, 0xAA, 0xAA, 0x95, 0xAA, 0xA, 0 };
-u8 D_FIELDSTG_80097AB4[12] = { 0xAA, 0x15, 0, 0x95, 0xAA, 0x15, 0, 0x15, 0, 0x54, 0xAA, 0x56 };
-u8 D_FIELDSTG_80097AC0[12] = { 0xAA, 0x56, 0xAA, 0xAA, 0xAA, 2, 0, 0, 0, 0, 0xA8, 0xAA };
-u8 D_FIELDSTG_80097ACC[12] = { 0x80, 0xAA, 0x2A, 0, 0xA8, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0, 0x54 };
-u8 D_FIELDSTG_80097AD8[12] = { 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0x5A, 0xA9, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA };
-u8 D_FIELDSTG_80097AE4[12] = { 0xAA, 0xA, 0, 0, 0, 0, 0xA8, 0xAA, 0xAA, 0xAA, 0xAA, 0x56 };
-u8 D_FIELDSTG_80097AF0[12] = { 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0x2A, 0, 0xA8, 0xAA };
-u8 D_FIELDSTG_80097AFC[12] = { 0, 0, 0, 0, 0x55, 0xA5, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA };
-u8 D_FIELDSTG_80097B08[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+u8 fieldstg_meter_pattern_0[12] = { 0, 0, 0, 0, 0, 0, 0xAA, 0xAA, 0x95, 0xAA, 0xA, 0 };
+u8 fieldstg_meter_pattern_1[12] = { 0xAA, 0x15, 0, 0x95, 0xAA, 0x15, 0, 0x15, 0, 0x54, 0xAA, 0x56 };
+u8 fieldstg_meter_pattern_2[12] = { 0xAA, 0x56, 0xAA, 0xAA, 0xAA, 2, 0, 0, 0, 0, 0xA8, 0xAA };
+u8 fieldstg_meter_pattern_3[12] = { 0x80, 0xAA, 0x2A, 0, 0xA8, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0, 0x54 };
+u8 fieldstg_meter_pattern_4[12] = { 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0x5A, 0xA9, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA };
+u8 fieldstg_meter_pattern_5[12] = { 0xAA, 0xA, 0, 0, 0, 0, 0xA8, 0xAA, 0xAA, 0xAA, 0xAA, 0x56 };
+u8 fieldstg_meter_pattern_6[12] = { 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0x2A, 0, 0xA8, 0xAA };
+u8 fieldstg_meter_pattern_7[12] = { 0, 0, 0, 0, 0x55, 0xA5, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA };
+u8 fieldstg_meter_pattern_8[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 u8 *fieldstg_meter_patterns[9] = {
-    D_FIELDSTG_80097AA8, D_FIELDSTG_80097AB4, D_FIELDSTG_80097AC0, D_FIELDSTG_80097ACC, D_FIELDSTG_80097AD8,
-    D_FIELDSTG_80097AE4, D_FIELDSTG_80097AF0, D_FIELDSTG_80097AFC, D_FIELDSTG_80097B08,
+    fieldstg_meter_pattern_0, fieldstg_meter_pattern_1, fieldstg_meter_pattern_2, fieldstg_meter_pattern_3,
+    fieldstg_meter_pattern_4, fieldstg_meter_pattern_5, fieldstg_meter_pattern_6, fieldstg_meter_pattern_7,
+    fieldstg_meter_pattern_8,
 };
 
 FieldstgPos fieldstg_camera_shake_offsets[5] = { { 0, 0 }, { -1, -1 }, { -1, 1 }, { 1, -1 }, { 1, 1 } };
@@ -5324,7 +5333,9 @@ FieldstgPos fieldstg_front_offsets[8] = {
     { 0, 16 }, { -11, 11 }, { -16, 0 }, { -11, -11 }, { 0, -16 }, { 11, -11 }, { 16, 0 }, { 11, 11 },
 };
 
-FieldstgVramPlace D_FIELDSTG_80097D0C[22] = {
+/* Stage 528's data (fieldstg_stage_setup): the VRAM places, then the actors' condition flags and talks, the placed
+ * actors and their list, the sprites, the map events and the events, as a stage file's (wstag<N>_vram_places, ...). */
+FieldstgVramPlace fieldstg_stage_vram_places[22] = {
     { 512, 256, 540, 422, 112, 166, 560, 510 }, { 512, 256, 512, 256, 0, 0, 544, 510 },
     { 512, 256, 534, 312, 88, 56, 512, 509 }, { 512, 256, 520, 444, 32, 188, 528, 509 },
     { 512, 256, 528, 444, 64, 188, 544, 509 }, { 512, 256, 512, 444, 0, 188, 560, 509 },
@@ -5578,7 +5589,7 @@ u16 D_FIELDSTG_80098BE0[4] = { 0x6027, 1, 0xFFFF, 0 };
 u16 D_FIELDSTG_80098BE8[4] = { 0x6027, 1, 0xFFFF, 0 };
 u16 D_FIELDSTG_80098BF0[4] = { 0x6027, 1, 0xFFFF, 0 };
 
-FieldstgPlacedActor D_FIELDSTG_80098BF8[115] = {
+FieldstgPlacedActor fieldstg_stage_placed_actors[115] = {
     { D_FIELDSTG_8009881C, NULL, 30, 4, 336, 329, 1 }, { D_FIELDSTG_80098824, NULL, 30, 4, 336, 329, 1 },
     { D_FIELDSTG_8009882C, NULL, 30, 4, 336, 329, 1 }, { D_FIELDSTG_80098834, NULL, 30, 4, 336, 329, 1 },
     { D_FIELDSTG_8009883C, NULL, 30, 4, 336, 329, 1 }, { D_FIELDSTG_80098844, NULL, 30, 4, 336, 329, 1 },
@@ -5689,39 +5700,49 @@ FieldstgPlacedActor D_FIELDSTG_80098BF8[115] = {
     { D_FIELDSTG_80098BF0, D_FIELDSTG_80098804, 174, 19, 192, 402, 5 },
 };
 
-FieldstgPlacedActor *D_FIELDSTG_800994F4[116] = {
-    &D_FIELDSTG_80098BF8[0], &D_FIELDSTG_80098BF8[1], &D_FIELDSTG_80098BF8[2], &D_FIELDSTG_80098BF8[3],
-    &D_FIELDSTG_80098BF8[4], &D_FIELDSTG_80098BF8[5], &D_FIELDSTG_80098BF8[6], &D_FIELDSTG_80098BF8[7],
-    &D_FIELDSTG_80098BF8[8], &D_FIELDSTG_80098BF8[9], &D_FIELDSTG_80098BF8[10], &D_FIELDSTG_80098BF8[11],
-    &D_FIELDSTG_80098BF8[12], &D_FIELDSTG_80098BF8[13], &D_FIELDSTG_80098BF8[14], &D_FIELDSTG_80098BF8[15],
-    &D_FIELDSTG_80098BF8[16], &D_FIELDSTG_80098BF8[17], &D_FIELDSTG_80098BF8[18], &D_FIELDSTG_80098BF8[19],
-    &D_FIELDSTG_80098BF8[20], &D_FIELDSTG_80098BF8[21], &D_FIELDSTG_80098BF8[22], &D_FIELDSTG_80098BF8[23],
-    &D_FIELDSTG_80098BF8[24], &D_FIELDSTG_80098BF8[25], &D_FIELDSTG_80098BF8[26], &D_FIELDSTG_80098BF8[27],
-    &D_FIELDSTG_80098BF8[28], &D_FIELDSTG_80098BF8[29], &D_FIELDSTG_80098BF8[30], &D_FIELDSTG_80098BF8[31],
-    &D_FIELDSTG_80098BF8[32], &D_FIELDSTG_80098BF8[33], &D_FIELDSTG_80098BF8[34], &D_FIELDSTG_80098BF8[35],
-    &D_FIELDSTG_80098BF8[36], &D_FIELDSTG_80098BF8[37], &D_FIELDSTG_80098BF8[38], &D_FIELDSTG_80098BF8[39],
-    &D_FIELDSTG_80098BF8[40], &D_FIELDSTG_80098BF8[41], &D_FIELDSTG_80098BF8[42], &D_FIELDSTG_80098BF8[43],
-    &D_FIELDSTG_80098BF8[44], &D_FIELDSTG_80098BF8[45], &D_FIELDSTG_80098BF8[46], &D_FIELDSTG_80098BF8[47],
-    &D_FIELDSTG_80098BF8[48], &D_FIELDSTG_80098BF8[49], &D_FIELDSTG_80098BF8[50], &D_FIELDSTG_80098BF8[51],
-    &D_FIELDSTG_80098BF8[52], &D_FIELDSTG_80098BF8[53], &D_FIELDSTG_80098BF8[54], &D_FIELDSTG_80098BF8[55],
-    &D_FIELDSTG_80098BF8[56], &D_FIELDSTG_80098BF8[57], &D_FIELDSTG_80098BF8[58], &D_FIELDSTG_80098BF8[59],
-    &D_FIELDSTG_80098BF8[60], &D_FIELDSTG_80098BF8[61], &D_FIELDSTG_80098BF8[62], &D_FIELDSTG_80098BF8[63],
-    &D_FIELDSTG_80098BF8[64], &D_FIELDSTG_80098BF8[65], &D_FIELDSTG_80098BF8[66], &D_FIELDSTG_80098BF8[67],
-    &D_FIELDSTG_80098BF8[68], &D_FIELDSTG_80098BF8[69], &D_FIELDSTG_80098BF8[70], &D_FIELDSTG_80098BF8[71],
-    &D_FIELDSTG_80098BF8[72], &D_FIELDSTG_80098BF8[73], &D_FIELDSTG_80098BF8[74], &D_FIELDSTG_80098BF8[75],
-    &D_FIELDSTG_80098BF8[76], &D_FIELDSTG_80098BF8[77], &D_FIELDSTG_80098BF8[78], &D_FIELDSTG_80098BF8[79],
-    &D_FIELDSTG_80098BF8[80], &D_FIELDSTG_80098BF8[81], &D_FIELDSTG_80098BF8[82], &D_FIELDSTG_80098BF8[83],
-    &D_FIELDSTG_80098BF8[84], &D_FIELDSTG_80098BF8[85], &D_FIELDSTG_80098BF8[86], &D_FIELDSTG_80098BF8[87],
-    &D_FIELDSTG_80098BF8[88], &D_FIELDSTG_80098BF8[89], &D_FIELDSTG_80098BF8[90], &D_FIELDSTG_80098BF8[91],
-    &D_FIELDSTG_80098BF8[92], &D_FIELDSTG_80098BF8[93], &D_FIELDSTG_80098BF8[94], &D_FIELDSTG_80098BF8[95],
-    &D_FIELDSTG_80098BF8[96], &D_FIELDSTG_80098BF8[97], &D_FIELDSTG_80098BF8[98], &D_FIELDSTG_80098BF8[99],
-    &D_FIELDSTG_80098BF8[100], &D_FIELDSTG_80098BF8[101], &D_FIELDSTG_80098BF8[102], &D_FIELDSTG_80098BF8[103],
-    &D_FIELDSTG_80098BF8[104], &D_FIELDSTG_80098BF8[105], &D_FIELDSTG_80098BF8[106], &D_FIELDSTG_80098BF8[107],
-    &D_FIELDSTG_80098BF8[108], &D_FIELDSTG_80098BF8[109], &D_FIELDSTG_80098BF8[110], &D_FIELDSTG_80098BF8[111],
-    &D_FIELDSTG_80098BF8[112], &D_FIELDSTG_80098BF8[113], &D_FIELDSTG_80098BF8[114], NULL,
+FieldstgPlacedActor *fieldstg_stage_actors[116] = {
+    &fieldstg_stage_placed_actors[0], &fieldstg_stage_placed_actors[1], &fieldstg_stage_placed_actors[2],
+    &fieldstg_stage_placed_actors[3], &fieldstg_stage_placed_actors[4], &fieldstg_stage_placed_actors[5],
+    &fieldstg_stage_placed_actors[6], &fieldstg_stage_placed_actors[7], &fieldstg_stage_placed_actors[8],
+    &fieldstg_stage_placed_actors[9], &fieldstg_stage_placed_actors[10], &fieldstg_stage_placed_actors[11],
+    &fieldstg_stage_placed_actors[12], &fieldstg_stage_placed_actors[13], &fieldstg_stage_placed_actors[14],
+    &fieldstg_stage_placed_actors[15], &fieldstg_stage_placed_actors[16], &fieldstg_stage_placed_actors[17],
+    &fieldstg_stage_placed_actors[18], &fieldstg_stage_placed_actors[19], &fieldstg_stage_placed_actors[20],
+    &fieldstg_stage_placed_actors[21], &fieldstg_stage_placed_actors[22], &fieldstg_stage_placed_actors[23],
+    &fieldstg_stage_placed_actors[24], &fieldstg_stage_placed_actors[25], &fieldstg_stage_placed_actors[26],
+    &fieldstg_stage_placed_actors[27], &fieldstg_stage_placed_actors[28], &fieldstg_stage_placed_actors[29],
+    &fieldstg_stage_placed_actors[30], &fieldstg_stage_placed_actors[31], &fieldstg_stage_placed_actors[32],
+    &fieldstg_stage_placed_actors[33], &fieldstg_stage_placed_actors[34], &fieldstg_stage_placed_actors[35],
+    &fieldstg_stage_placed_actors[36], &fieldstg_stage_placed_actors[37], &fieldstg_stage_placed_actors[38],
+    &fieldstg_stage_placed_actors[39], &fieldstg_stage_placed_actors[40], &fieldstg_stage_placed_actors[41],
+    &fieldstg_stage_placed_actors[42], &fieldstg_stage_placed_actors[43], &fieldstg_stage_placed_actors[44],
+    &fieldstg_stage_placed_actors[45], &fieldstg_stage_placed_actors[46], &fieldstg_stage_placed_actors[47],
+    &fieldstg_stage_placed_actors[48], &fieldstg_stage_placed_actors[49], &fieldstg_stage_placed_actors[50],
+    &fieldstg_stage_placed_actors[51], &fieldstg_stage_placed_actors[52], &fieldstg_stage_placed_actors[53],
+    &fieldstg_stage_placed_actors[54], &fieldstg_stage_placed_actors[55], &fieldstg_stage_placed_actors[56],
+    &fieldstg_stage_placed_actors[57], &fieldstg_stage_placed_actors[58], &fieldstg_stage_placed_actors[59],
+    &fieldstg_stage_placed_actors[60], &fieldstg_stage_placed_actors[61], &fieldstg_stage_placed_actors[62],
+    &fieldstg_stage_placed_actors[63], &fieldstg_stage_placed_actors[64], &fieldstg_stage_placed_actors[65],
+    &fieldstg_stage_placed_actors[66], &fieldstg_stage_placed_actors[67], &fieldstg_stage_placed_actors[68],
+    &fieldstg_stage_placed_actors[69], &fieldstg_stage_placed_actors[70], &fieldstg_stage_placed_actors[71],
+    &fieldstg_stage_placed_actors[72], &fieldstg_stage_placed_actors[73], &fieldstg_stage_placed_actors[74],
+    &fieldstg_stage_placed_actors[75], &fieldstg_stage_placed_actors[76], &fieldstg_stage_placed_actors[77],
+    &fieldstg_stage_placed_actors[78], &fieldstg_stage_placed_actors[79], &fieldstg_stage_placed_actors[80],
+    &fieldstg_stage_placed_actors[81], &fieldstg_stage_placed_actors[82], &fieldstg_stage_placed_actors[83],
+    &fieldstg_stage_placed_actors[84], &fieldstg_stage_placed_actors[85], &fieldstg_stage_placed_actors[86],
+    &fieldstg_stage_placed_actors[87], &fieldstg_stage_placed_actors[88], &fieldstg_stage_placed_actors[89],
+    &fieldstg_stage_placed_actors[90], &fieldstg_stage_placed_actors[91], &fieldstg_stage_placed_actors[92],
+    &fieldstg_stage_placed_actors[93], &fieldstg_stage_placed_actors[94], &fieldstg_stage_placed_actors[95],
+    &fieldstg_stage_placed_actors[96], &fieldstg_stage_placed_actors[97], &fieldstg_stage_placed_actors[98],
+    &fieldstg_stage_placed_actors[99], &fieldstg_stage_placed_actors[100], &fieldstg_stage_placed_actors[101],
+    &fieldstg_stage_placed_actors[102], &fieldstg_stage_placed_actors[103], &fieldstg_stage_placed_actors[104],
+    &fieldstg_stage_placed_actors[105], &fieldstg_stage_placed_actors[106], &fieldstg_stage_placed_actors[107],
+    &fieldstg_stage_placed_actors[108], &fieldstg_stage_placed_actors[109], &fieldstg_stage_placed_actors[110],
+    &fieldstg_stage_placed_actors[111], &fieldstg_stage_placed_actors[112], &fieldstg_stage_placed_actors[113],
+    &fieldstg_stage_placed_actors[114], NULL,
 };
 
-FieldstgSprite D_FIELDSTG_800996C4[14] = {
+FieldstgSprite fieldstg_stage_sprites[14] = {
     { 1, 1, 0x44, 2, 0x52, 2, 0, 1, 4, 0, 312, 282, 0, 0 },
     { 1, 2, 0x40, 2, 0x4A, 1, 0x4A, 0x51, 4, 0, 135, 358, 0, 0 },
     { 1, 0, 0x40, 6, 0x3E, 1, 0x3E, 0x43, 4, 0, 357, 161, 0, 0 },
@@ -5736,7 +5757,7 @@ FieldstgSprite D_FIELDSTG_800996C4[14] = {
     { 1, 0, 0x40, 8, 0x38, 1, 0x38, 0x3D, 4, 0, 357, 241, 280, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 };
 
-FieldstgMapEvent D_FIELDSTG_800997C0[5] = {
+FieldstgMapEvent fieldstg_stage_map_events[5] = {
     { 0xFFFF, 0, 0xFFFF, 0, 1, 0x201, 0x368, 0xF4, 1, 0, 0, 0 },
     { 0xFFFF, 0, 0xFFFF, 0, 1, 0x212, 0x2FE, 0xA5, 1, 0, 0, 0 }, { 0xFFFF, 0, 0xFFFF, 0, 6, 1, 0, 0, 0, 0, 0, 0 },
     { 0xFFFF, 0, 0xFFFF, 0, 5, 8, 0, 0, 0, 0, 0, 0 }, { 0xFFFF, 0, 0xFFFF, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -5744,7 +5765,7 @@ FieldstgMapEvent D_FIELDSTG_800997C0[5] = {
 
 FieldstgStageFuncs fieldstg_stage_funcs = { fieldstg_stage_setup, fieldstg_window_anim_start, fieldstg_window_anim_update };
 
-FieldstgEventDef D_FIELDSTG_80099844[67] = {
+FieldstgEventDef fieldstg_stage_events[67] = {
     { 1320, SLOT_PTR(2, s16 *, 0x800A5DE0), 0x1190040, NULL, NULL }, { 1325, SLOT_PTR(2, s16 *, 0x800A5EC4), 0x1190041, NULL, NULL },
     { 1331, SLOT_PTR(2, s16 *, 0x800A5FA8), 0x1190000, NULL, NULL },
     { 1332, NULL, 0, (Object *(*)(void))fieldstg_choice_start_0, NULL },
@@ -6057,7 +6078,10 @@ FieldstgStageEntry fieldstg_stages[240] = {
 };
 
 FieldstgTimer fieldstg_timer = { 0, 0, fieldstg_timer_reset, fieldstg_find_actor };
-FieldstgEventFuncs fieldstg_event_funcs = { fieldstg_to_screen_pos, fieldstg_wait_frames, fieldstg_wait_anim_done, fieldstg_wait_walk_done, fieldstg_player_clear_unk_10C };
+FieldstgEventFuncs fieldstg_event_funcs = {
+    fieldstg_to_screen_pos, fieldstg_wait_frames, fieldstg_wait_anim_done, fieldstg_wait_walk_done,
+    fieldstg_player_clear_script_flag,
+};
 
 FieldstgScriptObject fieldstg_script_objects[58] = {
     { 800, SLOT_FUNC(Object *(*)(s32), 0x800A6F8C), SLOT_FUNC(void (*)(void *, s32, s32), 0x800A6F40) },

@@ -219,7 +219,7 @@ typedef struct FieldstgActor {
     /* 0x0C0 */ s32 reload; /* reload the sprite */
     /* 0x0C4 */ s32 vertical_speed; /* vertical speed (fieldstg_player_control_height) */
     /* 0x0C8 */ s16 voice; /* voice of a looping sound, or -1 */
-    /* 0x0CA */ u8 unk_CA[0x2];
+    /* 0x0CA */ u8 pad_CA[0x2];
     /* 0x0CC */ s32 anim_pos;  /* position in the animation script */
     /* 0x0D0 */ s32 anim_time; /* time left of the frame */
     /* 0x0D4 */ u32 frame_file; /* sprite sub-file ID */
@@ -237,7 +237,7 @@ typedef struct FieldstgActor {
     /* 0x100 */ s32 no_turn; /* doesn't turn to the talker (actors 0x28-0x2A, 0x3E, 0x11A) */
     /* 0x104 */ struct FieldstgTrail *trail;
     /* 0x108 */ void (*control)(); /* run every frame: pad control, following, scripted walk, ... */
-    /* 0x10C */ s32 unk_10C; /* only ever cleared (fieldstg_player_clear_unk_10C); nothing reads it */
+    /* 0x10C */ s32 script_flag; /* only ever cleared (fieldstg_player_clear_script_flag); nothing reads it */
     /* 0x110 */ void (*walk_out)(struct FieldstgActor *obj, s32 dir);
     /* 0x114 */ void (*climb_from_bottom)(struct FieldstgActor *obj, s32 dir, s32 x, s32 y, s32 height);
     /* 0x118 */ void (*climb_from_top)(struct FieldstgActor *obj, s32 dir, s32 x, s32 y, s32 height);
@@ -325,7 +325,7 @@ typedef struct FieldstgEventFuncs {
     /* 0x04 */ void (*wait_frames)(s32 frames, s32 *count); /* fieldstg_wait_frames */
     /* 0x08 */ void (*wait_anim_done)(s32 id, s32 *count);     /* fieldstg_wait_anim_done */
     /* 0x0C */ void (*wait_walk_done)(s32 id, s32 *count);     /* fieldstg_wait_walk_done */
-    /* 0x10 */ void (*player_clear_unk_10C)(void);     /* fieldstg_player_clear_unk_10C (nothing calls it) */
+    /* 0x10 */ void (*player_clear_script_flag)(void);     /* fieldstg_player_clear_script_flag (nothing calls it) */
 } FieldstgEventFuncs; /* size 0x14 */
 
 extern FieldstgEventFuncs fieldstg_event_funcs;
