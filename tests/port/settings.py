@@ -268,6 +268,10 @@ def main():
           "--renderer, --internal-scale")
     _, s, _ = printed(binary, a / "full.json", "--subpixel", "on")
     check(s["video"]["subpixel"] == "on", "--subpixel on overrides video.subpixel \"off\"")
+    _, s, _ = printed(binary, a / "full.json", "--subpixel", "perspective")
+    check(s["video"]["subpixel"] == "perspective", "--subpixel perspective")
+    _, s, _ = printed(binary, write(a / "perspective.json", {"schema": 1, "video": {"subpixel": "perspective"}}))
+    check(s["video"]["subpixel"] == "perspective", "video.subpixel \"perspective\" read and printed back")
 
     _, s, _ = printed(binary, a / "full.json", "--filter", "none")
     check(s["video"]["filter"] == "none", "--filter overrides video.filter")
@@ -306,7 +310,7 @@ def main():
         "internal scale 9": ({"schema": 1, "video": {"internal_scale": 9}},
                              "video.internal_scale: an integer from 1 to 8"),
         "an unknown subpixel": ({"schema": 1, "video": {"subpixel": "smooth"}},
-                                'video.subpixel: "off" or "on", not "smooth"'),
+                                'video.subpixel: "off", "on" or "perspective", not "smooth"'),
         "subpixel not a string": ({"schema": 1, "video": {"subpixel": True}}, "video.subpixel: a string"),
         "a card path not a string": ({"schema": 1, "memcard1": 3}, "memcard1: a path"),
         "an unknown filter": ({"schema": 1, "video": {"filter": "blur"}}, 'video.filter: "none" or "sharp", not "blur"'),
