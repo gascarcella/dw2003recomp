@@ -301,6 +301,8 @@ byte-identical; `--m32` adds the 32-bit build (same log and record: the layout c
 report). Frames, `random_index` and the full hash are not compared, as between the emulator's two cores (`tests/port/README.md`).
 It needs the disc, the host gcc, CMake and Ninja (on PATH, or `scripts/setup.sh cmake` puts them in the venv) and the
 venv: no emulator. `scripts/test.sh` skips it when one is missing; CI runs it, and `--m32`, with the data checkout.
+`tests/port/savestate.py` (in the same layer) resumes `first_battle_save` from a save state at `battle_start` and
+requires the straight run's record, log tail and audio (docs/PORT.md "Save states").
 The mods' tests (`tests/port/mods.py`, the longest of the port's checks: ~4 min one after another) are their own layer,
 `mods`: each mod's test runs in its own process (`--only MOD`), `DW3_JOBS` at a time, in CI's own `port-mods` job.
 

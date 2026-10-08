@@ -87,6 +87,11 @@ The plan's milestones (`docs/PORT.md`):
 - **Debug channel and MCP server:** `dw2003 --debug SOCKET` lets a tool pause, step, press, read and write memory and
   take screenshots between two vsyncs; `tools/mcp/` (registered by `.mcp.json`) is the MCP server over it, with symbol
   names from `nm` and the config tables (`docs/PORT.md`; gate: `tests/port/debug.py`).
+- **Save states** ([#80](https://github.com/gascarcella/dw2003recomp/issues/80)): `--save-state WHEN:FILE` and
+  `--load-state FILE` (and the debug channel's and MCP's save and load) put the whole machine, the game's native stack
+  included, in a file of about 8 MB that the same binary resumes from; a run resumed at the first battle ends exactly as
+  the straight replay (`-m64`, `-m32`, sanitizer, Windows under Wine; `tests/port/savestate.py`). The battle fixture:
+  `tests/port/savestate.py path` (`docs/PORT.md` "Save states").
 - **Platforms:** Linux x86_64 and Windows x86_64 (cross-built from Linux; the board's Windows track,
   [#37](https://github.com/gascarcella/dw2003recomp/issues/37)):
   the cross toolchain (llvm-mingw, SDL3 for Windows, `scripts/build_windows.sh`) builds `dw2003.exe` and the

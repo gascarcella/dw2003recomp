@@ -138,6 +138,7 @@ prototypes in `include/psyq/`.
 | Settings, mods, input | Settings round trip; mods keep the emulator's stable hashes; the battle-script scanner on every script on the disc; `--input-test` | `tests/port/settings.py`, `mods.py`, `battle.py`, `dw2003 --input-test` |
 | Debug channel | One `--debug` run to CNTY_SEL: step and pad advance the frame exactly, the state map and the host symbol read the same, poke/peek, screenshot, hash, quit status; `tools/mcp`'s offline self-test | `tests/port/debug.py` (the `port` layer), `psxstack/tools/mcp/selftest.py` |
 | Hardware renderer | Its picture byte for byte the software image, its present at six output sizes against the reference, SDL_Renderer's present against the same reference; its rasteriser's whole VRAM target equal to the software VRAM every 10 vsyncs of both replays and after each of the gpu golden family's 715 lists; the fallback without a device (CI); everything else needs a GPU device (local, or lavapipe) | `tests/port/render_gpu.py`, `tests/host/gpu_hw_replay.py` (the `port` layer) |
+| Save states | `first_battle_save` resumed from its `battle_start` state: the straight run's record, its log after the saved frame and its audio, in the `-m64`, `-m32` and sanitizer builds (and the Windows build under Wine); the debug channel's save, 30 vsyncs, load, the same 30 vsyncs: the same hash and picture | `tests/port/savestate.py [--m32] [--sanitize]` (the `port` layer), `tests/port/debug.py` |
 | Crash report | A forced NULL write dies of SIGSEGV with a report whose pc symbolizes to the hook's function; a fatal error's report; `--version` | `tests/port/crash.py` (the `port` layer) |
 
 What the port and the emulator are *not* compared on: frame numbers (the port's CD timing and CPU time differ), the
@@ -145,6 +146,26 @@ random index and the full checkpoint hash (both follow the frame count). See `te
 
 Play-tests on a desktop (window, gamepads, audio device, real time) cover what the headless tests cannot. Their
 findings are filed as issues.
+
+## Save states
+psxstack's save states (its `docs/PORT.md` "Save states", `docs/RUNTIME.md` "Save states") let a test or a session
+start anywhere the game has been: a state is the whole machine at the end of a vsync, loadable by **the binary that
+saved it** (a rebuild makes it invalid; its header names the binary). A state holds the game's data: it is generated
+from the disc into `build/states/` and never committed. The first battle (`first_battle_save`'s `battle_start`:
+FIGHTSTG loaded, about vsync 19760) is the fixture the tests and the renderer work use:
+```sh
+# the state of this binary at battle_start (made in ~10 s headless when missing; cached per binary in build/states/<sha1>/)
+tools/venv/bin/python tests/port/savestate.py path --exe build/port-sdl/dw2003
+# play or debug from it (any options of a normal run; a script given with it starts at the loaded frame)
+build/port-sdl/dw2003 --disc iso/dw2003.cue --window --renderer gpu \
+    --load-state "$(tools/venv/bin/python tests/port/savestate.py path --exe build/port-sdl/dw2003)"
+# by hand: any checkpoint of a script, or a frame number, then exit
+build/port/dw2003 --disc iso/dw2003.cue --script tests/replay/scripts/first_battle_save.json \
+    --save-state battle_start:build/states/battle_start.state --save-state-exit
+```
+The adapter's part is `game_savestate` (`port/game/game_mods.c`): what the mods carry between vsyncs (save-anywhere's
+map, party experience's knocked-out slots, XP boost's tenths). The debug channel's `save_state`/`load_state` (MCP:
+`state_save`, `state_load`) use the same files.
 
 ## Known limitations
 - **Coverage of the game:** the replays reach 14 of 19 tier-1 overlays and a small share of the WSTAG files; the

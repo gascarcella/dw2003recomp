@@ -12,6 +12,7 @@
 #include "gamestate.h"
 #include "port_harness.h"
 #include "port_runtime.h"
+#include "savestate.h"
 
 #define PORT_BATTLE_SCAN_MAX 4096 /* words: the longest script on the disc has 567 */
 
@@ -386,3 +387,11 @@ PortMod *game_mods(void) {
     return game_mod_table;
 }
 
+/* A save state (psxstack/game.h game_savestate): what the mods carry from one vsync to the next about the game (the
+ * map a save-anywhere was opened from, the last battle's knocked-out party slots, the boost's tenths). Their options
+ * and toggles are settings: the loading run's own. */
+void game_savestate(struct PortState *s) {
+    PORT_STATE_VAR(s, gs_opened_from);
+    PORT_STATE_VAR(s, px_ko);
+    PORT_STATE_VAR(s, xb_tenths);
+}

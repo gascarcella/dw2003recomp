@@ -11,6 +11,8 @@ Needs build/port/dw2003 (tests/port/run.py builds it) and the disc. Starts the g
   - `peek_ps1` of overlay_module.stage through the state map equals `peek` of the host global (nm), and both are 22;
   - `poke_ps1` of a byte in the arena reads back through `peek_ps1` and the host alias;
   - `screenshot` writes a binary PPM (P6, 320 wide); `hash` gives two 40-hex SHA-1s;
+  - `save_state` while paused, 30 vsyncs, `load_state`, the same 30 vsyncs: the same `hash` and screenshot; a
+    `save_state` while the game runs is written at its vsync's end and loads;
   - `quit` with status 3 ends the process with exit status 3.
 Then runs tools/mcp/selftest.py (the client, the symbols and the server's tools against fake_game.py, offline); it is
 skipped with a message when the `mcp` package is not installed (scripts/setup.sh venv).
@@ -87,6 +89,27 @@ def channel(out):
         h = g.hash()
         hexes = [h.get("sha1", ""), h.get("stable_sha1", "")]
         check(all(len(x) == 40 and all(c in "0123456789abcdef" for c in x) for x in hexes), f"hash: {h}")
+        # A save state (psxstack/runtime/savestate.c): saved while paused, 30 vsyncs on, loaded, the same 30 vsyncs
+        # again: the same game state and the same picture; then one saved while the game runs (at its vsync's end).
+        state, shots = out / "cnty_sel.state", [out / "after30_a.ppm", out / "after30_b.ppm"]
+        r = g.save_state(str(state))
+        check(r["frame"] == f2 and state.exists(), f"save_state while paused: {r}, {state.stat().st_size >> 10} KB")
+        g.step(30)
+        h1 = g.hash()
+        g.screenshot(str(shots[0]))
+        f3 = g.load_state(str(state))
+        st = g.status()
+        check(f3 == f2 and st["frame"] == f2 and st["paused"] == 1, f"load_state: frame {f3}, paused at {st['frame']}")
+        g.step(30)
+        h2 = g.hash()
+        g.screenshot(str(shots[1]))
+        check(h1 == h2 and shots[0].read_bytes() == shots[1].read_bytes(),
+              f"the 30 vsyncs after the load: the same hash ({h1['sha1'][:12]}, {h2['sha1'][:12]}) and picture")
+        g.resume()
+        r = g.save_state(str(state))
+        check(r["frame"] > f2 + 30, f"save_state while running (at the vsync's end): {r}")
+        check(g.load_state(str(state)) == r["frame"], "load_state of it")
+        g.pause()
         g.pad_free()
         g.quit(3)
         status = g.proc.wait(timeout=5)

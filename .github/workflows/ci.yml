@@ -177,7 +177,7 @@ jobs:
   # The PC port with the disc: layer 1 (the goldens regenerated in the emulator, their host replays, the SPU and XA
   # units) and the port layer: the M1 test (tests/port/run.py: the layer-2 scripts replayed by the port, twice, against
   # the emulator's record; --m32: the -m32 build must write the same log and record, the layout check) and the port's
-  # checks (settings, 60 Hz, the battle scripts, VRAM, the debug channel, the crash report).
+  # checks (settings, 60 Hz, the battle scripts, VRAM, the debug channel, save states, the crash report).
   port:
     needs: areas
     if: needs.areas.outputs.port == 'true' && needs.areas.outputs.data == 'true'

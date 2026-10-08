@@ -129,10 +129,24 @@ to end on animation 10. ~1 min together; in `scripts/test.sh --layer port`.
 channel's plain client: `wait` on stage 22 (CNTY_SEL, `new_game.json`'s first `wait_stage`) hits and leaves the game
 paused; `step 10` advances the frame by exactly 10 and `pad START` with sync by frames + release; `overlay_module.stage`
 read by its PS1 address (the state map) and by the host global (`nm`) agree; a byte poked into the arena reads back by
-both routes; `screenshot` writes a P6 PPM 320 wide; `hash` gives two SHA-1s; `quit 3` exits with status 3. It also
+both routes; `screenshot` writes a P6 PPM 320 wide; `hash` gives two SHA-1s; `save_state` while paused, 30 vsyncs,
+`load_state`, the same 30 vsyncs give the same hash and screenshot, and a `save_state` while running is written at its
+vsync's end and loads; `quit 3` exits with status 3. It also
 checks that the socket path fits `sun_path` (108 bytes). Then it runs psxstack's `tools/mcp/selftest.py` (the client, the symbol
 lookup and the server's tools against `fake_game.py`, offline; skipped with a message when the `mcp` package is not
 installed). Needs `build/port/dw2003` (`run.py` builds it) and the disc. In `scripts/test.sh --layer port`.
+
+## Save states (`savestate.py`; docs/PORT.md "Save states", issue #80)
+`tests/port/savestate.py [--m32] [--sanitize]` runs `first_battle_save` from boot with `--save-state battle_start:FILE`
+(its checkpoints must still match the emulator's cross-core view: the save changes nothing), then the same script with
+`--load-state FILE`: the resumed run's record must equal the straight run's byte for byte, its frame log the straight
+log's lines after the saved frame (about 24,700), and its `--wav` audio the straight run's samples from the next
+vsync on. `--m32` and `--sanitize` repeat it on those builds (the sanitizer runs with
+`ASAN_OPTIONS=detect_stack_use_after_return=0`, which states need; no ASan/UBSan report allowed); `--exe BIN [--wine]`
+tests another binary (`build/port-win/dw2003.exe` under Wine passes). About 30 s for the plain build. `savestate.py
+path [CHECKPOINT] [--exe BIN]` prints the path of a state of BIN at that checkpoint of `first_battle_save`, made first
+when missing (`build/states/<the binary's SHA-1>/`). In `scripts/test.sh --layer port`. `debug.py` checks the debug
+channel's save and load.
 
 ## The hardware renderer (`render_gpu.py`; docs/PORT.md "Rendering", issue #31)
 `tests/port/render_gpu.py` builds `build/port-sdl` (needs `tools/sdl3` and `tools/dxc`; skipped without them) and runs it
