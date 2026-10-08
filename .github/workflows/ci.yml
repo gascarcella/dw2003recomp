@@ -295,6 +295,7 @@ jobs:
         run: |
           tools/venv/bin/python tests/port/render_gpu.py
           tools/venv/bin/python tests/host/gpu_hw_replay.py   # builds the exactness test's harness; no device: skipped
+          tools/venv/bin/python tests/port/textures.py        # the texture dump (issue #70): no device needed
 
       - name: Launcher, self-test
         run: |

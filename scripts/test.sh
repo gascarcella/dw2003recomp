@@ -129,6 +129,7 @@ for L in $LAYERS; do
             "$PY" "$ROOT/tests/port/run.py" "${M32[@]}"; ran=$((ran + 1))   # --m32: the -m32 build's log and record too
             "$PY" "$ROOT/tests/port/settings.py"   # --config, the launcher's contract (docs/LAUNCHER.md "Settings file")
             "$PY" "$ROOT/tests/port/render_gpu.py" # the hardware renderer (pictures only with a GPU device)
+            "$PY" "$ROOT/tests/port/textures.py"   # the texture dump (no device needed)
             "$PY" "$ROOT/tests/host/gpu_hw_replay.py"   # its rasteriser on the gpu goldens (only with a GPU device)
             "$PY" "$ROOT/tests/port/hz60.py"       # the 60 Hz mode against the patched game's records
             "$PY" "$ROOT/tests/port/battle.py"     # the battle scripts on the disc, for battle_animations
