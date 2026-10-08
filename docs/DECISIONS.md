@@ -419,3 +419,12 @@ checkout's pattern); a fork pull request has no secrets, so the areas job then s
 warning and a maintainer's run tests them. **2026-10-08, phase 5:** psxstack is public and tagged `v0.1.0`, the pin
 is on the tag, the key, the secret and that gate are gone: the submodule is a plain HTTPS fetch for everyone, fork
 pull requests included.
+
+## Widescreen battles: the renderer widens, the game is unchanged
+_Decided: 2026-10-08_ (issue #71, the measurements there)
+
+Only FIGHTSTG draws 3D through the GTE, and it already sends the geometry a 16:9 frame needs, so the `widescreen` mod
+changes nothing in the game: it names the battle as the scene to widen and psxstack's renderer draws it into a wide
+canvas (psxstack DECISIONS "Widescreen: a wide canvas beside the VRAM"). The HUD stays centred as drawn, the software
+renderer stays 4:3, the window keeps its size (a new one opens 16:9). The field (2D tile map, 12 VRAM tile slots) and
+the menus (2D art cut at 320) stay 4:3 until the owner decides otherwise (#78).
