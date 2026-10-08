@@ -223,6 +223,7 @@ def main():
     _, s, _ = printed(binary, a / "settings.json")
     check(s["disc"]["path"] == "" and s["video"] == {"window": True, "scale": 2, "fullscreen": False, "refresh": 50,
                                                      "renderer": "software", "internal_scale": 1,
+                                                     "subpixel": "on",
                                                      "filter": "none",
                                                      "crt": {"scanlines": 50, "mask": 30, "curvature": 0}}
           and s["audio"] == {"mute": False} and s["watchdog"] == 0, "the defaults of an empty file")
@@ -231,7 +232,8 @@ def main():
     full = {
         "schema": 1,
         "disc": {"path": "../discs/dw2003.cue", "sha1": "457cb233" + "0" * 32},
-        "video": {"window": False, "scale": 3, "fullscreen": True, "refresh": 60, "renderer": "gpu", "internal_scale": 4},
+        "video": {"window": False, "scale": 3, "fullscreen": True, "refresh": 60, "renderer": "gpu", "internal_scale": 4,
+                  "subpixel": "off"},
         "audio": {"mute": True},
         "memcard1": "cards/one.mcd",
         "memcard2": None,
@@ -266,6 +268,8 @@ def main():
           and s["video"]["renderer"] == "software" and s["video"]["internal_scale"] == 2,
           "--disc (from the current directory), --scale (implies the window), --memcard1 none, --memcard2, --watchdog, "
           "--renderer, --internal-scale")
+    _, s, _ = printed(binary, a / "full.json", "--subpixel", "on")
+    check(s["video"]["subpixel"] == "on", "--subpixel on overrides video.subpixel \"off\"")
 
     _, s, _ = printed(binary, a / "full.json", "--filter", "none")
     check(s["video"]["filter"] == "none", "--filter overrides video.filter")
@@ -306,6 +310,9 @@ def main():
         "a renderer not a string": ({"schema": 1, "video": {"renderer": 1}}, "video.renderer: a string, not a number"),
         "internal scale 9": ({"schema": 1, "video": {"internal_scale": 9}},
                              "video.internal_scale: an integer from 1 to 8"),
+        "an unknown subpixel": ({"schema": 1, "video": {"subpixel": "smooth"}},
+                                'video.subpixel: "off" or "on", not "smooth"'),
+        "subpixel not a string": ({"schema": 1, "video": {"subpixel": True}}, "video.subpixel: a string"),
         "a card path not a string": ({"schema": 1, "memcard1": 3}, "memcard1: a path"),
         "an unknown filter": ({"schema": 1, "video": {"filter": "blur"}},
                               'video.filter: "none", "sharp", "scanlines" or "crt", not "blur"'),
