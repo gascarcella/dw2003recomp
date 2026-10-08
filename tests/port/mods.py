@@ -50,6 +50,9 @@ xp_boost: the same route with the mod on: exp 3 and bits 2.5 (12 experience for 
 exp and bits 10 with `manual` and party_xp's default share (40, 20, 20 and 500 bits); and 10 without `manual`
 (capped at the sliders' 5x: 20 and 250 bits). Each run logs two boosts (the experience and the bits); the first battle
 gives no form experience (member 0 fights as its own form), so `form_exp` is not reached by a scripted run.
+widescreen (no script of its own): first_battle_save to back_on_field with the mod on, in the headless build
+(no GPU renderer): the frame log equals the run without the mod (the mod changes nothing the game does; the renderer
+draws its wide canvas, tests/port/render_gpu.py), and the run logs once that the picture stays 4:3.
 Exit codes: 0 pass, 1 fail, 2 something missing.
 """
 import argparse
@@ -209,6 +212,22 @@ def battle_animations(binary, out):
             e = {c["name"]: c for c in emu["checkpoints"]}
             print(f"    the battle took {cps['battle_won']['frame'] - cps['battle_start']['frame']} frames "
                   f"(emulator, the mod off: {e['battle_won']['frame'] - e['battle_start']['frame']})")
+
+
+def widescreen(binary, out):
+    """widescreen: the battle with the mod on in the headless build: the game's frame log unchanged, the software
+    picture's 4:3 logged once."""
+    print("mods: widescreen (first_battle_save to back_on_field, the headless build: no GPU renderer)")
+    fbs = json.loads((SCRIPTS / "first_battle_save.json").read_text())["steps"]
+    j = next(k for k, s in enumerate(fbs) if s.get("type") == "checkpoint" and s.get("name") == "back_on_field")
+    script = derived(out, "ws", fbs[:j + 1])
+    rc_on, log_on, _, err = run_port(binary, out, "ws_on", script, settings(out, "ws", {"widescreen": {"enabled": True}}),
+                                     True)
+    rc_off, log_off, _, _ = run_port(binary, out, "ws_off", script)
+    said = err.count("widescreen: needs the GPU renderer")
+    check(rc_on == rc_off == 0 and log_on == log_off and len(log_on) > 0,
+          f"the frame log with the mod equals the one without (exit {rc_on}, {rc_off})")
+    check("mods: widescreen on" in err and said == 1, f"the 4:3 picture logged once ({said} times)")
 
 
 GS_SCRIPT = MODS / "scripts/global_save.json"
@@ -429,6 +448,7 @@ MODS_TESTS = {
     "xp_boost": lambda binary, out, record: xp_boost(binary, out),
     "global_save": lambda binary, out, record: global_save(binary, out),
     "battle_animations": lambda binary, out, record: battle_animations(binary, out),
+    "widescreen": lambda binary, out, record: widescreen(binary, out),
 }
 
 

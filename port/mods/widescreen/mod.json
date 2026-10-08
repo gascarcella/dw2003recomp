@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "id": "widescreen",
+  "name": "Widescreen battles",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "Battles fill a 16:9 screen: more of the arena shows at both sides, the menus and the HUD stay as drawn in the middle. Needs the GPU renderer (Video); with the software renderer the picture stays 4:3. The field, the menus and the movies stay 4:3. A new window opens 16:9.",
+  "options": []
+}
