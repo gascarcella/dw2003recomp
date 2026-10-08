@@ -13,7 +13,7 @@
 #   ccache: the pinned static ccache binary into tools/ccache (CI's host builds of the port and the launcher:
 #          .github/actions/setup; no apt package, the runners' mirror stalls)
 #   llvm-mingw: the pinned llvm-mingw release (clang + lld, UCRT) into tools/llvm-mingw: the Windows cross toolchain
-#          (cmake/windows-x86_64.cmake, scripts/build_windows.sh; DECISIONS "Windows")
+#          (psxstack/cmake/windows-x86_64.cmake, scripts/build_windows.sh; DECISIONS "Windows")
 #   sdl3-windows: SDL3 cross-built static for Windows into tools/sdl3-windows (needs llvm-mingw)
 #   dxc:   the pinned DirectX Shader Compiler release into tools/dxc: HLSL to SPIR-V (and DXIL) for the hardware renderer's
 #          shaders (issue #31)
@@ -271,8 +271,8 @@ step_sdl3() { sdl3_build sdl3 "$INSTALL/sdl3" 0; }
 step_sdl3-desktop() { sdl3_build sdl3-desktop "$INSTALL/sdl3-desktop" 1; }
 
 # llvm-mingw (Apache-2.0 with LLVM exceptions; mingw-w64 runtime under its own permissive licences): clang, lld and the
-# UCRT mingw-w64 sysroot, the Windows cross toolchain (DECISIONS "Windows"; cmake/windows-x86_64.cmake is the CMake
-# toolchain file, scripts/build_windows.sh builds the game and the launcher with it). One pinned release tarball for
+# UCRT mingw-w64 sysroot, the Windows cross toolchain (DECISIONS "Windows"; psxstack/cmake/windows-x86_64.cmake is the
+# CMake toolchain file, scripts/build_windows.sh builds the game and the launcher with it). One pinned release tarball for
 # Linux x86_64, SHA-256 checked, unpacked into tools/llvm-mingw. Self-contained: no system package, the same build
 # here and on CI. Optional (not in the default steps): scripts/setup.sh llvm-mingw
 LLVM_MINGW_VER=20260922
@@ -309,17 +309,19 @@ step_llvm-mingw() {
 # raw input...). Optional: scripts/setup.sh llvm-mingw sdl3-windows
 step_sdl3-windows() {
     local name=sdl3-windows prefix="$INSTALL/sdl3-windows" dir="$SRC/SDL3-$SDL3_VER-sdl3-windows"
+    local toolchain="$ROOT/psxstack/cmake/windows-x86_64.cmake"   # psxstack's, as scripts/build_windows.sh uses it
     if [[ -f "$prefix/lib/libSDL3.a" && -f "$prefix/.sha256" && "$(cat "$prefix/.sha256")" == "$SDL3_SHA256" ]]; then
         log "$name: $SDL3_VER already installed ($prefix)"
         return
     fi
     [[ -x "$INSTALL/llvm-mingw/bin/x86_64-w64-mingw32-clang" ]] || step_llvm-mingw
     command -v cmake >/dev/null && command -v ninja >/dev/null || step_cmake
+    [[ -f "$toolchain" ]] || die "$name: no $toolchain (the psxstack submodule: run scripts/worktree_init.sh first)"
     sdl3_fetch "$name" "$dir"
     rm -rf "$prefix"
     log "$name: configuring (static, Windows x86_64; no tests, examples or camera)"
-    DW3_LLVM_MINGW="$INSTALL/llvm-mingw" cmake -S "$dir" -B "$dir/build" -G Ninja \
-        -DCMAKE_TOOLCHAIN_FILE="$ROOT/cmake/windows-x86_64.cmake" -DCMAKE_BUILD_TYPE=Release \
+    PSXSTACK_LLVM_MINGW="$INSTALL/llvm-mingw" cmake -S "$dir" -B "$dir/build" -G Ninja \
+        -DCMAKE_TOOLCHAIN_FILE="$toolchain" -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX="$prefix" -DCMAKE_INSTALL_LIBDIR=lib \
         -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF -DSDL_CAMERA=OFF \
         >"$dir/configure.log" 2>&1 || die "$name: configure failed (see $dir/configure.log)"
