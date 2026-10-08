@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""The texture dump (psxstack/runtime/render_gpu_textures.c; issue #70, psxstack docs/RUNTIME.md "Texture dump"):
-`--dump-textures DIR` writes every texture a primitive samples, the first time, as a PNG named by its key (the SHA-1 of
-the transfer it was loaded by, the SHA-1 of its CLUT, the depth, the size), and DIR/index.json. It runs under either
-renderer and needs no GPU device, so CI runs it.
+"""The texture dump and texture packs (psxstack/runtime/render_gpu_textures.c, render_gpu_packs.c; issue #70, psxstack
+docs/RUNTIME.md "Texture dump", "Texture packs"): `--dump-textures DIR` writes every texture a primitive samples, the
+first time, as a PNG named by its key (the SHA-1 of the transfer it was loaded by, the SHA-1 of its CLUT, the depth, the
+size), and DIR/index.json; `--texture-pack DIR` loads PNGs named so, which the hardware renderer draws instead. The
+dump runs under either renderer and needs no GPU device, so CI runs it; the packs' pictures need a device.
 
 Usage: tests/port/textures.py [--out DIR] [-j N] [--update]
 
@@ -15,7 +16,14 @@ Builds build/port-sdl if needed (-DPSXSTACK_SDL=ON: tools/sdl3 and tools/dxc), t
   - the dump continued: a second run into the same directory reads index.json back, writes no PNG again and adds its
     draws to the counts;
   - with a GPU device (else skipped): the same run with the hardware renderer's rasteriser on (a --gpu-screenshot
-    headless) gives the same files and the same index.json.
+    headless) gives the same files and the same index.json;
+  - `--texture-pack` in the headless build (exit 64) and a directory that is not a pack (exit 1);
+  - packs made from that dump, with a GPU device (else skipped), new_game at internal scale 1: the identity pack (the
+    dump's own PNGs, `nearest`) keeps the rasteriser's whole VRAM target equal to the software VRAM every 10 vsyncs
+    and the pictures unchanged; a pack of 1x1 magenta PNGs (every key) changes them; the same as sub-rectangle files
+    (each key's sampled range from index.json) gives the same pictures; the identity pack given before the magenta one
+    wins; at internal scale 2 the identity pack's pictures are within SCALED_BUDGET of those without it (the colour is
+    8-bit there, the texture coordinates exact).
 Exit codes: 0 pass (parts may be skipped), 1 fail, 2 something missing for the build.
 """
 import argparse
@@ -32,6 +40,13 @@ sys.path.insert(0, str(ROOT / "tests/port"))
 from run import DISC, SCRIPTS, Missing, build, tool_env  # noqa: E402  (the port test's build)
 
 KEYS = ROOT / "tests/port/textures/new_game.keys"
+FRAMES = (900, 1300, 1800)   # new_game: the title's menus, the field
+# At internal scale 2 an identity pack's picture may differ from the one without it by at most this mean per channel,
+# and by more than 8 in at most this share of the channels. Above scale 1 a replacement's colour is its 8 bits, the
+# dump's widening c << 3 | c >> 2 where the VRAM's texel gives c << 3 (up to 7 more), and its texture coordinates are
+# exact where gpu.c's are rounded (a texel's edge). Measured on NVIDIA: new_game's title 3.8 mean, none over 8;
+# first_battle_save's field 2.9, none over 7; its battle 1.9, 0.015 % over 8.
+SCALED_BUDGET = (6.0, 0.001)
 FAILURES = []
 
 
@@ -53,6 +68,93 @@ def png_info(path):
         return None
     w, h, _depth, ctype = struct.unpack(">IIBB", data[16:26])
     return w, h, ctype
+
+
+def write_png(path, w, h, rgba):
+    """An 8-bit RGBA PNG."""
+    import zlib
+    raw = b"".join(b"\0" + rgba[y * w * 4:(y + 1) * w * 4] for y in range(h))
+
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
+                     + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+
+
+def make_pack(d, pid, filt, files):
+    """A pack at d: mod.json and files {relative path: (w, h, rgba) or a source PNG to copy}."""
+    (d / "textures").mkdir(parents=True)
+    (d / "mod.json").write_text(json.dumps({"schema": 1, "id": pid, "name": pid, "kind": "data",
+                                            "textures": {"dir": "textures", "filter": filt}}))
+    for rel, content in files.items():
+        if isinstance(content, Path):
+            (d / "textures" / rel).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(content, d / "textures" / rel)
+        else:
+            write_png(d / "textures" / rel, *content)
+
+
+def ppm(path):
+    data = path.read_bytes()
+    _magic, size, _depth, pixels = data.split(b"\n", 3)
+    return tuple(map(int, size.split())), pixels
+
+
+def shots(sdl, env, out, tag, extra, scale=1, check_every=0):
+    """new_game's hardware pictures at FRAMES with these options; (exit, output, {frame: ppm})."""
+    args = ["--gpu-screenshot", "1:/dev/null", "--internal-scale", str(scale)]
+    for f in FRAMES:
+        args += ["--gpu-screenshot", f"{f}:{out / f'{tag}_{f}.ppm'}"]
+    rc, text = new_game(sdl, dict(env, DW3_PORT_GPU_VRAM_CHECK=str(check_every)) if check_every else env, out,
+                        args + extra)
+    return rc, text, {f: ppm(out / f"{tag}_{f}.ppm") for f in FRAMES if (out / f"{tag}_{f}.ppm").exists()}
+
+
+def packs(sdl, env, out, dump, entries):
+    print("textures: packs (the hardware renderer at internal scale 1, then 2)")
+    magenta = (1, 1, bytes((255, 0, 255, 255)))
+    make_pack(out / "identity", "identity", "nearest",
+              {str(p.relative_to(dump)): p for p in dump.rglob("*.png")})
+    make_pack(out / "magenta", "magenta", "linear", {Path(e["file"]).name: magenta for e in entries})
+    subs = {}
+    for e in entries:
+        u0, v0, u1, v1 = e["uv"]
+        subs[Path(e["file"]).name[:-4] + f"@{u0},{v0},{u1 - u0 + 1}x{v1 - v0 + 1}.png"] = magenta
+    make_pack(out / "magenta-sub", "magenta_sub", "linear", subs)
+    rc, text, plain = shots(sdl, env, out, "plain", [])
+    if "renderer: gpu for the screenshots" not in text:
+        why = next((l.split("unavailable ", 1)[1] for l in text.splitlines() if "gpu unavailable" in l), "?")
+        print(f"  skipped: no GPU device ({why})")
+        return
+    check(rc == 0 and len(plain) == len(FRAMES), f"new_game's pictures without a pack (exit {rc})")
+    rc, text, ident = shots(sdl, env, out, "identity", ["--texture-pack", out / "identity"], check_every=10)
+    total = next((l.split("gpu vram check: ", 1)[1] for l in text.splitlines() if " checks, " in l), "no checks")
+    used = next((l.split("texture packs: ", 1)[1] for l in text.splitlines() if "textures uploaded" in l), "none used")
+    check(rc == 0 and total.endswith(" 0 with differences") and "uploaded" in used,
+          f"the identity pack: the whole VRAM target equal to the software VRAM ({total}; {used})")
+    check(ident == plain, "the identity pack: the pictures unchanged")
+    rc, text, mag = shots(sdl, env, out, "magenta", ["--texture-pack", out / "magenta"])
+    changed = sum(1 for f in FRAMES if mag.get(f) != plain[f])
+    check(rc == 0 and changed == len(FRAMES), f"the magenta pack changes the pictures ({changed} of {len(FRAMES)})")
+    rc, text, sub = shots(sdl, env, out, "magenta-sub", ["--texture-pack", out / "magenta-sub"])
+    check(rc == 0 and sub == mag, "the magenta pack as sub-rectangle files: the same pictures")
+    rc, text, both = shots(sdl, env, out, "both", ["--texture-pack", out / "identity", "--texture-pack",
+                                                   out / "magenta"])
+    check(rc == 0 and both == plain, "the identity pack given first wins over the magenta one")
+    rc, text, plain2 = shots(sdl, env, out, "plain2", [], scale=2)
+    rc2, text, ident2 = shots(sdl, env, out, "identity2", ["--texture-pack", out / "identity"], scale=2)
+    worst = (0.0, 0.0)
+    for f in FRAMES:
+        a, b = plain2.get(f), ident2.get(f)
+        if a is None or b is None or a[0] != b[0]:
+            worst = (float("inf"), 1.0)
+            continue
+        diffs = [abs(x - y) for x, y in zip(a[1], b[1])]
+        worst = (max(worst[0], sum(diffs) / len(diffs)), max(worst[1], sum(1 for d in diffs if d > 8) / len(diffs)))
+    check(rc == 0 and rc2 == 0 and worst[0] <= SCALED_BUDGET[0] and worst[1] <= SCALED_BUDGET[1],
+          f"internal scale 2: the identity pack within the budget (mean {worst[0]:.2f}, over 8: "
+          f"{100 * worst[1]:.3f} %)")
 
 
 def pngs(d):
@@ -123,6 +225,12 @@ def main():
         rc, text = run([headless, "--dump-textures", out / "x"], env)
         check(rc == 64 and "--dump-textures: this build has no texture dump" in text,
               f"--dump-textures in the headless build: exit 64 (exit {rc})")
+        rc, text = run([headless, "--texture-pack", out / "x"], env)
+        check(rc == 64 and "--texture-pack: this build has no hardware renderer" in text,
+              f"--texture-pack in the headless build: exit 64 (exit {rc})")
+    (out / "not-a-pack").mkdir()
+    rc, text = run([sdl, "--max-frames", "1", "--texture-pack", out / "not-a-pack"], env)
+    check(rc == 1 and "no mod.json" in text, f"--texture-pack with a directory that is not a pack: exit 1 (exit {rc})")
     if not DISC.exists():
         print("textures: no disc (iso/dw2003.cue): the dump is skipped")
     else:
@@ -158,6 +266,9 @@ def main():
         else:
             check(rc == 0 and pngs(gpu) == pngs(dump), "the same files")
             check(json.loads((gpu / "index.json").read_text())["textures"] == entries, "the same index.json")
+        first = out / "dump-first"
+        rc, text = new_game(sdl, env, out, ["--dump-textures", first])
+        packs(sdl, env, out, first, json.loads((first / "index.json").read_text())["textures"])
     print(f"textures test: {'FAIL (' + str(len(FAILURES)) + ')' if FAILURES else 'pass'}")
     return 1 if FAILURES else 0
 

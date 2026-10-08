@@ -84,10 +84,12 @@ The plan's milestones (`docs/PORT.md`):
   sides, the HUD centred as drawn, the game's output unchanged. Everything else stays 4:3 (the field: #78). Not
   play-tested yet.
 - **Texture replacement** ([#70](https://github.com/gascarcella/dw2003recomp/issues/70), the research and the plan
-  there): phase 1 done, the keys and the dump. `--dump-textures DIR` (the SDL build, either renderer) writes every
-  texture the game samples as a PNG named by its key (the loaded image's and its CLUT's content, not the VRAM place)
-  and an `index.json` (psxstack `docs/RUNTIME.md` "Texture dump"): 134 keys in new_game, 1,728 in first_battle_save.
-  Next: packs (data mods) sampled by the rasteriser, then the launcher's user `mods/` directory.
+  there): phases 1 and 2 done. `--dump-textures DIR` (the SDL build, either renderer) writes every texture the game
+  samples as a PNG named by its key (the loaded image's and its CLUT's content, not the VRAM place) and an
+  `index.json` (psxstack `docs/RUNTIME.md` "Texture dump"): 134 keys in new_game, 1,728 in first_battle_save.
+  `--texture-pack DIR` loads a pack (a data mod of PNGs named by key, "Texture packs") that the hardware renderer
+  draws instead, at any internal scale; the unedited dump as a pack keeps scale 1 equal to the software VRAM over both
+  replays. Next: the launcher's user `mods/` directory.
 - **The port stack (psxstack):** the runtime, the Psy-Q shim, the build (`psxstack_add_game()`), the launcher and the
   debug tools live in the `psxstack` repository (gascarcella/psxstack; its `docs/PORT.md`, `docs/RUNTIME.md`,
   `docs/LAUNCHER.md`), consumed as the `psxstack` submodule pinned at its tag `v0.1.0` (`scripts/worktree_init.sh`
