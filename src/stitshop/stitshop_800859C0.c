@@ -1250,60 +1250,57 @@ void stitshop_info_compare(StitshopInfo *obj, StitshopInfoData *data, s32 member
     }
 }
 
+/* The y of an item line, two lower when selling. A function of its own: written inline, gcc folds the sum into y. */
+static inline s32 stitshop_info_line_y(StitshopInfo *obj, s32 y) {
+    return obj->selling * 2 + y;
+}
+
 /* Creates the item's information's text windows (the party's only when buying). */
-#ifdef NON_MATCHING
-/* 99.1%: the original sets x = 0 after the loop's first test (a copy of i's 0); otherwise the same. Here combine
- * moves `i = 0` next to the test, after `x = 0`, and the second zero becomes a copy of the first (x's); the original's
- * x init is after the test, as a loop.c preheader insn would be. Tried (wip-7): init orders, chained inits, x as
- * i * 0x63 (each x + c becomes its own giv, 87%), declaration orders.
- * final-rest: the original's preheader is [lui s6, lui fp, lw s3, x = (i's 0), sw 0 to the spilled giv]: x's init sits
- * among loop.c's giv inits. `i = 0; if (i < obj->unk_60) { for (x = 0; ...) }` (or the same as a do-while) puts the
- * init after the test and leaves only that order (3 lines; objdiff 98.40); while/for forms, s16/u16 x, x = i * 0x63
- * at the top, `if (obj->unk_60 > 0)` guards: no better. The permuter (wip-14, 30 min) found nothing.
- * last-rest (final): the preheader order is sched2's tie-break by luid (backward, later insn first): the original's
- * x = 0 has a higher luid than loop.c's giv inits, which strength_reduce emits just before the loop's LOOP_BEG note,
- * so x's init came after them in RTL; no source position before the loop gives that. x as a giv of i (computed in
- * the test, the increment or the body), `x = i` copies, LOOP_BARRIERs: no better; the permuter (25 min, boosted
- * weights) on the guarded form `i = 0; if (i < n) for (x = i; ...)` (3 lines left): nothing. */
 void stitshop_info_create_windows(StitshopInfo *obj, StitshopInfoData *data) {
-    s32 y;
+    s32 y = obj->selling * 40;
+    s16 left;
+    s16 right;
+    s32 x;
     s32 i;
     s32 j;
-    s32 x;
-    MessageWindow *win;
+    s32 column;
 
-    y = obj->selling * 40;
-    data->item_name = message_create_window(obj->layer_id, 1, 0x25, y + (s16)(obj->selling * 2 + 0x73));
-    data->equipped_label = message_create_window(obj->layer_id, 1, 0xA1, y + (s16)(obj->selling * 2 + 0x75));
-    data->equipped = message_create_window(obj->layer_id, 1, 0xE1, y + (s16)(obj->selling * 2 + 0x75));
-    data->owned_label = message_create_window(obj->layer_id, 1, 0xEA, y + (s16)(obj->selling * 2 + 0x75));
-    data->owned = message_create_window(obj->layer_id, 1, 0x12A, y + (s16)(obj->selling * 2 + 0x75));
-    data->price_label = message_create_window(obj->layer_id, 3, 0x11A, y + (s16)(obj->selling * 2 + 0x8B));
-    data->price = message_create_window(obj->layer_id, 3, 0x117, y + (s16)(obj->selling * 2 + 0x8B));
-    data->description = win = message_create_window(obj->layer_id, 1, 0x14, y + 0xA1);
-    win->set_page_lines(win, 2);
+    data->item_name = message_create_window(obj->layer_id, 1, 0x25, y + stitshop_info_line_y(obj, 0x73));
+    data->equipped_label = message_create_window(obj->layer_id, 1, 0xA1, y + stitshop_info_line_y(obj, 0x75));
+    data->equipped = message_create_window(obj->layer_id, 1, 0xE1, y + stitshop_info_line_y(obj, 0x75));
+    data->owned_label = message_create_window(obj->layer_id, 1, 0xEA, y + stitshop_info_line_y(obj, 0x75));
+    data->owned = message_create_window(obj->layer_id, 1, 0x12A, y + stitshop_info_line_y(obj, 0x75));
+    data->price_label = message_create_window(obj->layer_id, 3, 0x11A, y + stitshop_info_line_y(obj, 0x8B));
+    data->price = message_create_window(obj->layer_id, 3, 0x117, y + stitshop_info_line_y(obj, 0x8B));
+    data->description = message_create_window(obj->layer_id, 1, 0x14, y + 0xA1);
+    data->description->set_page_lines(data->description, 2);
     data->slot = message_create_window(obj->layer_id, 1, 0x14, y + 0xAF);
     if (obj->selling == 0) {
-        for (i = 0, x = 0; i < obj->member_count; i++, x += 0x63) {
+        /* FAKE: x is set from a column counter of its own inside the arrows' loop (the shape of the US decomp's
+         * STITSHOP_createInfoWindows): it puts x's init among loop.c's giv inits, after the loop's first test, as
+         * the original does; x stepped by the loop itself leaves it before them (99.1%). */
+        column = 0;
+        for (i = 0; i < obj->member_count; i++) {
             data->members[i].name = message_create_window(obj->layer_id, 1, i * 0x63 + 0x17, 0x9E);
             for (j = 0; j < 2; j++) {
+                x = column * 0x63;
                 data->members[i].arrows[j] = message_create_window(obj->layer_id, 1, i * 0x63 + 0x3C, j * 14 + 0xAC);
             }
-            data->members[i].stats[0] = message_create_window(obj->layer_id, 1, x + 0x39, 0xAC);
-            data->members[i].stats[1] = message_create_window(obj->layer_id, 1, x + 0x39, 0xBA);
-            data->members[i].stats[2] = message_create_window(obj->layer_id, 1, x + 0x5A, 0xAC);
-            data->members[i].stats[3] = message_create_window(obj->layer_id, 1, x + 0x5A, 0xBA);
-            data->members[i].stats[4] = message_create_window(obj->layer_id, 1, x + 0x39, 0xC8);
+            left = x + 0x39;
+            data->members[i].stats[0] = message_create_window(obj->layer_id, 1, left, 0xAC);
+            data->members[i].stats[1] = message_create_window(obj->layer_id, 1, left, 0xBA);
+            right = x + 0x5A;
+            data->members[i].stats[2] = message_create_window(obj->layer_id, 1, right, 0xAC);
+            data->members[i].stats[3] = message_create_window(obj->layer_id, 1, right, 0xBA);
+            data->members[i].stats[4] = message_create_window(obj->layer_id, 1, left, 0xC8);
             data->members[i].stats[5] = message_create_window(obj->layer_id, 1, x + 0x63, 0xC8);
-            data->members[i].stats[6] = message_create_window(obj->layer_id, 1, x + 0x39, 0xD6);
+            data->members[i].stats[6] = message_create_window(obj->layer_id, 1, left, 0xD6);
             data->members[i].stats[7] = message_create_window(obj->layer_id, 1, x + 0x63, 0xD6);
+            column++;
         }
         data->page = message_create_window(obj->layer_id, 1, 0x13, 0x87);
     }
 }
-#else
-INCLUDE_ASM("asm/stitshop/nonmatchings/stitshop_800859C0", stitshop_info_create_windows);
-#endif
 
 /* Shows (`show`) or hides the item's name, how many are equipped and owned, and the price. */
 void stitshop_info_show_item(StitshopInfo *obj, StitshopInfoData *data, s32 show) {

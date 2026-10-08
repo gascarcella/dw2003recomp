@@ -89,6 +89,9 @@ int port_video_screenshot_add(const char *spec); /* "FRAME:PATH"; 0 when malform
  * --gpu-screenshot "FRAME[@WxH]:PATH" (SDL build): the hardware renderer's picture; 0 when malformed (or too many). */
 int port_video_set_renderer(const char *name);
 int port_video_gpu_screenshot_add(const char *spec);
+/* A run without a window that has --gpu-screenshot: the GPU device and the rasteriser opened now, before the game
+ * draws (SDL build; logged and skipped without a device). */
+void port_video_gpu_headless(void);
 /* The current display image (converted at this frame already, or now) to `path` as --screenshot writes it; its size
  * in *w, *h; 0 when the file cannot be written (the debug channel's screenshot). */
 int port_video_screenshot_now(const char *path, int *w, int *h);

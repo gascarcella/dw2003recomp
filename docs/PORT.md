@@ -36,9 +36,9 @@ formats are in `port/README.md`; the shim's per-function behaviour is in `port/p
   symbols with `nm`'s link-time addresses of `build/port/dw2003`, which a PIE would relocate at load (Ubuntu's GCC
   links PIE by default). Nothing else needs it: the arena needs no link address (see "Memory arena") and the
   overlay sections are orphan sections the linker places after `.data`/`.bss`, outside GNU_RELRO (see "Overlays").
-- **`INCLUDE_ASM`** is empty on the host. No game function is left in asm except the 8 holdouts, and with
-  `NON_MATCHING` their WIP C is compiled instead: the WIP C is the port's code. `tests/holdouts/run.sh` validates it
-  by running a `NON_MATCHING` PS1 image through the replays (see "Testing").
+- **`INCLUDE_ASM`** is empty on the host. No game function is left in asm (the last 8 holdouts matched on
+  2026-10-07), so the port compiles the same matching C as the PS1 build. `tools/hacks.py --check` keeps it so (no
+  `INCLUDE_ASM` or `NON_MATCHING` in game code).
 - **FAKE matches** (`grep -rn "FAKE:" src`) are valid C and compile as they are.
 - **`gte_*` macros** (`include/psyq/gtemac.h`, MIPS `cop2` sequences) are replaced at build time by a generated header
   that turns each sequence into the same register accesses on the software GTE (`tools/port_gen.py overrides`;
@@ -263,8 +263,15 @@ PS1 or the emulator) are listed in `port/psyq/README.md` "Behaviour assumed".
   in the binary. **Phase 1, now:** it opens the device and the window's swapchain, and presents the same software image
   pixel for pixel (an integer nearest mapping into video.c's 4:3 rectangle, equal to SDL_Renderer's output); when no
   device can present (no Vulkan driver; NVIDIA on SDL's offscreen driver) the run logs why and uses SDL_Renderer.
-  `--gpu-screenshot FRAME[@WxH]:PATH` writes its picture (headless too). **Next** (the plan on issue #31): the
-  rasteriser of the software GPU's command stream into a 1024x512 VRAM target with an exactness test at scale 1, then
+  `--gpu-screenshot FRAME[@WxH]:PATH` writes its picture (headless too). **Phase 2, now:** its rasteriser draws the
+  software GPU's decoded command stream (gpu.c's listener: every triangle, rectangle, line segment, fill, copy and
+  transfer) into a 1024x512 VRAM target of its own, and a 15-bit display is presented from it. Its pixel shader is
+  gpu.c's pixel pipeline in integers (attributes from gpu.c's plane equations, coverage by the GPU with vertices shifted
+  by half a pixel); blending, dithering and the mask test read a copy of the target refreshed per triangle or segment
+  where something was drawn since (no fixed-function blending); texels come from a copy of the software VRAM uploaded in
+  stream order from gpu.c's write stamps; an overlapping copy that smears takes its result from the VRAM. At internal
+  scale 1 the target equals the software VRAM: every one of the gpu golden family's 715 lists, and every 10th vsync of
+  `new_game` and `first_battle_save` (whole VRAM, NVIDIA and lavapipe). **Next** (phase 3, the plan on issue #31):
   internal resolutions up to 8x. The software GPU stays the reference and the default; every existing test uses it.
 
 ## GTE
@@ -319,9 +326,8 @@ mods); without `--config` the binary depends on nothing on the machine. Built-in
 | 60 Hz | The port's 60 Hz mode against the NTSC-patched game in the emulator | `tests/port/hz60.py` |
 | Settings, mods, input | Settings round trip; mods keep the emulator's stable hashes; the battle-script scanner on every script on the disc; `--input-test` | `tests/port/settings.py`, `mods.py`, `battle.py`, `dw2003 --input-test` |
 | Debug channel | One `--debug` run to CNTY_SEL: step and pad advance the frame exactly, the state map and the host symbol read the same, poke/peek, screenshot, hash, quit status; `tools/mcp`'s offline self-test | `tests/port/debug.py` (the `port` layer), `tools/mcp/selftest.py` |
-| Hardware renderer | Its picture of the software image byte for byte, its present at six output sizes against the reference, SDL_Renderer's present against the same reference; the fallback without a device (CI); the pictures need a GPU device (local, or lavapipe) | `tests/port/render_gpu.py` (the `port` layer) |
+| Hardware renderer | Its picture byte for byte the software image, its present at six output sizes against the reference, SDL_Renderer's present against the same reference; its rasteriser's whole VRAM target equal to the software VRAM every 10 vsyncs of both replays and after each of the gpu golden family's 715 lists; the fallback without a device (CI); everything else needs a GPU device (local, or lavapipe) | `tests/port/render_gpu.py`, `tests/host/gpu_hw_replay.py` (the `port` layer) |
 | Crash report | A forced NULL write dies of SIGSEGV with a report whose pc symbolizes to the hook's function; a fatal error's report; `--version` | `tests/port/crash.py` (the `port` layer) |
-| Holdouts | A `NON_MATCHING` PS1 image (the holdouts' WIP C) replayed in the emulator without divergence | `tests/holdouts/run.sh` |
 
 What the port and the emulator are *not* compared on: frame numbers (the port's CD timing and CPU time differ), the
 random index and the full checkpoint hash (both follow the frame count). See `tests/port/README.md`.
@@ -369,8 +375,7 @@ stack overflow gets the text (the filter runs on what the guard page leaves) and
   port or multitap.
 - **No reset key** in the window (the console reset exists only as a script step).
 - **Coverage of the game:** the replays reach 14 of 19 tier-1 overlays and a small share of the WSTAG files; the
-  debug overlays (STAGSLCT, SOUNDTST, SHOCKTST) and WFIGHTTS cannot be reached by pad input, and the three holdouts in
-  them (card booster, WFIGHTTS, SHOCKTST) are unvalidated.
+  debug overlays (STAGSLCT, SOUNDTST, SHOCKTST) and WFIGHTTS cannot be reached by pad input.
 - **Timing stand-ins:** the CD seek times (3 ticks + 1 per 8192 sectors, at most 40) and `StGetNext`'s 5000 polls
   per vsync are estimates, not measurements.
 - **State probes:** `port_state_read` (a script's `wait_mem`) maps only layout-identical data and an explicit field

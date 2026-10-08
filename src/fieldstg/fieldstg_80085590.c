@@ -643,73 +643,73 @@ void fieldstg_background_draw(FieldstgBackground *obj, FieldstgBackgroundData *d
     }
 }
 
-#ifdef NON_MATCHING
-/* 88.7%: first_cells as [4][2][2] (the original's folded lbu 2(v0)), an unsigned flip (srl) and the two first-cell
- * indexes computed before the divisions (cx, cy) are the original's. The rest: the original computes the tile-order
- * value before order[row][col]'s address (so loop.c doesn't hoist sp+16 and flip stays in t7): a value temporary or
- * a static inline accessor for the tile order gives that (90.45%, not adopted: judgement call); then sched2 places the
- * order_by_dir address first and the t-registers of quarter, quarter*30 and the row giv differ. wip-13: 30 min of
- * permuter gave only a quarter copy (87.4 alone) plus a semantic change; *(order[row] + col) 90.08 (flip in t7, the row
- * giv then includes sp); 1D order indexes, a dir local, statement orders of quarter/table/flip: no gain.
- * US decomp (func_80085EEC): still INCLUDE_ASM.
- * final-rest: a value temporary `v` for the tile order plus `cx = obj->y & 0x7F` reused for the y test: 94.59
- * (both forced; left: the first block's schedule and the t-registers of quarter, flip and the first-cell bases).
- * last-rest (final): the permuter (25 min, boosted weights) on that form: an s16 quarter gives 96.00, the rest only
- * with dummy memory writes. Not adopted: the forced forms don't reach 100. */
+/* Points the 30 tile objects at the tiles around the view: visible[] gets, per object, the map tile it holds
+ * (0xFF: off the map), first_x/first_y the tile of the view's top left corner. The order of the objects comes from
+ * the player's direction (a table and its row/column flips) and from the quarter of its tile the view is in. */
 void fieldstg_background_update_visible(FieldstgBackground *obj) {
     u8 order[5][6];
-    FieldstgActor *player = (FieldstgActor *)heap_objects.find(5, -1, 0);
-    s32 quarter = (obj->x & 0x7F) > 0x40;
-    s32 table = fieldstg_background_order_by_dir[player->dir].table;
-    u32 flip = fieldstg_background_order_by_dir[player->dir].flip;
+    s32 quarter;
+    s32 table;
+    u32 flip;
     s32 row;
     s32 col;
     s32 r;
     s32 c;
-    s32 tx;
-    s32 ty;
-    s32 i;
+    s32 x;
+    s32 y;
     s32 cx;
     s32 cy;
+    FieldstgActor *player;
+    s32 offset;
 
-    if ((obj->y & 0x7F) > 0x10) {
+    player = (FieldstgActor *)heap_objects.find(5, -1, 0);
+    offset = obj->x & 0x7F;
+    quarter = offset > 0x40;
+    table = fieldstg_background_order_by_dir[player->dir].table;
+    flip = fieldstg_background_order_by_dir[player->dir].flip;
+    /* y's offset written as y less its tile's start: `y & 0x7F` doesn't match (the two reads of y order its load
+     * ahead of the x test) */
+    offset = obj->y - (obj->y & ~0x7F);
+    if (offset > 0x10) {
         quarter |= 2;
     }
     for (row = 0; row < 5; row++) {
         for (col = 0; col < 6; col++) {
-            c = col;
             if (flip & 2) {
                 c = 5 - col;
+            } else {
+                c = col;
             }
-            r = row;
             if (flip & 1) {
                 r = 4 - row;
+            } else {
+                r = row;
             }
             order[row][col] = fieldstg_background_tile_orders[table][quarter][r][c];
         }
     }
-    cx = (flip >> 1) & 1;
+    cx = flip >> 1;
+    cx &= 1;
     cy = flip & 1;
     obj->first_x = obj->x / 128 - fieldstg_background_first_cells[quarter][0][cx];
     obj->first_y = obj->y / 128 - fieldstg_background_first_cells[quarter][1][cy];
-    for (i = 0; i < 30; i++) {
-        obj->visible[i] = 0xFF;
+    /* FAKE: the clearing loop counts with col, the column counter of the loops around it (the US decomp's shape);
+     * an index of its own gets another register (99.70%) */
+    for (col = 0; col < 30; col++) {
+        obj->visible[col] = 0xFF;
     }
     for (row = 0; row < 5; row++) {
-        ty = row + obj->first_y;
-        if (ty >= 0 && ty < obj->height) {
+        y = row + obj->first_y;
+        if (y >= 0 && y < obj->height) {
             for (col = 0; col < 6; col++) {
-                tx = col + obj->first_x;
-                if (tx >= 0 && tx < obj->width) {
-                    obj->visible[order[row][col]] = tx + ty * obj->width;
+                x = col + obj->first_x;
+                if (x >= 0 && x < obj->width) {
+                    obj->visible[order[row][col]] = x + y * obj->width;
                 }
             }
         }
     }
 }
-#else
-INCLUDE_ASM("asm/fieldstg/nonmatchings/fieldstg_80085590", fieldstg_background_update_visible);
-#endif
 
 void fieldstg_background_update(FieldstgBackground *obj, FieldstgBackgroundData *data) {
     GfxLayer *layer;

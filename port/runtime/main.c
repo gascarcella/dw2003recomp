@@ -344,6 +344,8 @@ int main(int argc, char **argv) {
         }
         port_video_open(scale, fullscreen);
         port_input_init(input_test);
+    } else {
+        port_video_gpu_headless(); /* --gpu-screenshot: the rasteriser draws from the first frame */
     }
     if (debug != NULL) {
         /* a driven run: the tool decides when it ends, and may hold the game paused for as long as it likes */

@@ -7,7 +7,8 @@
 #        scripts/ci_areas.sh --all               every area (manual runs, release tags, unknown history)
 #
 # The areas and the jobs each runs (ci.yml has the steps; the jobs run in parallel, each gated by its area):
-#   game      `game`: the toolchain smoke test, the byte-identical rebuild (build.sh --check), scripts/test.sh's
+#   game      `check`'s workaround census (tools/hacks.py --check: reads src/, include/, config/, docs/STATUS.md),
+#             `game`: the toolchain smoke test, the byte-identical rebuild (build.sh --check), scripts/test.sh's
 #             layer 2 (the emulator's replays and SPU trace: nothing of port/)
 #   port      `check`'s probes (the host's gcc and llvm-mingw's clang), `port`: scripts/test.sh's layer 1 and port
 #             layer (every test that compiles or runs port/: the host replays of the gpu/gte/libgs_view/mdec goldens,
@@ -59,7 +60,7 @@ case "${1:-}" in
         [[ $# -ge 2 ]] || { echo "usage: $0 --diff BASE [HEAD]" >&2; exit 2; }
         mapfile -t files < <(git diff --name-only "$2" "${3:-HEAD}")
         echo "ci_areas: ${#files[@]} file(s) changed from $2 to ${3:-HEAD}" >&2 ;;
-    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,23p' "$0"; exit 0 ;;
     *) files=("$@") ;;
 esac
 for f in "${files[@]}"; do

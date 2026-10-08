@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# Runs the host-compile probe, then every reference-test layer that is available here (tests/README.md), and exits
-# non-zero on the first failure. Headless; DW3_JOBS=1 by default (cloud sessions, shared machines): the layers that can
-# run their pieces at once (layer 2's replays, the mods) do so with DW3_JOBS > 1 (CI: 4, the runner's cores).
+# Runs the workaround census (tools/hacks.py --check) and the host-compile probe, then every reference-test layer that
+# is available here (tests/README.md), and exits non-zero on the first failure. Headless; DW3_JOBS=1 by default (cloud
+# sessions, shared machines): the layers that can run their pieces at once (layer 2's replays, the mods) do so with
+# DW3_JOBS > 1 (CI: 4, the runner's cores).
 # Usage: scripts/test.sh [--build] [--layer 1|2|3|port|mods]... [--m32] [--no-probe]
 #   --build     run scripts/build.sh first (the matching build must stay byte-identical; tests never change it)
-#   --layer N   run only that layer (repeatable); the probe still runs. "port": the PC port's M1 test and its checks
-#               (tests/port); "mods": the mods that change the game (tests/port/mods.py, the longest: CI's own job)
+#   --layer N   run only that layer (repeatable); the census and the probe still run. "port": the PC port's M1 test
+#               and its checks (tests/port); "mods": the mods that change the game (tests/port/mods.py, the longest:
+#               CI's own job)
 #   --m32       the port layer's M1 test also on the -m32 build (tests/port/run.py --m32; needs gcc-multilib)
 #   --no-probe  skip the host-compile probe (tools/port_inventory.py probe + link: every unit compiles at -m64 with no
 #               pointer/int cast, implicit declaration or incompatible pointer type, and no global is defined twice)
@@ -23,7 +25,7 @@ while [[ $# -gt 0 ]]; do
         --layer) LAYERS="$LAYERS $2"; shift 2 ;;
         --m32) M32=(--m32); shift ;;
         --no-probe) PROBE=0; shift ;;
-        -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
         *) echo "unknown argument: $1" >&2; exit 2 ;;
     esac
 done
@@ -41,6 +43,11 @@ if [[ $BUILD -eq 1 ]]; then
     echo "=== build (must stay byte-identical)"
     "$ROOT/scripts/build.sh"
 fi
+
+# The workaround census (docs/MATCHING.md "The census: tools/hacks.py"): stdlib only, <1 s, always. The game code is all
+# C, every FAKE: and LOOP_BLOCK carries its comment, and docs/STATUS.md quotes the counts.
+echo "=== census: the matching workarounds (tools/hacks.py --check)"
+"$PY" "$ROOT/tools/hacks.py" --check
 
 # The host-compile gate (docs/PORT.md "Compiling the game C for the host"): needs only the host gcc and nm (the probe writes its own
 # INCLUDE_ASM/gte override headers under build/port_inventory/; include/asm_generated/ is not needed), a few seconds.
@@ -122,6 +129,7 @@ for L in $LAYERS; do
             "$PY" "$ROOT/tests/port/run.py" "${M32[@]}"; ran=$((ran + 1))   # --m32: the -m32 build's log and record too
             "$PY" "$ROOT/tests/port/settings.py"   # --config, the launcher's contract (docs/LAUNCHER.md "Settings file")
             "$PY" "$ROOT/tests/port/render_gpu.py" # the hardware renderer (pictures only with a GPU device)
+            "$PY" "$ROOT/tests/host/gpu_hw_replay.py"   # its rasteriser on the gpu goldens (only with a GPU device)
             "$PY" "$ROOT/tests/port/hz60.py"       # the 60 Hz mode against the patched game's records
             "$PY" "$ROOT/tests/port/battle.py"     # the battle scripts on the disc, for battle_animations
             "$PY" "$ROOT/tests/port/vram.py"       # the first battle's textures in VRAM against the emulator's

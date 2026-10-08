@@ -78,16 +78,15 @@ typedef struct FightstgDrawState {
     /* 0x04 */ s32 unk_04;
     /* 0x08 */ s32 unk_08;
     /* 0x0C */ s32 quad;   /* quad (else triangle) */
-    /* 0x10 */ s32 gouraud; /* gouraud */
-    /* 0x14 */ s32 unk_14;
+    /* 0x10 */ s32 lit; /* corner colours from the lit normals (vertex_colors) */
+    /* 0x14 */ s32 gouraud; /* gouraud primitives (POLY_GT3/GT4), else flat */
     /* 0x18 */ s32 semi_trans; /* semi-transparent (blend mode + 1) */
     /* 0x1C */ u8 *stream; /* command stream */
     /* 0x20 */ s32 *screen_xy; /* screen coordinates of the vertices */
     /* 0x24 */ s32 *screen_z;
     /* 0x28 */ u32 *ot;     /* ordering table */
     /* 0x2C */ s32 *vertex_colors;
-    /* 0x30 */ s32 texture_x;
-    /* 0x34 */ s32 texture_y;
+    /* 0x30 */ FightstgPos texture_pos;
     /* 0x38 */ s32 u_offset;
     /* 0x3C */ s32 v_offset;
     /* 0x40 */ u16 tpage;  /* tpage */
@@ -96,7 +95,7 @@ typedef struct FightstgDrawState {
     /* 0x54 */ FightstgPrim prim;   /* next primitive */
     /* 0x58 */ s32 corners_xy[4]; /* x, y of each corner */
     /* 0x68 */ u32 *ot_entry; /* ordering table entry */
-    /* 0x6C */ u16 corners_uv[4]; /* u, v of each corner */
+    /* 0x6C */ u8 corners_uv[4][2]; /* u, v of each corner */
     /* 0x74 */ CVECTOR corners_color[4]; /* colour of each corner */
 } FightstgDrawState;
 
@@ -658,9 +657,9 @@ void fightstg_model_add_poly_gt(FightstgDrawState *ctx) {
     *(s32 *)&ctx->prim.gt4->x0 = ctx->corners_xy[0];
     *(s32 *)&ctx->prim.gt4->x1 = ctx->corners_xy[1];
     *(s32 *)&ctx->prim.gt4->x2 = ctx->corners_xy[2];
-    *(u16 *)&ctx->prim.gt4->u0 = ctx->corners_uv[0];
-    *(u16 *)&ctx->prim.gt4->u1 = ctx->corners_uv[1];
-    *(u16 *)&ctx->prim.gt4->u2 = ctx->corners_uv[2];
+    *(u16 *)&ctx->prim.gt4->u0 = *(u16 *)ctx->corners_uv[0];
+    *(u16 *)&ctx->prim.gt4->u1 = *(u16 *)ctx->corners_uv[1];
+    *(u16 *)&ctx->prim.gt4->u2 = *(u16 *)ctx->corners_uv[2];
     ctx->prim.gt4->clut = ctx->clut;
     ctx->prim.gt4->tpage = ctx->tpage;
     if (ctx->quad != 0) {
@@ -669,7 +668,7 @@ void fightstg_model_add_poly_gt(FightstgDrawState *ctx) {
             setSemiTrans(ctx->prim.gt4, 1);
         }
         *(s32 *)&ctx->prim.gt4->x3 = ctx->corners_xy[3];
-        *(u16 *)&ctx->prim.gt4->u3 = ctx->corners_uv[3];
+        *(u16 *)&ctx->prim.gt4->u3 = *(u16 *)ctx->corners_uv[3];
         addPrim(ctx->ot_entry, ctx->prim.gt4);
         ctx->prim.gt4++;
     } else {
@@ -688,9 +687,9 @@ void fightstg_model_add_poly_ft(FightstgDrawState *ctx) {
     *(s32 *)&ctx->prim.ft4->x0 = ctx->corners_xy[0];
     *(s32 *)&ctx->prim.ft4->x1 = ctx->corners_xy[1];
     *(s32 *)&ctx->prim.ft4->x2 = ctx->corners_xy[2];
-    *(u16 *)&ctx->prim.ft4->u0 = ctx->corners_uv[0];
-    *(u16 *)&ctx->prim.ft4->u1 = ctx->corners_uv[1];
-    *(u16 *)&ctx->prim.ft4->u2 = ctx->corners_uv[2];
+    *(u16 *)&ctx->prim.ft4->u0 = *(u16 *)ctx->corners_uv[0];
+    *(u16 *)&ctx->prim.ft4->u1 = *(u16 *)ctx->corners_uv[1];
+    *(u16 *)&ctx->prim.ft4->u2 = *(u16 *)ctx->corners_uv[2];
     ctx->prim.ft4->clut = ctx->clut;
     ctx->prim.ft4->tpage = ctx->tpage;
     if (ctx->quad != 0) {
@@ -699,7 +698,7 @@ void fightstg_model_add_poly_ft(FightstgDrawState *ctx) {
             setSemiTrans(ctx->prim.ft4, 1);
         }
         *(s32 *)&ctx->prim.ft4->x3 = ctx->corners_xy[3];
-        *(u16 *)&ctx->prim.ft4->u3 = ctx->corners_uv[3];
+        *(u16 *)&ctx->prim.ft4->u3 = *(u16 *)ctx->corners_uv[3];
         addPrim(ctx->ot_entry, ctx->prim.ft4);
         ctx->prim.ft4++;
     } else {
@@ -759,43 +758,135 @@ s32 fightstg_model_mesh_is_visible(FightstgMesh *obj, GfxLayer *layer) {
     return 0;
 }
 
+/* Command 1: the texture page, the clut and the UV offsets, from the command's bytes. */
+static inline void fightstg_model_mesh_set_texture(FightstgDrawState *ctx) {
+    s32 x, y;
+    s32 cx, cy, tp;
+
+    x = ctx->texture_pos.x;
+    y = ctx->texture_pos.y;
+    ctx->u_offset = ctx->stream[1] + (ctx->stream[2] << 8);
+    ctx->v_offset = ctx->stream[3];
+    cx = ctx->stream[4];
+    cx += x;
+    cy = ctx->stream[5] + y;
+    tp = ctx->stream[6];
+    ctx->clut = getClut(cx, cy);
+    ctx->tpage = getTPage(tp, ctx->semi_trans ? ctx->semi_trans - 1 : 0, x + (ctx->stream[2] << 6), y);
+    ctx->stream += 7;
+}
+
+/* Command 0: a run of faces, each a 0 byte then its vertex indices (then its normals' indices when lit, its UVs
+ * when textured); adds each face turned to the camera to the ordering table. */
+static inline void fightstg_model_mesh_draw_faces(FightstgDrawState *ctx) {
+    s32 opz;
+    s32 otz;
+    s32 i0, i1, i2, i3;
+    s32 z1, z2;
+    s32 n;
+    s32 k;
+    u8 *p;
+    u8 *q;
+
+    do {
+        ctx->stream++;
+        i0 = ctx->stream[0];
+        i1 = ctx->stream[1];
+        i2 = ctx->stream[2];
+        i3 = 0;
+        if (ctx->quad) {
+            i3 = ctx->stream[3];
+        }
+        ctx->corners_xy[0] = ctx->screen_xy[i0];
+        ctx->corners_xy[1] = ctx->screen_xy[i1];
+        ctx->corners_xy[2] = ctx->screen_xy[i2];
+        if (ctx->quad) {
+            ctx->corners_xy[3] = ctx->screen_xy[i3];
+        }
+        /* Evidence (class B; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): the face's tests and drawing, left by
+         * breaks, inside a loop: its notes weigh the references inside it more, which gives the original's registers
+         * for the corners, the screen coordinates' base, the depths' base and z1. */
+        LOOP_BLOCK(
+            gte_ldsxy3(ctx->corners_xy[0], ctx->corners_xy[1], ctx->corners_xy[2]);
+            gte_nclip();
+            if (ctx->corners_xy[0] == ctx->corners_xy[1] || ctx->corners_xy[0] == ctx->corners_xy[2] ||
+                ctx->corners_xy[1] == ctx->corners_xy[2]) {
+                break;
+            }
+            if (ctx->quad && (ctx->corners_xy[0] == ctx->corners_xy[3] || ctx->corners_xy[1] == ctx->corners_xy[3] ||
+                              ctx->corners_xy[2] == ctx->corners_xy[3])) {
+                break;
+            }
+            gte_stopz(&opz);
+            if (opz <= 0) {
+                break;
+            }
+            if (ctx->lit) {
+                p = ctx->stream + (ctx->quad + 3);
+                ctx->corners_color[0] = ((CVECTOR *)ctx->vertex_colors)[p[0]];
+                ctx->corners_color[1] = ((CVECTOR *)ctx->vertex_colors)[p[1]];
+                ctx->corners_color[2] = ((CVECTOR *)ctx->vertex_colors)[p[2]];
+                if (ctx->quad) {
+                    ctx->corners_color[3] = ((CVECTOR *)ctx->vertex_colors)[p[3]];
+                }
+            }
+            if (ctx->textured) {
+                k = ctx->quad + 3;
+                q = ctx->stream + (ctx->lit ? k + (ctx->quad + 3) : k);
+                ctx->corners_uv[0][0] = q[0] + ctx->u_offset;
+                ctx->corners_uv[0][1] = q[1] + ctx->v_offset;
+                ctx->corners_uv[1][0] = q[2] + ctx->u_offset;
+                ctx->corners_uv[1][1] = q[3] + ctx->v_offset;
+                ctx->corners_uv[2][0] = q[4] + ctx->u_offset;
+                ctx->corners_uv[2][1] = q[5] + ctx->v_offset;
+                if (ctx->quad) {
+                    ctx->corners_uv[3][0] = q[6] + ctx->u_offset;
+                    ctx->corners_uv[3][1] = q[7] + ctx->v_offset;
+                }
+            }
+            otz = ctx->screen_z[i0];
+            z1 = ctx->screen_z[i1];
+            z2 = ctx->screen_z[i2];
+            if (ctx->quad) {
+                gte_ldsz4(otz, z1, z2, ctx->screen_z[i3]);
+                gte_avsz4();
+                gte_stotz(&otz);
+            } else {
+                gte_ldsz3(otz, z1, z2);
+                gte_avsz3();
+                gte_stotz(&otz);
+            }
+            ctx->ot_entry = ctx->ot + otz;
+            if (ctx->gouraud) {
+                fightstg_model_add_poly_gt(ctx);
+            } else {
+                if (!ctx->lit) {
+                    ctx->corners_color[0] = ctx->face_colors[0];
+                }
+                fightstg_model_add_poly_ft(ctx);
+            }
+        );
+        n = ctx->quad + 3;
+        ctx->stream += n;
+        if (ctx->lit) {
+            ctx->stream += n;
+        }
+        if (ctx->textured) {
+            ctx->stream += n * 2;
+        }
+    } while (*ctx->stream == 0);
+}
+
 /* Draws the mesh on `layer` (a layer callback): its screen matrix, then the command stream of
  * sub-file 2: 0x8n-0xEn set the drawing state, 1 a texture page, 2-5 a colour, 0 a run of faces
  * (vertex indices, then colours and UVs as the state says); 0xFF ends. */
-#ifdef NON_MATCHING
-/* 99.2% (last-fight; was 97.3%): register allocation of the face's vertex values and depths and of the clut's two halves.
- * wip-14: the texture command through getClut/getTPage (97.3). wip-10: the original loads cmd[6] (tpage) before storing
- * unk_42 (clut), and keeps the two UV sums' adds per branch; argument orders, per-branch `p = ...`, a ternary: no better.
- * final-fight: draw_edges' if/else skeleton instead of `continue`, the fields instead of x/y locals, block-local x/y,
- * the clut written out: no better (the original loads x into a1 and y into a2, here y first).
- * last-fight: what moved it to 99.2: cmd[6] read into tp before the clut store (the original's load order; it fixes
- * the command pointer's a3 and x/y), cx/cy locals for the clut's coordinates, an own k for the UV block (n was one
- * pseudo with the step at the end of the face loop), and in the UV block uv = k + 3 computed before the branch with
- * p = q + (k + (k + 6)) / q + uv from a once-assigned q (the original's per-branch adds and load order; these last
- * temporaries are permuter-style shapes, kept only in this WIP). Left: the vertex base (here v1, original a2), the
- * depth base/z1 (a1/a0 swapped), the clut halves (v0/v1 swapped, store one slot earlier). xy0..2 locals, a pointer
- * for unk_20/unk_24, depth load orders, clut forms (u16 local, shifts first): no better; the permuter (30 min, gte
- * macros preserved): only dummy copies (9055 -> 8755). */
 void fightstg_model_mesh_draw(void *data, GfxLayer *layer, s32 arg) {
     FightstgMesh *obj = data;
     MATRIX m;
     FightstgDrawState ctx;
-    s32 opz;
-    s32 otz;
-    u8 *cmd;
-    u8 *p;
+    u32 op;
     s32 hi;
     s32 lo;
-    s32 i0, i1, i2, i3;
-    s32 xy0, xy1, xy2;
-    s32 z1, z2;
-    s32 n;
-    s32 k;
-    s32 uv;
-    u8 *q;
-    s32 x, y;
-    s32 tp;
-    s32 cx, cy;
 
     gte_CompMatrix(&D_80081358, &obj->matrix, &m);
     gte_SetRotMatrix(&m);
@@ -806,15 +897,16 @@ void fightstg_model_mesh_draw(void *data, GfxLayer *layer, s32 arg) {
     fightstg_model_mesh_project(obj, layer);
     fightstg_model_mesh_light(obj);
     ctx.stream = obj->faces;
-    *(FightstgPos *)&ctx.texture_x = obj->texture_pos;
+    ctx.texture_pos = obj->texture_pos;
     ctx.screen_xy = obj->screen_xy;
     ctx.screen_z = obj->screen_z;
     ctx.vertex_colors = obj->colors;
     ctx.ot = layer->get_ot(layer);
     ctx.prim.ft3 = gfx_module.funcs.get_packet();
     while (*ctx.stream != 0xFF) {
-        hi = *ctx.stream >> 4;
-        lo = *ctx.stream & 0xF;
+        op = *ctx.stream;
+        hi = op >> 4;
+        lo = op & 0xF;
         if (hi != 0) {
             switch (hi) {
             case 8:
@@ -830,138 +922,44 @@ void fightstg_model_mesh_draw(void *data, GfxLayer *layer, s32 arg) {
                 ctx.unk_04 = lo;
                 break;
             case 12:
-                ctx.gouraud = lo;
+                ctx.lit = lo;
                 break;
             case 13:
-                ctx.unk_14 = lo;
+                ctx.gouraud = lo;
                 break;
             case 14:
                 ctx.semi_trans = lo;
                 break;
             }
             ctx.stream++;
-            continue;
-        }
-        switch (lo) {
-        case 1:
-            x = ctx.texture_x;
-            y = ctx.texture_y;
-            ctx.u_offset = ctx.stream[1] + (ctx.stream[2] << 8);
-            ctx.v_offset = ctx.stream[3];
-            tp = ctx.stream[6];
-            cy = ctx.stream[5] + y;
-            cx = ctx.stream[4] + x;
-            ctx.clut = getClut(cx, cy);
-            ctx.tpage = getTPage(tp, ctx.semi_trans != 0 ? ctx.semi_trans - 1 : 0, x + (ctx.stream[2] << 6), y);
-            ctx.stream += 7;
-            break;
-        case 2:
-        case 3:
-        case 4:
-        case 5:
-            if (obj->use_color != 0) {
-                ctx.face_colors[lo - 2].r = obj->color.r;
-                ctx.face_colors[lo - 2].g = obj->color.g;
-                ctx.face_colors[lo - 2].b = obj->color.b;
-            } else {
-                ctx.face_colors[lo - 2].r = ctx.stream[1];
-                ctx.face_colors[lo - 2].g = ctx.stream[2];
-                ctx.face_colors[lo - 2].b = ctx.stream[3];
+        } else {
+            switch (lo) {
+            case 1:
+                fightstg_model_mesh_set_texture(&ctx);
+                break;
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+                if (obj->use_color != 0) {
+                    ctx.face_colors[lo - 2].r = obj->color.r;
+                    ctx.face_colors[lo - 2].g = obj->color.g;
+                    ctx.face_colors[lo - 2].b = obj->color.b;
+                } else {
+                    ctx.face_colors[lo - 2].r = ctx.stream[1];
+                    ctx.face_colors[lo - 2].g = ctx.stream[2];
+                    ctx.face_colors[lo - 2].b = ctx.stream[3];
+                }
+                ctx.stream += 4;
+                break;
+            case 0:
+                fightstg_model_mesh_draw_faces(&ctx);
+                break;
             }
-            ctx.stream += 4;
-            break;
-        case 0:
-            do {
-                ctx.stream++;
-                i0 = ctx.stream[0];
-                i1 = ctx.stream[1];
-                i2 = ctx.stream[2];
-                i3 = 0;
-                if (ctx.quad != 0) {
-                    i3 = ctx.stream[3];
-                }
-                ctx.corners_xy[0] = ctx.screen_xy[i0];
-                ctx.corners_xy[1] = ctx.screen_xy[i1];
-                ctx.corners_xy[2] = ctx.screen_xy[i2];
-                if (ctx.quad != 0) {
-                    ctx.corners_xy[3] = ctx.screen_xy[i3];
-                }
-                gte_ldsxy3(ctx.corners_xy[0], ctx.corners_xy[1], ctx.corners_xy[2]);
-                gte_nclip();
-                if (ctx.corners_xy[0] != ctx.corners_xy[1] && ctx.corners_xy[0] != ctx.corners_xy[2] && ctx.corners_xy[1] != ctx.corners_xy[2] &&
-                    (ctx.quad == 0 || (ctx.corners_xy[0] != ctx.corners_xy[3] && ctx.corners_xy[1] != ctx.corners_xy[3] &&
-                                         ctx.corners_xy[2] != ctx.corners_xy[3]))) {
-                    gte_stopz(&opz);
-                    if (opz > 0) {
-                        if (ctx.gouraud != 0) {
-                            p = ctx.stream + (ctx.quad + 3);
-                            ctx.corners_color[0] = ((CVECTOR *)ctx.vertex_colors)[p[0]];
-                            ctx.corners_color[1] = ((CVECTOR *)ctx.vertex_colors)[p[1]];
-                            ctx.corners_color[2] = ((CVECTOR *)ctx.vertex_colors)[p[2]];
-                            if (ctx.quad != 0) {
-                                ctx.corners_color[3] = ((CVECTOR *)ctx.vertex_colors)[p[3]];
-                            }
-                        }
-                        if (ctx.textured != 0) {
-                            k = ctx.quad;
-                            uv = k + 3;
-                            q = ctx.stream;
-                            if (ctx.gouraud != 0) {
-                                p = q + (k + (k + 6));
-                            } else {
-                                p = q + uv;
-                            }
-                            ((u8 *)ctx.corners_uv)[0] = p[0] + (u8)ctx.u_offset;
-                            ((u8 *)ctx.corners_uv)[1] = p[1] + (u8)ctx.v_offset;
-                            ((u8 *)ctx.corners_uv)[2] = p[2] + (u8)ctx.u_offset;
-                            ((u8 *)ctx.corners_uv)[3] = p[3] + (u8)ctx.v_offset;
-                            ((u8 *)ctx.corners_uv)[4] = p[4] + (u8)ctx.u_offset;
-                            ((u8 *)ctx.corners_uv)[5] = p[5] + (u8)ctx.v_offset;
-                            if (ctx.quad != 0) {
-                                ((u8 *)ctx.corners_uv)[6] = p[6] + (u8)ctx.u_offset;
-                                ((u8 *)ctx.corners_uv)[7] = p[7] + (u8)ctx.v_offset;
-                            }
-                        }
-                        otz = ctx.screen_z[i0];
-                        z1 = ctx.screen_z[i1];
-                        z2 = ctx.screen_z[i2];
-                        if (ctx.quad != 0) {
-                            gte_ldsz4(otz, z1, z2, ctx.screen_z[i3]);
-                            gte_avsz4();
-                            gte_stotz(&otz);
-                        } else {
-                            gte_ldsz3(otz, z1, z2);
-                            gte_avsz3();
-                            gte_stotz(&otz);
-                        }
-                        ctx.ot_entry = ctx.ot + otz;
-                        if (ctx.unk_14 != 0) {
-                            fightstg_model_add_poly_gt(&ctx);
-                        } else {
-                            if (ctx.gouraud == 0) {
-                                ctx.corners_color[0] = ctx.face_colors[0];
-                            }
-                            fightstg_model_add_poly_ft(&ctx);
-                        }
-                    }
-                }
-                n = ctx.quad + 3;
-                ctx.stream += n;
-                if (ctx.gouraud != 0) {
-                    ctx.stream += n;
-                }
-                if (ctx.textured != 0) {
-                    ctx.stream += n * 2;
-                }
-            } while (*ctx.stream == 0);
-            break;
         }
     }
     gfx_module.funcs.set_packet(ctx.prim.ft3);
 }
-#else
-INCLUDE_ASM("asm/fightstg/nonmatchings/fightstg_model", fightstg_model_mesh_draw);
-#endif
 
 /* Draws the mesh's edges (green lines) on `layer`: fightstg_model_mesh_draw's command stream, faces
  * only. */
@@ -982,7 +980,7 @@ void fightstg_model_mesh_draw_edges(void *data, GfxLayer *layer, s32 arg) {
     }
     fightstg_model_mesh_project(obj, layer);
     ctx.stream = obj->faces;
-    *(FightstgPos *)&ctx.texture_x = obj->texture_pos;
+    ctx.texture_pos = obj->texture_pos;
     ctx.screen_xy = obj->screen_xy;
     ctx.screen_z = obj->screen_z;
     ctx.vertex_colors = obj->colors;
@@ -1000,7 +998,7 @@ void fightstg_model_mesh_draw_edges(void *data, GfxLayer *layer, s32 arg) {
                 ctx.textured = lo;
                 break;
             case 12:
-                ctx.gouraud = lo;
+                ctx.lit = lo;
                 break;
             }
             ctx.stream++;
@@ -1057,7 +1055,7 @@ void fightstg_model_mesh_draw_edges(void *data, GfxLayer *layer, s32 arg) {
                     }
                     n = ctx.quad + 3;
                     ctx.stream += n;
-                    if (ctx.gouraud != 0) {
+                    if (ctx.lit != 0) {
                         ctx.stream += n;
                     }
                     if (ctx.textured != 0) {

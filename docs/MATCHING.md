@@ -2,9 +2,8 @@
 
 The practical guide to turning a function's assembly into C that rebuilds byte-identical, for contributors and
 agents. The rules behind it are in `docs/DECISIONS.md` ("Match status and forced (FAKE) matches", "Naming
-conventions", "LOOP_BLOCK"); the compiler evidence is in `docs/TOOLCHAIN.md`. Every game function is already C except a
-few holdouts (`grep -rn "^#ifdef NON_MATCHING" src`), so this guide serves retries of holdouts and FAKE matches,
-new splits, and anyone checking how a shape was found.
+conventions", "LOOP_BLOCK"); the compiler evidence is in `docs/TOOLCHAIN.md`. Every game function is matching C (no
+holdouts are left), so this guide serves retries of FAKE matches, new splits, and anyone checking how a shape was found.
 
 ## Setup
 
@@ -270,10 +269,22 @@ A bare `do { } while (0)` stays forbidden.
 
 ### Forced (FAKE) matches
 Only after natural C has been given up for that function (DECISIONS "Match status and forced (FAKE) matches"). Mark the
-forced line with `/* FAKE: <what is forced and why> */`. Forms used so far: a copy variable (`arrow = ofs`, a local
-copy of a parameter), a repeated store reorg deletes, mixed spellings of one access (`(p + i)->f` and `p[i].f`), a cast
-chain, a `volatile` cast that stops combine folding an address, a constant in a variable before a `LOOP_BARRIER`, one
-variable reused for two jobs, `q - -count`.
+forced line with `/* FAKE: <what is forced and why> */`. Forms in use: a copy variable (`arrow = ofs`, a local
+copy of a parameter), mixed spellings of one access (`(p + i)->f` and `p[i].f`), a cast chain, one variable reused for
+two jobs (a remainder then a sum, a step through a local shared with another case, one pointer over unrelated arrays, a
+counter shared by loops or set inside another loop), a pointer computed from an index instead of stepped. Before forcing
+one, check the US decomp's C for the same function (by EU address through its link maps; `docs/THIRD_PARTY.md`): its
+shapes matched the last 8 holdouts and replaced 5 FAKEs with natural or milder forms.
+
+### The census: `tools/hacks.py`
+`tools/hacks.py --list` prints every workaround with file:line and function: the `FAKE:` comments, the `LOOP_BLOCK`/
+`LOOP_BARRIER` uses with their evidence class, the holdouts (`INCLUDE_ASM`, `NON_MATCHING` blocks) and the uses of the
+macros that wrap inline asm. `--check` (CI's `check` job, `scripts/test.sh`, <1 s, no build or disc) fails on a `FAKE:`
+without its reason, a `LOOP_BLOCK`/`LOOP_BARRIER` without a comment naming its class (or a `FAKE:`) within 12 lines
+above it, an `INCLUDE_ASM` not in the tool's `HOLDOUTS`, a `NON_MATCHING` block beside none, inline asm in game code
+(the macros only in `heap_run_object`), `#if 0`, a game code segment left as split asm, and on counts that differ from
+those `docs/STATUS.md` quotes. A change that adds or removes a workaround runs `tools/hacks.py --update` (it rewrites
+those counts) and commits the docs with it.
 
 ## Search techniques
 

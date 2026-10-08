@@ -1352,41 +1352,42 @@ s32 stgtrain_anim_parse(s32 part) {
 /* Puts part `part`'s images into VRAM from pos[0], pos[1] (one every 64 columns), their CLUTs at pos[2] (+ the
  * image's own offset), pos[3], decompressing "RLEN" images (stgtrain_module.funcs.upload). */
 s32 stgtrain_anim_upload(s32 part, s32 *pos) {
-    StgtrainModule *state = &stgtrain_module;
     Tim tim;
-    s32 x0, x, y, clut_x, clut_y;
-    s32 i, n, k;
-    u8 c;
+    s32 x;
+    s32 y;
+    s32 clut_x;
+    s32 clut_y;
     u8 *buf;
     u8 *src;
     u8 *dst; /* the image to upload, also the decompression's output */
-    u32 magic;
+    s32 i;
+    s32 k;
+    s32 n;
+    u8 c;
+    s32 magic;
 
-    if (part != state->parts[part].id) {
+    if (part != stgtrain_module.parts[part].id) {
         return 0;
     }
-    x0 = pos[0];
+    x = pos[0];
     y = pos[1];
     clut_x = pos[2];
     clut_y = pos[3];
     tim_init(&tim);
-    state->parts[part].y = y;
+    stgtrain_module.parts[part].y = y;
     buf = heap_funcs.alloc(0xA800, 2);
-    for (i = 0; i < state->parts[part].count; i++) {
-        x = x0 + i * 0x40;
-        stgtrain_module.parts[part].x[i] = x;
-        tim.set_image_pos(x, y);
+    for (i = 0; i < stgtrain_module.parts[part].count; i++) {
+        stgtrain_module.parts[part].x[i] = x + i * 0x40;
+        tim.set_image_pos(x + i * 0x40, y);
         src = (u8 *)stgtrain_module.parts[part].images[i];
-        magic = 0x4E454C52; /* "RLEN" */
-        /* FAKE: the constant in a variable set before an empty loop (a scheduling barrier). The original schedules
-         * [lui, lw src, ori, lw *src, nop, bne]: the constant and src are ready before the image word's load,
-         * which no single block's schedule gives (sched2 puts the ori next to the bne). */
-        LOOP_BARRIER();
-        if (*(u32 *)src == magic) {
-            src += 8;
+        /* The image's first word is read before dst is set (the US decomp's shape); with the copy first, or the
+         * word tested in place, cse loads it through dst (99.85%). */
+        magic = *(s32 *)src;
+        dst = src;
+        if (magic == 0x4E454C52) { /* "RLEN" */
             dst = buf;
-            c = *src;
-            while (c != 0) {
+            src += 8;
+            while ((c = *src) != 0) {
                 if (c & 0x80) {
                     n = c & 0x7F;
                     src++;
@@ -1400,11 +1401,8 @@ s32 stgtrain_anim_upload(s32 part, s32 *pos) {
                         *dst++ = *src++;
                     }
                 }
-                c = *src;
             }
             dst = buf;
-        } else {
-            dst = src;
         }
         tim.set_clut_pos(clut_x + ((s16 *)dst)[6], clut_y);
         tim.load((u32 *)dst);

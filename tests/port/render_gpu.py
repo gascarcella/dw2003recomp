@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""The hardware renderer (port/runtime/render_gpu.c; issue #31), phase 1: the device, the present of the software image, the
-fallback. CI only compiles the renderer and runs the fallback part; the rest needs a GPU device and runs locally.
+"""The hardware renderer (port/runtime/render_gpu.c; issue #31): the device, the present, the fallback, and the rasteriser
+at internal scale 1. CI only compiles the renderer and runs the fallback part; the rest needs a GPU device and runs
+locally.
 
 Usage: tests/port/render_gpu.py [--out DIR] [-j N] [--lavapipe]
 
@@ -12,9 +13,11 @@ Builds build/port-sdl if needed (-DDW3_PORT_SDL=ON: tools/sdl3 and tools/dxc), t
     lavapipe can: VK_EXT_headless_surface; NVIDIA's driver cannot, and the window then falls back: skipped): the
     input self-test with `--renderer gpu` must pass with the window presenting through SDL_GPU;
   - with a GPU device and the disc (otherwise skipped, with the reason): new_game replayed headless with --screenshot
-    and --gpu-screenshot at fixed vsyncs: the hardware renderer's image must be the software image byte for byte, and
-    its present into outputs of several sizes (integer scales, letterboxing, a non-integer 4:3 width, a window
-    smaller than the image) must be the reference below pixel for pixel;
+    and --gpu-screenshot at fixed vsyncs: the hardware renderer's picture (drawn by its rasteriser for a 15-bit
+    display) must be the software image byte for byte, and its present into outputs of several sizes (integer scales,
+    letterboxing, a non-integer 4:3 width, a window smaller than the image) must be the reference below pixel for
+    pixel; then new_game and first_battle_save with the rasteriser's whole VRAM target compared with the software VRAM
+    every 10 vsyncs (DW3_PORT_GPU_VRAM_CHECK): no difference anywhere (~40 s);
   - with the disc: SDL_Renderer's own present (a 960x720 window on the offscreen driver, read back through
     DW3_PORT_PRESENT_READBACK) must be the same reference: the two present paths agree.
 The reference is video.c's placement (video_dest: 4:3, as tall as an integer multiple of the image's lines allows,
@@ -156,6 +159,17 @@ def screenshots(sdl, env, out):
               + (f" ({'; '.join(bad)} differ)" if bad else ""))
 
 
+def vram_checks(sdl, env, every=10):
+    print(f"render_gpu: the rasteriser's whole VRAM against the software VRAM every {every} vsyncs")
+    for name in ("new_game", "first_battle_save"):
+        rc, text = run([sdl, "--disc", DISC, "--script", SCRIPTS / f"{name}.json", "--gpu-screenshot", "1:/dev/null"],
+                       dict(env, DW3_PORT_GPU_VRAM_CHECK=str(every)), timeout=900)
+        total = next((l.split("gpu vram check: ", 1)[1] for l in text.splitlines() if " checks, " in l), "no checks")
+        bad = [l.split("port: ", 1)[1] for l in text.splitlines() if "pixels differ" in l]
+        check(rc == 0 and total.endswith(" 0 with differences") and "no rasteriser" not in text,
+              f"{name}: {total}" + (f"; the first: {bad[0]}" if bad else ""))
+
+
 def sdl_renderer(sdl, env, out):
     print("render_gpu: SDL_Renderer's present (a 960x720 window, offscreen) against the same reference")
     for f in (FRAMES[0], FRAMES[-1]):
@@ -212,6 +226,7 @@ def main():
         else:
             window(sdl, env)
             screenshots(sdl, env, out)
+            vram_checks(sdl, env)
         sdl_renderer(sdl, env, out)
     print(f"render_gpu test: {'FAIL (' + str(len(FAILURES)) + ')' if FAILURES else 'pass'}")
     return 1 if FAILURES else 0

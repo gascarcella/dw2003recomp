@@ -79,7 +79,7 @@ fixtures: {name: [...]}, cases: [{name, comment, fixture, buffers, calls: [{func
 | `wfightmn_events` | `fightstg_events_get_delay`, `_take_next`, `_add_knockout` (`_add_first`), `_add_party_turn`, `_start_final_phase`; `wfightmn_note_copied_tech` | the `fightstg_rules` fixture (imported; its own kept setup case); a family of its own (first made to run last because appending to `fightstg_rules` moved a vblank into `gamestate_flags`' whole-struct read; that read now skips `playtime_frames`, DECISIONS "Replay and golden contracts"): the delays (the turn `base * other.Boost / root` with its 10-step Newton root, which ends on k at k*k - 1 where an isqrt gives k - 1: Boost 50 against 48 -> 979; its bounds 707/1414; an unbounded blast kind; regen, kind 8 (its 6000 cap unreachable), paralysis/confusion/sleep with their resist pairs, a technique's modifier), `take_next` (smallest delay; a turn event loses a tie to any later event; types 4/6/9 stay queued; empty queue), `add_first` (+2 to the queue, itself at 1), a full queue drops the new event, the boss's final phase (event 0x18 at 3000, modifiers set to `-stat >> 1`), and battle type 4's copy rule (`WFIGHTMN.PRO` in the tier-2 slot: party only; kinds 2..8, 11, >= 13 or defense_stat >= 2; never anim scripts 5/12) (34 cases) |
 | `gte` | the GTE (`port/psyq/gte.c` on the host) | small MIPS routines written into scratch RAM (`0x80180800`..`0x80184000`, code at `0x80181000`) save the GTE's state, load all 64 registers, run one command, store every register back and restore the state: every command with sf/lm 0/1, all 128 MVMVA variants, the game's 9 command words, MAC overflow past 44 bits, NCLIP/AVSZ limits, SXY/IR0 clamps, RTPS sweeps over every UNR table entry, H >= 2*SZ3, SZ3 saturation; LIBGTE's own functions and the state they leave; replayed on the host by `tests/host/gte_replay.py` (865 cases) |
 | `libgs_view` | LIBGS's `GsSetRefView2`, `GsGetLw` and `GsSetFlatLight`, LIBGTE's `MulMatrix`, `MulMatrix2`, `ApplyMatrixLV`, `TransposeMatrix`, `SquareRoot0` (`port/psyq/libgs.c`, `libgte.c` on the host) | the battle camera (issue #7): each call through the `gte` family's wrapper (its routines are this family's fixture), so the GTE registers before and after are part of the golden; a scratch view buffer holds the `GsRVIEW2`, up to four `GsCOORDINATE2` and a `MATRIX`; reads the world-screen matrix `D_80081358`, its copy `D_80081338`, the coordinate systems' `flg`/`workm` (and once the boot's view base `D_80081398` and PSDCNT 1): FIGHTSTG's camera with `super` rotations taken along its swing and its model view, no `super`, twists, `vp = vr` (returns 1), straight up/down (no y turn), coordinates past 15 bits (scaled down), random views, hierarchies of 2..4 systems over every `flg` case (0, PSDCNT, other) with `GsGetLw` on its own; the LIBGTE functions on random and edge inputs, aliased arguments, `SquareRoot0` over powers of two and the table's edges (non-negative only: the PS1 reads past its table for a negative one); `GsSetFlatLight` (issue #19: the battle's lights) as runs of calls from GsInitGraph's zero matrices, reading the light matrix `D_800812F8` (row id = the direction normalised to 4096 and negated) and the light colour matrix `D_80081318` (column id = the colour, `(c << 12) / 255`, loaded as the GTE's LCM): every distinct lighting of FIGHTSTG's stage table (zero lights return -1 and leave their row alone), a zero light over a set row, ids outside 0..2, axis, tiny and large directions, every colour edge, random lights; replayed on the host by `tests/host/libgs_replay.py` (267 cases) |
-| `gpu` | the GPU and LIBGPU (`port/psyq/gpu.c`, `libgpu.c` on the host) | GP0 command lists drawn through the game's `DrawOTag` into a 64x64 target at VRAM (512, 0) and read back with `StoreImage` (MIPS routines at `0x80187800` fill textures with a xorshift pattern, `0x80187900` makes 5-argument calls): every polygon, line and rectangle type with random modes (blend mode, dither, mask set/check, depth, raw) and the texture window; probes that pin the rasteriser (UV/colour ramps, line stepping, the colour pipeline per blend mode, sprites); edges (shared edges, thin/degenerate/bowtie, negative and 11-bit coordinates, the 1023/511 limit, draw areas, texture pages); fills and copies; `LoadImage`, `MoveImage`, `ClearImage(2)` (aligned and not, the whole VRAM), the `SetDrawEnv`/`SetDefDrawEnv`/`SetDrawMove` packets, `BreakDraw` idle; replayed on the host by `tests/host/gpu_replay.py` with 133 known differences (`tests/host/known_mismatches.json`) (715 cases) |
+| `gpu` | the GPU and LIBGPU (`port/psyq/gpu.c`, `libgpu.c` on the host) | GP0 command lists drawn through the game's `DrawOTag` into a 64x64 target at VRAM (512, 0) and read back with `StoreImage` (MIPS routines at `0x80187800` fill textures with a xorshift pattern, `0x80187900` makes 5-argument calls): every polygon, line and rectangle type with random modes (blend mode, dither, mask set/check, depth, raw) and the texture window; probes that pin the rasteriser (UV/colour ramps, line stepping, the colour pipeline per blend mode, sprites); edges (shared edges, thin/degenerate/bowtie, negative and 11-bit coordinates, the 1023/511 limit, draw areas, texture pages); fills and copies; `LoadImage`, `MoveImage`, `ClearImage(2)` (aligned and not, the whole VRAM), the `SetDrawEnv`/`SetDefDrawEnv`/`SetDrawMove` packets, `BreakDraw` idle; replayed on the host by `tests/host/gpu_replay.py` with 133 known differences (`tests/host/known_mismatches.json`) (715 cases); the same lists through the hardware renderer's rasteriser by `tests/host/gpu_hw_replay.py` (its whole VRAM target against the software VRAM after each case; ledger `tests/host/gpu_hw_mismatches.json`, empty; needs a GPU device) |
 | `mdec` | LIBPRESS and the MDEC (`port/psyq/libpress.c`, `mdec.c` on the host) | a kept setup puts `STDWTITL.PRO` (LIBPRESS) in the slot; frames of the movies on the disc (MOVIEOPN 3, MOVIEE03 100/1383/1480, MOVIED01 397: the opening, the largest frames, the largest quantiser) are assembled from their sectors into RAM at `0x80112000` (the golden keeps only their `source`, size and SHA-1: the family's `frame_bitstream` rebuilds them from the disc), `DecDCTvlcBuild` + `DecDCTvlc2` expand them (the run-level words and the 0xA5 fill after them read back), then `DecDCTReset(0)`, `DecDCTin` (the command word) and per 16-pixel column `DecDCTout` + `DecDCToutSync` (each column's pixels: a SHA-1); one frame also in 15-bit modes 0 and 2; made-up run-level data (every quantiser, quantiser 0, DC only, 0xFE00 padding, runs past 63, 15-bit, saturation and out-of-range colours) kept as pixels; replayed on the host by `tests/host/mdec_replay.py`: the run-level words exact, the pixels within 4 per byte (PCSX-Redux's IDCT rounding), the movie columns (SHA-1s) and two emulator disagreements known (`known_mismatches.json`) (17 cases) |
 | `wfightmn_spoils` | `wfightmn_battle_end` (substep 0), `fieldstg_start_battle` | the battle's spoils, named to run after `gamestate_flags` (sweep5, 2026-10-05): the `fightstg_rules` fixture (its own kept setup case), `WFIGHTMN.PRO` in the tier-2 slot per case; the fade object the function creates is allocated in a 0x100-byte scratch heap arena (`heap_funcs.first/end` pointed at it, restored after the case): the drop pick `next() % count` over the enemies with a Digimon and `item != 0` (a stolen -1 counts, an empty slot does not), the holder's rank used as the slot index (one holder in slot 1: `enemies[0]` is read, no item), `drop_rate + 1` out of 1024 at residues 128/129 (0xD9, rate 128), the picked enemy's own rate (0x20, rate 2), a stolen item (no second draw), the prize override, result 0 (nothing but the HP/MP write-back), 2 (the same drop), a knocked-out member back at 1 HP with its results cleared, and no holder (`% 0`: the draw, no item; the host traps: FINDINGS 7); `fieldstg_start_battle` with `FIELDSTG.PRO` in the slot and a scratch field manager (kind 7) on `heap_objects`: no manager, a plain battle copied (has_prize 0, next map 0x600; 0xE0A at progress 0x2B), the range edges 0x1C8/0x1D1, the prize by parity (odd `next() & 0x1F`, even `& 0xF`: a draw with residue 16 is the rare item only for an even enemy), map and progress 0x2D (24 cases) |
 
@@ -337,60 +337,12 @@ The pure-logic modules: `fightstg_rules_*` 32/32, `cardgame_cpu` 15/15, `pad_ran
 the oracle and 49/50 in the union (only `gamestate_start_card_game`, no card match), `records` 6/7 and 7/7; the rest of each
 overlay is mostly UI (object update/draw/run, windows, cursors) that the replays run: STFGTREP 34/36, STGTRAIN 37/94,
 STGDGLAB 20/71, STSTATUS 34/123 in the union. Tier-1 overlays run by the replays: 14 of 19 (not CARDGAME, STDGNAME,
-STAGSLCT, SOUNDTST, SHOCKTST); tier 2: WFIGHTMN and 15 of 293 WSTAG files, not WFIGHTTS. Holdouts and FAKE matches run: 9 of
-17 (`tests/holdouts/` validates the holdouts that run).
+STAGSLCT, SOUNDTST, SHOCKTST); tier 2: WFIGHTMN and 15 of 293 WSTAG files, not WFIGHTTS. FAKE matches run: see
+`build/coverage/report.md`.
 
-## Holdout validation (not a test)
+## Holdout validation (retired)
 
-`tests/holdouts/run.sh [--control] [--no-probe] [--scripts NAME ...] [--out DIR]` checks the WIP C of the
-`NON_MATCHING` holdouts (the functions whose C is under `#ifdef NON_MATCHING`, the original's asm in `#else`) by running
-it: DECISIONS "Reference tests: three layers" ("the `-DNON_MATCHING` build replayed through the holdouts' scenes") and
-"Holdout validation by run". It needs the matching build (`scripts/build.sh`), the emulator and the disc, and writes only
-to `DIR` (default `$TMPDIR/dw3_holdouts`, ~0.7 GB for the image); `src/`, `build/` and the matching outputs are untouched.
-
-1. **Build.** Each C file with a holdout is compiled again with `-DNON_MATCHING` (`tools/cc_psx.sh`, the build's `-G`
-   and data flags) and its overlay relinked from the build's own linker scripts with that object swapped in. A WIP
-   function of another size moves everything after it, so everything that points into a moved overlay is relinked or
-   patched: the overlay's tier-2 children against its new symbols (FIELDSTG's 293 `WSTAG` files), a parent against a
-   changed child's new addresses (`tier2_calls`), and the EXE: its absolute references to FIELDSTG (`gamestate.c`'s
-   `func_8008B770` = `fieldstg_goto_map`, `func_8008BFA4`, `func_8008C000`, `D_8009B6A4`) are relinked with the new
-   addresses, and `overlay_entries` (`src/main/overlay.c`: the stages' entry points as plain numbers) is patched.
-   Two guards: every word, `lui` and `jal` of a relinked file that holds an address of a moved range must carry a
-   relocation (the relink is linked with `-q`; otherwise the run stops), and any other EXE word holding the old address
-   of a moved symbol is printed.
-2. **Image.** `mkpsxiso` rebuilds the disc from `extracted/dw2003.xml` over a tree of symlinks to `extracted/disc`
-   with the changed files copied in. The game finds files by the EXE's table (LBA, sectors): if a file needs another
-   number of sectors, the files after it move, and the table in the EXE copy is patched from the new image's
-   directories before a second `mkpsxiso` (checked on a padded FIELDSTG: all 2,382 entries agree with the image; no
-   holdout has needed it so far, every changed file keeps its sector count).
-3. **Replay.** Every recorded layer-2 script runs on that image (`replay.py`'s `run_once(iso=...)`, also `replay.py
-   run|check --iso CUE`) twice: on the dynarec, compared with its expected file in full and in the cross-core view;
-   and under `-debugger -interpreter` with the **holdout probe** (`tools/coverage.lua` with a spec that arms only the
-   holdouts, in the NON_MATCHING files' `.text`), compared in the cross-core view, recording which holdouts ran.
-4. **Report** per holdout: compiled (size against the original), the scripts that ran it, and **validated** (every
-   script that ran it reproduced its checkpoints), **diverged** (then a `tests/host/FINDINGS.md` entry: the function and
-   the first checkpoint that differs) or **not reached**. `DIR/report.json` has the details.
-
-`--control` first runs steps 1-2 without `-DNON_MATCHING` and requires the original image back bit for bit, a check of
-the procedure itself. Cost (4 cores shared with other agents): build ~45-100 s, image 3 s, control ~50 s, dynarec replays
-~65 s, probe replays ~8 min (`first_battle_save` 438 s under `-debugger -interpreter`); ~1.7 min with `--no-probe`
-(no reach data then: it falls back to `build/coverage/*.json`), ~11 min in full. Too slow for `scripts/test.sh`; run it
-after a holdout's C changes or a new script reaches one.
-
-State (2026-10-05, scripts `new_game` and `first_battle_save`; both replays identical to their expected files on the
-dynarec, frames included, and the same checkpoints under the interpreter):
-
-| Holdout | Size (original -> WIP) | Run by | Result |
-|---|---|---|---|
-| `fieldstg_background_update_visible` | 0x258 -> 0x260 | `new_game`, `first_battle_save` (field from frame 2,283) | validated |
-| `fieldstg_manager_update` | 0xC94 -> 0xC94 | `new_game`, `first_battle_save` (every field frame) | validated |
-| `fightstg_rules_get_stats` | 0x9B0 -> 0x9B0 | `first_battle_save` (the battle) | validated |
-| `fightstg_model_mesh_draw` | 0x848 -> 0x848 | `first_battle_save` (the battle) | validated |
-| `stitshop_info_create_windows` | 0x3E8 -> 0x3E4 | `first_battle_save` (the item shop) | validated |
-| `stcrdshp_run_booster` | 0xE14 -> 0xE14 | - (card shop booster) | not reached |
-| `wfightts_digimon_menu_update` | 0x53C -> 0x538 | - (WFIGHTTS is not loaded by the first battle) | not reached |
-| `shocktst_convert_table` | 0x324 -> 0x308 | - (SHOCKTST is a debug overlay; the function writes to the dev PC through `sim:`) | not reached |
-
-"Validated" covers what the scripts exercise: the checkpoint hashes cover `gamestate_data` only, so a drawing function
-(`fightstg_model_mesh_draw`, `fieldstg_background_update_visible`) is validated as "the game state and the rest of the
-run did not change", not pixel for pixel.
+`tests/holdouts/run.sh` replayed a `-DNON_MATCHING` PS1 image through the layer-2 scripts to validate the holdouts' WIP
+C (the code the port compiled for them). Since #55 there are no holdouts, and `tools/hacks.py --check` keeps any new
+`INCLUDE_ASM`/`NON_MATCHING` out of game code, so the script was removed; it is in the history (`git show
+26bace0:tests/holdouts/run.py`) should a function ever have to go back to asm.

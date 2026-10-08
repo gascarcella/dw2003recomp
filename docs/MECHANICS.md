@@ -18,9 +18,8 @@ the end says what to fetch from an unblocked machine. Where a guide and the C di
 
 Provenance of the golden values: goldens come from the emulator-run original (the oracle runs the disc's own code), never
 from this document's hand arithmetic; the hand-computed numbers below check that a harness is wired right.
-`fightstg_rules_get_stats` is still under `#ifdef NON_MATCHING` in `src/fightstg/fightstg_8008D3B4.c` (the build links the
-original asm); its WIP C reproduces every `fightstg_rules` golden on the host and the first battle's replay
-(`tests/holdouts/`).
+`fightstg_rules_get_stats` (`src/fightstg/fightstg_8008D3B4.c`) is matching C since 2026-10-07, so the host replays
+the original's code too.
 
 ## 0. Shared conventions
 
@@ -741,7 +740,7 @@ with emulator-written cards and with the port.
 ## 13. Open questions
 
 Answered and removed (2026-10-05): the goldens' validity while `fightstg_rules_get_stats` was NON_MATCHING (they run the
-original's code; the WIP C reproduces every `fightstg_rules` case on the host and the battle replay, `tests/holdouts/`);
+original's code; the WIP C reproduced every `fightstg_rules` case on the host and the battle replay; it is matching C since #55);
 `values[1]` (the TP, section 6); division by zero (no trap, and no zero divisor in the game's data: section 4); where the
 digivolution and training rules are (sections 6, 7); the card rules (section 10); the menu item effects and the shops' helpers
 (section 9); the exact fields of the status rolls (section 5); which training menus and shops the field opens (sections 6 and 9,

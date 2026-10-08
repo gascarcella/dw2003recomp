@@ -80,7 +80,6 @@ tests/golden/oracle.py gen|check|list [families] [--bios retail]   # layer-1 gol
 tests/host/replay.py [families] [--findings]   # the goldens through the C compiled with gcc -m64; mismatches = tests/host/FINDINGS.md
 tests/replay/replay.py run tests/replay/scripts/<name>.json [--record] [--repeat 2]   # layer-2 script; `check` replays them all
 tools/venv/bin/python tools/coverage.py run [--oracle] [--replay NAME ...] | report [--module X]   # function coverage of the emulator tests -> build/coverage/report.md (~23 min; --oracle alone ~40 s)
-tests/holdouts/run.sh [--control] [--no-probe]   # NON_MATCHING build -> scratch disc image -> replays: validates the holdouts' WIP C (~11 min; not in test.sh)
 tools/redux/pcsx-redux -no-ui -stdout -testmode -run -iso iso/dw2003.cue -bios <bin> -dofile <lua>   # headless run with a Lua script (tools/redux_boot_check.lua is the template)
 tools/venv/bin/python tools/port_inventory.py counts [--sites KIND[:TAG]]   # PC port inventory (`docs/PORT.md`): Psy-Q calls, macros, literal sizes, PS1 addresses, port.h hooks; --sites lists file:line
 tools/venv/bin/python tools/port_inventory.py probe [FILES...] [-v] [--warnings] [--m32]   # host-compile gate (-m64, -Werror on pointer/int casts, implicit declarations, incompatible pointers); exit 0 = clean (~1 s); test.sh and CI run it
@@ -110,6 +109,7 @@ tools/venv/bin/python tools/wstag_groups.py [--funcs|--add|--propagate]   # WSTA
 tools/venv/bin/python tools/overlay_xref.py fieldstg   # per-function evidence for an overlay's file boundaries
 tools/venv/bin/python tools/disc_files.py   # file ID <-> disc path map (importable read(id)/subfile() helpers; docs/FORMATS.md)
 tools/venv/bin/python tools/dump_text.py TALK08 [-s N] [-r] | --check   # print/decode the game's text files
+tools/venv/bin/python tools/hacks.py [--list] [--check] [--update]   # the matching workarounds (FAKE:, LOOP_BLOCK, holdouts) and the all-C gate; --check (CI, test.sh) = the rules + the counts docs/STATUS.md quotes (<1 s)
 tools/venv/bin/python tools/flag_census.py [--type 0x72] | --check   # every flag word the game reads/writes, by type and index (from the C; asm/ for the residual-asm sweep); --check = layer 3's range check
 scripts/setup.sh psyq && tools/psyq_compare.sh [-D NON_MATCHING] src/<t>/<unit>.c <func>   # same function through Sony's real Psy-Q chain vs ours
 tools/cc_psx.sh -V 2.8.1 -Iinclude -Iinclude/asm_generated -I. in.c -o out.o   # compile like the build does

@@ -11,6 +11,11 @@
  *   D HEX_ENV x y w h       SetDefDrawEnv(DRAWENV with these bytes, x, y, w, h)           -> the DRAWENV's bytes
  *   V HEX_DRMOVE x y w h dx dy  SetDrawMove(DR_MOVE with these bytes, RECT, dx, dy)       -> the DR_MOVE's bytes
  *   B                       BreakDraw                                                     -> 0 for NULL, else 1
+ * Built with -DGPU_HW (tests/host/gpu_hw_replay.py: with port/runtime/render_gpu.c and SDL3) the hardware renderer's
+ * rasteriser listens to the software GPU from the start, and:
+ *   H                       its whole VRAM target against the software VRAM -> "ok", or "diff N x y SW HW" (the
+ *                           count, the first differing pixel, both values), after which the target is set to the
+ *                           software VRAM again (each case starts equal)
  * The ordering-table walk resolves 24-bit tags as PS1-style byte offsets in the arena (psyq_set_arena): a list at the
  * PS1 address A sits at port_arena + (A & 0xFFFFFF), so the golden's tags work unchanged (docs/PORT.md "Ordering
  * tables on 64-bit" has the port's own scheme, word offsets in the tag window). */
@@ -21,6 +26,31 @@
 
 #include "psyq_internal.h"
 #include "psyq/libgpu.h"
+
+#ifdef GPU_HW
+#include <stdarg.h>
+
+#include "render_gpu.h"
+
+void port_log(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    fputs("harness: ", stderr);
+    vfprintf(stderr, fmt, ap);
+    fputc('\n', stderr);
+    va_end(ap);
+}
+
+void port_fatal(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    fputs("harness: fatal: ", stderr);
+    vfprintf(stderr, fmt, ap);
+    fputc('\n', stderr);
+    va_end(ap);
+    exit(1);
+}
+#endif
 
 #define ARENA_SIZE PORT_ARENA_SIZE
 
@@ -81,6 +111,18 @@ int main(void) {
     memset(arena, 0, ARENA_SIZE);
     psyq_set_arena(arena, ARENA_SIZE);
     psyq_gpu_reset();
+#ifdef GPU_HW
+    {
+        char why[256];
+        if (!SDL_Init(SDL_INIT_VIDEO) || !render_gpu_open(NULL, why, sizeof(why)) ||
+            !render_gpu_raster_start(why, sizeof(why))) {
+            printf("nodevice %s\n", SDL_WasInit(SDL_INIT_VIDEO) ? why : SDL_GetError());
+            return 2;
+        }
+        printf("device %s\n", render_gpu_describe());
+        fflush(stdout);
+    }
+#endif
     while (fgets(line, sizeof(line), stdin) != NULL) {
         int x, y, w, h, a, b, c, dx, dy;
         char cmd[4];
@@ -160,10 +202,37 @@ int main(void) {
             puthex((const u8 *)&mv, sizeof(mv));
         } else if (strcmp(cmd, "B") == 0) {
             printf("%d\n", BreakDraw() == NULL ? 0 : 1);
+#ifdef GPU_HW
+        } else if (strcmp(cmd, "H") == 0) {
+            static u16 hw[1024 * 512];
+            const u16 *sw = psyq_gpu_vram();
+            int i, n = 0, first = -1;
+
+            if (!render_gpu_read_vram(hw)) {
+                puts("readback failed");
+            } else {
+                for (i = 0; i < 1024 * 512; i++) {
+                    if (hw[i] != sw[i]) {
+                        first = first < 0 ? i : first;
+                        n++;
+                    }
+                }
+                if (n == 0) {
+                    puts("ok");
+                } else {
+                    printf("diff %d %d %d %04x %04x\n", n, first % 1024, first / 1024, sw[first], hw[first]);
+                    render_gpu_raster_resync();
+                }
+            }
+#endif
         } else {
             printf("? %s\n", cmd);
         }
         fflush(stdout);
     }
+#ifdef GPU_HW
+    render_gpu_close();
+    SDL_Quit();
+#endif
     return 0;
 }
