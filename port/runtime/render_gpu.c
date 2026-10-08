@@ -55,6 +55,7 @@
 #define BLOCKS 16 /* gpu.c's write-stamp blocks per row (64 pixels each) */
 #define STAMP_NONE 0xFFFFFFFFu
 #define RENDER_MAX_SCALE 8
+#define RENDER_INFLIGHT 3 /* frames the GPU may lag behind: a slow device (software Vulkan) holds the game back */
 
 /* ---- The units (raster.vert.hlsl's and raster.frag.hlsl's uniforms) ---- */
 
@@ -125,6 +126,8 @@ static struct {
     u32 uploaded[VRAM_H][BLOCKS];          /* the stamp each block had at its last upload; STAMP_NONE: never */
     u32 generation;                        /* gpu.c's stamp generation at the last check */
     u8 dirty[TILES_Y][TILES_X];            /* drawn into since the tile's last background copy */
+    SDL_GPUFence *inflight[RENDER_INFLIGHT]; /* the last frames' fences: at most RENDER_INFLIGHT frames queued */
+    unsigned frame;
 } r;
 
 /* ---- Recording ---- */
@@ -696,6 +699,14 @@ static void render_release(void) {
         gpu_set_listener(NULL);
     }
     if (r.device != NULL) {
+        size_t f;
+        for (f = 0; f < RENDER_INFLIGHT; f++) {
+            if (r.inflight[f] != NULL) {
+                SDL_ReleaseGPUFence(r.device, r.inflight[f]);
+            }
+        }
+    }
+    if (r.device != NULL) {
         SDL_GPUTexture *textures[] = { r.target, r.image, r.vram_target, r.background, r.mirror };
         SDL_GPUTransferBuffer *buffers[] = { r.download, r.upload, r.staging_buf, r.vram_download };
         SDL_GPUGraphicsPipeline *pipes[] = { r.pipe_off, r.pipe_swap, r.pipe_vram_off, r.pipe_vram_swap,
@@ -1052,16 +1063,26 @@ static void raster_run(SDL_GPUCommandBuffer *cb) {
 
 void render_gpu_frame(void) {
     SDL_GPUCommandBuffer *cb;
+    SDL_GPUFence **slot;
     if (!r.raster || r.nrecs == 0) {
         return;
+    }
+    /* The frame RENDER_INFLIGHT frames ago must be done: a run without a window (nothing else waits: no swapchain)
+     * never queues more than that, however slow the device. */
+    slot = &r.inflight[r.frame++ % RENDER_INFLIGHT];
+    if (*slot != NULL) {
+        SDL_WaitForGPUFences(r.device, true, slot, 1);
+        SDL_ReleaseGPUFence(r.device, *slot);
+        *slot = NULL;
     }
     cb = SDL_AcquireGPUCommandBuffer(r.device);
     if (cb == NULL) {
         port_fatal("renderer: gpu: SDL_AcquireGPUCommandBuffer: %s", SDL_GetError());
     }
     raster_run(cb);
-    if (!SDL_SubmitGPUCommandBuffer(cb)) {
-        port_fatal("renderer: gpu: SDL_SubmitGPUCommandBuffer: %s", SDL_GetError());
+    *slot = SDL_SubmitGPUCommandBufferAndAcquireFence(cb);
+    if (*slot == NULL) {
+        port_fatal("renderer: gpu: SDL_SubmitGPUCommandBufferAndAcquireFence: %s", SDL_GetError());
     }
 }
 
