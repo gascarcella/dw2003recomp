@@ -34,9 +34,10 @@ formats are in `port/README.md`; the shim's per-function behaviour is in `port/p
   symbols with `nm`'s link-time addresses of `build/port/dw2003`, which a PIE would relocate at load (Ubuntu's GCC
   links PIE by default). Nothing else needs it: the arena needs no link address (see "Memory arena") and the
   overlay sections are orphan sections the linker places after `.data`/`.bss`, outside GNU_RELRO (see "Overlays").
-- **`INCLUDE_ASM`** is empty on the host. No game function is left in asm except the 8 holdouts, and with
-  `NON_MATCHING` their WIP C is compiled instead: the WIP C is the port's code. `tests/holdouts/run.sh` validates it
-  by running a `NON_MATCHING` PS1 image through the replays (see "Testing").
+- **`INCLUDE_ASM`** is empty on the host. No game function is left in asm (the last 8 holdouts matched on
+  2026-10-07), so the port compiles the same matching C as the PS1 build. Should a holdout come back, its
+  `NON_MATCHING` WIP C is what the port compiles, and `tests/holdouts/run.sh` validates it by running a
+  `NON_MATCHING` PS1 image through the replays (see "Testing").
 - **FAKE matches** (`grep -rn "FAKE:" src`) are valid C and compile as they are.
 - **`gte_*` macros** (`include/psyq/gtemac.h`, MIPS `cop2` sequences) are replaced at build time by a generated header
   that turns each sequence into the same register accesses on the software GTE (`tools/port_gen.py overrides`;
@@ -315,7 +316,7 @@ mods); without `--config` the binary depends on nothing on the machine. Built-in
 | Debug channel | One `--debug` run to CNTY_SEL: step and pad advance the frame exactly, the state map and the host symbol read the same, poke/peek, screenshot, hash, quit status; `tools/mcp`'s offline self-test | `tests/port/debug.py` (the `port` layer), `tools/mcp/selftest.py` |
 | Hardware renderer | Its picture byte for byte the software image, its present at six output sizes against the reference, SDL_Renderer's present against the same reference; its rasteriser's whole VRAM target equal to the software VRAM every 10 vsyncs of both replays and after each of the gpu golden family's 715 lists; the fallback without a device (CI); everything else needs a GPU device (local, or lavapipe) | `tests/port/render_gpu.py`, `tests/host/gpu_hw_replay.py` (the `port` layer) |
 | Crash report | A forced NULL write dies of SIGSEGV with a report whose pc symbolizes to the hook's function; a fatal error's report; `--version` | `tests/port/crash.py` (the `port` layer) |
-| Holdouts | A `NON_MATCHING` PS1 image (the holdouts' WIP C) replayed in the emulator without divergence | `tests/holdouts/run.sh` |
+| Holdouts | A `NON_MATCHING` PS1 image (a holdout's WIP C) replayed in the emulator without divergence; none are left today | `tests/holdouts/run.sh` |
 
 What the port and the emulator are *not* compared on: frame numbers (the port's CD timing and CPU time differ), the
 random index and the full checkpoint hash (both follow the frame count). See `tests/port/README.md`.
@@ -363,8 +364,7 @@ stack overflow gets the text (the filter runs on what the guard page leaves) and
   port or multitap.
 - **No reset key** in the window (the console reset exists only as a script step).
 - **Coverage of the game:** the replays reach 14 of 19 tier-1 overlays and a small share of the WSTAG files; the
-  debug overlays (STAGSLCT, SOUNDTST, SHOCKTST) and WFIGHTTS cannot be reached by pad input, and the three holdouts in
-  them (card booster, WFIGHTTS, SHOCKTST) are unvalidated.
+  debug overlays (STAGSLCT, SOUNDTST, SHOCKTST) and WFIGHTTS cannot be reached by pad input.
 - **Timing stand-ins:** the CD seek times (3 ticks + 1 per 8192 sectors, at most 40) and `StGetNext`'s 5000 polls
   per vsync are estimates, not measurements.
 - **State probes:** `port_state_read` (a script's `wait_mem`) maps only layout-identical data and an explicit field

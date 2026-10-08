@@ -19,8 +19,9 @@
 # each gated by its area (a job an area does not need is skipped, no runner starts for it):
 #   game      src/, include/, config/, configure.py, tools/ (but port_gen.py), tests/ (but the port's), scripts/
 #             (setup.sh pins every tool), .claude/hooks/, any file no rule names
-#             -> `game`: the toolchain smoke test, the byte-identical rebuild, layer 2 (the emulator's replays and
-#                SPU trace); and everything below
+#             -> `check`'s census (tools/hacks.py --check: the game code all C, the workarounds' markers and the
+#                counts docs/STATUS.md quotes), `game`: the toolchain smoke test, the byte-identical rebuild, layer 2
+#                (the emulator's replays and SPU trace); and everything below
 #   port      port/ (its runtime, Psy-Q shim, mods' manifests, CMake), tools/port_gen.py, tests/port, tests/spu,
 #             tests/xa, tests/saves, tests/host
 #             -> `check`'s probes (the host's gcc and llvm-mingw's clang), `port`: layer 1 (the goldens, their host
@@ -114,8 +115,10 @@ jobs:
         id: data
         run: echo "present=${{ secrets.GAMEDATA_DEPLOY_KEY != '' }}" >> "$GITHUB_OUTPUT"
 
-  # Disc-free, always: the scripts parse, the Python compiles; for the port area the host-compile probe: every game
-  # unit with the runner's gcc (Ubuntu 24.04: GCC 13) at -m64 with its own INCLUDE_ASM/gte override headers
+  # Disc-free, always: the scripts parse, the Python compiles; for the game area the workaround census
+  # (tools/hacks.py --check, stdlib only, <1 s: no INCLUDE_ASM beyond its HOLDOUTS, every FAKE: with its reason and
+  # LOOP_BLOCK with its evidence class, the counts docs/STATUS.md quotes); for the port area the host-compile probe:
+  # every game unit with the runner's gcc (Ubuntu 24.04: GCC 13) at -m64 with its own INCLUDE_ASM/gte override headers
   # (include/asm_generated/ is not needed), nm's check for duplicate globals, and every unit with llvm-mingw's clang.
   check:
     needs: areas
@@ -132,6 +135,10 @@ jobs:
         run: |
           bash -n scripts/*.sh tools/*.sh tests/*/*.sh .claude/hooks/*.sh
           tools/venv/bin/python -m py_compile configure.py diff_settings.py tools/*.py tests/golden/*.py tests/golden/families/*.py tests/replay/*.py tests/host/*.py tests/holdouts/*.py tests/port/*.py
+
+      - name: Workaround census (the game code all C, the FAKE/LOOP_BLOCK markers, the counts in docs/STATUS.md)
+        if: needs.areas.outputs.game == 'true'
+        run: tools/venv/bin/python tools/hacks.py --check
 
       - name: Host-compile probe (every unit clean at -m64, no duplicate globals; and for Windows with llvm-mingw)
         if: needs.areas.outputs.port == 'true'

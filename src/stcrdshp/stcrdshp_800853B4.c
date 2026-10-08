@@ -770,7 +770,8 @@ void stcrdshp_run_buy(StcrdshpBuy *obj, StcrdshpBuyData *data) {
 
 void stcrdshp_update_buy(StcrdshpBuy *obj, StcrdshpBuyData *data) {
     s32 i;
-    s32 count;
+    s32 partial;
+    s32 pages;
 
     switch (obj->base.state) {
     case OBJECT_STATE_INIT:
@@ -782,12 +783,12 @@ void stcrdshp_update_buy(StcrdshpBuy *obj, StcrdshpBuyData *data) {
         }
         obj->card_count = obj->stock->count;
         /* Pages of six cards, the last one partly filled. */
-        count = obj->card_count % 6 != 0;
-        /* FAKE: count holds the partial page and then the sum (so local-alloc can't tie the sum to the quotient
-         * copy, which leaves it the original's v0), and `- -count` keeps the original's add operand order
-         * (quotient first); `obj->unk_A4 / 6 + count` is reordered (count first). */
-        count = obj->card_count / 6 - -count;
-        obj->pages = count;
+        /* FAKE: pages first holds the remainder (the US decomp's shape). A remainder variable of its own, or
+         * `partial` set straight from the test, gives 99.88% (register choice); `pages++` under an if, 90.3%. */
+        pages = obj->card_count % 6;
+        partial = pages != 0;
+        pages = obj->card_count / 6 + partial;
+        obj->pages = pages;
         data->pack = stcrdshp_create_pack(obj->main, obj->cards);
         stcrdshp_create_buy_windows(obj, data);
         obj->anims[0].duration = 10;

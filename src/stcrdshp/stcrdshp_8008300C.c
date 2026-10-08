@@ -380,36 +380,166 @@ extern StcrdshpBoosterContents stcrdshp_booster_contents[];
 #define STCRDSHP_BOOSTER_X(i) ((i) % 2 * 0x83 + 0x1D)
 #define STCRDSHP_BOOSTER_Y(i) ((i) % 8 / 2 * 14 + 0x39)
 
-#ifdef NON_MATCHING
-/* 99.99%: old doubles as the page's first index in cases 4 and 52 (the original keeps both in one register) and the
- * random card index is its own value (computed before the pool's address). wip-12: case 11's booster has its own
- * variable, case 52 computes end from unk_60 * 8 before old and reloads id in a nested if. Left: case 52 loads
- * unk_60 into a1 (here v1: local-alloc ties it to the * 8). Permuter (10 min): nothing.
- * wip-14: old first, `end = old | 7`, `old = end & ~7`, shifts, a page local: no better.
- * final-rest: the a1 is explained: the original shifts unk_60 twice (cse doesn't merge `(unk_60 + 1) * 8 - 1`, case 4's
- * form, with `unk_60 * 8`), so unk_60 stays live past the first shift (a1) and reload_cse turns the second shift
- * into `move s2,v1`. `id = ...; obj->base.step = 0; end = (obj->unk_60 + 1) * 8 - 1; old = obj->unk_60 * 8;` gets
- * every register right (99.49) but the store then follows id's lh (alias) and lands in the jal slot; with the store
- * first, sched1 moves unk_5C's load next to its use and the registers go. Permuter (reduced block): nothing.
- * last-rest (final): with the store first and the `(unk_60 + 1) * 8 - 1` form, sched1's order equals the natural
- * one; the registers differ because unk_60 now lives past unk_5C's load and the shift, and sched2 can't hoist
- * unk_5C's load over the v0 the shift took. unk_5C's load sits next to its use because sched1 boosts a load into a
- * pseudo set once (birthing_insn_p: REG_N_SETS == 1). `c = obj->unk_5C; c <<= 1; id = *(s16 *)((u8 *)obj + c +
- * 0x98);` (c set twice: no boost) gets every instruction but the two loads' order (unk_60's load is still boosted,
- * so unk_5C's comes first) and so v0/v1 (99.94, 8 lines); identical if/else arms around the block (the permuter's
- * find, merged by jump2) leave 5 lines. With unk_60 in k as well (a multi-block variable: no boost, global-alloc
- * gives it a1) the loads and a1 are right, but unk_5C and the shift swap v0/v1 and case 11's k moves (12 lines).
- * Barriers, other globals (cur, i, last, booster, old) for either value: no better. */
-/* The booster screen's steps (base.step): choose a booster, open it, look through its cards. */
-void stcrdshp_run_booster(StcrdshpBooster *obj, StcrdshpBoosterData *data) {
-    s32 booster;
-    s32 old;
+/* Step 4: the cursor on the page's boosters. L1/R1 turn the page, the pad moves the cursor (kept on the page and
+ * within the list); cross opens the booster, triangle leaves. */
+static inline void stcrdshp_choose_booster(StcrdshpBooster *obj, StcrdshpBoosterData *data) {
     s32 cur;
-    s32 end;
+    s32 first;
     s32 last;
-    s32 id;
+
+    first = obj->page;
+    if (!PAD_HELD(0xB) && PAD_PRESSED(0xA)) {
+        obj->page--;
+        if (obj->page < 0) {
+            obj->page = 0;
+        }
+    } else if (!PAD_HELD(0xA) && PAD_PRESSED(0xB)) {
+        obj->page++;
+        if (obj->page > obj->pages - 1) {
+            obj->page = obj->pages - 1;
+        }
+    }
+    if (first != obj->page) {
+        sound_module.play(0x8004513E);
+        obj->chosen = obj->page * 8;
+        data->cursor->set_pos(data->cursor, STCRDSHP_BOOSTER_X(obj->chosen), STCRDSHP_BOOSTER_Y(obj->chosen));
+        stcrdshp_show_booster_page(obj, data, 1);
+        stcrdshp_show_booster_card(obj, data, 1);
+        return;
+    }
+    last = (first + 1) * 8 - 1;
+    cur = obj->chosen;
+    first *= 8;
+    if (last > obj->booster_count - 1) {
+        last = obj->booster_count - 1;
+    }
+    if (PAD_PRESSED(4) || PAD_REPEAT(4)) {
+        obj->chosen -= 2;
+        if (obj->chosen < first) {
+            obj->chosen = first;
+        }
+    } else if (PAD_PRESSED(6) || PAD_REPEAT(6)) {
+        obj->chosen += 2;
+        if (obj->chosen > last) {
+            obj->chosen = last;
+        }
+    }
+    if (PAD_PRESSED(7) || PAD_REPEAT(7)) {
+        obj->chosen--;
+        if (obj->chosen < first) {
+            obj->chosen = first;
+        }
+    } else if (PAD_PRESSED(5) || PAD_REPEAT(5)) {
+        obj->chosen++;
+        if (obj->chosen > last) {
+            obj->chosen = last;
+        }
+    }
+    if (cur != obj->chosen) {
+        sound_module.play(0x8004513E);
+        data->cursor->set_pos(data->cursor, STCRDSHP_BOOSTER_X(obj->chosen), STCRDSHP_BOOSTER_Y(obj->chosen));
+        stcrdshp_show_booster_card(obj, data, 1);
+    } else if (PAD_PRESSED(0xD)) {
+        sound_module.play(0x8004503C);
+        obj->base.step = 10;
+    } else if (PAD_PRESSED(0xE)) {
+        sound_module.play(0x800450BD);
+        obj->base.step = 50;
+        obj->base.substep = 0;
+    }
+}
+
+/* Step 10: closes the list and the chosen booster; the message says the booster is being opened. */
+static inline void stcrdshp_close_booster_list(StcrdshpBooster *obj, StcrdshpBoosterData *data) {
+    stcrdshp_util.window_anim_start(&obj->anims[0], 0);
+    stcrdshp_show_booster_page(obj, data, 0);
+    stcrdshp_util.window_anim_start(&obj->anims[1], 0);
+    stcrdshp_show_booster_card(obj, data, 0);
+    data->cursor->show(data->cursor, 0);
+    data->message->set_text(data->message, cdload_module.files.get_file(records_language + 0x32), 0x10);
+    data->back_hint->set_text(data->back_hint, cdload_module.files.get_file(records_language + 0x32), 4);
+    obj->base.step++;
+}
+
+/* Step 11, once the panels have closed (and the last booster's cards have gone): opens the chosen booster. Each of
+ * its six cards is one of its 16 at random; they are added to the player's, the booster is used up and the card
+ * pack object shows them. */
+static inline void stcrdshp_open_booster(StcrdshpBooster *obj, StcrdshpBoosterData *data) {
+    s32 booster;
     s32 k;
     s32 i;
+    s32 n;
+
+    stcrdshp_util.window_anim_update(&obj->anims[0]);
+    if (stcrdshp_util.window_anim_update(&obj->anims[1])) {
+        booster = obj->boosters[obj->chosen];
+        if (data->opened_cards != NULL) {
+            data->opened_cards->base.state = OBJECT_STATE_END;
+            return;
+        }
+        k = 0;
+        for (i = 0; stcrdshp_booster_contents[i].item != 0; i++) {
+            if (stcrdshp_booster_contents[i].item == booster) {
+                k = i;
+            }
+        }
+        for (i = 0; i < 6; i++) {
+            n = pad_random.next() % 16;
+            obj->cards_got[i] = stcrdshp_booster_contents[k].choices[i][n];
+            gamestate_data.funcs.add_card(obj->cards_got[i], 1);
+        }
+        gamestate_data.items[booster]--;
+        data->opened_cards = stcrdshp_create_pack(obj->main, obj->cards_got);
+        obj->card_shown = 0;
+        stcrdshp_util.window_anim_start(&obj->anims[3], 1);
+        obj->base.step++;
+    }
+}
+
+/* Step 13: left/right show each card got; triangle closes them. */
+static inline void stcrdshp_choose_booster_card(StcrdshpBooster *obj, StcrdshpBoosterData *data) {
+    s32 old;
+
+    old = obj->card_shown;
+    if (PAD_PRESSED(7) || PAD_REPEAT(7)) {
+        obj->card_shown--;
+        if (obj->card_shown < 0) {
+            obj->card_shown = 0;
+        }
+    } else if (PAD_PRESSED(5) || PAD_REPEAT(5)) {
+        obj->card_shown++;
+        if (obj->card_shown >= 6) {
+            obj->card_shown = 5;
+        }
+    }
+    if (old != obj->card_shown) {
+        sound_module.play(0x4001B);
+        stcrdshp_show_booster_result(obj, data, 1);
+    } else if (PAD_PRESSED(0xE)) {
+        sound_module.play(0x800450BD);
+        obj->base.step = 50;
+        obj->cursor_shown = 0;
+        obj->base.substep = 1;
+    }
+}
+
+/* Step 55, once the message's panel has closed: closes the list and the chosen booster. */
+static inline void stcrdshp_close_booster(StcrdshpBooster *obj, StcrdshpBoosterData *data) {
+    if (stcrdshp_util.window_anim_update(&obj->anims[2])) {
+        stcrdshp_util.window_anim_start(&obj->anims[0], 0);
+        stcrdshp_show_booster_page(obj, data, 0);
+        stcrdshp_util.window_anim_start(&obj->anims[1], 0);
+        stcrdshp_show_booster_card(obj, data, 0);
+        data->cursor->show(data->cursor, 0);
+        obj->base.step++;
+    }
+}
+
+/* The booster screen's steps (base.step): choose a booster, open it, look through its cards. */
+void stcrdshp_run_booster(StcrdshpBooster *obj, StcrdshpBoosterData *data) {
+    s32 id;
+    s32 end;
+    s32 first;
 
     switch (obj->base.step) {
     case 0:
@@ -438,99 +568,13 @@ void stcrdshp_run_booster(StcrdshpBooster *obj, StcrdshpBoosterData *data) {
         obj->base.step++;
         break;
     case 4:
-        old = obj->page;
-        if (!PAD_HELD(0xB) && PAD_PRESSED(0xA)) {
-            if (--obj->page < 0) {
-                obj->page = 0;
-            }
-        } else if (!PAD_HELD(0xA) && PAD_PRESSED(0xB)) {
-            if (++obj->page > obj->pages - 1) {
-                obj->page = obj->pages - 1;
-            }
-        }
-        if (old != obj->page) {
-            sound_module.play(0x8004513E);
-            obj->chosen = obj->page * 8;
-            data->cursor->set_pos(data->cursor, STCRDSHP_BOOSTER_X(obj->chosen), STCRDSHP_BOOSTER_Y(obj->chosen));
-            stcrdshp_show_booster_page(obj, data, 1);
-            stcrdshp_show_booster_card(obj, data, 1);
-            break;
-        }
-        last = (old + 1) * 8 - 1;
-        cur = obj->chosen;
-        old *= 8;
-        if (last > obj->booster_count - 1) {
-            last = obj->booster_count - 1;
-        }
-        if (PAD_PRESSED(4) || PAD_REPEAT(4)) {
-            obj->chosen -= 2;
-            if (obj->chosen < old) {
-                obj->chosen = old;
-            }
-        } else if (PAD_PRESSED(6) || PAD_REPEAT(6)) {
-            obj->chosen += 2;
-            if (obj->chosen > last) {
-                obj->chosen = last;
-            }
-        }
-        if (PAD_PRESSED(7) || PAD_REPEAT(7)) {
-            if (--obj->chosen < old) {
-                obj->chosen = old;
-            }
-        } else if (PAD_PRESSED(5) || PAD_REPEAT(5)) {
-            if (++obj->chosen > last) {
-                obj->chosen = last;
-            }
-        }
-        if (cur != obj->chosen) {
-            sound_module.play(0x8004513E);
-            data->cursor->set_pos(data->cursor, STCRDSHP_BOOSTER_X(obj->chosen), STCRDSHP_BOOSTER_Y(obj->chosen));
-            stcrdshp_show_booster_card(obj, data, 1);
-        } else if (PAD_PRESSED(0xD)) {
-            sound_module.play(0x8004503C);
-            obj->base.step = 10;
-        } else if (PAD_PRESSED(0xE)) {
-            sound_module.play(0x800450BD);
-            obj->base.step = 50;
-            obj->base.substep = 0;
-        }
+        stcrdshp_choose_booster(obj, data);
         break;
     case 10:
-        stcrdshp_util.window_anim_start(&obj->anims[0], 0);
-        stcrdshp_show_booster_page(obj, data, 0);
-        stcrdshp_util.window_anim_start(&obj->anims[1], 0);
-        stcrdshp_show_booster_card(obj, data, 0);
-        data->cursor->show(data->cursor, 0);
-        data->message->set_text(data->message, cdload_module.files.get_file(records_language + 0x32), 0x10);
-        data->back_hint->set_text(data->back_hint, cdload_module.files.get_file(records_language + 0x32), 4);
-        obj->base.step++;
+        stcrdshp_close_booster_list(obj, data);
         break;
     case 11:
-        stcrdshp_util.window_anim_update(&obj->anims[0]);
-        if (stcrdshp_util.window_anim_update(&obj->anims[1])) {
-            booster = obj->boosters[obj->chosen];
-            if (data->opened_cards != NULL) {
-                data->opened_cards->base.state = OBJECT_STATE_END;
-                break;
-            }
-            k = 0;
-            for (i = 0; stcrdshp_booster_contents[i].item != 0; i++) {
-                if (stcrdshp_booster_contents[i].item == booster) {
-                    k = i;
-                }
-            }
-            for (i = 0; i < 6; i++) {
-                s32 n = pad_random.next() % 16;
-
-                obj->cards_got[i] = stcrdshp_booster_contents[k].choices[i][n];
-                gamestate_data.funcs.add_card(obj->cards_got[i], 1);
-            }
-            gamestate_data.items[booster]--;
-            data->opened_cards = stcrdshp_create_pack(obj->main, obj->cards_got);
-            obj->card_shown = 0;
-            stcrdshp_util.window_anim_start(&obj->anims[3], 1);
-            obj->base.step++;
-        }
+        stcrdshp_open_booster(obj, data);
         break;
     case 12:
         if (stcrdshp_util.window_anim_update(&obj->anims[3])) {
@@ -542,25 +586,7 @@ void stcrdshp_run_booster(StcrdshpBooster *obj, StcrdshpBoosterData *data) {
         }
         break;
     case 13:
-        old = obj->card_shown;
-        if (PAD_PRESSED(7) || PAD_REPEAT(7)) {
-            if (--obj->card_shown < 0) {
-                obj->card_shown = 0;
-            }
-        } else if (PAD_PRESSED(5) || PAD_REPEAT(5)) {
-            if (++obj->card_shown > 5) {
-                obj->card_shown = 5;
-            }
-        }
-        if (old != obj->card_shown) {
-            sound_module.play(0x4001B);
-            stcrdshp_show_booster_result(obj, data, 1);
-        } else if (PAD_PRESSED(0xE)) {
-            sound_module.play(0x800450BD);
-            obj->base.step = 50;
-            obj->cursor_shown = 0;
-            obj->base.substep = 1;
-        }
+        stcrdshp_choose_booster_card(obj, data);
         break;
     case 50:
         stcrdshp_util.window_anim_start(&obj->anims[2], 0);
@@ -582,10 +608,12 @@ void stcrdshp_run_booster(StcrdshpBooster *obj, StcrdshpBoosterData *data) {
         break;
     case 52:
         if (stcrdshp_util.window_anim_update(&obj->anims[3]) || data->opened_cards == NULL) {
+            /* The page's last index is written (page + 1) * 8 - 1 as in step 4 (the page is shifted twice) and its
+             * first has a variable of its own. */
             obj->base.step = 0;
-            end = obj->page * 8 | 7;
-            old = obj->page * 8;
+            end = (obj->page + 1) * 8 - 1;
             id = obj->boosters[obj->chosen];
+            first = obj->page * 8;
             stcrdshp_find_boosters(obj);
             if (end > obj->booster_count - 1) {
                 end = obj->booster_count - 1;
@@ -594,11 +622,13 @@ void stcrdshp_run_booster(StcrdshpBooster *obj, StcrdshpBoosterData *data) {
             if (gamestate_data.items[id] <= 0) {
                 id = obj->boosters[obj->chosen];
                 if (gamestate_data.items[id] <= 0) {
-                    if (--obj->chosen < old) {
-                        if (--obj->page < 0) {
-                            obj->base.state = OBJECT_STATE_END;
-                        } else {
+                    obj->chosen--;
+                    if (obj->chosen < first) {
+                        obj->page--;
+                        if (obj->page >= 0) {
                             obj->chosen = end;
+                        } else {
+                            obj->base.state = OBJECT_STATE_END;
                         }
                     }
                 }
@@ -606,14 +636,7 @@ void stcrdshp_run_booster(StcrdshpBooster *obj, StcrdshpBoosterData *data) {
         }
         break;
     case 55:
-        if (stcrdshp_util.window_anim_update(&obj->anims[2])) {
-            stcrdshp_util.window_anim_start(&obj->anims[0], 0);
-            stcrdshp_show_booster_page(obj, data, 0);
-            stcrdshp_util.window_anim_start(&obj->anims[1], 0);
-            stcrdshp_show_booster_card(obj, data, 0);
-            data->cursor->show(data->cursor, 0);
-            obj->base.step++;
-        }
+        stcrdshp_close_booster(obj, data);
         break;
     case 56:
         stcrdshp_util.window_anim_update(&obj->anims[0]);
@@ -626,9 +649,6 @@ void stcrdshp_run_booster(StcrdshpBooster *obj, StcrdshpBoosterData *data) {
         break;
     }
 }
-#else
-INCLUDE_ASM("asm/stcrdshp/nonmatchings/stcrdshp_8008300C", stcrdshp_run_booster);
-#endif
 
 void stcrdshp_update_booster(StcrdshpBooster *obj, StcrdshpBoosterData *data) {
     switch (obj->base.state) {

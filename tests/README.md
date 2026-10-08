@@ -377,6 +377,9 @@ the procedure itself. Cost (4 cores shared with other agents): build ~45-100 s, 
 (no reach data then: it falls back to `build/coverage/*.json`), ~11 min in full. Too slow for `scripts/test.sh`; run it
 after a holdout's C changes or a new script reaches one.
 
+Since 2026-10-07 there are no holdouts (all 8 below matched; the PC port now compiles the matching C), so the script has
+nothing to run; it stays as the procedure for a future holdout. The last state:
+
 State (2026-10-05, scripts `new_game` and `first_battle_save`; both replays identical to their expected files on the
 dynarec, frames included, and the same checkpoints under the interpreter):
 
