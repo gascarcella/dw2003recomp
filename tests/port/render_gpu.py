@@ -22,6 +22,12 @@ Builds build/port-sdl if needed (-DPSXSTACK_SDL=ON: tools/sdl3 and tools/dxc), t
     pictures of field and battle frames are the display's size times the scale and, averaged back over each N x N
     block, close to the software image (SCALED_BUDGET: the 3D's edges and textures sampled between texels differ, the
     2D does not); the debug channel's screenshot with "renderer": "gpu" at the internal scale;
+  - with a GPU device and the disc, widescreen (the `widescreen` mod; psxstack render_gpu_wide.c, issue #71):
+    first_battle_save with the mod on (a settings file: no window, renderer gpu): a field frame stays the software image
+    (320x240); a battle frame is 428x240 whose middle 320 columns are the software image byte for byte and whose sides
+    show the arena (WIDE_SIDES: at least that share of the side pixels not black); its present into 1920x1080 is the
+    reference at 16:9; at internal scale 2 a battle frame is 856x480 and its middle, averaged back, within
+    SCALED_BUDGET of the software image; the frame log equals the run without the mod (the game draws the same);
   - with the disc: SDL_Renderer's own present (a 960x720 window on the offscreen driver, read back through
     DW3_PORT_PRESENT_READBACK) must be the same reference: the two present paths agree.
 The reference is video.c's placement (video_dest: 4:3, as tall as an integer multiple of the image's lines allows,
@@ -36,6 +42,7 @@ into the working directory. Without a device under Wine (CI's Wine 9.0 has none:
 Exit codes: 0 pass (parts may be skipped), 1 fail, 2 something missing for the build.
 """
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -52,6 +59,8 @@ SCALED_FRAMES = (10000, 15000, 19900, 20300)   # first_battle_save: the field, a
 # per channel, and by more than 32 in at most this share of the channels (measured on NVIDIA: field 0.00 / 0.00 %,
 # a field event's translucent bands in 8-bit colour 1.1 / 0.00 %, the battle's 3D up to 9.5 / 9.1 %).
 SCALED_BUDGET = (12.0, 0.12)   # new_game: CNTY_SEL's 320x576 screen, the title's menus, the field
+WIDE_FIELD, WIDE_BATTLE = 15000, (19900, 20300, 20600)   # first_battle_save: the field, the first battle (FIGHTSTG)
+WIDE_SIDES = 0.25   # measured 0.52 (NVIDIA): the arena's floor and pillars; the sky is the clear colour
 SIZES = ((960, 720), (1366, 768), (1920, 1080), (1280, 1024), (1000, 700), (300, 200))
 LAVAPIPE = Path("/usr/share/vulkan/icd.d/lvp_icd.x86_64.json")
 FAILURES = []
@@ -72,23 +81,24 @@ def ppm(path):
     return w, h, pixels
 
 
-def dest(ow, oh, w, h):
-    """video.c video_dest, in whole pixels as video_dest_rect rounds it: (x, y, w, h)."""
+def dest(ow, oh, w, h, an=4, ad=3):
+    """video.c video_dest, in whole pixels as video_dest_rect rounds it: (x, y, w, h); the aspect an:ad (4:3, or a
+    wide picture's 4 W : 3 w)."""
     f = oh // h
-    while f > 0 and (h * f * 4 + 2) // 3 > ow:
+    while f > 0 and (h * f * an + ad - 1) // ad > ow:
         f -= 1
     if f > 0:
-        dh, dw = h * f, (h * f * 4 + 2) // 3
+        dh, dw = h * f, (h * f * an + ad - 1) // ad
     else:
-        dh = min(float(oh), ow * 3.0 / 4.0)
-        dw = dh * 4.0 / 3.0
+        dh = min(float(oh), ow * ad / an)
+        dw = dh * an / ad
     return int((ow - dw) / 2), int((oh - dh) / 2), int(dw + 0.5), int(dh + 0.5)
 
 
-def present(image, ow, oh):
+def present(image, ow, oh, aspect=(4, 3)):
     """The reference present of image (w, h, RGB) into an ow x oh output, on black."""
     w, h, px = image
-    x0, y0, dw, dh = dest(ow, oh, w, h)
+    x0, y0, dw, dh = dest(ow, oh, w, h, *aspect)
     out = bytearray(ow * oh * 3)
     xs = [((2 * (x - x0) + 1) * w) // (2 * dw) for x in range(ow)]
     for y in range(max(y0, 0), min(y0 + dh, oh)):
@@ -240,6 +250,77 @@ def scaled(sdl, env, out):
                   f"channels off by more than 32")
 
 
+def middle(image, w):
+    """The middle w columns of a wider picture (w, h, RGB), and the share of its side pixels that are not black."""
+    W, h, px = image
+    pad = (W - w) // 2
+    rows, side, lit = [], 0, 0
+    for y in range(h):
+        row = px[y * W * 3:(y + 1) * W * 3]
+        rows.append(row[pad * 3:(pad + w) * 3])
+        for x in list(range(pad)) + list(range(pad + w, W)):
+            side += 1
+            lit += sum(row[x * 3:x * 3 + 3]) > 24
+    return b"".join(rows), lit / max(side, 1)
+
+
+def widescreen(sdl, env, out):
+    print("render_gpu: widescreen (the widescreen mod: the battle at 16:9 from the wide canvas)")
+    cfg = out / "wide.settings.json"
+    cfg.write_text(json.dumps({"schema": 1, "disc": {"path": str(DISC)}, "video": {"window": False, "renderer": "gpu"},
+                               "memcard1": None, "memcard2": None, "mods": {"widescreen": {"enabled": True}}}))
+    last = WIDE_BATTLE[-1] + 1
+    args = []
+    for f in (WIDE_FIELD, *WIDE_BATTLE):
+        args += ["--screenshot", f"{f}:{out / f'w_sw{f}.ppm'}", "--gpu-screenshot", f"{f}:{out / f'w_hw{f}.ppm'}"]
+    args += ["--gpu-screenshot", f"{WIDE_BATTLE[1]}@1920x1080:{out / 'w_present.ppm'}"]
+    rc, text = run([sdl, "--config", cfg, "--script", SCRIPTS / "first_battle_save.json", "--script-mods",
+                    "--max-frames", str(last), "--log", out / "w_mod.log", *args], env, timeout=900)
+    rc0, _ = run([sdl, "--disc", DISC, "--script", SCRIPTS / "first_battle_save.json", "--max-frames", str(last),
+                  "--log", out / "w_bare.log"], env)
+    check(rc == 0 and rc0 == 0 and "mods: widescreen on" in text, f"the runs: exit {rc}, {rc0} (without the mod)")
+    if rc != 0 or rc0 != 0:
+        print("\n".join(text.splitlines()[-10:]))
+        return
+    check((out / "w_mod.log").read_bytes() == (out / "w_bare.log").read_bytes(),
+          "the frame log with the mod equals the one without (the game draws the same)")
+    sw, hw = out / f"w_sw{WIDE_FIELD}.ppm", out / f"w_hw{WIDE_FIELD}.ppm"
+    check(sw.read_bytes() == hw.read_bytes(), f"vsync {WIDE_FIELD} (the field): the software image, 4:3")
+    for f in WIDE_BATTLE:
+        w, h, lo = ppm(out / f"w_sw{f}.ppm")
+        image = ppm(out / f"w_hw{f}.ppm")
+        want = w + 2 * ((w + 5) // 6)
+        if image[:2] != (want, h):
+            check(False, f"vsync {f} (the battle): {image[0]}x{image[1]}, not {want}x{h}")
+            continue
+        mid, lit = middle(image, w)
+        check(mid == lo and lit >= WIDE_SIDES, f"vsync {f} (the battle): {want}x{h}, the middle {w} columns the "
+              f"software image byte for byte, {100 * lit:.0f} % of the sides drawn")
+    image = ppm(out / f"w_hw{WIDE_BATTLE[1]}.ppm")
+    got = ppm(out / "w_present.ppm")
+    n = differing(got[2], present(image, 1920, 1080, (4 * image[0], 3 * 320)))
+    check(got[:2] == (1920, 1080) and n == 0, f"vsync {WIDE_BATTLE[1]}: the present into 1920x1080 at 16:9"
+          + (f" ({n} pixels differ)" if n else ""))
+    f = WIDE_BATTLE[1]
+    rc, text = run([sdl, "--config", cfg, "--script", SCRIPTS / "first_battle_save.json", "--script-mods",
+                    "--max-frames", str(f + 1), "--internal-scale", "2", "--screenshot", f"{f}:{out / 'w2_sw.ppm'}",
+                    "--gpu-screenshot", f"{f}:{out / 'w2_hw.ppm'}"], env, timeout=900)
+    if rc != 0:
+        check(False, f"scale 2: the run (exit {rc})")
+        return
+    w, h, lo = ppm(out / "w2_sw.ppm")
+    W, H, hi = ppm(out / "w2_hw.ppm")
+    want = (w + 2 * ((w + 5) // 6)) * 2
+    if (W, H) != (want, h * 2):
+        check(False, f"scale 2, vsync {f}: {W}x{H}, not {want}x{h * 2}")
+        return
+    mid, lit = middle((W, H, hi), w * 2)
+    mean, far = reduced(mid, 2, w, h)(lo)
+    check(mean <= SCALED_BUDGET[0] and far <= SCALED_BUDGET[1] and lit >= WIDE_SIDES,
+          f"scale 2, vsync {f}: {W}x{H}, the middle averaged back: mean |diff| {mean:.2f}, {100 * far:.2f} % of the "
+          f"channels off by more than 32; {100 * lit:.0f} % of the sides drawn")
+
+
 def debug_channel(sdl, env, out):
     print("render_gpu: the debug channel's screenshot, renderer gpu (a headless --renderer gpu --internal-scale 2)")
     sys.path.insert(0, str(ROOT / "tools"))
@@ -329,6 +410,7 @@ def main():
             screenshots(sdl, env, out)
             vram_checks(sdl, env)
             scaled(sdl, env, out)
+            widescreen(sdl, env, out)
             debug_channel(sdl, env, out)
         sdl_renderer(sdl, env, out)
     print(f"render_gpu test: {'FAIL (' + str(len(FAILURES)) + ')' if FAILURES else 'pass'}")

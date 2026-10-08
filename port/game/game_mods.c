@@ -1,6 +1,6 @@
 /* The game's built-in mods (docs/LAUNCHER.md "Built-in mods"; psxstack/game.h game_mods): skip_dialogues,
- * battle_animations, global_save, preset_language, party_xp and xp_boost, as PortMod records the runtime's engine
- * (port/runtime/mods.c) reads the settings of, gives hotkeys to and runs every vsync. Each reaches the game's C through
+ * battle_animations, global_save, preset_language, party_xp, xp_boost and widescreen, as PortMod records the
+ * runtime's engine (port/runtime/mods.c) reads the settings of, gives hotkeys to and runs every vsync. Each reaches the game's C through
  * the port_mod_* flags and functions of include/port.h, read inside `#ifdef PC_PORT` blocks. The runtime's own mod,
  * fast_forward, is the engine's; skip_dialogues asks for it with port_fast_forward_request. */
 #include <stddef.h>
@@ -363,6 +363,23 @@ s32 port_xp_boost(s32 kind, s32 amount) {
     return (s32)r;
 }
 
+/* ---- widescreen (docs/LAUNCHER.md "Widescreen battles"): the battle at 16:9 through the hardware renderer's wide
+ * canvas (psxstack render_gpu_wide.c). FIGHTSTG already sends the 3D a 16:9 frame needs: its only screen-space cull,
+ * fightstg_model_mesh_is_visible, keeps a mesh with a bounding point within the clip plus 64 pixels (x within 224 of
+ * the centre; 16:9 reaches 213.5), and the GPU clips the rest to the 320-wide drawing area (issue #71). Nothing in the
+ * game changes: the mod only tells the renderer which scenes to widen. The field and the menus are 320-wide 2D and stay
+ * 4:3 (pillarboxed in a 16:9 window). */
+static void ws_start(struct PortMod *mod) {
+    (void)mod;
+    port_video_widescreen_enable();
+}
+
+static void ws_frame(struct PortMod *mod) {
+    const PortOverlay *ovl = port_overlay_current(1);
+    (void)mod;
+    port_video_widescreen(ovl != NULL && strcmp(ovl->name, "FIGHTSTG") == 0);
+}
+
 static PortMod game_mod_table[] = {
     { .id = "skip_dialogues", .version = "0.1", .options = sd_options,
       .option_count = (int)(sizeof(sd_options) / sizeof(sd_options[0])), .start = sd_start, .frame = sd_frame,
@@ -377,6 +394,7 @@ static PortMod game_mod_table[] = {
       .option_count = (int)(sizeof(px_options) / sizeof(px_options[0])), .start = px_start },
     { .id = "xp_boost", .version = "0.1", .options = xb_options,
       .option_count = (int)(sizeof(xb_options) / sizeof(xb_options[0])), .start = xb_start },
+    { .id = "widescreen", .version = "0.1", .start = ws_start, .frame = ws_frame },
 };
 
 int game_mod_count(void) {

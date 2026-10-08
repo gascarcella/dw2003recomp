@@ -77,6 +77,10 @@ The plan's milestones (`docs/PORT.md`):
   decisions there): `--filter`, `video.filter`, the launcher's Filter combo (GPU renderer only). Done: `none` (the
   default, the picture unchanged) and `sharp` (sharp bilinear), one shader pass in psxstack's present. Next: `scanlines`
   and `crt` (`video.crt`), then `smooth` (on the 1x software image).
+- **Widescreen battles** ([#71](https://github.com/gascarcella/dw2003recomp/issues/71)): the `widescreen` mod shows
+  the battle 16:9 through the GPU renderer's wide canvas (psxstack `render_gpu_wide.c`): more of the arena at the
+  sides, the HUD centred as drawn, the game's output unchanged. Everything else stays 4:3 (the field: #78). Not
+  play-tested yet.
 - **The port stack (psxstack):** the runtime, the Psy-Q shim, the build (`psxstack_add_game()`), the launcher and the
   debug tools live in the `psxstack` repository (gascarcella/psxstack; its `docs/PORT.md`, `docs/RUNTIME.md`,
   `docs/LAUNCHER.md`), consumed as the `psxstack` submodule pinned at its tag `v0.1.0` (`scripts/worktree_init.sh`
