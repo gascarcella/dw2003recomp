@@ -95,7 +95,7 @@ launcher links `libstdc++`/`libgcc` statically (`-DDW3_LAUNCHER_STATIC_RUNTIME=O
 `ldd` shows anything else. The runtime is AppImage's static type-2 runtime: no `libfuse2` is needed (it mounts with
 `fusermount`/`fusermount3`; without FUSE, `--appimage-extract-and-run` or `APPIMAGE_EXTRACT_AND_RUN=1` works).
 
-Settings live where the launcher's lookup puts them (`launcher/README.md`): inside a read-only AppImage that is the
+Settings live where the launcher's lookup puts them (`psxstack/launcher/README.md`): inside a read-only AppImage that is the
 per-user directory `~/.local/share/dw2003/` (or `--config-dir`, `$DW3_CONFIG_DIR`, a `settings.json` in the current
 directory). Known limit: the game runs from the AppImage's mount, so closing the launcher while the game runs
 (the launcher's window is hidden then) can end the mount under the game.
@@ -129,7 +129,7 @@ from the unzipped folder with `DW3_SELFTEST_GAME=beside` (the bundled game and m
 `iso/dw2003.cue` the game runs 300 frames from the launcher's command), then a forced crash of the bundled game
 (`tests/port/crash.py --wine`) whose report must symbolize with the symbols zip's PDB. Settings, memory cards, logs
 and crash reports go to `%APPDATA%\dw2003\` (`C:\Users\<name>\AppData\Roaming\dw2003\`), or beside the launcher with
-a `portable.txt` there (`launcher/README.md`). The programs are not signed: SmartScreen warns the first time.
+a `portable.txt` there (`psxstack/launcher/README.md`). The programs are not signed: SmartScreen warns the first time.
 
 ## Crash reports from a release
 
