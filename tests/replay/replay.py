@@ -134,7 +134,7 @@ def run_once(script_path, script, bios, out_dir, verbose=False, lua=None, emu_ar
     """Runs the script in the emulator once; returns the record (without the checkpoint dumps) or raises. `lua` replaces
     run.lua as the -dofile chunk and `emu_args` are extra emulator flags (tools/coverage.py: a wrapper chunk that loads
     tools/coverage.lua first, and -debugger -interpreter); `speed` is PCSX-Redux's spu.Speed (0: unthrottled); `iso` is
-    another disc image's .cue (tests/holdouts/run.py: the NON_MATCHING build) instead of iso/dw2003.cue."""
+    another disc image's .cue (a modified build's image) instead of iso/dw2003.cue."""
     # Absolute: PCSX-Redux resolves a relative -memcard path elsewhere (not the cwd), and a card that is not the fresh
     # one changes the boot (CNTY_SEL 144 frames earlier with `--out` relative).
     out_dir = Path(out_dir).resolve()
@@ -357,7 +357,7 @@ def main():
                    help="emulation speed (PCSX-Redux spu.Speed): 0 = unthrottled (default), 1 = real time")
     r.add_argument("--interpreter", action="store_true",
                    help="run on the interpreter core; compares the cross-core view with the expected file (no --record)")
-    r.add_argument("--iso", help="another disc image (.cue) instead of iso/dw2003.cue (tests/holdouts/run.py)")
+    r.add_argument("--iso", help="another disc image (.cue) instead of iso/dw2003.cue")
     r.add_argument("--prelude", help="a Lua chunk run before run.lua (e.g. tests/port/ntsc_patch.lua); implies the "
                                      "debugger and the interpreter core; compares the cross-core view")
     r.add_argument("--expected-dir", help="where the expected file is read or --record writes it "
@@ -367,7 +367,7 @@ def main():
     c = sub.add_parser("check", help="run every recorded script and compare")
     c.add_argument("scripts", nargs="*")
     c.add_argument("--interpreter", action="store_true", help="run on the interpreter core; compare the cross-core view")
-    c.add_argument("--iso", help="another disc image (.cue) instead of iso/dw2003.cue (tests/holdouts/run.py)")
+    c.add_argument("--iso", help="another disc image (.cue) instead of iso/dw2003.cue")
     c.add_argument("-j", "--jobs", type=int, default=int(os.environ.get("DW3_JOBS", "0")) or None,
                    help="scripts replayed at once (default: $DW3_JOBS, else all)")
     c.set_defaults(func=cmd_check)
