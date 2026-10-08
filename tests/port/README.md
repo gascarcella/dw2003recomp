@@ -192,8 +192,9 @@ doubles the draw counts. **With a GPU device:** the same dump with the rasterise
 index; then packs made from it at runtime (nothing of the game committed), new_game's pictures at vsyncs 900, 1300 and
 1800: the dump itself as a pack (`nearest`) keeps the whole VRAM target equal to the software VRAM every 10 vsyncs and
 the pictures unchanged; a pack of 1x1 magenta PNGs for every key changes them, and the same as sub-rectangle files (each
-key's sampled range) gives the same pictures; the identity pack given first wins over the magenta one; at internal
-scale 2 the identity pack's pictures are within `SCALED_BUDGET` of those without it. ~40 s. In
+key's sampled range) gives the same pictures; the identity pack given first wins over the magenta one, and so does
+whichever `mod_order` puts first when both are the user's data mods (a settings file switching them on, `--mods-dir`);
+at internal scale 2 the identity pack's pictures are within `SCALED_BUDGET` of those without it. ~40 s. In
 `scripts/test.sh --layer port`.
 
 ## The crash report (`crash.py`; docs/PORT.md "Crash report")
