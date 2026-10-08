@@ -59,7 +59,7 @@ typedef struct StstatusStatusPage {
     /* 0x108 */ WindowAnim menu_anim; /* menu */
     /* 0x118 */ WindowAnim list_anim; /* forms and equipment */
     /* 0x128 */ WindowAnim exp_anim; /* experience */
-    /* 0x138 */ WindowAnim unk_138;
+    /* 0x138 */ WindowAnim unused_anim; /* only its duration is set (8): nothing starts it */
     /* 0x148 */ void (*preview_item)(struct StstatusStatusPage *obj, s32 slot, s32 item); /* ststatus_status_preview_item: previews an
                                                                                * item in an equipment slot */
 } StstatusStatusPage; /* size 0x14C */

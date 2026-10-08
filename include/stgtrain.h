@@ -20,7 +20,7 @@ typedef struct StgtrainAnimFile {
     /* 0x0 */ s32 file; /* file ID */
     /* 0x4 */ s32 x;
     /* 0x8 */ s32 y;
-    /* 0xC */ s32 unk_C;
+    /* 0xC */ s32 same_depth; /* part 8's sprite at the Digimon's OT depth (0: at depth - 1; stgtrain_trainee_update) */
 } StgtrainAnimFile; /* size 0x10 */
 
 /* A part of the loaded animation file (stgtrain_anim_parse): pointers into the file. */
@@ -28,7 +28,7 @@ typedef struct StgtrainAnimPart {
     /* 0x00 */ s32 id; /* the part's index, set by stgtrain_anim_parse */
     /* 0x04 */ u8 *sprite_data;
     /* 0x08 */ s32 sprite_offset;
-    /* 0x0C */ s32 unk_0C;
+    /* 0x0C */ s32 unk_0C; /* the header's word after sprite_offset; only stgtrain_anim_get_part_0C reads it, uncalled */
     /* 0x10 */ u8 *anims[6];
     /* 0x28 */ u32 *images[4]; /* TIM images, "RLEN" compressed or not */
     /* 0x38 */ s32 count;      /* images */
@@ -66,7 +66,7 @@ typedef struct StgtrainFuncs {
     /* 0x28 */ s32 (*upload)(s32 part, s32 *pos);                               /* stgtrain_anim_upload */
     /* 0x2C */ s32 (*get_file_id)(s32 file);                                    /* stgtrain_anim_get_file_id */
     /* 0x30 */ s32 (*get_file_pos)(s32 file);                                   /* stgtrain_anim_get_file_pos */
-    /* 0x34 */ s32 (*get_file_unk_C)(s32 file);                                 /* stgtrain_anim_get_file_unk_C */
+    /* 0x34 */ s32 (*get_file_same_depth)(s32 file);                            /* stgtrain_anim_get_file_same_depth */
     /* 0x38 */ u8 *(*get_part_data)(s32 part);                                    /* stgtrain_anim_get_part_data */
     /* 0x3C */ s32 (*get_part_offset)(s32 part);                                    /* stgtrain_anim_get_part_offset */
     /* 0x40 */ s32 (*get_part_0C)(s32 part);                                    /* stgtrain_anim_get_part_0C */
@@ -91,7 +91,7 @@ extern StgtrainModule stgtrain_module;
 typedef struct StgtrainSpriteFrame {
     /* 0x0 */ s16 list;     /* index of the frame's part list in the sprite data */
     /* 0x2 */ u8 duration;  /* in frames */
-    /* 0x3 */ u8 unk_3;
+    /* 0x3 */ u8 pad_3;
     /* 0x4 */ s16 x;
     /* 0x6 */ s16 y;
 } StgtrainSpriteFrame; /* size 0x8 */
@@ -119,7 +119,7 @@ typedef struct StgtrainSprite {
     /* 0x078 */ s32 done; /* the animation reached its last frame; bit 31: paused */
     /* 0x07C */ s32 unk_7C;
     /* 0x080 */ u8 *data;  /* part lists */
-    /* 0x084 */ u16 unk_84;
+    /* 0x084 */ u16 unk_84; /* half-words 1 and 2 of the sprite data (set_data); nothing reads them */
     /* 0x086 */ u16 unk_86;
     /* 0x088 */ s32 offset; /* of the part lists in data */
     /* 0x08C */ StgtrainSpriteAnim *anim;

@@ -146,7 +146,7 @@ typedef struct StitshopSell {
     /* 0x7C */ WindowAnim kinds_anim; /* the kinds */
     /* 0x8C */ WindowAnim count_anim; /* how many */
     /* 0x9C */ WindowAnim question_anim; /* yes/no */
-    /* 0xAC */ WindowAnim unk_AC;
+    /* 0xAC */ WindowAnim unused_anim; /* nothing starts it: the sprite it scales (0xD) never shows */
     /* 0xBC */ WindowAnim nothing_anim; /* "nothing to sell" */
 } StitshopSell; /* size 0xCC */
 

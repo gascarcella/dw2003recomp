@@ -162,11 +162,12 @@ typedef struct FieldstgAnimFrame {
 } FieldstgAnimFrame; /* size 0x4 */
 
 /* Animations of FieldstgWarpPicture: image (-1: go back to the frame in time) and duration. */
-extern FieldstgAnimFrame D_FIELDSTG_80096CC8[];
-extern FieldstgAnimFrame D_FIELDSTG_80096D14[];
-extern FieldstgAnimFrame D_FIELDSTG_80096D40[];
+extern FieldstgAnimFrame fieldstg_warp_picture_anim[]; /* type 0's: plays once (state 2 at image -1) */
+extern FieldstgAnimFrame fieldstg_warp_picture_loop_anim[]; /* type 1's (image): loops */
+extern FieldstgAnimFrame fieldstg_warp_picture_loop_anim_2[]; /* type 1's second layer (image_2): loops */
 
-/* Animations of FieldstgWarpEffect: [its type][track]. */
+/* Animations of FieldstgWarpEffect: [its type][track]. Tracks 0 and 3 are the same for both types; tracks 1 and 2:
+ * fieldstg_warp_effect_anim_1/_2 for type 0, _1b/_2b for type 1. */
 extern FieldstgAnimFrame *fieldstg_warp_effect_anims[][4];
 
 /* The warp effect (fieldstg_warp_effect_update, created by fieldstg_warp_effect_create): four animation tracks at a
@@ -176,7 +177,7 @@ typedef struct FieldstgWarpEffect {
     /* 0x50 */ s32 x;
     /* 0x54 */ s32 y;
     /* 0x58 */ s16 type;
-    /* 0x5A */ u8 unk_5A[0x2];
+    /* 0x5A */ u8 pad_5A[0x2];
     /* 0x5C */ FieldstgAnimTrack tracks[4];
 } FieldstgWarpEffect; /* size 0x7C */
 
@@ -222,7 +223,7 @@ typedef struct FieldstgBackground {
     /* 0x074 */ FieldstgBackgroundSlot slots[12];
     /* 0x104 */ FieldstgBackgroundTile *tiles;
     /* 0x108 */ u8 visible[30]; /* visible tiles, 0xFF: none */
-    /* 0x126 */ u8 unk_126[0x2];
+    /* 0x126 */ u8 pad_126[0x2];
     /* 0x128 */ s32 first_x; /* tile of visible's first column */
     /* 0x12C */ s32 first_y; /* and first row */
     /* 0x130 */ s32 *(*get_size)(struct FieldstgBackground *obj); /* fieldstg_background_get_size */
@@ -299,8 +300,8 @@ void fieldstg_warp_picture_update(FieldstgWarpPicture *obj) {
         if (obj->type == 0) {
             if (obj->time <= 0) {
                 obj->frame++;
-                obj->image = D_FIELDSTG_80096CC8[obj->frame].image;
-                obj->time = D_FIELDSTG_80096CC8[obj->frame].time;
+                obj->image = fieldstg_warp_picture_anim[obj->frame].image;
+                obj->time = fieldstg_warp_picture_anim[obj->frame].time;
             } else {
                 obj->time -= gfx_module.funcs.get_frame_ticks();
             }
@@ -318,8 +319,8 @@ void fieldstg_warp_picture_update(FieldstgWarpPicture *obj) {
             while (1) {
                 if (obj->time <= 0) {
                     obj->frame++;
-                    obj->image = D_FIELDSTG_80096D14[obj->frame].image;
-                    obj->time = D_FIELDSTG_80096D14[obj->frame].time;
+                    obj->image = fieldstg_warp_picture_loop_anim[obj->frame].image;
+                    obj->time = fieldstg_warp_picture_loop_anim[obj->frame].time;
                 } else {
                     obj->time -= gfx_module.funcs.get_frame_ticks();
                 }
@@ -332,8 +333,8 @@ void fieldstg_warp_picture_update(FieldstgWarpPicture *obj) {
             while (1) {
                 if (obj->time_2 <= 0) {
                     obj->frame_2++;
-                    obj->image_2 = D_FIELDSTG_80096D40[obj->frame_2].image;
-                    obj->time_2 = D_FIELDSTG_80096D40[obj->frame_2].time;
+                    obj->image_2 = fieldstg_warp_picture_loop_anim_2[obj->frame_2].image;
+                    obj->time_2 = fieldstg_warp_picture_loop_anim_2[obj->frame_2].time;
                 } else {
                     obj->time_2 -= gfx_module.funcs.get_frame_ticks();
                 }
@@ -1234,45 +1235,47 @@ Object *fieldstg_map_title_create(s32 show) {
 
 /* .data (address order) */
 
-FieldstgAnimFrame D_FIELDSTG_80096CC8[19] = {
+FieldstgAnimFrame fieldstg_warp_picture_anim[19] = {
     { 0, 1 }, { 0, 13 }, { 1, 14 }, { 2, 15 }, { 3, 14 }, { 0, 13 }, { 1, 14 }, { 2, 15 }, { 3, 14 }, { 0, 6 },
     { 1, 6 }, { 2, 6 }, { 4, 7 }, { 5, 5 }, { 6, 4 }, { 7, 4 }, { 8, 4 }, { 9, 4 }, { -1, -1 },
 };
 
-FieldstgAnimFrame D_FIELDSTG_80096D14[11] = {
+FieldstgAnimFrame fieldstg_warp_picture_loop_anim[11] = {
     { 0, 1 }, { 1, 8 }, { 2, 6 }, { 3, 4 }, { 4, 4 }, { 3, 4 }, { 4, 4 }, { 3, 6 }, { 4, 4 }, { 3, 4 }, { -1, 7 },
 };
 
-FieldstgAnimFrame D_FIELDSTG_80096D40[10] = {
+FieldstgAnimFrame fieldstg_warp_picture_loop_anim_2[10] = {
     { 0, 1 }, { 9, 18 }, { 5, 4 }, { 6, 5 }, { 7, 4 }, { 8, 4 }, { 6, 4 }, { 7, 4 }, { 8, 4 }, { -1, 5 },
 };
 
-FieldstgAnimFrame D_FIELDSTG_80096D68[33] = {
+FieldstgAnimFrame fieldstg_warp_effect_anim_0[33] = {
     { 0, 4 }, { 1, 4 }, { 2, 4 }, { 3, 4 }, { 4, 4 }, { 5, 4 }, { 6, 4 }, { 7, 4 }, { 8, 4 }, { 9, 4 }, { 10, 4 },
     { 11, 4 }, { 12, 4 }, { 13, 4 }, { 14, 4 }, { 15, 4 }, { 16, 4 }, { 17, 4 }, { 18, 4 }, { 19, 4 }, { 20, 4 },
     { 21, 4 }, { 22, 4 }, { 23, 4 }, { 24, 4 }, { 25, 4 }, { 26, 4 }, { 27, 4 }, { 28, 4 }, { 29, 4 }, { 30, 4 },
     { 31, 4 }, { 255, 999 },
 };
 
-FieldstgAnimFrame D_FIELDSTG_80096DEC[5] = { { 300, 28 }, { 32, 4 }, { 33, 24 }, { 34, 4 }, { 255, 999 } };
-FieldstgAnimFrame D_FIELDSTG_80096E00[5] = { { 300, 28 }, { 35, 4 }, { 36, 24 }, { 37, 4 }, { 255, 999 } };
+FieldstgAnimFrame fieldstg_warp_effect_anim_1[5] = { { 300, 28 }, { 32, 4 }, { 33, 24 }, { 34, 4 }, { 255, 999 } };
+FieldstgAnimFrame fieldstg_warp_effect_anim_1b[5] = { { 300, 28 }, { 35, 4 }, { 36, 24 }, { 37, 4 }, { 255, 999 } };
 
-FieldstgAnimFrame D_FIELDSTG_80096E14[8] = {
+FieldstgAnimFrame fieldstg_warp_effect_anim_2[8] = {
     { 300, 104 }, { 38, 4 }, { 39, 4 }, { 40, 4 }, { 41, 4 }, { 42, 4 }, { 43, 4 }, { 255, 999 },
 };
 
-FieldstgAnimFrame D_FIELDSTG_80096E34[8] = {
+FieldstgAnimFrame fieldstg_warp_effect_anim_2b[8] = {
     { 300, 104 }, { 44, 4 }, { 45, 4 }, { 46, 4 }, { 47, 4 }, { 48, 4 }, { 49, 4 }, { 255, 0 },
 };
 
-FieldstgAnimFrame D_FIELDSTG_80096E54[12] = {
+FieldstgAnimFrame fieldstg_warp_effect_anim_3[12] = {
     { 300, 128 }, { 50, 4 }, { 51, 4 }, { 52, 4 }, { 53, 4 }, { 54, 4 }, { 55, 4 }, { 56, 4 }, { 57, 4 }, { 58, 4 },
     { 59, 4 }, { 255, 999 },
 };
 
 FieldstgAnimFrame *fieldstg_warp_effect_anims[2][4] = {
-    { D_FIELDSTG_80096D68, D_FIELDSTG_80096DEC, D_FIELDSTG_80096E14, D_FIELDSTG_80096E54 },
-    { D_FIELDSTG_80096D68, D_FIELDSTG_80096E00, D_FIELDSTG_80096E34, D_FIELDSTG_80096E54 },
+    { fieldstg_warp_effect_anim_0, fieldstg_warp_effect_anim_1, fieldstg_warp_effect_anim_2,
+      fieldstg_warp_effect_anim_3 },
+    { fieldstg_warp_effect_anim_0, fieldstg_warp_effect_anim_1b, fieldstg_warp_effect_anim_2b,
+      fieldstg_warp_effect_anim_3 },
 };
 
 u8 fieldstg_background_tile_orders[3][4][5][6] = {

@@ -23,9 +23,10 @@ ready; the release itself is still to be published.
 - **Data:** split per object and in C, except crt0's `.sbss`, a FIELDSTG zero block with psylink padding, and
   STDWTITL's LIBPRESS data.
 - **Names:** every function is named; the EXE's C uses no default name but `D_80056088` (libgte's sin table) and the
-  overlay addresses it calls through `LATE_FUNC`. 229 `unk_` fields remain, 27 of them accessed by the C (37 accesses;
-  issue #56: `tools/ref_names.py` lists the US decomp's candidates, `tools/renames.py` replays the rename lists), the
-  rest never read; 40 FIELDSTG and 3 FIGHTSTG data tables and the WSTAG stage scripts' data keep their `D_` names.
+  overlay addresses it calls through `LATE_FUNC`. 197 `unk_` fields remain; the 15 the C touches are only written or
+  read by getters nothing calls, the rest never accessed (issue #56: `tools/ref_names.py` lists the US decomp's
+  candidates, `tools/renames.py` replays the rename lists `tools/renames/*.txt`). Stage 528's small per-actor arrays in
+  FIELDSTG (3 runs and a stray byte) and the WSTAG stage scripts' data keep their `D_` names.
 
 ## Reference tests
 `scripts/test.sh` runs every layer that the machine can run (`tests/README.md` has the details):

@@ -1,0 +1,64 @@
+# Batch 4 of issue #56: FIELDSTG (include/fieldstg.h, the structs local to src/fieldstg/*.c, the overlay's data the C
+# names). Candidates from ReGame-Labs/dw3_decomp (docs/THIRD_PARTY.md), named from what our code does with them. Apply
+# with tools/renames.py. By hand (not a rename): the new data names' lines in config/fieldstg.symbols.txt, and the
+# comments that describe them.
+# Left as they are: stage 528's per-actor condition flags and talks (D_FIELDSTG_80097E6C.., 80097EBC.., 8009881C..,
+# a run of small arrays each, like the stage files' D_WSTAG data) and the unreferenced byte D_FIELDSTG_80097623.
+
+# FieldstgManagerData 0x10: the object the manager waits for until it ends (the loader while loading, the inn in
+# fieldstg_open_inn)
+FieldstgManagerData.unk_10 awaited
+
+# FieldstgWarpPicture's animations: type 0 plays once; type 1's two layers loop
+D_FIELDSTG_80096CC8 fieldstg_warp_picture_anim
+D_FIELDSTG_80096D14 fieldstg_warp_picture_loop_anim
+D_FIELDSTG_80096D40 fieldstg_warp_picture_loop_anim_2
+
+# fieldstg_warp_effect_anims[type][track]: tracks 0 and 3 are both types', tracks 1 and 2 type 0's and (b) type 1's
+D_FIELDSTG_80096D68 fieldstg_warp_effect_anim_0
+D_FIELDSTG_80096DEC fieldstg_warp_effect_anim_1
+D_FIELDSTG_80096E00 fieldstg_warp_effect_anim_1b
+D_FIELDSTG_80096E14 fieldstg_warp_effect_anim_2
+D_FIELDSTG_80096E34 fieldstg_warp_effect_anim_2b
+D_FIELDSTG_80096E54 fieldstg_warp_effect_anim_3
+
+# fieldstg_actor_effect_anims[step]
+D_FIELDSTG_80097690 fieldstg_actor_effect_anim_0
+D_FIELDSTG_8009769C fieldstg_actor_effect_anim_1
+D_FIELDSTG_800976CC fieldstg_actor_effect_anim_2
+D_FIELDSTG_800976E0 fieldstg_actor_effect_anim_3
+
+# fieldstg_spots_effect_anims[dir]
+D_FIELDSTG_800979E8 fieldstg_spots_effect_anim_0
+D_FIELDSTG_800979F8 fieldstg_spots_effect_anim_1
+D_FIELDSTG_80097A08 fieldstg_spots_effect_anim_2
+D_FIELDSTG_80097A18 fieldstg_spots_effect_anim_3
+D_FIELDSTG_80097A28 fieldstg_spots_effect_anim_4
+D_FIELDSTG_80097A38 fieldstg_spots_effect_anim_5
+D_FIELDSTG_80097A48 fieldstg_spots_effect_anim_6
+D_FIELDSTG_80097A58 fieldstg_spots_effect_anim_7
+
+# fieldstg_meter_patterns[pattern]
+D_FIELDSTG_80097AA8 fieldstg_meter_pattern_0
+D_FIELDSTG_80097AB4 fieldstg_meter_pattern_1
+D_FIELDSTG_80097AC0 fieldstg_meter_pattern_2
+D_FIELDSTG_80097ACC fieldstg_meter_pattern_3
+D_FIELDSTG_80097AD8 fieldstg_meter_pattern_4
+D_FIELDSTG_80097AE4 fieldstg_meter_pattern_5
+D_FIELDSTG_80097AF0 fieldstg_meter_pattern_6
+D_FIELDSTG_80097AFC fieldstg_meter_pattern_7
+D_FIELDSTG_80097B08 fieldstg_meter_pattern_8
+
+# stage 528's data (fieldstg_stage_setup puts it in fieldstg_stage; the stage files' wstag<N>_vram_places, ...)
+D_FIELDSTG_80097D0C fieldstg_stage_vram_places
+D_FIELDSTG_80098BF8 fieldstg_stage_placed_actors
+D_FIELDSTG_800994F4 fieldstg_stage_actors
+D_FIELDSTG_800996C4 fieldstg_stage_sprites
+D_FIELDSTG_800997C0 fieldstg_stage_map_events
+D_FIELDSTG_80099844 fieldstg_stage_events
+
+# alignment padding (the gap the next member's or the struct's alignment makes; nothing reads it)
+FieldstgActor.unk_CA pad_CA
+FieldstgCamera.unk_66 pad_66
+FieldstgWarpEffect.unk_5A pad_5A
+FieldstgBackground.unk_126 pad_126

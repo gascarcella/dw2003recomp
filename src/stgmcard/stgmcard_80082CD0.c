@@ -106,7 +106,7 @@ typedef struct StgmcardSlotSummary {
     /* 0x24 */ StgmcardPlayInfo playtime; /* the save's gamestate_data.playtime_frames..playtime */
     /* 0x30 */ s32 party[3];  /* the party's GamestateDigimon.joined (3..: sprite animation, stgmcard_party_anims) */
     /* 0x3C */ s16 levels[3]; /* the party's levels */
-    /* 0x42 */ u8 unk_42[0x2];
+    /* 0x42 */ u8 pad_42[0x2];
 } StgmcardSlotSummary; /* size 0x44 */
 
 /* The save file's header (stgmcard_module.header; part 1 of the save file, 0xD4 bytes): what the screen
@@ -115,7 +115,7 @@ typedef struct StgmcardSaveHeader {
     /* 0x00 */ u8 checksum; /* checksum of the bytes from magic on (memcard_funcs.get_checksum) */
     /* 0x01 */ u8 last_slot; /* the slot saved last */
     /* 0x02 */ u8 version; /* 4 */
-    /* 0x03 */ u8 unk_03;
+    /* 0x03 */ u8 pad_03;
     /* 0x04 */ s32 magic;  /* "DMW3" */
     /* 0x08 */ StgmcardSlotSummary slots[3];
 } StgmcardSaveHeader; /* size 0xD4 */

@@ -1,0 +1,26 @@
+# Batch 5 of issue #56: FIGHTSTG (include/fightstg.h, the structs local to src/fightstg/, WFIGHTMN's and WFIGHTTS's).
+# Candidates from ReGame-Labs/dw3_decomp (docs/THIRD_PARTY.md), named from what our code does with them. Apply with
+# tools/renames.py; the data names' lines in config/fightstg.symbols.txt were added by hand.
+# By hand (not a rename): FightstgDigivolveData's four effect slots 0x08..0x17 became FightstgEffect *effects[4]
+# (`effects` -> effects[0] at its two stores; the other three by the lines below).
+# Left unk_ (written, never read, meaning not shown by our code; commented in place): FightstgPlayerReaction.unk_5C
+# and FightstgScript.unk_74 (the reaction's second argument passed on), FightstgDrawState.unk_04/unk_08 (set by the
+# mesh stream's commands 0xBn/0xAn).
+
+# data: three zero words nothing references (config/fightstg.yaml: owners unknown), in address order
+D_FIGHTSTG_800A46CC fightstg_unused_0
+D_FIGHTSTG_800A46D4 fightstg_unused_1
+D_FIGHTSTG_800A470C fightstg_unused_2
+
+# fields
+FightstgDigivolveData.unk_C effects[1]
+FightstgDigivolveData.unk_10 effects[2]
+FightstgDigivolveData.unk_14 effects[3]
+
+# alignment padding (the gap the next member's or the struct's alignment makes; nothing reads it; in the disc's
+# records of files 0x1CF and 0x1CC these bytes are 0)
+FightstgStage.unk_E6 pad_E6
+FightstgEnemyRecord.unk_31 pad_31
+FightstgModelRecordA.unk_C2 pad_C2
+FightstgModelRecordB.unk_46 pad_46
+FightstgStats.unk_3F pad_3F

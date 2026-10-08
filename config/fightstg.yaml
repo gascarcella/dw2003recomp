@@ -75,7 +75,7 @@ segments:
       #   D_800A46D8 is used by 86A00, 8B630 and 8D3B4); it is at 46D8, with the camera object's file (weak). GCC
       #   emits uninitialized definitions in the order of their first declaration: D_800A46D8 (declared in
       #   fightstg.h) can only come first in its file's .bss, not after 8B630's D_800A46D0.
-      # - Three unreferenced zero words (their own variables in C, owners unknown): 800A46CC after A1FE0's table
+      # - Three unreferenced zero words (fightstg_unused_0..2, owners unknown): 800A46CC after A1FE0's table
       #   (or .bss of a file before 8B630), 800A46D4 and 800A470C (gaps in the .bss).
       - [0x1F7E8, .data, fightstg_stage]   # 0x800A2498 (after the last function's jr ra): sound keys
       - [0x1F808, .data, fightstg_80086A00]   # 0x800A24B8

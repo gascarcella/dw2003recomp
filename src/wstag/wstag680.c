@@ -52,7 +52,7 @@ s32 wstag680_drop_anim_loop_b(Wstag680Drop *drop, WstagAnimKeyB *keys, s32 depth
         drop->anim.key++;
         drop->anim.time += key->time;
         if (key->frame == 0xFF) {
-            drop->dy = key->unk_3;
+            drop->dy = key->end_value;
             key = keys;
             drop->anim.key = 0;
             drop->anim.time += key->time;

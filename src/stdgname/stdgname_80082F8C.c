@@ -681,7 +681,7 @@ void stdgname_entry_update(StdgnameNameEntry *obj, StdgnameNameEntryData *data) 
             stdgname_keyboard.titles = stdgname_key_tabs_latin;
             stdgname_keyboard.keys = stdgname_key_pages_latin;
         }
-        obj->unk_C0.duration = 10;
+        obj->unused_anim.duration = 10;
         obj->warning_anim.duration = 10;
         obj->keyboard_anim.duration = 10;
         stdgname_entry_create_windows(obj, data);

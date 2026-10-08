@@ -162,7 +162,7 @@ typedef struct FightstgStage {
     /* 0xD4 */ SVECTOR background_to; /* background colour faded to */
     /* 0xDC */ SVECTOR background; /* background colour */
     /* 0xE4 */ s16 sound_key;
-    /* 0xE6 */ s16 unk_E6;
+    /* 0xE6 */ s16 pad_E6;
     /* 0xE8 */ void (*change)(struct FightstgStage *, s32, s32, s32); /* fightstg_stage_change */
 } FightstgStage; /* size 0xEC */
 
@@ -205,7 +205,7 @@ typedef struct FightstgScript {
     /* 0x68 */ s32 stage; /* stage */
     /* 0x6C */ s32 effect;
     /* 0x70 */ s32 hit_sound;
-    /* 0x74 */ s32 unk_74;
+    /* 0x74 */ s32 unk_74; /* set by fightstg_player_reaction_update (its unk_5C); nothing reads it */
     /* 0x78 */ s32 model_id; /* model ID */
     /* 0x7C */ s32 slot;
     /* 0x80 */ s32 file; /* script file's sub-file ID */
@@ -242,7 +242,7 @@ typedef struct FightstgEnemyRecord {
     /* 0x0E */ s16 stats[5]; /* stats (x records_state.enemies[].stat_scale / 16), as FightstgStats.stats */
     /* 0x18 */ s16 resists[12]; /* as FightstgStats.resists */
     /* 0x30 */ u8 type; /* as FightstgStats.type */
-    /* 0x31 */ u8 unk_31;
+    /* 0x31 */ u8 pad_31;
     /* 0x32 */ FightstgEnemyAction actions[3]; /* the first whose condition holds is taken */
     /* 0x3E */ u8 unk_3E[0x4];
     /* 0x42 */ u8 counter_action;
@@ -380,7 +380,7 @@ typedef struct FightstgModelRecordA {
     /* 0x1A */ s16 camera_eyes[12][3];
     /* 0x62 */ s16 camera_targets[12][3];
     /* 0xAA */ s16 camera_projections[12];
-    /* 0xC2 */ u8 unk_C2[0x2];
+    /* 0xC2 */ u8 pad_C2[0x2];
 } FightstgModelRecordA; /* size 0xC4 */
 
 typedef struct FightstgModelRecordB {
@@ -395,7 +395,7 @@ typedef struct FightstgModelRecordB {
     /* 0x2C */ s16 camera_targets[3][3];
     /* 0x3E */ s16 camera_projections[3];
     /* 0x44 */ s16 default_camera;
-    /* 0x46 */ u8 unk_46[0x2];
+    /* 0x46 */ u8 pad_46[0x2];
 } FightstgModelRecordB; /* size 0x48 */
 
 /* fightstg_models: the record cache of file 0x1CC and its function table. */
@@ -471,7 +471,7 @@ typedef struct FightstgStats {
     /* 0x3C */ u8 escape;
     /* 0x3D */ u8 no_escape;
     /* 0x3E */ u8 steal;
-    /* 0x3F */ u8 unk_3F;
+    /* 0x3F */ u8 pad_3F;
 } FightstgStats; /* size 0x40 */
 
 struct FightstgPoisonArgs;

@@ -219,7 +219,7 @@ typedef struct FieldstgActor {
     /* 0x0C0 */ s32 reload; /* reload the sprite */
     /* 0x0C4 */ s32 vertical_speed; /* vertical speed (fieldstg_player_control_height) */
     /* 0x0C8 */ s16 voice; /* voice of a looping sound, or -1 */
-    /* 0x0CA */ u8 unk_CA[0x2];
+    /* 0x0CA */ u8 pad_CA[0x2];
     /* 0x0CC */ s32 anim_pos;  /* position in the animation script */
     /* 0x0D0 */ s32 anim_time; /* time left of the frame */
     /* 0x0D4 */ u32 frame_file; /* sprite sub-file ID */

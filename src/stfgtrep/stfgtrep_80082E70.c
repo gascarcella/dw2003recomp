@@ -38,10 +38,10 @@ typedef struct StfgtrepMain {
 
 /* A technique's "level up" on a party member's panel. */
 typedef struct StfgtrepTechLevelUp {
-    /* 0x0 */ s32 level_up; /* the technique's level went up */
-    /* 0x4 */ s32 step; /* fade-in step, 0..10 */
-    /* 0x8 */ s32 time; /* time of the last step */
-    /* 0xC */ s32 unk_C;
+    /* 0x0 */ s32 unk_0;
+    /* 0x4 */ s32 level_up; /* the technique's level went up */
+    /* 0x8 */ s32 step; /* fade-in step, 0..10 */
+    /* 0xC */ s32 time; /* time of the last step */
 } StfgtrepTechLevelUp; /* size 0x10 */
 
 /* A party member's panel (stfgtrep_member_create, size 0x174). */
@@ -64,8 +64,8 @@ typedef struct StfgtrepMember {
     /* 0x0F0 */ s32 level_up; /* the level went up */
     /* 0x0F4 */ s32 level_up_step; /* "level up" fade-in step, 0..10 */
     /* 0x0F8 */ s32 level_up_time; /* time of its last step */
-    /* 0x0FC */ s32 unk_FC;
-    /* 0x100 */ StfgtrepTechLevelUp tech_level_ups[3];
+    /* 0x0FC */ StfgtrepTechLevelUp tech_level_ups[3];
+    /* 0x12C */ s32 learned; /* step 41 taught a technique: step 42 then checks how many forms there are */
     /* 0x130 */ s32 sound_playing; /* sound playing */
     /* 0x134 */ s16 voice;   /* its voice, -1: none */
     /* 0x138 */ s32 exp_shown; /* experience shown */
@@ -616,8 +616,8 @@ void stfgtrep_member_run(StfgtrepMember *obj, StfgtrepMemberData *data) {
             stfgtrep_member_show_text(obj, data, 1);
             obj->base.step = 45;
             obj->base.substep = 4;
-            obj->tech_level_ups[2].unk_C = 1;
-        } else if (obj->tech_level_ups[2].unk_C != 0) {
+            obj->learned = 1;
+        } else if (obj->learned != 0) {
             obj->base.step = 42;
         } else {
             obj->base.step = 50;

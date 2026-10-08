@@ -81,8 +81,8 @@ typedef struct StgtrainSpritePart {
     /* 0x01 */ u8 v;
     /* 0x02 */ u8 x;
     /* 0x03 */ u8 y;
-    /* 0x04 */ u16 unk_4; /* bits 6-14: CLUT row; bit 15: semi-transparent */
-    /* 0x06 */ u16 unk_6; /* bits 0-4: CLUT column (x16); bits 5-8: texture page bits */
+    /* 0x04 */ u16 clut_row; /* bits 6-14: CLUT row; bit 15: semi-transparent */
+    /* 0x06 */ u16 tpage; /* bits 0-4: CLUT column (x16); bits 5-8: texture page bits */
     /* 0x08 */ u16 w;
     /* 0x0A */ u16 h;
     /* 0x0C */ u8 unk_C[8];
@@ -182,8 +182,8 @@ void stgtrain_sprite_update(StgtrainSprite *obj) {
         part = (StgtrainSpritePart *)list;
         for (i = 0; i < n; i++) {
             part--;
-            info = part->unk_6;
-            clut = getClut(obj->clut_x + (info & 0x1F) * 16, obj->clut_y + ((part->unk_4 & 0x7FC0) >> 6));
+            info = part->tpage;
+            clut = getClut(obj->clut_x + (info & 0x1F) * 16, obj->clut_y + ((part->clut_row & 0x7FC0) >> 6));
             tpage = getTPage(info >> 7, info >> 5, obj->tex_x + (info & 0x1F) * 64, obj->tex_y);
             u = part->u;
             x = part->x;
@@ -202,7 +202,7 @@ void stgtrain_sprite_update(StgtrainSprite *obj) {
                     prev = tpage;
                 }
                 setSprt((SPRT *)prim);
-                if ((s16)part->unk_4 & 0x8000) {
+                if ((s16)part->clut_row & 0x8000) {
                     setSemiTrans((SPRT *)prim, 1);
                 }
                 setRGB0((SPRT *)prim, 0x80, 0x80, 0x80);
@@ -217,7 +217,7 @@ void stgtrain_sprite_update(StgtrainSprite *obj) {
                 prim = (SPRT *)prim + 1;
             } else {
                 setPolyFT4((POLY_FT4 *)prim);
-                if ((s16)part->unk_4 & 0x8000) {
+                if ((s16)part->clut_row & 0x8000) {
                     setSemiTrans((POLY_FT4 *)prim, 1);
                 }
                 setRGB0((POLY_FT4 *)prim, 0x80, 0x80, 0x80);

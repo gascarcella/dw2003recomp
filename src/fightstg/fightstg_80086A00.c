@@ -133,10 +133,8 @@ typedef struct FightstgDigivolve {
 typedef struct FightstgDigivolveData {
     /* 0x00 */ Object *flash; /* the fade (fightstg_flash_create) */
     /* 0x04 */ s32 unk_4;
-    /* 0x08 */ FightstgEffect *effects; /* effects (fightstg_effect_create) */
-    /* 0x0C */ FightstgEffect *unk_C;
-    /* 0x10 */ FightstgEffect *unk_10;
-    /* 0x14 */ FightstgEffect *unk_14;
+    /* 0x08 */ FightstgEffect *effects[4]; /* effects (fightstg_effect_create): [0] and (key2 0) [1] at step 2, [2]
+                                            * at the end of step 3, [3] at the end of step 8 */
 } FightstgDigivolveData; /* size 0x18 */
 
 extern FightstgEffectFiles fightstg_effect_files[];
@@ -156,7 +154,7 @@ typedef struct FightstgPlayerReaction {
     /* 0x50 */ FightstgSlots *slots;  /* the 0x14 object */
     /* 0x54 */ FightstgCamera *camera;  /* the 0x12 object */
     /* 0x58 */ s32 reaction;
-    /* 0x5C */ s32 unk_5C;
+    /* 0x5C */ s32 unk_5C; /* create's arg1 (1 from WFIGHTMN's poison damage, 0 from WFIGHTTS): the script's unk_74 */
     /* 0x60 */ s32 image_file;            /* animation 0x33's model (fightstg_effect_get_files) */
     /* 0x64 */ s32 file;
     /* 0x68 */ FightstgPos vram;
@@ -1637,10 +1635,10 @@ void fightstg_digivolve_update(FightstgDigivolve *obj, FightstgDigivolveData *da
             }
             slots->get_params(slots, 0x10)->layers[0].shown = 0;
             if (obj->base.key2 == 0) {
-                data->effects = fightstg_effect_create(0x3E8, (SVECTOR *)&pos_origin);
-                data->unk_C = fightstg_effect_create(0x3E9, (SVECTOR *)&pos_origin);
+                data->effects[0] = fightstg_effect_create(0x3E8, (SVECTOR *)&pos_origin);
+                data->effects[1] = fightstg_effect_create(0x3E9, (SVECTOR *)&pos_origin);
             } else {
-                data->effects = fightstg_effect_create(0x3EF, (SVECTOR *)&pos_origin);
+                data->effects[0] = fightstg_effect_create(0x3EF, (SVECTOR *)&pos_origin);
             }
             obj->base.next_step(obj);
             /* fallthrough */
@@ -1654,7 +1652,7 @@ void fightstg_digivolve_update(FightstgDigivolve *obj, FightstgDigivolveData *da
                 obj->bottom_bar.h = 240;
                 obj->bottom_bar.y = 0;
                 slots->get_params(slots, 0)->layers[0].shown = 0;
-                data->unk_10 = fightstg_effect_create(0x3EA, (SVECTOR *)&pos_center);
+                data->effects[2] = fightstg_effect_create(0x3EA, (SVECTOR *)&pos_center);
                 obj->base.next_step(obj);
             }
             layer = gfx_module.funcs.get_layer(0x1004);
@@ -1743,8 +1741,8 @@ void fightstg_digivolve_update(FightstgDigivolve *obj, FightstgDigivolveData *da
                 obj->bottom_bar.y = 240;
                 obj->bottom_bar.h = 0;
                 slots->get_params(slots, 0)->layers[1].shown = 0;
-                data->unk_14 = fightstg_effect_create(obj->base.key2 == 0 ? 0x3EB : 0x3F0,
-                                                      (SVECTOR *)&pos_corner);
+                data->effects[3] = fightstg_effect_create(obj->base.key2 == 0 ? 0x3EB : 0x3F0,
+                                                         (SVECTOR *)&pos_corner);
                 obj->base.next_step(obj);
             }
             bar = gfx_module.funcs.get_layer(0x1004);

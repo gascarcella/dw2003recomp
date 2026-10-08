@@ -119,4 +119,4 @@ FightstgIntroCameraStep fightstg_intro_camera_steps[3][3] = {
 };
 
 /* unreferenced */
-s32 D_FIGHTSTG_800A46CC = 0;
+s32 fightstg_unused_0 = 0;

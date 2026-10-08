@@ -523,7 +523,7 @@ void stgtrain_trainee_update(StgtrainTrainee *obj, StgtrainTraineeData *data) {
             data->sprite_2->set_pos(data->sprite_2, pos & 0xFFFF, pos >> 16);
             data->sprite_2->set_tex(data->sprite_2, obj->pos[0], obj->pos[1]);
             data->sprite_2->set_clut(data->sprite_2, obj->pos[2], obj->pos[3]);
-            if (stgtrain_module.funcs.get_file_unk_C(obj->file) == 0) {
+            if (stgtrain_module.funcs.get_file_same_depth(obj->file) == 0) {
                 data->sprite_2->set_layer(data->sprite_2, obj->layer, obj->ot_depth - 1);
             } else {
                 data->sprite_2->set_layer(data->sprite_2, obj->layer, obj->ot_depth);
@@ -1419,8 +1419,8 @@ s32 stgtrain_anim_get_file_pos(s32 file) {
     return (stgtrain_anim_files[file].y << 16) | stgtrain_anim_files[file].x;
 }
 
-s32 stgtrain_anim_get_file_unk_C(s32 file) {
-    return stgtrain_anim_files[file].unk_C;
+s32 stgtrain_anim_get_file_same_depth(s32 file) {
+    return stgtrain_anim_files[file].same_depth;
 }
 
 u8 *stgtrain_anim_get_part_data(s32 part) {
@@ -1631,7 +1631,7 @@ StgtrainModule stgtrain_module = {
         stgtrain_anim_upload,
         stgtrain_anim_get_file_id,
         stgtrain_anim_get_file_pos,
-        stgtrain_anim_get_file_unk_C,
+        stgtrain_anim_get_file_same_depth,
         stgtrain_anim_get_part_data,
         stgtrain_anim_get_part_offset,
         stgtrain_anim_get_part_0C,

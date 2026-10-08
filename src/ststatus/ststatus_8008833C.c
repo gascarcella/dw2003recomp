@@ -1774,7 +1774,7 @@ void ststatus_status_update(StstatusStatusPage *obj, StstatusStatusPageData *dat
         obj->list_anim.duration = 10;
         obj->menu_anim.duration = 10;
         obj->exp_anim.duration = 10;
-        obj->unk_138.duration = 8;
+        obj->unused_anim.duration = 8;
         ststatus_status_create_windows(obj, data);
         break;
     case OBJECT_STATE_RUN:

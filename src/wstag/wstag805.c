@@ -137,7 +137,7 @@ s32 wstag805_sprite_anim_loop_b(WstagSpriteAnim *sa, WstagAnimKeyB *keys, s32 de
         sa->anim.key++;
         sa->anim.time += key->time;
         if (key->frame == 0xFF) {
-            next = key->unk_3;
+            next = key->end_value;
             key = &keys[next];
             sa->anim.key = next;
             sa->anim.time += key->time;
