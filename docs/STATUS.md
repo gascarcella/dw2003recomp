@@ -76,9 +76,9 @@ The plan's milestones (`docs/PORT.md`):
   the 3D at those positions (`--subpixel on|off`, `video.subpixel`, default on; the launcher's "3D vertices" choice);
   `--subpixel perspective` also textures it perspective-correct (off by default).
 - **Present filters** ([#69](https://github.com/gascarcella/dw2003recomp/issues/69), the plan and the owner's
-  decisions there): `--filter`, `video.filter`, the launcher's Filter combo (GPU renderer only). Done: `none` (the
-  default, the picture unchanged) and `sharp` (sharp bilinear), one shader pass in psxstack's present. Next: `scanlines`
-  and `crt` (`video.crt`), then `smooth` (on the 1x software image).
+  decisions there): `--filter`, `video.filter`, `video.crt`, the launcher's Filter combo and sliders (GPU renderer
+  only). Done: `none` (the default, the picture unchanged), `sharp` (sharp bilinear), `scanlines` and `crt` (beams,
+  aperture grille, curvature), one shader pass each in psxstack's present. Next: `smooth` (on the 1x software image).
 - **Widescreen battles** ([#71](https://github.com/gascarcella/dw2003recomp/issues/71)): the `widescreen` mod shows
   the battle 16:9 through the GPU renderer's wide canvas (psxstack `render_gpu_wide.c`): more of the arena at the
   sides, the HUD centred as drawn, the game's output unchanged. Everything else stays 4:3 (the field: #78). Not
