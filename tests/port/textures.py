@@ -22,6 +22,7 @@ Builds build/port-sdl if needed (-DPSXSTACK_SDL=ON: tools/sdl3 and tools/dxc), t
     dump's own PNGs, `nearest`) keeps the rasteriser's whole VRAM target equal to the software VRAM every 10 vsyncs
     and the pictures unchanged; a pack of 1x1 magenta PNGs (every key) changes them; the same as sub-rectangle files
     (each key's sampled range from index.json) gives the same pictures; the identity pack given before the magenta one
+    wins; the same two as the user's data mods (--mods-dir, a settings file switching them on): mod_order decides which
     wins; at internal scale 2 the identity pack's pictures are within SCALED_BUDGET of those without it (the colour is
     8-bit there, the texture coordinates exact).
 Exit codes: 0 pass (parts may be skipped), 1 fail, 2 something missing for the build.
@@ -142,6 +143,19 @@ def packs(sdl, env, out, dump, entries):
     rc, text, both = shots(sdl, env, out, "both", ["--texture-pack", out / "identity", "--texture-pack",
                                                    out / "magenta"])
     check(rc == 0 and both == plain, "the identity pack given first wins over the magenta one")
+    # The same packs as the user's data mods (psxstack docs/LAUNCHER.md "Data mods"): switched on and ordered by the
+    # settings, found through --mods-dir (as the launcher starts the game; --script-mods, since a script turns mods off).
+    mods = out / "mods"
+    for name in ("identity", "magenta"):
+        shutil.copytree(out / name, mods / name)
+    for first, want, what in (("identity", plain, "the identity pack"), ("magenta", mag, "the magenta pack")):
+        cfg = out / f"datamods-{first}.json"
+        cfg.write_text(json.dumps({"schema": 1, "video": {"window": False}, "memcard1": None, "memcard2": None,
+                                   "mods": {"identity": {"enabled": True}, "magenta": {"enabled": True}},
+                                   "mod_order": [first, "magenta" if first == "identity" else "identity"]}))
+        rc, text, got = shots(sdl, env, out, f"datamods-{first}", ["--config", cfg, "--mods-dir", mods,
+                                                                  "--script-mods"])
+        check(rc == 0 and got == want, f"data mods through --mods-dir, mod_order {first} first: {what}'s pictures")
     rc, text, plain2 = shots(sdl, env, out, "plain2", [], scale=2)
     rc2, text, ident2 = shots(sdl, env, out, "identity2", ["--texture-pack", out / "identity"], scale=2)
     worst = (0.0, 0.0)

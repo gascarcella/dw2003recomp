@@ -19,6 +19,9 @@ Code cites this file as `docs/LAUNCHER.md "<heading>"`; keep the headings stable
   SHA-1 and size; the launcher and the game both check against it.
 - The environment variables keep their names (`DW3_CONFIG_DIR`, `DW3_GAME`, `DW3_SELFTEST_*`, `DW3_PORT_*`): the
   description's `env_prefix` is `DW3`.
+- Texture packs are data mods in the settings directory's `mods/` (psxstack `docs/LAUNCHER.md` "Data mods"; the
+  launcher passes `--mods-dir`); `tests/port/settings.py` checks `mod_order` and the data mods' settings, and
+  `tests/port/textures.py` the packs found that way.
 - The self-test with the real disc and game: `DW3_SELFTEST_DISC=$PWD/iso/dw2003.cue
   DW3_SELFTEST_GAME=$PWD/build/port-sdl/dw2003 SDL_VIDEO_DRIVER=offscreen build/launcher/dw2003-launcher --self-test DIR`.
 

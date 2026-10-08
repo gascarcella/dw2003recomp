@@ -238,6 +238,7 @@ def main():
         "watchdog": 30,
         "input": {"keyboard": {"cross": "X"}, "hotkeys": {"pause": "P"}},
         "mods": {"fast_forward": {"enabled": True}},
+        "mod_order": ["pack_b", "pack_a"],
         "launcher": {"window": [10, 20], "note": "tab\tquote\" é"},
     }
     write(a / "full.json", full)
@@ -247,7 +248,8 @@ def main():
     check(s["memcard2"] is None, "memcard2 null: no card")
     check(s["video"] == full["video"] and s["audio"] == full["audio"] and s["watchdog"] == 30
           and s["disc"]["sha1"] == full["disc"]["sha1"], "every value read")
-    check(s["input"] == full["input"] and s["launcher"] == full["launcher"], "input and launcher printed back as they are")
+    check(s["input"] == full["input"] and s["launcher"] == full["launcher"] and s["mod_order"] == full["mod_order"],
+          "input, mod_order and launcher printed back as they are")
     check(s["mods"]["fast_forward"] == {"enabled": True, "hold": "Tab", "toggle": "", "speed": "4x", "mute": True},
           "mods printed resolved: the manifest's defaults filled in")
 
@@ -305,6 +307,8 @@ def main():
         "subpixel not a string": ({"schema": 1, "video": {"subpixel": True}}, "video.subpixel: a string"),
         "a card path not a string": ({"schema": 1, "memcard1": 3}, "memcard1: a path"),
         "mods not an object": ({"schema": 1, "mods": []}, "mods: an object, not an array"),
+        "mod_order not a list": ({"schema": 1, "mod_order": "a"}, "mod_order: an array, not a string"),
+        "mod_order not of ids": ({"schema": 1, "mod_order": ["a", 1]}, "mod_order: a list of data mods' ids"),
         "not JSON": ('{"schema": 1,}', "not JSON"),
         "not an object": ("[1]", "the settings are an object"),
         "a bad enum": ({"schema": 1, "mods": {"fast_forward": {"speed": "5x"}}}, "mods.fast_forward.speed: one of"),
@@ -372,6 +376,21 @@ def main():
             lines = [l for l in proc.stderr.splitlines() if "input test:" in l]
             check(proc.returncode == 0 and any("the pause: passed" in l for l in lines),
                   f"{label}: exit {proc.returncode}: {'; '.join(l.split('input test: ')[1] for l in lines)}")
+        print("settings: the data mods (--mods-dir, psxstack docs/LAUNCHER.md \"Data mods\")")
+        md = out / "datamods"
+        write(md / "pack/mod.json", {"schema": 1, "id": "pack", "name": "Pack", "kind": "data", "textures": {}})
+        write(md / "code/mod.json", {"schema": 1, "id": "code", "name": "Code", "kind": "builtin"})
+        p = write(out / "datamods.json", {"schema": 1, "mods": {"pack": {"enabled": True}, "code": {"enabled": True}},
+                                          "mod_order": ["pack"]})
+        rc, text, err = run(sdl, "--config", p, "--mods-dir", md, "--print-settings")
+        check(rc == 0 and "mods.pack: no such mod" not in err and "mods.code: no such mod in this build" in err
+              and "code/mod.json: not a data mod" in err and ": 1 data mod" in err,
+              "a data mod's id is known, a built-in manifest there is not a data mod")
+        p = write(out / "datamods_bad.json", {"schema": 1, "mods": {"pack": {"enabled": 1}}})
+        rc, _, err = run(sdl, "--config", p, "--mods-dir", md, "--print-settings")
+        check(rc == 64 and "mods.pack.enabled: true or false" in err, f"a data mod's enabled not a bool: exit {rc}")
+        rc, _, err = run(binary, "--mods-dir", md)
+        check(rc == 64 and "--mods-dir: this build has no data mods" in err, f"--mods-dir in the headless build: exit {rc}")
         if DISC.exists():
             fast_forward_check(sdl, env_sdl, out)
     else:

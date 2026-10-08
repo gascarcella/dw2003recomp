@@ -75,12 +75,14 @@ The plan's milestones (`docs/PORT.md`):
   the time instead of 21 %); the frame hash is the same with it on. Above internal scale 1 the hardware renderer draws
   the 3D at those positions (`--subpixel on|off`, `video.subpixel`, default on; the launcher's "3D vertices" choice).
 - **Texture replacement** ([#70](https://github.com/gascarcella/dw2003recomp/issues/70), the research and the plan
-  there): phases 1 and 2 done. `--dump-textures DIR` (the SDL build, either renderer) writes every texture the game
+  there): done (three phases). `--dump-textures DIR` (the SDL build, either renderer) writes every texture the game
   samples as a PNG named by its key (the loaded image's and its CLUT's content, not the VRAM place) and an
   `index.json` (psxstack `docs/RUNTIME.md` "Texture dump"): 134 keys in new_game, 1,728 in first_battle_save.
   `--texture-pack DIR` loads a pack (a data mod of PNGs named by key, "Texture packs") that the hardware renderer
   draws instead, at any internal scale; the unedited dump as a pack keeps scale 1 equal to the software VRAM over both
-  replays. Next: the launcher's user `mods/` directory.
+  replays. Players install packs as data mods in the settings directory's `mods/`: the launcher lists them, switches
+  them on and orders them (`mod_order`) and starts the game with `--mods-dir` (psxstack `docs/LAUNCHER.md` "Data
+  mods"). The `any`-CLUT replacement is [#77](https://github.com/gascarcella/dw2003recomp/issues/77).
 - **The port stack (psxstack):** the runtime, the Psy-Q shim, the build (`psxstack_add_game()`), the launcher and the
   debug tools live in the `psxstack` repository (gascarcella/psxstack; its `docs/PORT.md`, `docs/RUNTIME.md`,
   `docs/LAUNCHER.md`), consumed as the `psxstack` submodule pinned at its tag `v0.1.0` (`scripts/worktree_init.sh`
