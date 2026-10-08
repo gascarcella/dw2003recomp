@@ -1,0 +1,27 @@
+# Batch 2 of issue #56: include/gamestate.h, include/records.h and the battle setup they hold (the battle table's
+# entry it is copied from, the stage select's debug windows that show two of its values). Candidates from
+# ReGame-Labs/dw3_decomp (docs/THIRD_PARTY.md), named from what our code does with them. Apply with tools/renames.py.
+# By hand (not a rename): RecordsDigimon.unk_2A[7] became u16 pair_technique + u8 status_resists[5]
+# (unk_2A[i - 5] -> status_resists[i - 7]; the records_digimon initializers' group of 7 -> a u16 and 5 bytes).
+
+*.unk_26E4 alt_layout                   # GamestateData, and the port's GsRecord copy of it (port/src/mods.c)
+RecordsState.unk_04 debug_up_down
+RecordsState.unk_08 debug_left_right
+RecordsState.unk_3D battle_kind
+FieldstgBattle.unk_0D kind
+FieldstgBattle.unk_0E blocked
+StageSelectData.unk_94 debug_up_down
+StageSelectData.unk_98 debug_left_right
+
+# alignment padding (the gap the next member's or the struct's alignment makes; nothing reads it)
+GamestateForm.unk_03 pad_03
+GamestateRecord.unk_04E pad_04E
+GamestateRecord.unk_3CD pad_3CD
+GamestateData.unk_075A pad_075A
+RecordsDigimon.unk_57 pad_57
+RecordsItem.unk_0A pad_0A
+RecordsEquip.unk_05 pad_05
+RecordsWeapon.unk_05 pad_05
+RecordsWeapon.unk_13 pad_13
+RecordsArmor.unk_05 pad_05
+RecordsAccessory.unk_05 pad_05

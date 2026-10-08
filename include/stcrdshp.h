@@ -39,7 +39,7 @@ typedef struct StcrdshpMain {
     /* 0x064 */ s32 greeting; /* the shopkeeper's greeting (stcrdshp_greetings) */
     /* 0x068 */ s32 left;   /* left through the menu's third choice */
     /* 0x06C */ s32 menu_cursor; /* menu cursor: buy, open boosters, leave */
-    /* 0x070 */ s16 items[404];  /* the player's items (records_state.unk_88) */
+    /* 0x070 */ s16 items[404];  /* the player's items (records_funcs.list_items) */
     /* 0x398 */ WindowAnim anims[3];
     /* 0x3C8 */ void (*update_money)(struct StcrdshpMain *obj); /* stcrdshp_update_money */
 } StcrdshpMain; /* size 0x3CC */

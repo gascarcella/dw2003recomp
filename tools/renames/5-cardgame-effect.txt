@@ -1,0 +1,16 @@
+# Review of #56 (PR #64): CardgameGame 0x420..0x497 is one struct, CardgameEffectState effect (the in-game menu copies it
+# whole). By hand: the declaration (CardgameEffectState replaces CardgameEffectSave, a s32 array) and the menu's two copies,
+# which lose their casts. A branch with the old flat names catches up with this list as long as the declaration is the
+# new one (the old names then fail to compile and are fixed at their line).
+CardgameGame.effect effect.id
+CardgameGame.new_effect effect.new_id
+CardgameGame.effect_step effect.step
+CardgameGame.next_step effect.next_step
+CardgameGame.effect_time effect.time
+CardgameGame.effect_vars effect.vars
+CardgameGame.cursor effect.cursor
+CardgameGame.choice effect.choice
+CardgameGame.selected effect.selected
+CardgameGame.target_rows effect.target_rows
+CardgameGame.selectable effect.selectable
+CardgameGame.marked effect.marked

@@ -1,0 +1,37 @@
+# Batch 3 of issue #56: the EXE's structs the port and its debug channel use (message.h and message.c's dialog
+# outline, pad.h, memcard.h) and the EXE's last default symbol names the C uses. Candidates from ReGame-Labs/dw3_decomp
+# (docs/THIRD_PARTY.md), named from what our code does with them. Apply with tools/renames.py; an EXE symbol's line in
+# config/symbol_addrs.txt is renamed with it (added there by hand first when splat named it).
+# By hand (not a rename): MessageDialogOutline 0x88..0x97 became VECTOR translation.
+
+# functions
+func_80015528 memcard_unformat
+func_800189A8 pad_start_recording
+func_800189B0 pad_stop_recording
+func_8001A458 message_set_unk_C4
+
+# data: the block at the start of message.c's .data (owner open), records.c's .sbss slot, Psy-Q .bss (Sony's names)
+D_8004DC10 message_zero_vector
+D_8004DC20 message_identity_matrix
+D_8004DC40 message_double_x_matrix
+D_8004DC60 message_double_y_matrix
+D_8004DC80 message_double_xy_matrix
+D_8005CCF0 records_field_menu_choice
+D_800812F8 GsLIGHTWSMATRIX
+D_80081358 GsWSMATRIX
+D_80081454 StCdIntrFlag
+
+# fields
+MemcardFuncs.unk_28 unformat
+PadState.unk_40C start_recording
+PadState.unk_410 stop_recording
+MessageWindow.unk_164 set_unk_C4
+MessageDialogOutline.unk_88 translation.vx
+MessageDialogOutline.unk_8C translation.vy
+MessageDialogOutline.unk_90 translation.vz
+
+# alignment padding (the gap the next member's or the struct's alignment makes; nothing reads it)
+MessageWindow.unk_C5 pad_C5
+MessageFont.unk_02 pad_02
+FontChar.unk_3 pad_3
+MessageDialogOutline.unk_5E pad_5E

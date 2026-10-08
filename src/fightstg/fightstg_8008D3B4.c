@@ -4781,7 +4781,7 @@ void fightstg_switch_menu_update(FightstgSwitchMenu *obj, FightstgSwitchMenuData
                     own = records_get_digimon_func(fightstg_battle.state.members[0][fightstg_battle.state.current[0]].digimon);
                     rec = records_get_digimon_func(obj->entries[obj->picked]);
                     if (own->level_thresholds[6] != 0 && own->level_thresholds[6] == rec->name_id) {
-                        obj->action = *(u16 *)own->unk_2A; /* a u16 at 0x2A */
+                        obj->action = own->pair_technique;
                     } else {
                         obj->action = 0;
                     }
@@ -6926,9 +6926,9 @@ void fightstg_battle_to_screen(GfxLayer *layer, SVECTOR *in, SVECTOR *out) {
     s32 z;
     s32 shift = 0x10 - layer->get_ot_bits(layer);
 
-    gte_MulMatrix0(&D_80081358, &D_8004DC20, &m);
-    gte_SetTransMatrix(&D_80081358);
-    gte_ldlv0(D_8004DC20.t);
+    gte_MulMatrix0(&GsWSMATRIX, &message_identity_matrix, &m);
+    gte_SetTransMatrix(&GsWSMATRIX);
+    gte_ldlv0(message_identity_matrix.t);
     gte_rt();
     gte_stlvnl(m.t);
     gte_SetRotMatrix(&m);
@@ -7152,7 +7152,7 @@ FightstgStats *fightstg_rules_get_stats(u8 side, s32 first, s32 member) {
         rec = &records_digimon[id];
         gamestate_data.funcs.get_stats(id, &stats);
         for (i = 7; i < 12; i++) {
-            out->resists[i] = rec->unk_2A[i - 5];
+            out->resists[i] = rec->status_resists[i - 7];
         }
         if (rec->id != m->digimon) {
             form = records_get_digimon_func(m->digimon);
@@ -7163,7 +7163,7 @@ FightstgStats *fightstg_rules_get_stats(u8 side, s32 first, s32 member) {
                 (&stats.values[12])[i] += form->resists[i];
             }
             for (i = 7; i < 12; i++) {
-                out->resists[i] += form->unk_2A[i - 5];
+                out->resists[i] += form->status_resists[i - 7];
             }
         }
         if (m->modifiers[0] != 0) {

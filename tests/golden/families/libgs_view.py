@@ -8,7 +8,7 @@ the GTE state the game had is put back. So each golden is the function's memory 
 
 GsSetRefView2/GsGetLw cases use one scratch buffer, `view` (the first buffer: at SCRATCH_BASE), laid out as
 VIEW_LAYOUT says: the GsRVIEW2, up to four GsCOORDINATE2 (their super pointers point into the buffer) and a MATRIX.
-Their reads: the world-screen matrix D_80081358 and its copy D_80081338 (the function's result), the buffer (each
+Their reads: the world-screen matrix GsWSMATRIX and its copy D_80081338 (the function's result), the buffer (each
 coordinate system's flg and workm, which GsGetLw updates). The state they start from is the boot's: GsInitGraph(320,
 240) left the view base D_80081398 the identity and PSDCNT (D_800812D8) 1 (the first case reads both).
 Cases: the first battle's camera (FIGHTSTG's vp/vr with super rotations taken from the emulator along its swing) and
@@ -19,8 +19,8 @@ scale-down, so the sum of squares stays below 2^31 (a larger one makes SquareRoo
 LIBGTE: random and edge matrices, the aliased calls (MulMatrix(m, m), TransposeMatrix(m, m)), 32-bit vectors with
 large components for ApplyMatrixLV, SquareRoot0 of 0, 1, the table's edges and powers of two up to 2^31 - 1.
 GsSetFlatLight (issue #19: the battle's lights): each case is a run of calls on a 16-byte GsF_LIGHT buffer per light,
-starting from GsInitGraph's zero matrices (the case restores them). Reads: the light matrix D_800812F8 (row id = the
-direction normalised to 4096 and negated), the light colour matrix D_80081318 (column id = the colour, (c << 12) / 255)
+starting from GsInitGraph's zero matrices (the case restores them). Reads: the light matrix GsLIGHTWSMATRIX (row id =
+the direction normalised to 4096 and negated), the light colour matrix D_80081318 (column id = the colour, (c << 12) / 255)
 and the GTE registers (LCM, which the function loads). Cases: every distinct lighting of FIGHTSTG's stage table (disc
 file 0x1CB: directions at scale 12800..22170, several zero third lights, which return -1 and leave their row alone),
 a zero light over a set row, ids outside 0..2 (nothing changes, LCM still loaded, returns 0), unit and axis vectors,
@@ -32,19 +32,19 @@ import struct
 from oracle import SCRATCH_BASE, Call, Case, Read, Write
 import gte
 
-COMMENT = ("LIBGS's GsSetRefView2 and GsGetLw (the battle camera's world-screen matrix D_80081358, its copy "
-           "D_80081338, the coordinate hierarchy's flg/workm), GsSetFlatLight (the light matrix D_800812F8 and the "
-           "light colour matrix D_80081318, the GTE's LCM) and the LIBGTE functions they call, each through "
+COMMENT = ("LIBGS's GsSetRefView2 and GsGetLw (the battle camera's world-screen matrix GsWSMATRIX, its copy "
+           "D_80081338, the coordinate hierarchy's flg/workm), GsSetFlatLight (the light matrix GsLIGHTWSMATRIX and "
+           "the light colour matrix D_80081318, the GTE's LCM) and the LIBGTE functions they call, each through "
            "gte.py's wrapper: the GTE registers before and after are part of the golden.")
 RESIDENT = "CNTY_SEL loaded; the wrapper routine is the gte family's code in scratch RAM"
 SEED = 0x6E5F2003
 
-WS_ADDR = 0x80081358     # D_80081358: the world-screen matrix
+WS_ADDR = 0x80081358     # GsWSMATRIX: the world-screen matrix
 WS_COPY_ADDR = 0x80081338  # D_80081338: GsSetRefView2's copy of it
 VIEW_BASE_ADDR = 0x80081398  # D_80081398: the view's base (GsInitGraph)
 PSDCNT_ADDR = 0x800812D8
 LW_STACK_ADDR = 0x800813B8   # GsGetLw's walk (100 pointers)
-LIGHT_ADDR = 0x800812F8    # D_800812F8: the light matrix (GsSetFlatLight's directions as rows)
+LIGHT_ADDR = 0x800812F8    # GsLIGHTWSMATRIX: the light matrix (GsSetFlatLight's directions as rows)
 COLOR_ADDR = 0x80081318    # D_80081318: the light colour matrix (the colours as columns), right after it
 
 # FIGHTSTG's stage lighting (FightstgStageRecord.lights, disc file 0x1CB: the first record with each distinct setup):
@@ -163,7 +163,7 @@ class Ctx:
 
 
 def view_reads(first=False):
-    reads = [Read(f"0x{WS_ADDR:08X}", 0, 32, "D_80081358: the world-screen matrix"),
+    reads = [Read(f"0x{WS_ADDR:08X}", 0, 32, "GsWSMATRIX: the world-screen matrix"),
              Read(f"0x{WS_COPY_ADDR:08X}", 0, 32, "D_80081338: its copy"),
              Read("buf:view", 0, VIEW_SIZE, "the view buffer: the coordinate systems' flg and workm, the MATRIX")]
     if first:
@@ -295,7 +295,7 @@ def light_bytes(vx, vy, vz, r, g, b):
 
 def light_case(ctx, name, lights, comment):
     """GsSetFlatLight for each (id, light) in order, one buffer per call, the matrices read after each call."""
-    reads = [Read(f"0x{LIGHT_ADDR:08X}", 0, 32, "D_800812F8: the light matrix"),
+    reads = [Read(f"0x{LIGHT_ADDR:08X}", 0, 32, "GsLIGHTWSMATRIX: the light matrix"),
              Read(f"0x{COLOR_ADDR:08X}", 0, 32, "D_80081318: the light colour matrix")]
     calls, buffers = [], {}
     for k, (lid, light) in enumerate(lights):

@@ -1,6 +1,6 @@
 {
  "family": "libgs_view",
- "comment": "LIBGS's GsSetRefView2 and GsGetLw (the battle camera's world-screen matrix D_80081358, its copy D_80081338, the coordinate hierarchy's flg/workm), GsSetFlatLight (the light matrix D_800812F8 and the light colour matrix D_80081318, the GTE's LCM) and the LIBGTE functions they call, each through gte.py's wrapper: the GTE registers before and after are part of the golden.",
+ "comment": "LIBGS's GsSetRefView2 and GsGetLw (the battle camera's world-screen matrix GsWSMATRIX, its copy D_80081338, the coordinate hierarchy's flg/workm), GsSetFlatLight (the light matrix GsLIGHTWSMATRIX and the light colour matrix D_80081318, the GTE's LCM) and the LIBGTE functions they call, each through gte.py's wrapper: the GTE registers before and after are part of the golden.",
  "generator": "tests/golden/families/libgs_view.py",
  "oracle": {
   "method": "lua-calls: tests/golden/oracle.lua hijacks the game at pad_update (-debugger -interpreter)",
@@ -93,7 +93,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "60f020fe3f03dfff210e840740fc51072ff2ffff15ffffff10090000712c0000"
       },
       {
@@ -172,7 +172,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "14f049fea8fee5fd7b0e7c068400a2065cf1ffff15ffffff10090000712c0000"
       },
       {
@@ -251,7 +251,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "e1f3a7fe89f5b9fb220f0103a40913052df4ffff15ffffff10090000712c0000"
       },
       {
@@ -330,7 +330,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "60fc08ff60f067fc9a0fdfff3e0f7c0340fcffff15ffffff10090000712c0000"
       },
       {
@@ -409,7 +409,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "0b0774ff91f1b3fee90fc4fe630eb601f506000015ffffff10090000712c0000"
       },
       {
@@ -488,7 +488,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "2e0ff1ffbdfa2700021049004305adff300f000015ffffff10090000712c0000"
       },
       {
@@ -567,7 +567,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "a00f000040fc210000108c00c00370ffa00f000015ffffff10090000712c0000"
       },
       {
@@ -646,7 +646,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "b4f30000b2f5a5ff00106c004e0a8d00b4f3ffff1ef3ffff47040000ccfcffff"
       },
       {
@@ -725,7 +725,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "a00f000040fc210000108c00c00370ffa00f000015ffffff10090000712c0000"
       },
       {
@@ -804,7 +804,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "cff3e9fe97f5ecfb260f2e03a40913052df4ffff3c000000ab090000522d0000"
       },
       {
@@ -883,7 +883,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "f4f366fe7df584fb1b0fd502a40913052df4ffffe7ffffffad090000522d0000"
       },
       {
@@ -962,7 +962,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "b9fb220f01031e0c5801760aa40913052df4ffffb0090000ebffffff522d0000"
       },
       {
@@ -1041,7 +1041,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "67f4bf09bbfa8b05a60b8609a40913052df4ffffe3060000c8060000522d0000"
       },
       {
@@ -1120,7 +1120,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "f5f360fe7cf580fb1a0fd002a40913052df4ffffe4ffffffae090000522d0000"
       },
       {
@@ -1199,7 +1199,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "ddf3b4fe8bf5c2fb230f0903a40913052df4ffff1a000000b0090000522d0000"
       },
       {
@@ -1278,7 +1278,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "a6f740f772f53af66c0c5cfda40913052df4ffff2ffbffff6b080000522d0000"
       },
       {
@@ -1357,7 +1357,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "e1f3a7fe89f5b9fb220f0103a40913052df4ffff14000000b0090000522d0000"
       },
       {
@@ -1436,7 +1436,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "e1f3a7fe89f5b9fb220f0103a40913052df4ffff14000000b0090000522d0000"
       },
       {
@@ -1515,7 +1515,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "0010000000000000001000000000000000100000000000000000000000000000"
       },
       {
@@ -1594,7 +1594,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "dc0dfe07000002f8dc0d00000000000000100000000000000000000000000000"
       },
       {
@@ -1673,7 +1673,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "00100000000000000000feef00000210000000000000000000000000d0070000"
       },
       {
@@ -1752,7 +1752,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "0010000000000000000008100000f8ef00000000cdfeffff8601000008000000"
       },
       {
@@ -1831,7 +1831,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "86fda7f0d60389f08d013efc3c03b6fbeff0ffff9817ffff842b000080b6faff"
       },
       {
@@ -1910,7 +1910,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "ed0dfc012cf8fdf946f858f3abfaf90d0dfaffffb73500008cf1fffff8630000"
       },
       {
@@ -1989,7 +1989,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "980166f15806dbf0a5fc14fce70463fad8f1ffffbeb6ffffb40b00004c650000"
       },
       {
@@ -2068,7 +2068,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "88031efa8cf1590e66fb6005dff9dbf142040000c0fc0b003cdaf4ff4e530700"
       },
       {
@@ -2147,7 +2147,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "c60ba1f93cf7e3015e1375f4350f7607010f0000ff0400f8040000099ceeff06"
       },
       {
@@ -2226,7 +2226,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "51acb503ef33362404ec09f300804ef300590000d3aac7ff510e0e00c46b9fff"
       },
       {
@@ -2305,7 +2305,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "c90c6e072a06bffd4cf8d50d640915f4ecfaffff40e90e0088fa0d00ccc63900"
       },
       {
@@ -2384,7 +2384,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "a7f51af4e702cf0927fa370bbcf80909160b000050703e004d73190042bb1300"
       },
       {
@@ -2463,7 +2463,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "31046b0a6b0bc8f0760027050703e5f3070a0000f00b000065f2ffffe9070000"
       },
       {
@@ -2542,7 +2542,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "a3589407995e3ed2e4db00808a48c0e6691900001ee86dff8f75020164b2caff"
       },
       {
@@ -2621,7 +2621,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "0df0c8004601dc00f50ff800c7fe040111f0ffff0d9dffff0d040000fb090000"
       },
       {
@@ -2700,7 +2700,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "6a0770f8f6f3520df4fedb080ffbe9f1cc0500007d51eaff4128ecff4fd4f1ff"
       },
       {
@@ -2779,7 +2779,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "41f87bff040eb80950f4ee04110ae90af7050000d33ef4ff13bb0e00aa580f00"
       },
       {
@@ -2858,7 +2858,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "2d0be80de2e86cfacdf76f3b742034051291ffff932edcff79ec100029fe98ff"
       },
       {
@@ -2937,7 +2937,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "a60b20fc510a87f57bf79e086b0300f341f7ffffcb0ee2ffc070e6ff5dc71900"
       },
       {
@@ -3016,7 +3016,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "0ff9b1f37b07d4f1060498f90c03aef65af3ffff6c0d000003110000601c0000"
       },
       {
@@ -3095,7 +3095,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "06f8ee09af094af822065ff372f40af5ba01000089d7090048090a009e760e00"
       },
       {
@@ -3174,7 +3174,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "00505af72b5ef950518ef443d3c3636de1c5ffff140be1ffa00edfff36d91800"
       },
       {
@@ -3253,7 +3253,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "030598f4220a450dfcfd55f76507160bdc0800002bc7daff15f81f0023b7dfff"
       },
       {
@@ -3332,7 +3332,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "21030dfe64f0a40a8bf492036bf4ebf415ffffff383800008aa5ffff28730000"
       },
       {
@@ -3411,7 +3411,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "7f0616009f0ea208e60c16fc31f47a093005000029aeffff9320000059020000"
       },
       {
@@ -3490,7 +3490,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "adfe36f655b4690054e7b62285f3c6fe550000006a130000a10f0000d4150000"
       },
       {
@@ -3569,7 +3569,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "6ef90000a00ee4f74e0d5bfcd6f321f789faffffa50d0000a5fcffff0d170000"
       },
       {
@@ -3648,7 +3648,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "76f689f9d9f4bb0c7afd94f613028df19e0600001c000000e9920000b4efffff"
       },
       {
@@ -3727,7 +3727,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "06fc21f3a10862f2a0feaff76f0796f666f5ffff59dc03000c0d0e005849f8ff"
       },
       {
@@ -3806,7 +3806,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "e1f91bf375a04af4ba1088e3f608490d57adffff2c633e0059b1d1ffd0ffe8ff"
       },
       {
@@ -3885,7 +3885,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "2a01b8f6040ddff5b309d2079ef332f7d5faffff424f22002caf1400e571f2ff"
       },
       {
@@ -3964,7 +3964,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "8cf852f5b2f6b5fd5a0bcff4120e1ffc2ef9ffffe7cbffffbc1400003385ffff"
       },
       {
@@ -4043,7 +4043,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "defebdf3600afd06da08390bb2f15a05c4040000051e0400671ae7ffd6ec3200"
       },
       {
@@ -4122,7 +4122,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "aaf30000c9f5f7faf20d1306e708e2073ff5ffffb60100009b11000041030000"
       },
       {
@@ -4201,7 +4201,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "fffe72fc62f02cf4b20a52fec20a710bb4fcffff7bf4fcff0005d9ff77292400"
       },
       {
@@ -4280,7 +4280,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "0af4c8fb3cf69c021a0d2af7540ad0f7eaf6ffff253e010057503d00c805f2ff"
       },
       {
@@ -4359,7 +4359,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "f1f067ff9afaa5fd090ff104e2047205c1f1ffff56a728000b770f0015c2d9ff"
       },
       {
@@ -4438,7 +4438,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "b4c13e13c128cc6372f9ba1229f7c7fad0470000438f44ffa43829012496e3ff"
       },
       {
@@ -4517,7 +4517,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "48f3a9f6db02e3fb61095e0c23f70c0927f6ffff75952600a3280c0090411b00"
       },
       {
@@ -4596,7 +4596,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "15066cf7ebf32c0af1f8220a3cf57cf4c102000011432100cd13e4ff07e4f7ff"
       },
       {
@@ -4675,7 +4675,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "ddf448fdd1f4b1f568fb5e0bdcfa190f72010000ccfbffffadeafffff50a0000"
       },
       {
@@ -4754,7 +4754,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "90c6817ca591d963bdc8ead0d4f614a3c22f00006e3236feb72fcb00a9cd5501"
       },
       {
@@ -4833,7 +4833,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "baf36cfa55f7210ac3fb62f4bf019cf1ca06000037e9ffffaedaffff26170000"
       },
       {
@@ -4912,7 +4912,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "a8f9f50856f44b07f30cfc05ca0c11fdccf6ffff08500800867afcffcac4f2ff"
       },
       {
@@ -4991,7 +4991,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "d9f23d04f0f7cf06fe0d40fc0e067bf9b3f2ffff06b134000502e5ffb404e8ff"
       },
       {
@@ -5070,7 +5070,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "494418dfe0dad64d6608e00c6a3b1e1d4e22000081bc870038c19a00621e7600"
       },
       {
@@ -5149,7 +5149,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "a00f940347ffecfc950ec405f00184faf00e0000800d000094000000ac130000"
       },
       {
@@ -5228,7 +5228,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "12063bf5ccf5670944faa30b82f49ef52604000053020000ae0d000049120000"
       },
       {
@@ -5307,7 +5307,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "650672f357f842f4a7f6820530f7640312f3ffff6efbf8ff2f9c0c009c9d0900"
       },
       {
@@ -5386,7 +5386,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "08019a0500f10cf1860507018805f20d970500009d120000e11200000c160000"
       },
       {
@@ -5530,7 +5530,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "080b10094507bcfccef8eb0d260beaf4e4fcffff5b01000088edffff0d050000"
       },
       {
@@ -5674,7 +5674,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "97037706390eb80dcc05e5f96cf88b0dc0fbffff57efffffc9050000feffffff"
       },
       {
@@ -5818,7 +5818,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "2d0f2a0235fbd1fa13083bf3ac00a90d4c080000560000002d0f00004f060000"
       },
       {
@@ -5962,7 +5962,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "adf18df9d1fce806a7f5dcf50a028ef5020c00004ffbffffbcfbffffbd220000"
       },
       {
@@ -6106,7 +6106,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "250ad20aff056a0c53f7a1fa9dff0f081cf2ffff3b050000d9edffffe9ffffff"
       },
       {
@@ -6250,7 +6250,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "83fe47feda0fc5fc57f0fefdb40fa1fc1a010000f1f9ffff0006000078020000"
       },
       {
@@ -6394,7 +6394,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "1df9680a050a7404f3f6730cc40d2808fe0000002e060000d8e6ffffe9080000"
       },
       {
@@ -6538,7 +6538,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "a2081c0085f2c10b22f876076df910f2abfbffff69fcffff920e00008c240000"
       },
       {
@@ -6682,7 +6682,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "07ff9d02cb0fc6f603f393010f0df9f64c0200000410000065f7ffffdb120000"
       },
       {
@@ -6826,7 +6826,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "4106c1055af28c0cae052308cf072ef2befdffffe7f6ffff630300003f130000"
       },
       {
@@ -6970,7 +6970,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "c4f175fad504d006fcf92a0d41fdc40db5070000a5f5ffffd11f00006bfbffff"
       },
       {
@@ -7114,7 +7114,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "3d0522053c0e86f5190c7aff14f5dcf65107000087f9ffffdaf6ffff15170000"
       },
       {
@@ -7258,7 +7258,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "ce0ebb05a9fd67fb2606f1f1dcfbaf0d520700008c030000040500005c080000"
       },
       {
@@ -7402,7 +7402,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "e50c01f7e6fc7005460be8f5d8070d07260c0000650100001f1e0000fe100000"
       },
       {
@@ -7546,7 +7546,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "3dfb1d0de407a4f27a0024f786f8c7f6cf0a000042000000abf4ffffa40f0000"
       },
       {
@@ -7690,7 +7690,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "e7faee0df7f95a0e7b06d202e4047bfb6ff1ffffa7020000fee0ffff49fcffff"
       },
       {
@@ -7834,7 +7834,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "f4f093040d03f00117fc670f2405d30e21030000ec0400008d18000098160000"
       },
       {
@@ -7978,7 +7978,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "0d0eebf9a8042407120ed5fc1bfdda040f0f00001f1b000047fffffff2040000"
       },
       {
@@ -8122,7 +8122,7 @@
        "symbol": "0x80081358",
        "offset": 0,
        "size": 32,
-       "field": "D_80081358: the world-screen matrix",
+       "field": "GsWSMATRIX: the world-screen matrix",
        "hex": "b3084df540081e05a10bad0989f35afdb80900009c0300001ed2ffff01210000"
       },
       {
@@ -20693,7 +20693,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000fdef00000000000000000000000000000000000000000000000000000000"
       },
       {
@@ -20739,7 +20739,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000fdef00000310000000000000000000000000000000000000000000000000"
       },
       {
@@ -20785,7 +20785,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000fdef0000031000000000fdef000000000000000000000000000000000000"
       },
       {
@@ -20861,7 +20861,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -20907,7 +20907,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f90000d7f8520e0000000000000000000000000000000000000000"
       },
       {
@@ -20953,7 +20953,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f90000d7f8520e2907520e00000000000000000000000000000000"
       },
       {
@@ -21029,7 +21029,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -21075,7 +21075,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f90000d7f8520e0000000000000000000000000000000000000000"
       },
       {
@@ -21121,7 +21121,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f90000d7f8520e2907520e00000000000000000000000000000000"
       },
       {
@@ -21197,7 +21197,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -21243,7 +21243,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f9530b530b00000000000000000000000000000000000000000000"
       },
       {
@@ -21289,7 +21289,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f9530b530b000048f5a4fab80a0000000000000000000000000000"
       },
       {
@@ -21365,7 +21365,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "530badf400000000000000000000000000000000000000000000000000000000"
       },
       {
@@ -21411,7 +21411,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "530badf4000077f977f9130d0000000000000000000000000000000000000000"
       },
       {
@@ -21457,7 +21457,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "530badf4000077f977f9130da4fab80a48f50000000000000000000000000000"
       },
       {
@@ -21533,7 +21533,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -21579,7 +21579,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f9530b0000530b0000000000000000000000000000000000000000"
       },
       {
@@ -21625,7 +21625,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f9530b0000530b2907520e00000000000000000000000000000000"
       },
       {
@@ -21701,7 +21701,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "48f548f55c050000000000000000000000000000000000000000000000000000"
       },
       {
@@ -21747,7 +21747,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "48f548f55c053e093e09c2f60000000000000000000000000000000000000000"
       },
       {
@@ -21793,7 +21793,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "48f548f55c053e093e09c2f60000000000000000000000000000000000000000"
       },
       {
@@ -21869,7 +21869,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906edf277f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -21915,7 +21915,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906edf277f948f5a4fab80a0000000000000000000000000000000000000000"
       },
       {
@@ -21961,7 +21961,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906edf277f948f5a4fab80a530b530b00000000000000000000000000000000"
       },
       {
@@ -22037,7 +22037,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf289060000000000000000000000000000000000000000000000000000"
       },
       {
@@ -22083,7 +22083,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf289063e093e09c2f60000000000000000000000000000000000000000"
       },
       {
@@ -22129,7 +22129,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf289063e093e09c2f60000000000000000000000000000000000000000"
       },
       {
@@ -22205,7 +22205,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "c2f6c2f6c2f60000000000000000000000000000000000000000000000000000"
       },
       {
@@ -22251,7 +22251,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "c2f6c2f6c2f63e093e09c2f60000000000000000000000000000000000000000"
       },
       {
@@ -22297,7 +22297,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "c2f6c2f6c2f63e093e09c2f60000adf4530b0000000000000000000000000000"
       },
       {
@@ -22373,7 +22373,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -22419,7 +22419,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f92907520e00000000000000000000000000000000000000000000"
       },
       {
@@ -22465,7 +22465,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f92907520e0000890677f9130d0000000000000000000000000000"
       },
       {
@@ -22541,7 +22541,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906edf277f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -22587,7 +22587,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906edf277f977f9edf289060000000000000000000000000000000000000000"
       },
       {
@@ -22633,7 +22633,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906edf277f977f9edf28906530b530b00000000000000000000000000000000"
       },
       {
@@ -22709,7 +22709,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906edf277f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -22755,7 +22755,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906edf277f977f9edf289060000000000000000000000000000000000000000"
       },
       {
@@ -22801,7 +22801,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906edf277f977f9edf28906530b530b00000000000000000000000000000000"
       },
       {
@@ -22877,7 +22877,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "3e09c2f6c2f60000000000000000000000000000000000000000000000000000"
       },
       {
@@ -22923,7 +22923,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "3e09c2f6c2f677f9edf289060000000000000000000000000000000000000000"
       },
       {
@@ -22969,7 +22969,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "3e09c2f6c2f677f9edf289060000031000000000000000000000000000000000"
       },
       {
@@ -23045,7 +23045,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906edf277f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -23091,7 +23091,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906edf277f93e093e093e090000000000000000000000000000000000000000"
       },
       {
@@ -23137,7 +23137,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906edf277f93e093e093e090000000000000000000000000000000000000000"
       },
       {
@@ -23213,7 +23213,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "adf4adf400000000000000000000000000000000000000000000000000000000"
       },
       {
@@ -23259,7 +23259,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "adf4adf40000530b530b00000000000000000000000000000000000000000000"
       },
       {
@@ -23305,7 +23305,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "adf4adf40000530b530b00000000000000000000000000000000000000000000"
       },
       {
@@ -23381,7 +23381,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000adf4adf40000000000000000000000000000000000000000000000000000"
       },
       {
@@ -23427,7 +23427,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000adf4adf4d7f8520e00000000000000000000000000000000000000000000"
       },
       {
@@ -23473,7 +23473,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000adf4adf4d7f8520e00005c0548f5b80a0000000000000000000000000000"
       },
       {
@@ -23549,7 +23549,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "c2f6c2f6c2f60000000000000000000000000000000000000000000000000000"
       },
       {
@@ -23595,7 +23595,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "c2f6c2f6c2f6890677f9130d0000000000000000000000000000000000000000"
       },
       {
@@ -23641,7 +23641,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "c2f6c2f6c2f6890677f9130db80ab80aa4fa0000000000000000000000000000"
       },
       {
@@ -23717,7 +23717,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906edf277f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -23763,7 +23763,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906edf277f977f9edf289060000000000000000000000000000000000000000"
       },
       {
@@ -23809,7 +23809,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906edf277f977f9edf28906530b530b00000000000000000000000000000000"
       },
       {
@@ -23885,7 +23885,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "48f548f55c050000000000000000000000000000000000000000000000000000"
       },
       {
@@ -23931,7 +23931,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "48f548f55c05b80ab80aa4fa0000000000000000000000000000000000000000"
       },
       {
@@ -23977,7 +23977,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "48f548f55c05b80ab80aa4fa0000000000000000000000000000000000000000"
       },
       {
@@ -24053,7 +24053,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "c2f6c2f6c2f60000000000000000000000000000000000000000000000000000"
       },
       {
@@ -24099,7 +24099,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "c2f6c2f6c2f60000000003100000000000000000000000000000000000000000"
       },
       {
@@ -24145,7 +24145,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "c2f6c2f6c2f6000000000310520e290700000000000000000000000000000000"
       },
       {
@@ -24221,7 +24221,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "a4fab80ab80a0000000000000000000000000000000000000000000000000000"
       },
       {
@@ -24267,7 +24267,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "a4fab80ab80a00002907aef10000000000000000000000000000000000000000"
       },
       {
@@ -24313,7 +24313,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "a4fab80ab80a00002907aef12907aef100000000000000000000000000000000"
       },
       {
@@ -24389,7 +24389,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9130d77f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -24435,7 +24435,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9130d77f9b80a48f55c050000000000000000000000000000000000000000"
       },
       {
@@ -24481,7 +24481,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9130d77f9b80a48f55c0577f98906130d0000000000000000000000000000"
       },
       {
@@ -24557,7 +24557,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9130d89060000000000000000000000000000000000000000000000000000"
       },
       {
@@ -24603,7 +24603,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9130d89062907aef100000000000000000000000000000000000000000000"
       },
       {
@@ -24649,7 +24649,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9130d89062907aef1000077f98906edf20000000000000000000000000000"
       },
       {
@@ -24725,7 +24725,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9130d77f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -24771,7 +24771,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9130d77f92907aef100000000000000000000000000000000000000000000"
       },
       {
@@ -24817,7 +24817,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9130d77f92907aef1000077f98906130d0000000000000000000000000000"
       },
       {
@@ -24893,7 +24893,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906130d77f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -24939,7 +24939,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906130d77f977f9edf277f90000000000000000000000000000000000000000"
       },
       {
@@ -24985,7 +24985,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "8906130d77f977f9edf277f90000000003100000000000000000000000000000"
       },
       {
@@ -25061,7 +25061,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000000000000000000000000000000000000000000000000000000000000000"
       },
       {
@@ -25107,7 +25107,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000000000000000000000000000000000000000000000000000000000000000"
       },
       {
@@ -25153,7 +25153,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000000000000000000000000000000000000000000000000000000000000000"
       },
       {
@@ -25228,7 +25228,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "00000000000077f9edf277f90000000000000000000000000000000000000000"
       },
       {
@@ -25274,7 +25274,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "00000000000077f9edf277f90000000000000000000000000000000000000000"
       },
       {
@@ -25351,7 +25351,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -25397,7 +25397,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -25443,7 +25443,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -25489,7 +25489,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "77f9edf277f90000000000000000000000000000000000000000000000000000"
       },
       {
@@ -25582,7 +25582,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "00f0000000000000000000000000000000000000000000000000000000000000"
       },
       {
@@ -25628,7 +25628,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "00f000000000000000f000000000000000000000000000000000000000000000"
       },
       {
@@ -25674,7 +25674,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "00f000000000000000f000000000000000f00000000000000000000000000000"
       },
       {
@@ -25720,7 +25720,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "001000000000000000f000000000000000f00000000000000000000000000000"
       },
       {
@@ -25766,7 +25766,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0010000000000000001000000000000000f00000000000000000000000000000"
       },
       {
@@ -25812,7 +25812,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0010000000000000001000000000000000100000000000000000000000000000"
       },
       {
@@ -25858,7 +25858,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "00f0000000000000001000000000000000100000000000000000000000000000"
       },
       {
@@ -25904,7 +25904,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "00f0000000000000000000100000000000100000000000000000000000000000"
       },
       {
@@ -25950,7 +25950,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "00f00000000000000000001067f634f300000000000000000000000000000000"
       },
       {
@@ -25996,7 +25996,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "9909000034f300000000001067f634f300000000000000000000000000000000"
       },
       {
@@ -26042,7 +26042,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "9909000034f300f000f000f067f634f300000000000000000000000000000000"
       },
       {
@@ -26088,7 +26088,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "9909000034f300f000f000f00010001000100000000000000000000000000000"
       },
       {
@@ -26134,7 +26134,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "c3f6c3f6c3f600f000f000f00010001000100000000000000000000000000000"
       },
       {
@@ -26180,7 +26180,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "c3f6c3f6c3f6bbf6bbf6bbf60010001000100000000000000000000000000000"
       },
       {
@@ -26226,7 +26226,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "c3f6c3f6c3f6bbf6bbf6bbf64509bbf645090000000000000000000000000000"
       },
       {
@@ -26272,7 +26272,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "f8ef00000000bbf6bbf6bbf64509bbf645090000000000000000000000000000"
       },
       {
@@ -26318,7 +26318,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "f8ef000000000010000000004509bbf645090000000000000000000000000000"
       },
       {
@@ -26364,7 +26364,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "f8ef000000000010000000000000a4f4a4f40000000000000000000000000000"
       },
       {
@@ -26410,7 +26410,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "c2f6c2f6c2f60010000000000000a4f4a4f40000000000000000000000000000"
       },
       {
@@ -26456,7 +26456,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "c2f6c2f6c2f60000000000f00000a4f4a4f40000000000000000000000000000"
       },
       {
@@ -26538,7 +26538,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000031000000000000000000000000000000000000000000000000000000000"
       },
       {
@@ -26584,7 +26584,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000031000000000031000000000000000000000000000000000000000000000"
       },
       {
@@ -26630,7 +26630,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000031000000000031000000000031000000000000000000000000000000000"
       },
       {
@@ -26676,7 +26676,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000031000000000031000000000031000000000000000000000000000000000"
       },
       {
@@ -26722,7 +26722,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000031000000000031000000000031000000000000000000000000000000000"
       },
       {
@@ -26768,7 +26768,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000031000000000031000000000031000000000000000000000000000000000"
       },
       {
@@ -26814,7 +26814,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000031000000000031000000000031000000000000000000000000000000000"
       },
       {
@@ -26860,7 +26860,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000031000000000031000000000031000000000000000000000000000000000"
       },
       {
@@ -26906,7 +26906,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000031000000000031000000000031000000000000000000000000000000000"
       },
       {
@@ -26985,7 +26985,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "d3f1000094f80000000000000000000000000000000000000000000000000000"
       },
       {
@@ -27031,7 +27031,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "d3f1000094f80000000000001fff03f000000000000000000000000000000000"
       },
       {
@@ -27077,7 +27077,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "05f821f200000000000000001fff03f000000000000000000000000000000000"
       },
       {
@@ -27123,7 +27123,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "edf2000039090000000000001fff03f000000000000000000000000000000000"
       },
       {
@@ -27169,7 +27169,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "edf2000039090000000000001fff03f000000000000000000000000000000000"
       },
       {
@@ -27215,7 +27215,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "edf2000039090000000000006007e607ce0b0000000000000000000000000000"
       },
       {
@@ -27294,7 +27294,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000000000002b0b7efb67f50000000000000000000000000000000000000000"
       },
       {
@@ -27340,7 +27340,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "a9f34308cdf92b0b7efb67f50000000000000000000000000000000000000000"
       },
       {
@@ -27386,7 +27386,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "a9f34308cdf92b0b7efb67f5af018f0dabf70000000000000000000000000000"
       },
       {
@@ -27432,7 +27432,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "a9f34308cdf9aa0756f95e0caf018f0dabf70000000000000000000000000000"
       },
       {
@@ -27478,7 +27478,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "a9f34308cdf9aa0756f95e0c50fb0000acf00000000000000000000000000000"
       },
       {
@@ -27524,7 +27524,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "a9f34308cdf9aa0756f95e0cde0a280875080000000000000000000000000000"
       },
       {
@@ -27603,7 +27603,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "a0f0000081040000000000000000000000000000000000000000000000000000"
       },
       {
@@ -27649,7 +27649,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "a0f0000081040000000000000000000000000000000000000000000000000000"
       },
       {
@@ -27695,7 +27695,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "a0f00000810400000000000050fffa0c96f60000000000000000000000000000"
       },
       {
@@ -27741,7 +27741,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "a0f000008104cb08da0cd30350fffa0c96f60000000000000000000000000000"
       },
       {
@@ -27787,7 +27787,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "a0f000008104cb08da0cd303c80a000028f40000000000000000000000000000"
       },
       {
@@ -27833,7 +27833,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "9a07200e0000cb08da0cd303c80a000028f40000000000000000000000000000"
       },
       {
@@ -27912,7 +27912,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "95fece0fd0fd0000000000000000000000000000000000000000000000000000"
       },
       {
@@ -27958,7 +27958,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "95fece0fd0fd8e0ced09d4000000000000000000000000000000000000000000"
       },
       {
@@ -28004,7 +28004,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "95fece0fd0fd2e0bd2f4ab020000000000000000000000000000000000000000"
       },
       {
@@ -28050,7 +28050,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "95fece0fd0fd63086cf8580b0000000000000000000000000000000000000000"
       },
       {
@@ -28096,7 +28096,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "95fece0fd0fd63086cf8580be7096cf300000000000000000000000000000000"
       },
       {
@@ -28142,7 +28142,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "95fece0fd0fd63086cf8580bd1f3000098f50000000000000000000000000000"
       },
       {
@@ -28221,7 +28221,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "00001ff53af40000000000000000000000000000000000000000000000000000"
       },
       {
@@ -28267,7 +28267,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "00001ff53af40000000000000000d7f5a2f30000000000000000000000000000"
       },
       {
@@ -28313,7 +28313,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "510f64fbd9fe0000000000000000d7f5a2f30000000000000000000000000000"
       },
       {
@@ -28359,7 +28359,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "29f4a00760f80000000000000000d7f5a2f30000000000000000000000000000"
       },
       {
@@ -28405,7 +28405,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "29f4a00760f80000000000000000bcf5aff30000000000000000000000000000"
       },
       {
@@ -28451,7 +28451,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "29f4a00760f8890bfe0877f90000bcf5aff30000000000000000000000000000"
       },
       {
@@ -28530,7 +28530,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000000003100000000000000000000000000000000000000000000000000000"
       },
       {
@@ -28576,7 +28576,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000000003103cfb0000aaf00000000000000000000000000000000000000000"
       },
       {
@@ -28622,7 +28622,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000000003103cfb0000aaf00000000000000000000000000000000000000000"
       },
       {
@@ -28668,7 +28668,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "0000000003103cfb0000aaf0db011bf000000000000000000000000000000000"
       },
       {
@@ -28714,7 +28714,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "bbf1fb0030073cfb0000aaf0db011bf000000000000000000000000000000000"
       },
       {
@@ -28760,7 +28760,7 @@
        "symbol": "0x800812F8",
        "offset": 0,
        "size": 32,
-       "field": "D_800812F8: the light matrix",
+       "field": "GsLIGHTWSMATRIX: the light matrix",
        "hex": "bbf1fb0030078c09210cb5fbdb011bf000000000000000000000000000000000"
       },
       {

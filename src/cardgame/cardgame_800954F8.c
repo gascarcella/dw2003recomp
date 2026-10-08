@@ -114,7 +114,7 @@ s32 cardgame_check_condition(CardgameGame *game, CardgameBoard *board, s32 kind)
         ok = 1;
         n = game->turn - 1;
         for (j = 0; j < 12; j++) {
-            game->marked[j] = 0;
+            game->effect.marked[j] = 0;
             if (j < 6) {
                 if (j >= game->slots[0].count) {
                     continue;

@@ -34,7 +34,7 @@ typedef struct FontGlyph {
 typedef struct FontChar {
     /* 0x0 */ u16 sjis;  /* Shift-JIS code */
     /* 0x2 */ u8 glyph;  /* glyph code */
-    /* 0x3 */ u8 unk_3;
+    /* 0x3 */ u8 pad_3;
 } FontChar; /* size 0x4 */
 
 /* The fonts' character tables (font.c): digits and letters, other characters. The overlays' name entry fonts
@@ -46,7 +46,7 @@ extern FontChar font_chars_ext[];
 typedef struct MessageFont {
     /* 0x00 */ u8 semi_trans; /* copied to MessageWindow.semi_trans by message_create_window; 0xFF: opaque */
     /* 0x01 */ s8 line_height; /* 14/11/9 */
-    /* 0x02 */ u8 unk_02[0x2];
+    /* 0x02 */ u8 pad_02[0x2];
     /* 0x04 */ FontGlyph *glyphs; /* glyphs of characters 4 and up */
     /* 0x08 */ FontGlyph *glyphs_ext; /* ext_count more glyphs, from 1 (control code 1) */
     /* 0x0C */ FontChar *chars;  /* digits and letters (glyphs of glyphs) */
@@ -94,8 +94,8 @@ typedef struct MessageWindow {
     /* 0x0C1 */ u8 visible;     /* drawn (0 while it has no text) */
     /* 0x0C2 */ u8 fixed_size;  /* message_set_fixed_size */
     /* 0x0C3 */ u8 done;        /* the page is drawn to its end (message_is_done) */
-    /* 0x0C4 */ u8 unk_C4;
-    /* 0x0C5 */ u8 unk_C5[0x3];
+    /* 0x0C4 */ u8 unk_C4;      /* set by message_set_unk_C4 (set_unk_C4), never read */
+    /* 0x0C5 */ u8 pad_C5[0x3];
     /* 0x0C8 */ s32 char_sound; /* sound played per character shown (0: none) */
     /* 0x0CC */ s32 scaled; /* draw through matrix (message_set_scale) */
     /* 0x0D0 */ VECTOR scale;
@@ -124,7 +124,7 @@ typedef struct MessageWindow {
     /* 0x158 */ void (*set_center)(struct MessageWindow *obj, s32 arg1, s32 arg2); /* message_set_center */
     /* 0x15C */ void (*set_ot_depth)(struct MessageWindow *obj, s32 arg1); /* message_set_ot_depth */
     /* 0x160 */ void (*set_page_lines)(struct MessageWindow *obj, u8 arg1); /* message_set_page_lines */
-    /* 0x164 */ void (*unk_164)(struct MessageWindow *obj, u8 arg1);    /* func_8001A458 */
+    /* 0x164 */ void (*set_unk_C4)(struct MessageWindow *obj, u8 arg1); /* message_set_unk_C4 */
     /* 0x168 */ s32 (*is_done)(struct MessageWindow *obj);              /* message_is_done */
     /* 0x16C */ s32 (*is_visible)(struct MessageWindow *obj);           /* message_is_visible */
     /* 0x170 */ s32 (*is_waiting)(struct MessageWindow *obj);           /* message_is_waiting: waits for a button (control code 2) */

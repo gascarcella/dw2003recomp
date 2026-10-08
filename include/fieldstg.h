@@ -334,8 +334,8 @@ extern FieldstgEventFuncs fieldstg_event_funcs;
 typedef struct FieldstgBattle {
     /* 0x00 */ struct RecordsEnemy *enemies[3]; /* its enemies (copied into records_state.enemies) */
     /* 0x0C */ u8 first_strike; /* the party's chance to strike first (records_state.first_strike_chance, wfightmn_roll_first_strike) */
-    /* 0x0D */ u8 unk_0D;
-    /* 0x0E */ u8 unk_0E[12];
+    /* 0x0D */ u8 kind;        /* 1-5: a class of battle the enemies' scripts can test (records_state.battle_kind) */
+    /* 0x0E */ u8 blocked[12]; /* records_state.blocked: the effects that fail against its enemies */
 } FieldstgBattle; /* size 0x1C */
 
 /* fieldstg_80083784.c: the battles (fieldstg_battles) and their enemies. */

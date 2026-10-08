@@ -36,6 +36,6 @@ u32 StGetNext(u32 **addr, u32 **header);
 u32 StFreeRing(u32 *base);
 void StUnSetRing(void);
 void StCdInterrupt(void);
-extern u8 D_80081454; /* StCdIntrFlag (STDWTITL; unnamed: LIBCD's .bss is one block) */
+extern u8 StCdIntrFlag; /* in LIBCD's .bss (one block): STDWTITL's movie player polls and clears it */
 
 #endif /* PSYQ_LIBCD_H */

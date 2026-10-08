@@ -56,7 +56,7 @@ typedef struct MemcardFuncs {
     /* 0x1C */ s32 (*list_files)(s32 chan);                                   /* memcard_list_files */
     /* 0x20 */ s32 (*create_file)(s32 chan);                                  /* memcard_create_file */
     /* 0x24 */ s32 (*format)(s32 chan);                                       /* memcard_format */
-    /* 0x28 */ s32 (*unk_28)(void);                                           /* func_80015528 */
+    /* 0x28 */ s32 (*unformat)(void);                                         /* memcard_unformat: a stub (returns 2) */
     /* 0x2C */ s32 (*check_checksum)(u8 *data, s32 size, u8 sum);             /* memcard_check_checksum */
     /* 0x30 */ u8 (*get_checksum)(u8 *data, s32 size);                        /* memcard_get_checksum */
 } MemcardFuncs; /* size 0x34 */

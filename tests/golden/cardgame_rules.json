@@ -8880,7 +8880,7 @@
        "symbol": "buf:game",
        "offset": 1080,
        "size": 4,
-       "field": "game.unk_438 (the combination's card + 1)",
+       "field": "game.effect_vars[4] (the combination's card + 1)",
        "hex": "00000000"
       },
       {
@@ -8940,7 +8940,7 @@
        "symbol": "buf:game",
        "offset": 1080,
        "size": 4,
-       "field": "game.unk_438 (the combination's card + 1)",
+       "field": "game.effect_vars[4] (the combination's card + 1)",
        "hex": "00000000"
       },
       {
@@ -8987,7 +8987,7 @@
      "ret_type": "s32",
      "ret": 4,
      "v0": 4,
-     "comment": "three 69 split by 60: sorted 60, 69 x 3: flags the three, unk_438 193, returns 4",
+     "comment": "three 69 split by 60: sorted 60, 69 x 3: flags the three, effect_vars[4] 193, returns 4",
      "reads": [
       {
        "symbol": "buf:game",
@@ -9000,7 +9000,7 @@
        "symbol": "buf:game",
        "offset": 1080,
        "size": 4,
-       "field": "game.unk_438 (the combination's card + 1)",
+       "field": "game.effect_vars[4] (the combination's card + 1)",
        "hex": "c1000000"
       },
       {
@@ -9060,7 +9060,7 @@
        "symbol": "buf:game",
        "offset": 1080,
        "size": 4,
-       "field": "game.unk_438 (the combination's card + 1)",
+       "field": "game.effect_vars[4] (the combination's card + 1)",
        "hex": "c1000000"
       },
       {
@@ -9120,7 +9120,7 @@
        "symbol": "buf:game",
        "offset": 1080,
        "size": 4,
-       "field": "game.unk_438 (the combination's card + 1)",
+       "field": "game.effect_vars[4] (the combination's card + 1)",
        "hex": "c1000000"
       },
       {
@@ -9167,7 +9167,7 @@
      "ret_type": "s32",
      "ret": 6,
      "v0": 6,
-     "comment": "start 3: the 72s, unk_438 62, returns 6",
+     "comment": "start 3: the 72s, effect_vars[4] 62, returns 6",
      "reads": [
       {
        "symbol": "buf:game",
@@ -9180,7 +9180,7 @@
        "symbol": "buf:game",
        "offset": 1080,
        "size": 4,
-       "field": "game.unk_438 (the combination's card + 1)",
+       "field": "game.effect_vars[4] (the combination's card + 1)",
        "hex": "3e000000"
       },
       {
@@ -9240,7 +9240,7 @@
        "symbol": "buf:game",
        "offset": 1080,
        "size": 4,
-       "field": "game.unk_438 (the combination's card + 1)",
+       "field": "game.effect_vars[4] (the combination's card + 1)",
        "hex": "00000000"
       },
       {
@@ -9300,7 +9300,7 @@
        "symbol": "buf:game",
        "offset": 1080,
        "size": 4,
-       "field": "game.unk_438 (the combination's card + 1)",
+       "field": "game.effect_vars[4] (the combination's card + 1)",
        "hex": "c1000000"
       },
       {
@@ -11746,7 +11746,7 @@
      "ret_type": "void",
      "ret": null,
      "v0": 0,
-     "comment": "decks of 10 from position 0: hands = the first 6, deck_pos 6, deck_count 4, hand_count 6; unk_42C/430 = 10",
+     "comment": "decks of 10 from position 0: hands = the first 6, deck_pos 6, deck_count 4, hand_count 6; effect_vars[1], [2] = 10",
      "reads": [
       {
        "symbol": "buf:game",
@@ -11780,7 +11780,7 @@
        "symbol": "buf:game",
        "offset": 1060,
        "size": 20,
-       "field": "game.unk_424..unk_434",
+       "field": "game.effect_time..effect_vars[3]",
        "hex": "00000000000000000a0000000a00000000000000"
       },
       {
@@ -11863,7 +11863,7 @@
        "symbol": "buf:game",
        "offset": 1060,
        "size": 20,
-       "field": "game.unk_424..unk_434",
+       "field": "game.effect_time..effect_vars[3]",
        "hex": "00000000000000000a0000000300000000000000"
       },
       {

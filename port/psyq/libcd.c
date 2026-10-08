@@ -114,7 +114,7 @@
 
 typedef void (*PsyqCdHandler)(int status, u8 *result);
 
-u8 D_80081454; /* LIBCD's StCdIntrFlag: set by the CD interrupt while MDEC runs on the PS1 (never here) */
+u8 StCdIntrFlag; /* LIBCD's StCdIntrFlag: set by the CD interrupt while MDEC runs on the PS1 (never here) */
 
 enum { CD_IDLE, CD_READ, CD_STREAM };
 
@@ -720,7 +720,7 @@ void psyq_cd_reset(void) {
     st_start_frame = 0;
     st_end_frame = 0xFFFFFFFFu;
     st_reset();
-    D_80081454 = 0;
+    StCdIntrFlag = 0;
     memset(psyq_cd_filter, 0, sizeof(psyq_cd_filter));
     memset(psyq_xa_fifo, 0, sizeof(psyq_xa_fifo));
     psyq_xa_flush("reset");

@@ -243,9 +243,9 @@ void cardgame_cpu_keep_best_target(CardgameGame *game, s32 side) {
     s32 v;
 
     if (side == 1) {
-        flags = &game->selectable[6];
+        flags = &game->effect.selectable[6];
     } else {
-        flags = &game->selectable[0];
+        flags = &game->effect.selectable[0];
     }
     for (i = 0; i < game->slots[side].count; i++) {
         if (flags[i] != 0) {
@@ -268,9 +268,9 @@ s32 cardgame_cpu_set_target(CardgameGame *game, s32 side) {
     s32 i;
 
     if (side == 1) {
-        flags = &game->selectable[6];
+        flags = &game->effect.selectable[6];
     } else {
-        flags = &game->selectable[0];
+        flags = &game->effect.selectable[0];
     }
     for (i = 0; i < game->slots[side].count; i++) {
         if (flags[i] != 0) {
@@ -289,9 +289,9 @@ s32 cardgame_cpu_set_target_kind_3(CardgameGame *game, s32 side) {
 
     card_init(&pic);
     if (side == 1) {
-        flags = &game->selectable[6];
+        flags = &game->effect.selectable[6];
     } else {
-        flags = &game->selectable[0];
+        flags = &game->effect.selectable[0];
     }
     for (i = 0; i < game->slots[side].count; i++) {
         if (flags[i] != 0) {
@@ -311,9 +311,9 @@ s32 cardgame_cpu_set_target_kind_4(CardgameGame *game, s32 side) {
 
     card_init(&pic);
     if (side == 1) {
-        flags = &game->selectable[6];
+        flags = &game->effect.selectable[6];
     } else {
-        flags = &game->selectable[0];
+        flags = &game->effect.selectable[0];
     }
     for (i = 0; i < game->slots[side].count; i++) {
         if (flags[i] != 0) {
@@ -329,7 +329,7 @@ s32 cardgame_cpu_set_target_kind_4(CardgameGame *game, s32 side) {
 s32 cardgame_cpu_is_target_within(CardgameGame *game, s32 side, s32 i, s32 max) {
     s32 ok = 0;
 
-    if (*(game->selectable + i) != 0) {
+    if (*(game->effect.selectable + i) != 0) {
         ok = max >= game->slots[side].slots[i].hp;
     }
     return ok;
@@ -343,9 +343,9 @@ s32 cardgame_cpu_filter_targets(CardgameGame *game, s32 side, s32 max, s32 keep)
     s32 any;
 
     if (side == 1) {
-        flags = &game->selectable[6];
+        flags = &game->effect.selectable[6];
     } else {
-        flags = &game->selectable[0];
+        flags = &game->effect.selectable[0];
     }
     for (i = 0; i < game->slots[side].count; i++) {
         if (flags[i] != 0) {
@@ -375,7 +375,7 @@ s32 cardgame_cpu_set_cheapest_target(CardgameGame *game) {
     CardPicture pic;
     s32 min = 500;
     s32 best = 500;
-    s8 *flags = game->selectable;
+    s8 *flags = game->effect.selectable;
     s32 found = 0;
     s32 i;
 
@@ -608,7 +608,7 @@ s32 cardgame_cpu_choose_card(CardgameGame *game, CardgameBoard *board) {
     s32 value1;
 
     for (i = 0; i < game->players[1].hand_count; i++) {
-        game->marked[i] = 0;
+        game->effect.marked[i] = 0;
     }
     if (game->turn == 0) {
         if (game->phase == 5) {
@@ -630,7 +630,7 @@ s32 cardgame_cpu_choose_card(CardgameGame *game, CardgameBoard *board) {
 
                 if (cardgame_cpu_can_use_effect(game, board, cardgame_get_card_data(id, 0, 0)) != 0 &&
                     cardgame_cpu_choose_target(game, board, id) != 0) {
-                    game->marked[i] = 1;
+                    game->effect.marked[i] = 1;
                     chosen = 1;
                     break;
                 }
@@ -652,7 +652,7 @@ s32 cardgame_cpu_choose_card(CardgameGame *game, CardgameBoard *board) {
 
                     if (cardgame_cpu_can_use_effect(game, board, cardgame_get_card_data(id, 0, 0)) != 0 &&
                         cardgame_cpu_choose_target(game, board, id) != 0) {
-                        game->marked[i] = 1;
+                        game->effect.marked[i] = 1;
                         chosen = 1;
                         break;
                     }
@@ -670,7 +670,7 @@ s32 cardgame_cpu_choose_card(CardgameGame *game, CardgameBoard *board) {
                 for (i = start; i < game->players[1].hand_count; i++) {
                     card = game->players[1].hand[i];
                     if ((game->cpu_cards[card - 40].kind == kind || game->cpu_cards[card - 40].kind == 4) &&
-                        game->cpu_cards[card - 40].unk_01 != 0) {
+                        game->cpu_cards[card - 40].may_counter != 0) {
                         pic.select(game->card_ids[card] + 1);
                         data = pic.record;
                         if (played[3] == 3) {
@@ -687,7 +687,7 @@ s32 cardgame_cpu_choose_card(CardgameGame *game, CardgameBoard *board) {
                         if (cardgame_is_card_playable(game, card) != 0 &&
                             cardgame_cpu_can_use_effect(game, board, cardgame_get_card_data(game->card_ids[card], 0, 0)) != 0 &&
                             cardgame_cpu_choose_counter_target(game, last, card, flag) != 0) {
-                            game->marked[i] = 1;
+                            game->effect.marked[i] = 1;
                             chosen = 1;
                             break;
                         }

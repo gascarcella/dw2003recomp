@@ -309,9 +309,9 @@ void stdwtitl_decode_callback(void) {
     RECT snap_rect;
     s32 id;
 
-    if (D_80081454) {
+    if (StCdIntrFlag) {
         StCdInterrupt();
-        D_80081454 = 0;
+        StCdIntrFlag = 0;
     }
     id = stdwtitl_decoder.imgid;
     snap_rect = stdwtitl_decoder.slice;

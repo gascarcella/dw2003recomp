@@ -37,8 +37,8 @@ OUT_DEFAULT = ROOT / "build/host"
 # the host's field stays NULL) unless listed under the pointer fields, and the segment after it is named by its first
 # field. The fields to verify are checked against the segment they lie in.
 BUFFER_LAYOUTS = {"game": ("CardgameGame.card_ids", 0x50,
-                           {"CardgameGame.cpu_cards": 0x35C, "CardgameGame.selectable": 0x446, "CardgameGame.players": 0x59C,
-                            "CardgameGame.slots": 0x72C, "CardgameGame.marked": 0x46F, "CardgameGame.display": 0x498,
+                           {"CardgameGame.cpu_cards": 0x35C, "CardgameGame.effect.selectable": 0x446, "CardgameGame.players": 0x59C,
+                            "CardgameGame.slots": 0x72C, "CardgameGame.effect.marked": 0x46F, "CardgameGame.display": 0x498,
                             "CardgameGame.turns": 0x580, "CardgameGame.prize": 0x2EC},
                            {0x820: ("CardgameGame.get_score", "@cardgame_cpu_get_score")},
                            {0x2F4: "CardgameGame.effect_state"}),

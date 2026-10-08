@@ -366,19 +366,19 @@ WstagTwoSpriteObject *wstag810_two_sprite_create(s32 x, s32 y, s32 frame) {
 }
 
 Object *wstag810_event_9000_start(void) {
-    if (gamestate_data.unk_26E4 != 0) {
+    if (gamestate_data.alt_layout != 0) {
         fieldstg_attr.set_file(7, 0x06ED0003);
         fieldstg_stage.map_events = wstag810_map_events;
-        gamestate_data.unk_26E4 = 0;
+        gamestate_data.alt_layout = 0;
     }
     return NULL;
 }
 
 Object *wstag810_event_9001_start(void) {
-    if (gamestate_data.unk_26E4 == 0) {
+    if (gamestate_data.alt_layout == 0) {
         fieldstg_attr.set_file(7, 0x06ED0004);
         fieldstg_stage.map_events = wstag810_map_events2;
-        gamestate_data.unk_26E4 = 0x20;
+        gamestate_data.alt_layout = 0x20;
     }
     return NULL;
 }
@@ -419,11 +419,11 @@ void wstag810_setup(void) {
     fieldstg_attr.set_file(0, 0x06ED0001);
     fieldstg_attr.set_file(4, 0x06ED0002);
     fieldstg_attr.init_layer(0);
-    if (gamestate_data.map_is_new != 0 || gamestate_data.unk_26E4 == 0) {
-        gamestate_data.unk_26E4 = 1;
+    if (gamestate_data.map_is_new != 0 || gamestate_data.alt_layout == 0) {
+        gamestate_data.alt_layout = 1;
         wstag810_event_9000_start();
     } else {
-        gamestate_data.unk_26E4 = 0;
+        gamestate_data.alt_layout = 0;
         wstag810_event_9001_start();
     }
 }

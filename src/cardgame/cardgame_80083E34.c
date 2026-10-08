@@ -187,15 +187,15 @@ void cardgame_skip_if_slots_free(CardgameGame *game, s32 side, s32 n) {
 }
 
 s32 cardgame_effect_wait(CardgameGame *game, CardgameBoard *board) {
-    game->unk_424 -= gfx_module.funcs.get_frame_ticks();
-    return game->unk_424 <= 0;
+    game->effect.time -= gfx_module.funcs.get_frame_ticks();
+    return game->effect.time <= 0;
 }
 
 void cardgame_choose_deck_top(CardgameGame *game, CardgameBoard *board, s32 arg2) {
     if (arg2 == 0) {
-        game->choice = game->players[0].deck_pos;
+        game->effect.choice = game->players[0].deck_pos;
     } else {
-        game->choice = game->cpu_deck_last;
+        game->effect.choice = game->cpu_deck_last;
     }
 }
 
@@ -205,7 +205,7 @@ void cardgame_mark_turn_target(CardgameGame *game, CardgameBoard *board) {
     s32 i;
 
     for (i = 0; i < 12; i++) {
-        game->marked[i] = 0;
+        game->effect.marked[i] = 0;
         if (i < 6) {
             if (i >= game->slots[0].count) {
                 continue;
@@ -218,7 +218,7 @@ void cardgame_mark_turn_target(CardgameGame *game, CardgameBoard *board) {
             slot = &game->slots[1].slots[i - 6];
         }
         if (slot->id == game->turns[turn].target) {
-            game->marked[i] = 1;
+            game->effect.marked[i] = 1;
         }
     }
 }
@@ -230,15 +230,15 @@ void cardgame_mark_best_cpu_slot(CardgameGame *game) {
     s32 v;
 
     for (i = 0; i < 12; i++) {
-        game->marked[i] = 0;
+        game->effect.marked[i] = 0;
         if (i >= 6) {
             v = game->get_score(game, 1, 1 << (i - 6));
             if (best < v) {
                 best = v;
-                game->marked[besti] = 0;
+                game->effect.marked[besti] = 0;
                 besti = i;
-                game->choice = i;
-                game->marked[i] = 1;
+                game->effect.choice = i;
+                game->effect.marked[i] = 1;
             }
         }
     }
@@ -249,7 +249,7 @@ s32 cardgame_effect_points_update(CardgameGame *game, CardgameBoard *board) {
     s32 kind = 0;
     s32 card;
 
-    switch (game->effect) {
+    switch (game->effect.id) {
     case 30:
     case 36:
         kind = 0;
@@ -272,7 +272,7 @@ s32 cardgame_effect_points_update(CardgameGame *game, CardgameBoard *board) {
         kind = 4;
         break;
     }
-    card = game->effect;
+    card = game->effect.id;
     if (card >= 30) {
         if (card < 36) {
             side = game->turns[game->turn - 1].side;
@@ -439,10 +439,10 @@ void cardgame_run_effect(CardgameGame *game, CardgameBoard *board) {
     side =game->turns[game->turn - 1].side;
     cur = game->turns[game->turn].side;
     other = side ^ 1;
-    if (game->new_effect != 0) {
-        switch (game->new_effect) {
+    if (game->effect.new_id != 0) {
+        switch (game->effect.new_id) {
         case 0x01:
-            game->unk_424 = 45;
+            game->effect.time = 45;
             break;
         case 0x12:
             cardgame_play_start(game, board, 0);
@@ -570,7 +570,7 @@ void cardgame_run_effect(CardgameGame *game, CardgameBoard *board) {
             cardgame_remove_marked_start(game, board);
             break;
         case 0x5D:
-            game->effect_step = 1;
+            game->effect.step = 1;
             break;
         case 0x5A:
             cardgame_recount_totals_start(game, board);
@@ -646,27 +646,27 @@ void cardgame_run_effect(CardgameGame *game, CardgameBoard *board) {
             break;
         case 0x6A:
             game->fade = 1;
-            game->unk_424 = 10;
+            game->effect.time = 10;
             break;
         case 0x6B:
             game->fade = 2;
-            game->unk_424 = 10;
+            game->effect.time = 10;
             break;
         case 0x6C:
             game->fade = 3;
-            game->unk_424 = 10;
+            game->effect.time = 10;
             break;
         case 0x6D:
             game->fade = 4;
-            game->unk_424 = 10;
+            game->effect.time = 10;
             break;
         case 0x6E:
             game->fade = 5;
-            game->unk_424 = 15;
+            game->effect.time = 15;
             break;
         case 0x6F:
             game->fade = 6;
-            game->unk_424 = 10;
+            game->effect.time = 10;
             break;
         case 0x98:
             cardgame_ask_play_start(game, board, 14);
@@ -684,7 +684,7 @@ void cardgame_run_effect(CardgameGame *game, CardgameBoard *board) {
             cardgame_hand_start(game, board, &game->players[0]);
             break;
         case 0x9D:
-            game->selected = 0;
+            game->effect.selected = 0;
             break;
         case 0x9E:
             cardgame_reveal_start(game, board);
@@ -829,11 +829,11 @@ void cardgame_run_effect(CardgameGame *game, CardgameBoard *board) {
             cardgame_choose_hand_card_start(game, board, cur);
             break;
         }
-        game->effect = game->new_effect;
-        game->new_effect = 0;
+        game->effect.id = game->effect.new_id;
+        game->effect.new_id = 0;
     }
 
-    switch (game->effect) {
+    switch (game->effect.id) {
     case 0x00:
         break;
     case 0x01:
@@ -1132,8 +1132,8 @@ void cardgame_run_effect(CardgameGame *game, CardgameBoard *board) {
         break;
     case 0x4A:
         for (j = 0; j < game->players[other].hand_count; j++) {
-            if (game->selectable[j] != 0) {
-                game->choice = j;
+            if (game->effect.selectable[j] != 0) {
+                game->effect.choice = j;
                 break;
             }
         }
@@ -1203,7 +1203,7 @@ void cardgame_run_effect(CardgameGame *game, CardgameBoard *board) {
         if (ret == 1) {
             game->effect_state = 2;
         } else if (ret == 2) {
-            game->new_effect = 0x4D;
+            game->effect.new_id = 0x4D;
         }
         break;
     case 0x5E:
@@ -1279,35 +1279,35 @@ void cardgame_run_effect(CardgameGame *game, CardgameBoard *board) {
         break;
     case 0x87:
         cardgame_mark_selectable_slots(game, board, cur, 0x180);
-        game->new_effect = 0x8D;
+        game->effect.new_id = 0x8D;
         break;
     case 0x86:
         cardgame_mark_selectable_slots(game, board, cur, 0x1BC);
-        game->new_effect = 0x8D;
+        game->effect.new_id = 0x8D;
         break;
     case 0x85:
         cardgame_mark_selectable_slots(game, board, cur, 0x1FC);
-        game->new_effect = 0x8D;
+        game->effect.new_id = 0x8D;
         break;
     case 0x8A:
         cardgame_mark_selectable_slots(game, board, cur, 0x280);
-        game->new_effect = 0x8D;
+        game->effect.new_id = 0x8D;
         break;
     case 0x89:
         cardgame_mark_selectable_slots(game, board, cur, 0x2BC);
-        game->new_effect = 0x8D;
+        game->effect.new_id = 0x8D;
         break;
     case 0x88:
         cardgame_mark_selectable_slots(game, board, cur, 0x2FC);
-        game->new_effect = 0x8D;
+        game->effect.new_id = 0x8D;
         break;
     case 0x8B:
         cardgame_mark_selectable_slots(game, board, cur, 0x3FC);
-        game->new_effect = 0x8D;
+        game->effect.new_id = 0x8D;
         break;
     case 0x8C:
         cardgame_mark_selectable_slots(game, board, cur, 0x380);
-        game->new_effect = 0x8D;
+        game->effect.new_id = 0x8D;
         break;
     case 0x8D:
         switch (cardgame_choose_slot_update(game, board)) {
@@ -1316,7 +1316,7 @@ void cardgame_run_effect(CardgameGame *game, CardgameBoard *board) {
             game->effect_state = 0;
             break;
         case 2:
-            k = game->choice;
+            k = game->effect.choice;
             if (k < 6) {
                 game->turns[game->turn].target = game->slots[0].slots[k].id;
             } else {
@@ -1468,7 +1468,7 @@ void cardgame_run_effect(CardgameGame *game, CardgameBoard *board) {
         break;
     case 0x96:
         cardgame_mark_selectable_cards(game, board, cur, 2, 0xFD);
-        game->new_effect = 0x97;
+        game->effect.new_id = 0x97;
         break;
     case 0x97:
         switch (cardgame_choose_card_update(game, board, 1)) {
@@ -1478,9 +1478,9 @@ void cardgame_run_effect(CardgameGame *game, CardgameBoard *board) {
             break;
         case 2:
             if (cur == 0) {
-                game->turns[game->turn].target = game->players[0].hand[game->choice];
+                game->turns[game->turn].target = game->players[0].hand[game->effect.choice];
             } else {
-                game->turns[game->turn].target = game->players[1].hand[game->choice];
+                game->turns[game->turn].target = game->players[1].hand[game->effect.choice];
             }
             game->answer = 1;
             game->effect_state = 0;
