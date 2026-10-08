@@ -316,15 +316,27 @@ typedef struct CardgameDisplay {
     /* 0x50 */ s32 substep;  /* the game phases' sub-step (cardgame_game_close_panels, ...) */
 } CardgameDisplay; /* size 0x54 */
 
-/* A copy of CardgameGame 0x420..0x497 (the effect state: effect to marked), kept while the in-game menu runs. */
-typedef struct CardgameEffectSave {
-    /* 0x00 */ s32 words[0x78 / 4];
-} CardgameEffectSave; /* size 0x78 */
+/* CardgameGame.effect (0x420): the effect running and its state. The in-game menu copies it whole
+ * (CardgameGameMenu.saved) while it runs, so it was one struct in the original too. */
+typedef struct CardgameEffectState {
+    /* 0x00 */ u8 id; /* the effect running (cardgame_run_effect) */
+    /* 0x01 */ u8 new_id; /* the effect to start */
+    /* 0x02 */ u8 step;
+    /* 0x03 */ u8 next_step; /* step to take on the next update (0: none) */
+    /* 0x04 */ s32 time; /* the step's frame count (cardgame_effect_wait counts it down) or sub-state */
+    /* 0x08 */ s32 vars[5]; /* values each effect uses its own way */
+    /* 0x1C */ s32 cursor; /* card under the cursor */
+    /* 0x20 */ s32 choice; /* an effect's result */
+    /* 0x24 */ u8 selected; /* hand cards selected (at most 6) */
+    /* 0x25 */ u8 target_rows; /* rows with selectable targets: 1 slots[0], 2 slots[1] (some effects reuse it) */
+    /* 0x26 */ s8 selectable[41]; /* per card: may be selected (the CPU: candidate targets) */
+    /* 0x4F */ s8 marked[41]; /* per card: selected, or a target */
+} CardgameEffectState; /* size 0x78 */
 
 /* CardgameGame.menu (0x4EC): the in-game menu (cardgame_game_run_menu). */
 typedef struct CardgameGameMenu {
     /* 0x00 */ s32 timer;
-    /* 0x04 */ CardgameEffectSave saved;
+    /* 0x04 */ CardgameEffectState saved; /* CardgameGame.effect while the menu runs */
     /* 0x7C */ u8 state;
     /* 0x7D */ u8 sel;
 } CardgameGameMenu; /* size 0x80 with padding */
@@ -373,18 +385,7 @@ typedef struct CardgameGame {
     /* 0x41B */ u8 cpu_deck_end;  /* the CPU may take deck cards up to here (stage <= round * 2 + 2) */
     /* 0x41C */ u8 cpu_deck_last; /* the end of its cards before the stage-7 ones */
     /* 0x41D */ u8 unk_41D[3];
-    /* 0x420 */ u8 effect; /* the effect running (cardgame_run_effect) */
-    /* 0x421 */ u8 new_effect; /* the effect to start */
-    /* 0x422 */ u8 effect_step;
-    /* 0x423 */ u8 next_step; /* effect_step to take on the next update (0: none) */
-    /* 0x424 */ s32 effect_time; /* the step's frame count (cardgame_effect_wait counts it down) or sub-state */
-    /* 0x428 */ s32 effect_vars[5]; /* values each effect uses its own way */
-    /* 0x43C */ s32 cursor; /* card under the cursor */
-    /* 0x440 */ s32 choice; /* an effect's result */
-    /* 0x444 */ u8 selected; /* hand cards selected (at most 6) */
-    /* 0x445 */ u8 target_rows; /* rows with selectable targets: 1 slots[0], 2 slots[1] (some effects reuse it) */
-    /* 0x446 */ s8 selectable[41]; /* per card: may be selected (the CPU: candidate targets) */
-    /* 0x46F */ s8 marked[41]; /* per card: selected, or a target */
+    /* 0x420 */ CardgameEffectState effect;
     /* 0x498 */ CardgameDisplay display;
     /* 0x4EC */ CardgameGameMenu menu;
     /* 0x56C */ u8 unk_56C[0x574 - 0x56C];

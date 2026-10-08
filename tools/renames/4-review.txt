@@ -1,5 +1,5 @@
 # Review of #56's batches 1-3 (PR #64): names that said the wrong thing. Apply with tools/renames.py.
-# By hand (not a rename): CardgameGame 0x420..0x497 nested as CardgameEffect effect (see 5-cardgame-effect.txt).
+# By hand (not a rename): CardgameGame 0x420..0x497 nested as CardgameEffectState effect (see 5-cardgame-effect.txt).
 
 # gfx: the per-buffer copy of GsLIGHTWSMATRIX (the flat-light matrix) was named after the world-screen matrix,
 # which `cameras` holds (with the projection)

@@ -100,13 +100,13 @@ void cardgame_restore_cpu_deck(CardgameGame *game) {
         }
     }
     k = game->cpu_deck_last;
-    pair = game->cpu_deck_info[game->choice];
-    game->cpu_deck_info[game->choice] = game->cpu_deck_info[k];
+    pair = game->cpu_deck_info[game->effect.choice];
+    game->cpu_deck_info[game->effect.choice] = game->cpu_deck_info[k];
     game->cpu_deck_info[k] = pair;
-    t = deck[game->choice];
-    deck[game->choice] = deck[k];
+    t = deck[game->effect.choice];
+    deck[game->effect.choice] = deck[k];
     deck[k] = t;
-    game->choice = k;
+    game->effect.choice = k;
 }
 
 s32 cardgame_is_card_playable(CardgameGame *game, s32 card) {
@@ -153,7 +153,7 @@ s32 cardgame_info_open_windows(CardgameGame *game, CardgameBoard *board, s32 a, 
             if (card != 0) {
                 board->open_popup(board, 0, 0, card, 0, 0x42);
             }
-            if (game->effect == 0x9A) {
+            if (game->effect.id == 0x9A) {
                 board->open_popup(board, 5, 4, 0x24, 0, 0x14);
             }
             break;
@@ -175,14 +175,14 @@ void cardgame_ask_play_start(CardgameGame *game, CardgameBoard *board, s32 mode)
     s32 i;
     s32 found;
 
-    game->choice = 0;
-    game->effect_step = 0;
+    game->effect.choice = 0;
+    game->effect.step = 0;
     if (board->panels[0].state == 0) {
         game->display.set_dimmed = 1;
         game->display.request = 1;
         board->open_panels(board);
     }
-    game->effect_time = 0;
+    game->effect.time = 0;
     board->dialog.message = mode;
     board->dialog.position = 0;
     found = 0;
@@ -194,28 +194,28 @@ void cardgame_ask_play_start(CardgameGame *game, CardgameBoard *board, s32 mode)
     }
     if (found) {
         board->dialog.answer = 0;
-        game->choice = 0;
-        game->effect_vars[4] = 2;
+        game->effect.choice = 0;
+        game->effect.vars[4] = 2;
     } else {
         board->dialog.answer = 1;
-        game->choice = 1;
-        game->effect_vars[4] = 3;
+        game->effect.choice = 1;
+        game->effect.vars[4] = 3;
     }
 }
 
 s32 cardgame_ask_play_update(CardgameGame *game, CardgameBoard *board) {
     s32 done = 0;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 0:
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time >= 36 && game->display.state == 0) {
-            game->effect_time = 0;
-            if (game->turn != 0 && game->effect_vars[4] == 3) {
-                game->effect_step = 8;
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time >= 36 && game->display.state == 0) {
+            game->effect.time = 0;
+            if (game->turn != 0 && game->effect.vars[4] == 3) {
+                game->effect.step = 8;
             } else {
-                game->effect_step = 1;
-                board->open_dialog(board, board->dialog.message, game->effect_vars[4], board->dialog.answer,
+                game->effect.step = 1;
+                board->open_dialog(board, board->dialog.message, game->effect.vars[4], board->dialog.answer,
                                board->dialog.position);
             }
         }
@@ -223,58 +223,58 @@ s32 cardgame_ask_play_update(CardgameGame *game, CardgameBoard *board) {
     case 2:
         if (PAD_PRESSED(13)) {
             board->confirm_dialog(board);
-            game->effect_step = 7;
+            game->effect.step = 7;
         } else if (PAD_PRESSED(14)) {
-            game->choice = 1;
+            game->effect.choice = 1;
             board->set_dialog_answer(board, 1);
             board->confirm_dialog(board);
-            game->effect_step = 7;
-        } else if ((PAD_PRESSED(4) || PAD_PRESSED(6)) && game->effect_vars[4] == 2) {
+            game->effect.step = 7;
+        } else if ((PAD_PRESSED(4) || PAD_PRESSED(6)) && game->effect.vars[4] == 2) {
             sound_module.play(0x8004513E);
-            game->choice ^= 1;
-            board->set_dialog_answer(board, game->choice);
+            game->effect.choice ^= 1;
+            board->set_dialog_answer(board, game->effect.choice);
         } else if ((!PAD_HELD(11) && PAD_PRESSED(10)) || (!PAD_HELD(10) && PAD_PRESSED(11))) {
             board->close_dialog(board);
-            game->effect_step = 6;
+            game->effect.step = 6;
         } else if (PAD_PRESSED(12)) {
             board->close_dialog(board);
-            game->effect_time = 0;
-            game->effect_step = 3;
+            game->effect.time = 0;
+            game->effect.step = 3;
         }
         break;
     case 6:
         if (board->dialog.state == 0) {
             board->dialog.position ^= 2;
-            board->open_dialog(board, board->dialog.message, game->effect_vars[4], board->dialog.answer,
+            board->open_dialog(board, board->dialog.message, game->effect.vars[4], board->dialog.answer,
                            board->dialog.position);
-            game->effect_step = 1;
+            game->effect.step = 1;
         }
         break;
     case 7:
         if (board->dialog.state == 0) {
-            if (game->choice == 0) {
-                game->effect_step = 9;
+            if (game->effect.choice == 0) {
+                game->effect.step = 9;
                 game->display.request = 2;
                 board->close_panels(board);
             } else {
-                game->effect_step = 8;
+                game->effect.step = 8;
             }
         }
         break;
     case 3:
-        switch (game->effect_time) {
+        switch (game->effect.time) {
         case 0:
             if (board->dialog.state == 0) {
                 game->display.request = 2;
                 board->close_panels(board);
-                game->effect_time = 1;
+                game->effect.time = 1;
             }
             break;
         case 1:
             if (board->panels[0].state == 0 && game->display.state == 0) {
                 game->effect_state = 3;
                 game->menu.state = 0;
-                game->effect_step = 4;
+                game->effect.step = 4;
             }
             break;
         }
@@ -283,33 +283,33 @@ s32 cardgame_ask_play_update(CardgameGame *game, CardgameBoard *board) {
         game->display.set_dimmed = 1;
         game->display.request = 1;
         board->open_panels(board);
-        game->effect_step = 5;
-        game->effect_time = 0;
+        game->effect.step = 5;
+        game->effect.time = 0;
         break;
     case 5:
-        switch (game->effect_time) {
+        switch (game->effect.time) {
         case 0:
             if (game->display.state == 0 && board->panels[0].state == 2) {
-                board->open_dialog(board, board->dialog.message, game->effect_vars[4], board->dialog.answer,
+                board->open_dialog(board, board->dialog.message, game->effect.vars[4], board->dialog.answer,
                                board->dialog.position);
-                game->effect_time = 1;
+                game->effect.time = 1;
             }
             break;
         case 1:
             if (board->dialog.state == 2) {
-                game->effect_step = 2;
+                game->effect.step = 2;
             }
             break;
         }
         break;
     case 1:
         if (board->dialog.state == 2) {
-            game->effect_step = 2;
+            game->effect.step = 2;
         }
         break;
     case 9:
         if (board->panels[0].state == 0 && game->display.state == 0) {
-            if (game->choice == 0) {
+            if (game->effect.choice == 0) {
                 done = 1;
             } else {
                 done = 2;
@@ -317,7 +317,7 @@ s32 cardgame_ask_play_update(CardgameGame *game, CardgameBoard *board) {
         }
         break;
     case 8:
-        if (game->choice == 0) {
+        if (game->effect.choice == 0) {
             done = 1;
         } else {
             done = 2;
@@ -343,30 +343,30 @@ void cardgame_info_show(CardgameGame *game, CardgameBoard *board, s32 first) {
     s32 t;
 
     cardgame_info_clear(game, board);
-    if (board->cards[first + game->cursor].is_digimon != 0) {
-        board->popups[1].value |= board->cards[first + game->cursor].level;
-        board->popups[1].value |= board->cards[first + game->cursor].color << 4;
+    if (board->cards[first + game->effect.cursor].is_digimon != 0) {
+        board->popups[1].value |= board->cards[first + game->effect.cursor].level;
+        board->popups[1].value |= board->cards[first + game->effect.cursor].color << 4;
         board->popups[1].show_value = 1;
     }
     found = 0;
-    if (board->cards[first + game->cursor].style != 3) {
-        id = game->card_ids[board->cards[first + game->cursor].card] + 1;
+    if (board->cards[first + game->effect.cursor].style != 3) {
+        id = game->card_ids[board->cards[first + game->effect.cursor].card] + 1;
         board->popups[2].value = id;
         for (i = 0; i < 5; i++) {
-            if (cardgame_bonus_cards[i] == game->card_ids[board->cards[first + game->cursor].card]) {
+            if (cardgame_bonus_cards[i] == game->card_ids[board->cards[first + game->effect.cursor].card]) {
                 found = 1;
             }
         }
-        if (board->cards[first + game->cursor].is_digimon != 0 && !found) {
+        if (board->cards[first + game->effect.cursor].is_digimon != 0 && !found) {
             board->popups[4].value = 500;
             board->popups[4].card_stats[2] = 1;
-            board->popups[4].card_stats[0] = board->cards[first + game->cursor].attack;
-            board->popups[4].card_stats[1] = board->cards[first + game->cursor].hp;
+            board->popups[4].card_stats[0] = board->cards[first + game->effect.cursor].attack;
+            board->popups[4].card_stats[1] = board->cards[first + game->effect.cursor].hp;
         } else {
             board->popups[4].card_stats[2] = 0;
             board->popups[4].value = id;
         }
-        t = game->card_ids[board->cards[first + game->cursor].card];
+        t = game->card_ids[board->cards[first + game->effect.cursor].card];
         card_init(&pic);
         pic.select(t + 1);
         switch (pic.record[6]) {
@@ -414,11 +414,11 @@ void cardgame_hand_start(CardgameGame *game, CardgameBoard *board, CardgamePlaye
 
     if (player->hand_count != 0) {
         for (i = 0; i < 40; i++) {
-            game->selectable[i] = 0;
-            game->marked[i] = 0;
+            game->effect.selectable[i] = 0;
+            game->effect.marked[i] = 0;
             if (i < player->hand_count) {
                 if (cardgame_can_play_card(game, player->points, player->hand[i]) != 0) {
-                    game->selectable[i] = 1;
+                    game->effect.selectable[i] = 1;
                     game->display.dimmed[i] = 0;
                 } else {
                     game->display.dimmed[i] = 1;
@@ -435,10 +435,10 @@ void cardgame_hand_start(CardgameGame *game, CardgameBoard *board, CardgamePlaye
     } else {
         game->display.request = 11;
     }
-    game->next_step = 1;
+    game->effect.next_step = 1;
     cardgame_info_clear(game, board);
-    game->cursor = 0;
-    game->choice = -1;
+    game->effect.cursor = 0;
+    game->effect.choice = -1;
 }
 
 void cardgame_view_start(CardgameGame *game, CardgameBoard *board, s32 n, s32 request) {
@@ -452,44 +452,44 @@ void cardgame_view_start(CardgameGame *game, CardgameBoard *board, s32 n, s32 re
         game->display.dimmed[0] = 0;
     }
     cardgame_info_clear(game, board);
-    game->next_step = 1;
+    game->effect.next_step = 1;
     game->display.request = request;
-    game->cursor = 0;
-    game->choice = -1;
+    game->effect.cursor = 0;
+    game->effect.choice = -1;
 }
 
 void cardgame_view_move_cursor(CardgameGame *game, CardgameBoard *board, s32 count, s32 delta) {
     sound_module.play(0x4001B);
-    board->slide_card(board, game->cursor, 5, board->get_card_x(count, game->cursor) + 0x1800, 0x6100);
-    board->cards[game->cursor].highlight &= ~1;
-    board->cards[game->cursor].zooming = 0;
-    game->cursor += delta;
-    board->slide_card(board, game->cursor, 1, board->get_card_x(count, game->cursor) + 0x1800, 0x5C00);
-    board->cards[game->cursor].highlight |= 1;
-    board->cards[game->cursor].zooming = 1;
+    board->slide_card(board, game->effect.cursor, 5, board->get_card_x(count, game->effect.cursor) + 0x1800, 0x6100);
+    board->cards[game->effect.cursor].highlight &= ~1;
+    board->cards[game->effect.cursor].zooming = 0;
+    game->effect.cursor += delta;
+    board->slide_card(board, game->effect.cursor, 1, board->get_card_x(count, game->effect.cursor) + 0x1800, 0x5C00);
+    board->cards[game->effect.cursor].highlight |= 1;
+    board->cards[game->effect.cursor].zooming = 1;
 }
 
 void cardgame_hand_move_cursor(CardgameGame *game, CardgameBoard *board, CardgamePlayer *player, s32 delta) {
     sound_module.play(0x4001B);
-    board->slide_card(board, game->cursor, 5, board->get_card_x(player->hand_count, game->cursor) + 0x1800, 0x6100);
-    board->cards[game->cursor].highlight &= ~1;
-    board->cards[game->cursor].zooming = 0;
-    game->cursor += delta;
-    board->slide_card(board, game->cursor, 1, board->get_card_x(player->hand_count, game->cursor) + 0x1800, 0x5C00);
-    board->cards[game->cursor].highlight |= 1;
-    board->cards[game->cursor].zooming = 1;
+    board->slide_card(board, game->effect.cursor, 5, board->get_card_x(player->hand_count, game->effect.cursor) + 0x1800, 0x6100);
+    board->cards[game->effect.cursor].highlight &= ~1;
+    board->cards[game->effect.cursor].zooming = 0;
+    game->effect.cursor += delta;
+    board->slide_card(board, game->effect.cursor, 1, board->get_card_x(player->hand_count, game->effect.cursor) + 0x1800, 0x5C00);
+    board->cards[game->effect.cursor].highlight |= 1;
+    board->cards[game->effect.cursor].zooming = 1;
 }
 
 void cardgame_hand_update_playable(CardgameGame *game, CardgameBoard *board, CardgamePlayer *player) {
     s32 i;
 
     for (i = 0; i < player->hand_count; i++) {
-        if (cardgame_can_play_card(game, player->points, player->hand[i]) != 0 && game->marked[i] == 0) {
-            game->selectable[i] = 1;
+        if (cardgame_can_play_card(game, player->points, player->hand[i]) != 0 && game->effect.marked[i] == 0) {
+            game->effect.selectable[i] = 1;
             board->cards[i].dimmed = 0;
         } else {
-            game->selectable[i] = 0;
-            if (game->marked[i] == 0) {
+            game->effect.selectable[i] = 0;
+            if (game->effect.marked[i] == 0) {
                 board->cards[i].dimmed = 1;
             } else {
                 board->cards[i].dimmed = 0;
@@ -502,9 +502,9 @@ s32 cardgame_hand_is_full(CardgameGame *game, CardgameBoard *board, CardgamePlay
     s32 ok = 1;
     s32 i;
 
-    if (game->selected < 6) {
+    if (game->effect.selected < 6) {
         for (i = 0; i < player->hand_count; i++) {
-            if (game->selectable[i] != 0) {
+            if (game->effect.selectable[i] != 0) {
                 ok = 0;
                 break;
             }
@@ -531,101 +531,101 @@ void cardgame_player_change_points(CardgameGame *game, CardgameBoard *board, Car
 }
 
 s32 cardgame_hand_toggle_card(CardgameGame *game, CardgameBoard *board, CardgamePlayer *player) {
-    s32 i = game->cursor;
+    s32 i = game->effect.cursor;
     s32 result = 0;
 
-    if (game->selectable[i] != 0) {
-        if (game->selected < 6) {
+    if (game->effect.selectable[i] != 0) {
+        if (game->effect.selected < 6) {
             cardgame_player_change_points(game, board, player, 0, player->hand[i]);
-            game->marked[game->cursor] = 1;
-            board->flash_card(board, game->cursor);
-            board->cards[game->cursor].highlight |= 2;
+            game->effect.marked[game->effect.cursor] = 1;
+            board->flash_card(board, game->effect.cursor);
+            board->cards[game->effect.cursor].highlight |= 2;
             result = 1;
-            game->selected++;
+            game->effect.selected++;
         }
-    } else if (game->marked[i] != 0) {
+    } else if (game->effect.marked[i] != 0) {
         cardgame_player_change_points(game, board, player, 1, player->hand[i]);
-        game->marked[game->cursor] = 0;
-        board->cards[game->cursor].highlight &= ~2;
+        game->effect.marked[game->effect.cursor] = 0;
+        board->cards[game->effect.cursor].highlight &= ~2;
         result = 2;
-        game->selected--;
+        game->effect.selected--;
     }
     return result;
 }
 
 void cardgame_hand_input_pick(CardgameGame *game, CardgameBoard *board, CardgamePlayer *player) {
-    board->cards[game->cursor].highlight |= 1;
-    board->cards[game->cursor].zooming = 1;
+    board->cards[game->effect.cursor].highlight |= 1;
+    board->cards[game->effect.cursor].zooming = 1;
     if (PAD_PRESSED(14)) {
         sound_module.play(0x800450BD);
-        game->choice = -1;
-        game->next_step = 14;
+        game->effect.choice = -1;
+        game->effect.next_step = 14;
     }
     if (PAD_PRESSED(12)) {
-        game->next_step = 11;
+        game->effect.next_step = 11;
     }
     if (player->hand_count != 0) {
         if ((pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 7))) |
             (pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 7)))) {
-            if (game->cursor > 0) {
+            if (game->effect.cursor > 0) {
                 cardgame_hand_move_cursor(game, board, player, -1);
             }
         } else if ((pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 5))) |
                    (pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 5)))) {
-            if (game->cursor < player->hand_count - 1) {
+            if (game->effect.cursor < player->hand_count - 1) {
                 cardgame_hand_move_cursor(game, board, player, 1);
             }
-        } else if (PAD_PRESSED(13) && game->selectable[game->cursor] != 0) {
-            game->next_step = 5;
-            game->choice = game->cursor;
-            game->marked[game->choice] = 1;
+        } else if (PAD_PRESSED(13) && game->effect.selectable[game->effect.cursor] != 0) {
+            game->effect.next_step = 5;
+            game->effect.choice = game->effect.cursor;
+            game->effect.marked[game->effect.choice] = 1;
         }
     }
 }
 
 void cardgame_hand_input_select(CardgameGame *game, CardgameBoard *board, CardgamePlayer *player) {
-    board->cards[game->cursor].highlight |= 1;
-    board->cards[game->cursor].zooming = 1;
+    board->cards[game->effect.cursor].highlight |= 1;
+    board->cards[game->effect.cursor].zooming = 1;
     if (PAD_PRESSED(15)) {
-        game->next_step = 6;
+        game->effect.next_step = 6;
     }
     if (PAD_PRESSED(12)) {
-        game->next_step = 11;
+        game->effect.next_step = 11;
     }
     if (player->hand_count != 0) {
         if ((pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 7))) |
             (pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 7)))) {
-            if (game->cursor > 0) {
+            if (game->effect.cursor > 0) {
                 cardgame_hand_move_cursor(game, board, player, -1);
             }
         } else if ((pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 5))) |
                    (pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 5)))) {
-            if (game->cursor < player->hand_count - 1) {
+            if (game->effect.cursor < player->hand_count - 1) {
                 cardgame_hand_move_cursor(game, board, player, 1);
             }
         } else if (PAD_PRESSED(13) && cardgame_hand_toggle_card(game, board, player) != 0) {
-            game->next_step = 4;
+            game->effect.next_step = 4;
         }
     }
 }
 
 void cardgame_view_input(CardgameGame *game, CardgameBoard *board, s32 count) {
-    board->cards[game->cursor].highlight |= 1;
-    board->cards[game->cursor].zooming = 1;
+    board->cards[game->effect.cursor].highlight |= 1;
+    board->cards[game->effect.cursor].zooming = 1;
     if (PAD_PRESSED(14)) {
         sound_module.play(0x800450BD);
-        game->choice = -1;
-        game->next_step = 10;
+        game->effect.choice = -1;
+        game->effect.next_step = 10;
     }
     if (count != 0) {
         if (((pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 7))) |
              (pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 7)))) &&
-            game->cursor > 0) {
+            game->effect.cursor > 0) {
             cardgame_view_move_cursor(game, board, count, -1);
         }
         if (((pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 5))) |
              (pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 5)))) &&
-            game->cursor < count - 1) {
+            game->effect.cursor < count - 1) {
             cardgame_view_move_cursor(game, board, count, 1);
         }
     }
@@ -634,27 +634,27 @@ void cardgame_view_input(CardgameGame *game, CardgameBoard *board, s32 count) {
 s32 cardgame_hand_pulse_card(CardgameGame *game, CardgameBoard *board) {
     s32 done = 0;
 
-    switch (game->effect_time) {
+    switch (game->effect.time) {
     case 0:
     default:
-        board->zoom_card(board, game->cursor, 5, 0x1400, 0x1400);
-        game->effect_vars[0] = 0;
-        game->effect_time++;
+        board->zoom_card(board, game->effect.cursor, 5, 0x1400, 0x1400);
+        game->effect.vars[0] = 0;
+        game->effect.time++;
         break;
     case 1:
-        game->effect_vars[0] += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_vars[0] >= 5) {
-            game->effect_time++;
+        game->effect.vars[0] += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.vars[0] >= 5) {
+            game->effect.time++;
         }
         break;
     case 2:
-        board->zoom_card(board, game->cursor, 5, 0x1000, 0x1000);
-        game->effect_vars[0] = 0;
-        game->effect_time++;
+        board->zoom_card(board, game->effect.cursor, 5, 0x1000, 0x1000);
+        game->effect.vars[0] = 0;
+        game->effect.time++;
         break;
     case 3:
-        game->effect_vars[0] += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_vars[0] >= 5) {
+        game->effect.vars[0] += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.vars[0] >= 5) {
             done = 1;
         }
         break;
@@ -671,11 +671,11 @@ s32 cardgame_hand_update(CardgameGame *game, CardgameBoard *board, CardgamePlaye
     s32 m;
     s32 t;
 
-    if (game->next_step != 0) {
-        switch (game->next_step) {
+    if (game->effect.next_step != 0) {
+        switch (game->effect.next_step) {
         case 1:
         case 2:
-            switch (game->effect) {
+            switch (game->effect.id) {
             case 0x99:
                 if (player->side != 0) {
                     cardgame_hand_title = 0x1C;
@@ -694,16 +694,16 @@ s32 cardgame_hand_update(CardgameGame *game, CardgameBoard *board, CardgamePlaye
                 cardgame_hand_title = 0x19;
                 break;
             }
-            game->effect_vars[1] = 0;
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
-            game->choice = 0;
-            game->selected = 0;
+            game->effect.vars[1] = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
+            game->effect.choice = 0;
+            game->effect.selected = 0;
             break;
         case 5:
             sound_module.play(0x4001C);
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
             break;
         case 4:
             sound_module.play(0x4001C);
@@ -715,8 +715,8 @@ s32 cardgame_hand_update(CardgameGame *game, CardgameBoard *board, CardgamePlaye
             } else {
                 game->display.request = 12;
             }
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
             board->close_popup(board, 4);
             board->close_popup(board, 0);
             board->close_popup(board, 1);
@@ -724,8 +724,8 @@ s32 cardgame_hand_update(CardgameGame *game, CardgameBoard *board, CardgamePlaye
             board->close_popup(board, 3);
             break;
         case 10:
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
             game->display.request = game->display.reopen;
             board->close_popup(board, 4);
             board->close_popup(board, 0);
@@ -734,11 +734,11 @@ s32 cardgame_hand_update(CardgameGame *game, CardgameBoard *board, CardgamePlaye
             board->close_popup(board, 3);
             break;
         case 6:
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
             cardgame_hand_title = board->popups[0].value;
             for (m = 0; m < player->hand_count; m++) {
-                if (game->marked[m] != 0) {
+                if (game->effect.marked[m] != 0) {
                     board->cards[m].dimmed = 0;
                     board->cards[m].highlight |= 4;
                 } else {
@@ -747,24 +747,24 @@ s32 cardgame_hand_update(CardgameGame *game, CardgameBoard *board, CardgamePlaye
             }
             break;
         case 7:
-            game->choice = 0;
-            game->effect_time = 0;
+            game->effect.choice = 0;
+            game->effect.time = 0;
             break;
         case 3:
         case 8:
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
             break;
         case 11:
             game->display.request = game->display.reopen;
             cardgame_hand_title = board->popups[0].value;
-            game->effect_time = game->display.reopen;
+            game->effect.time = game->display.reopen;
             board->close_popup(board, 4);
             board->close_popup(board, 0);
             board->close_popup(board, 1);
             board->close_popup(board, 2);
             board->close_popup(board, 3);
-            if (game->effect == 0x9A) {
+            if (game->effect.id == 0x9A) {
                 board->close_popup(board, 5);
             }
             if (player->side == 0) {
@@ -773,9 +773,9 @@ s32 cardgame_hand_update(CardgameGame *game, CardgameBoard *board, CardgamePlaye
             break;
         case 13:
             cardgame_hand_title = 0x19;
-            game->effect_vars[0] = 0;
-            game->display.request = game->effect_time - 1;
-            switch (game->effect) {
+            game->effect.vars[0] = 0;
+            game->display.request = game->effect.time - 1;
+            switch (game->effect.id) {
             case 0x99:
             case 0x9A:
             case 0x9D:
@@ -793,7 +793,7 @@ s32 cardgame_hand_update(CardgameGame *game, CardgameBoard *board, CardgamePlaye
             board->open_popup(board, 4, 2, 0, 0x86, 0x31);
             board->open_popup(board, 3, 1, 0, 0x82, 0x90);
             board->open_popup(board, 1, 3, 0, 0xFD, 0x90);
-            if (game->effect == 0x9A) {
+            if (game->effect.id == 0x9A) {
                 board->open_popup(board, 5, 4, 0x24, 0, 0x14);
             }
             if (player->side == 0) {
@@ -801,15 +801,15 @@ s32 cardgame_hand_update(CardgameGame *game, CardgameBoard *board, CardgamePlaye
             }
             break;
         case 9:
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
             for (k = 0; k < player->hand_count; k++) {
                 if (cardgame_can_play_card(game, player->points, player->hand[k]) != 0) {
                     board->cards[k].dimmed = 0;
                 } else {
                     board->cards[k].dimmed = 1;
                 }
-                if (game->marked[k] != 0) {
+                if (game->effect.marked[k] != 0) {
                     board->cards[k].dimmed = 0;
                     board->cards[k].highlight &= ~4;
                 }
@@ -818,33 +818,33 @@ s32 cardgame_hand_update(CardgameGame *game, CardgameBoard *board, CardgamePlaye
         case 12:
             break;
         }
-        game->effect_step = game->next_step;
-        game->next_step = 0;
+        game->effect.step = game->effect.next_step;
+        game->effect.next_step = 0;
     }
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
-        game->effect_vars[1] = cardgame_info_open_windows(game, board, 2, cardgame_hand_title, game->effect_time, game->effect_vars[1]);
+        game->effect.vars[1] = cardgame_info_open_windows(game, board, 2, cardgame_hand_title, game->effect.time, game->effect.vars[1]);
         cardgame_info_show(game, board, 0);
-        if (game->display.count * 4 + 14 < game->effect_time) {
-            game->next_step = 3;
+        if (game->display.count * 4 + 14 < game->effect.time) {
+            game->effect.next_step = 3;
             board->slide_card(board, 0, 5, 0x1800, 0x5C00);
-            board->cards[game->cursor].highlight |= 1;
-            board->cards[game->cursor].zooming = 1;
+            board->cards[game->effect.cursor].highlight |= 1;
+            board->cards[game->effect.cursor].zooming = 1;
         }
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
         break;
     case 2:
         board->zoom_card(board, 0, 5, 0x1000, 0x1000);
-        if (game->effect_time >= 11) {
-            game->next_step = 3;
+        if (game->effect.time >= 11) {
+            game->effect.next_step = 3;
             board->slide_card(board, 0, 5, 0x1800, 0x5C00);
-            board->cards[game->cursor].highlight |= 1;
-            board->cards[game->cursor].zooming = 1;
+            board->cards[game->effect.cursor].highlight |= 1;
+            board->cards[game->effect.cursor].zooming = 1;
         }
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
         break;
     case 3:
-        switch (game->effect) {
+        switch (game->effect.id) {
         case 0x99:
             cardgame_hand_input_pick(game, board, player);
             break;
@@ -860,87 +860,87 @@ s32 cardgame_hand_update(CardgameGame *game, CardgameBoard *board, CardgamePlaye
         cardgame_info_show(game, board, 0);
         break;
     case 4:
-        if (board->cards[game->cursor].state == 1) {
+        if (board->cards[game->effect.cursor].state == 1) {
             cardgame_hand_update_playable(game, board, player);
             if (cardgame_hand_is_full(game, board, player) != 0) {
-                game->next_step = 6;
+                game->effect.next_step = 6;
             } else {
-                game->next_step = 3;
+                game->effect.next_step = 3;
             }
         }
         cardgame_info_show(game, board, 0);
         break;
     case 5:
         if (cardgame_hand_pulse_card(game, board) != 0) {
-            game->next_step = 14;
+            game->effect.next_step = 14;
         }
         cardgame_info_show(game, board, 0);
         break;
     case 14:
-        if (player->hand_count * 4 + 5 < game->effect_time) {
-            game->next_step = 0;
-            game->new_effect = 0;
-            game->effect = 0;
-            game->new_effect = 0;
-            done = game->choice != -1;
+        if (player->hand_count * 4 + 5 < game->effect.time) {
+            game->effect.next_step = 0;
+            game->effect.new_id = 0;
+            game->effect.id = 0;
+            game->effect.new_id = 0;
+            done = game->effect.choice != -1;
         }
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
         break;
     case 10:
-        if (game->display.count * 4 + 14 < game->effect_time) {
+        if (game->display.count * 4 + 14 < game->effect.time) {
             done = 0;
-            game->next_step = 0;
-            game->new_effect = 0;
-            game->effect = 0;
-            game->new_effect = 0;
+            game->effect.next_step = 0;
+            game->effect.new_id = 0;
+            game->effect.id = 0;
+            game->effect.new_id = 0;
         }
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
         break;
     case 6:
-        switch (game->effect_time) {
+        switch (game->effect.time) {
         case 0:
             board->close_popup(board, 4);
             board->close_popup(board, 0);
             board->close_popup(board, 5);
-            board->move_card(board, game->cursor, 5, board->get_card_x(player->hand_count, game->cursor) + 0x1800, 0x6100);
-            board->cards[game->cursor].highlight &= ~1;
-            board->cards[game->cursor].zooming = 0;
+            board->move_card(board, game->effect.cursor, 5, board->get_card_x(player->hand_count, game->effect.cursor) + 0x1800, 0x6100);
+            board->cards[game->effect.cursor].highlight &= ~1;
+            board->cards[game->effect.cursor].zooming = 0;
             break;
         case 6:
             board->open_dialog(board, 15, 1, 0, 2);
             break;
         }
-        game->effect_time++;
-        if (game->effect_time >= 19) {
-            game->next_step = 7;
+        game->effect.time++;
+        if (game->effect.time >= 19) {
+            game->effect.next_step = 7;
         }
         break;
     case 7:
         if (PAD_PRESSED(13)) {
             board->confirm_dialog(board);
-            if (game->choice == 0) {
-                game->next_step = 8;
+            if (game->effect.choice == 0) {
+                game->effect.next_step = 8;
             } else {
-                game->next_step = 9;
+                game->effect.next_step = 9;
             }
         } else if (PAD_PRESSED(4) || PAD_PRESSED(6)) {
-            game->choice ^= 1;
+            game->effect.choice ^= 1;
             sound_module.play(0x8004513E);
-            board->set_dialog_answer(board, game->choice);
+            board->set_dialog_answer(board, game->effect.choice);
         } else if (PAD_PRESSED(14)) {
             sound_module.play(0x800450BD);
-            game->choice = 1;
+            game->effect.choice = 1;
             board->set_dialog_answer(board, 1);
             board->confirm_dialog(board);
-            game->next_step = 9;
+            game->effect.next_step = 9;
         }
         break;
     case 8:
-        switch (game->effect_time) {
+        switch (game->effect.time) {
         case 20:
             n = 0;
             for (i = 0; i < player->hand_count; i++) {
-                if (game->marked[i] != 0) {
+                if (game->effect.marked[i] != 0) {
                     board->zoom_card(board, i, 6, 0x1400, 0x1400);
                     n++;
                 }
@@ -951,7 +951,7 @@ s32 cardgame_hand_update(CardgameGame *game, CardgameBoard *board, CardgamePlaye
             break;
         case 25:
             for (j = 0; j < player->hand_count; j++) {
-                if (game->marked[j] != 0) {
+                if (game->effect.marked[j] != 0) {
                     board->zoom_card(board, j, 6, 0x1000, 0x1000);
                 }
             }
@@ -968,13 +968,13 @@ s32 cardgame_hand_update(CardgameGame *game, CardgameBoard *board, CardgamePlaye
             board->close_popup(board, 3);
             break;
         }
-        game->effect_time++;
-        if (game->effect_time >= 46 && game->display.state == 0) {
+        game->effect.time++;
+        if (game->effect.time >= 46 && game->display.state == 0) {
             done = 1;
         }
         break;
     case 9:
-        switch (game->effect_time) {
+        switch (game->effect.time) {
         case 6:
             break;
         case 18:
@@ -984,33 +984,33 @@ s32 cardgame_hand_update(CardgameGame *game, CardgameBoard *board, CardgamePlaye
             cardgame_info_show(game, board, 0);
             break;
         }
-        game->effect_time++;
-        if (game->effect_time >= 31) {
-            game->next_step = 3;
-            board->move_card(board, game->cursor, 5, board->get_card_x(player->hand_count, game->cursor) + 0x1800, 0x5C00);
-            board->cards[game->cursor].highlight |= 1;
-            board->cards[game->cursor].zooming = 1;
+        game->effect.time++;
+        if (game->effect.time >= 31) {
+            game->effect.next_step = 3;
+            board->move_card(board, game->effect.cursor, 5, board->get_card_x(player->hand_count, game->effect.cursor) + 0x1800, 0x5C00);
+            board->cards[game->effect.cursor].highlight |= 1;
+            board->cards[game->effect.cursor].zooming = 1;
         }
         break;
     case 11:
         if (board->panels[0].state == 0 && game->display.state == 0) {
-            game->next_step = 12;
+            game->effect.next_step = 12;
             game->menu.state = 0;
             game->effect_state = 3;
         }
         break;
     case 12:
-        game->next_step = 13;
+        game->effect.next_step = 13;
         break;
     case 13:
-        if ((player->side == 0 && board->panels[0].state == 2) || (player->side != 0 && ++game->effect_vars[0] >= 11)) {
+        if ((player->side == 0 && board->panels[0].state == 2) || (player->side != 0 && ++game->effect.vars[0] >= 11)) {
             if (game->display.state == 0) {
-                game->next_step = 3;
-                board->slide_card(board, game->cursor, 5, board->get_card_x(player->hand_count, game->cursor) + 0x1800, 0x5C00);
-                board->cards[game->cursor].highlight |= 1;
-                board->cards[game->cursor].zooming = 1;
+                game->effect.next_step = 3;
+                board->slide_card(board, game->effect.cursor, 5, board->get_card_x(player->hand_count, game->effect.cursor) + 0x1800, 0x5C00);
+                board->cards[game->effect.cursor].highlight |= 1;
+                board->cards[game->effect.cursor].zooming = 1;
                 for (t = 0; t < player->hand_count; t++) {
-                    if (game->marked[t] == 1) {
+                    if (game->effect.marked[t] == 1) {
                         board->cards[t].dimmed = 0;
                         board->cards[t].highlight |= 2;
                     }
@@ -1025,8 +1025,8 @@ s32 cardgame_hand_update(CardgameGame *game, CardgameBoard *board, CardgamePlaye
 
 void cardgame_reveal_start(CardgameGame *game, CardgameBoard *board) {
     board->reset_panels(board);
-    game->choice = 0;
-    game->effect_step = 1;
+    game->effect.choice = 0;
+    game->effect.step = 1;
     board->open_panels(board);
     game->display.set_dimmed = 1;
     game->display.face_down = 1;
@@ -1038,101 +1038,101 @@ s32 cardgame_reveal_update(CardgameGame *game, CardgameBoard *board) {
     s32 more = 0;
     s32 step;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         if (board->panels[0].state == 2 && game->display.state == 0) {
             if (game->slots[0].count + game->slots[1].count == 0) {
-                game->effect_step = 3;
-                game->effect_time = 0;
-                game->effect_vars[0] = 0;
-                game->effect_vars[1] = 0;
-                game->effect_vars[2] = 0;
-                game->effect_vars[3] = 0;
+                game->effect.step = 3;
+                game->effect.time = 0;
+                game->effect.vars[0] = 0;
+                game->effect.vars[1] = 0;
+                game->effect.vars[2] = 0;
+                game->effect.vars[3] = 0;
             } else {
-                game->effect_step = 2;
-                game->effect_time = 0;
-                game->effect_vars[0] = 0;
-                game->effect_vars[3] = 0;
+                game->effect.step = 2;
+                game->effect.time = 0;
+                game->effect.vars[0] = 0;
+                game->effect.vars[3] = 0;
                 if (game->slots[0].count > game->slots[1].count) {
-                    game->effect_vars[1] = game->slots[0].count;
+                    game->effect.vars[1] = game->slots[0].count;
                 } else {
-                    game->effect_vars[1] = game->slots[1].count;
+                    game->effect.vars[1] = game->slots[1].count;
                 }
-                game->effect_vars[1] = game->effect_vars[1] * 6 + 18;
+                game->effect.vars[1] = game->effect.vars[1] * 6 + 18;
             }
         }
         break;
     case 2:
-        if (game->effect_vars[3] >= 6) {
-            if (game->effect_vars[0] < game->slots[1].count) {
-                board->flip_card(board, game->effect_vars[0] + 6);
+        if (game->effect.vars[3] >= 6) {
+            if (game->effect.vars[0] < game->slots[1].count) {
+                board->flip_card(board, game->effect.vars[0] + 6);
             }
-            game->effect_vars[0]++;
-            game->effect_vars[3] -= 6;
+            game->effect.vars[0]++;
+            game->effect.vars[3] -= 6;
         }
-        if (game->effect_time > game->effect_vars[1]) {
-            game->effect_step = 3;
-            game->effect_time = 0;
-            game->effect_vars[0] = 0;
-            game->effect_vars[1] = 0;
-            game->effect_vars[2] = 0;
-            game->effect_vars[3] = 0;
+        if (game->effect.time > game->effect.vars[1]) {
+            game->effect.step = 3;
+            game->effect.time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.vars[1] = 0;
+            game->effect.vars[2] = 0;
+            game->effect.vars[3] = 0;
         }
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        game->effect_vars[3] += gfx_module.funcs.get_frame_ticks();
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        game->effect.vars[3] += gfx_module.funcs.get_frame_ticks();
         break;
     case 3:
         step = game->players[0].attack / 60;
-        game->effect_vars[0] += step == 0 ? 1 : step;
-        if (game->players[0].attack < game->effect_vars[0]) {
-            game->effect_vars[0] = game->players[0].attack;
+        game->effect.vars[0] += step == 0 ? 1 : step;
+        if (game->players[0].attack < game->effect.vars[0]) {
+            game->effect.vars[0] = game->players[0].attack;
         } else {
             more = 1;
         }
         step = game->players[0].hp / 60;
-        game->effect_vars[1] += step == 0 ? 1 : step;
-        if (game->players[0].hp < game->effect_vars[1]) {
-            game->effect_vars[1] = game->players[0].hp;
+        game->effect.vars[1] += step == 0 ? 1 : step;
+        if (game->players[0].hp < game->effect.vars[1]) {
+            game->effect.vars[1] = game->players[0].hp;
         } else {
             more = 1;
         }
         step = game->players[1].attack / 60;
-        game->effect_vars[2] += step == 0 ? 1 : step;
-        if (game->players[1].attack < game->effect_vars[2]) {
-            game->effect_vars[2] = game->players[1].attack;
+        game->effect.vars[2] += step == 0 ? 1 : step;
+        if (game->players[1].attack < game->effect.vars[2]) {
+            game->effect.vars[2] = game->players[1].attack;
         } else {
             more = 1;
         }
         step = game->players[1].hp / 60;
-        game->effect_vars[3] += step == 0 ? 1 : step;
-        if (game->players[1].hp < game->effect_vars[3]) {
-            game->effect_vars[3] = game->players[1].hp;
+        game->effect.vars[3] += step == 0 ? 1 : step;
+        if (game->players[1].hp < game->effect.vars[3]) {
+            game->effect.vars[3] = game->players[1].hp;
         } else {
             more = 1;
         }
-        if (game->effect_time++ >= 61) {
-            game->effect_step = 4;
-            game->effect_time = 0;
-            game->effect_vars[0] = game->players[0].attack;
-            game->effect_vars[1] = game->players[0].hp;
-            game->effect_vars[2] = game->players[1].attack;
-            game->effect_vars[3] = game->players[1].hp;
+        if (game->effect.time++ >= 61) {
+            game->effect.step = 4;
+            game->effect.time = 0;
+            game->effect.vars[0] = game->players[0].attack;
+            game->effect.vars[1] = game->players[0].hp;
+            game->effect.vars[2] = game->players[1].attack;
+            game->effect.vars[3] = game->players[1].hp;
         } else if (more) {
             sound_module.play(0x800452C6);
         }
-        board->set_panel_value(board, 0, 8, game->effect_vars[0]);
-        board->set_panel_value(board, 0, 9, game->effect_vars[1]);
-        board->set_panel_value(board, 1, 8, game->effect_vars[2]);
-        board->set_panel_value(board, 1, 9, game->effect_vars[3]);
+        board->set_panel_value(board, 0, 8, game->effect.vars[0]);
+        board->set_panel_value(board, 0, 9, game->effect.vars[1]);
+        board->set_panel_value(board, 1, 8, game->effect.vars[2]);
+        board->set_panel_value(board, 1, 9, game->effect.vars[3]);
         break;
     case 4:
         if (PAD_PRESSED(13) || PAD_PRESSED(14)) {
-            game->effect_time = 90;
+            game->effect.time = 90;
         }
-        game->effect_time++;
-        if (game->effect_time >= 91) {
+        game->effect.time++;
+        if (game->effect.time >= 91) {
             board->close_panels(board);
-            game->effect_step = 5;
+            game->effect.step = 5;
             game->display.request = 2;
         }
         break;
@@ -1148,29 +1148,29 @@ s32 cardgame_reveal_update(CardgameGame *game, CardgameBoard *board) {
 void cardgame_banner_start(CardgameGame *game, CardgameBoard *board, s32 i) {
     board->open_dialog(board, cardgame_banners[i][1], 0, 0, 1);
     board->open_popup(board, 5, 5, cardgame_banners[i][0], 0, 0x42);
-    game->effect_step = 1;
+    game->effect.step = 1;
 }
 
 s32 cardgame_banner_update(CardgameGame *game, CardgameBoard *board) {
     s32 done = 0;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         if (board->popups[5].state == 2) {
-            game->effect_step = 2;
+            game->effect.step = 2;
         }
         break;
     case 2:
         if (((pad_state.get_pressed(0) >> pad_state.get_button_map(0, 13)) & 1) ||
             ((pad_state.get_pressed(0) >> pad_state.get_button_map(0, 14)) & 1)) {
-            game->effect_step = 3;
+            game->effect.step = 3;
             board->close_popup(board, 5);
             board->close_dialog(board);
         }
         break;
     case 3:
         if (board->popups[5].state == 0) {
-            game->effect_step = 4;
+            game->effect.step = 4;
         }
         break;
     case 4:
@@ -1182,25 +1182,25 @@ s32 cardgame_banner_update(CardgameGame *game, CardgameBoard *board) {
 
 void cardgame_choose_first_move_cursor(CardgameGame *game, CardgameBoard *board) {
     sound_module.play(0x4001B);
-    board->slide_card(board, game->cursor, 5, cardgame_choose_first_pos[game->cursor].x,
-                   cardgame_choose_first_pos[game->cursor].y);
-    board->cards[game->cursor].highlight &= ~1;
-    board->cards[game->cursor].zooming = 0;
-    game->cursor ^= 1;
-    board->slide_card(board, game->cursor, 1, cardgame_choose_first_pos[game->cursor].x,
-                   cardgame_choose_first_pos[game->cursor].y - 0x500);
-    board->cards[game->cursor].highlight |= 1;
-    board->cards[game->cursor].zooming = 1;
+    board->slide_card(board, game->effect.cursor, 5, cardgame_choose_first_pos[game->effect.cursor].x,
+                   cardgame_choose_first_pos[game->effect.cursor].y);
+    board->cards[game->effect.cursor].highlight &= ~1;
+    board->cards[game->effect.cursor].zooming = 0;
+    game->effect.cursor ^= 1;
+    board->slide_card(board, game->effect.cursor, 1, cardgame_choose_first_pos[game->effect.cursor].x,
+                   cardgame_choose_first_pos[game->effect.cursor].y - 0x500);
+    board->cards[game->effect.cursor].highlight |= 1;
+    board->cards[game->effect.cursor].zooming = 1;
 }
 
 void cardgame_choose_first_start(CardgameGame *game, CardgameBoard *board) {
     s32 first = pad_random.next() & 1;
 
-    game->effect_vars[3] = first;
-    game->effect_vars[2] = 0;
-    game->effect_vars[1] = 0;
-    game->effect_vars[0] = 0;
-    game->effect_time = 0;
+    game->effect.vars[3] = first;
+    game->effect.vars[2] = 0;
+    game->effect.vars[1] = 0;
+    game->effect.vars[0] = 0;
+    game->effect.time = 0;
     board->place_card(board, 0, 0x7400, 0x6100);
     board->place_card(board, 1, 0xA400, 0x6100);
     if (first) {
@@ -1218,17 +1218,17 @@ void cardgame_choose_first_start(CardgameGame *game, CardgameBoard *board) {
     board->cards[1].scale_x = 0;
     board->cards[1].dimmed = 0;
     board->cards[1].highlight = 0;
-    game->cursor = 0;
-    game->choice = 0;
-    game->effect_step = 1;
+    game->effect.cursor = 0;
+    game->effect.choice = 0;
+    game->effect.step = 1;
 }
 
 s32 cardgame_choose_first_update(CardgameGame *game, CardgameBoard *board) {
     s32 done = 0;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
-        switch (game->effect_time) {
+        switch (game->effect.time) {
         case 0:
             board->zoom_card(board, 0, 10, 0x1000, 0x1000);
             break;
@@ -1236,61 +1236,61 @@ s32 cardgame_choose_first_update(CardgameGame *game, CardgameBoard *board) {
             board->zoom_card(board, 1, 10, 0x1000, 0x1000);
             break;
         }
-        game->effect_time++;
-        if (game->effect_time >= 15) {
-            game->effect_step = 2;
+        game->effect.time++;
+        if (game->effect.time >= 15) {
+            game->effect.step = 2;
             board->slide_card(board, 0, 5, 0x7400, 0x5C00);
             board->cards[0].zooming = 1;
             board->cards[0].highlight |= 1;
         }
         break;
     case 2:
-        board->cards[game->cursor].highlight |= 1;
-        board->cards[game->cursor].zooming = 1;
+        board->cards[game->effect.cursor].highlight |= 1;
+        board->cards[game->effect.cursor].zooming = 1;
         if (((pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 7))) |
              (pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 7)))) ||
             ((pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 5))) |
              (pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 5))))) {
             cardgame_choose_first_move_cursor(game, board);
         } else if (PAD_PRESSED(13)) {
-            game->effect_step = 3;
-            game->choice = game->cursor;
-            game->marked[game->choice] = 1;
-            game->effect_vars[1] = 0;
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
+            game->effect.step = 3;
+            game->effect.choice = game->effect.cursor;
+            game->effect.marked[game->effect.choice] = 1;
+            game->effect.vars[1] = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
             sound_module.play(0x4001C);
         }
         break;
     case 3:
         if (cardgame_hand_pulse_card(game, board) != 0) {
-            game->effect_step = 4;
-            game->effect_vars[1] = 0;
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
-            board->flip_card(board, game->cursor);
+            game->effect.step = 4;
+            game->effect.vars[1] = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
+            board->flip_card(board, game->effect.cursor);
         }
         break;
     case 4:
-        if (game->effect_time == 20) {
-            board->flip_card(board, game->cursor ^ 1);
-            board->open_popup(board, 5, 5, game->effect_vars[3] == game->choice ? 0x44 : 0x43, 0, 0x42);
+        if (game->effect.time == 20) {
+            board->flip_card(board, game->effect.cursor ^ 1);
+            board->open_popup(board, 5, 5, game->effect.vars[3] == game->effect.choice ? 0x44 : 0x43, 0, 0x42);
             sound_module.play(0x40019);
         }
-        if (game->effect_time >= 31 && (PAD_PRESSED(13) || PAD_PRESSED(14))) {
-            game->effect_time = 90;
+        if (game->effect.time >= 31 && (PAD_PRESSED(13) || PAD_PRESSED(14))) {
+            game->effect.time = 90;
         }
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time >= 91) {
-            game->effect_step = 5;
-            game->effect_vars[1] = 0;
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time >= 91) {
+            game->effect.step = 5;
+            game->effect.vars[1] = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
             board->close_popup(board, 5);
         }
         break;
     case 5:
-        switch (game->effect_time) {
+        switch (game->effect.time) {
         case 0:
             board->zoom_card(board, 0, 5, 0, 0x1000);
             break;
@@ -1298,16 +1298,16 @@ s32 cardgame_choose_first_update(CardgameGame *game, CardgameBoard *board) {
             board->zoom_card(board, 1, 5, 0, 0x1000);
             break;
         }
-        game->effect_time++;
-        if (game->effect_time >= 15) {
-            game->effect_step = 6;
+        game->effect.time++;
+        if (game->effect.time >= 15) {
+            game->effect.step = 6;
         }
         break;
     case 6:
-        if (game->effect_vars[3] == game->choice) {
-            game->choice = 1;
+        if (game->effect.vars[3] == game->effect.choice) {
+            game->effect.choice = 1;
         } else {
-            game->choice = 0;
+            game->effect.choice = 0;
         }
         done = 1;
         break;
@@ -1316,7 +1316,7 @@ s32 cardgame_choose_first_update(CardgameGame *game, CardgameBoard *board) {
 }
 
 void cardgame_view_board_start(CardgameGame *game, CardgameBoard *board) {
-    game->next_step = 1;
+    game->effect.next_step = 1;
 }
 
 s32 cardgame_view_board_get_duration(CardgameGame *game, CardgameBoard *board) {
@@ -1345,18 +1345,18 @@ void cardgame_view_board_move_cursor(CardgameGame *game, CardgameBoard *board, s
         base = 12;
         break;
     }
-    board->cards[base + game->cursor].highlight &= ~1;
-    board->cards[base + game->cursor].zooming = 0;
-    game->cursor += delta;
-    board->cards[base + game->cursor].highlight |= 1;
-    board->cards[base + game->cursor].zooming = 1;
+    board->cards[base + game->effect.cursor].highlight &= ~1;
+    board->cards[base + game->effect.cursor].zooming = 0;
+    game->effect.cursor += delta;
+    board->cards[base + game->effect.cursor].highlight |= 1;
+    board->cards[base + game->effect.cursor].zooming = 1;
 }
 
 s32 cardgame_view_board_update(CardgameGame *game, CardgameBoard *board) {
     s32 done = 0;
 
-    if (game->next_step != 0) {
-        switch (game->next_step) {
+    if (game->effect.next_step != 0) {
+        switch (game->effect.next_step) {
         case 1:
             cardgame_view_board_saved[0] = board->panels[0].anim_state;
             cardgame_view_board_saved[1] = board->panels[1].anim_state;
@@ -1364,59 +1364,59 @@ s32 cardgame_view_board_update(CardgameGame *game, CardgameBoard *board) {
             board->panels[1].anim_state = 0;
             game->display.set_dimmed = 1;
             game->display.request = 1;
-            game->effect_vars[1] = cardgame_view_board_get_duration(game, board);
-            game->cursor = 0;
+            game->effect.vars[1] = cardgame_view_board_get_duration(game, board);
+            game->effect.cursor = 0;
             board->reset_panels(board);
             board->open_panels(board);
             cardgame_info_clear(game, board);
             break;
         case 2:
             cardgame_info_clear(game, board);
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
-            game->effect_vars[3] = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
+            game->effect.vars[3] = 0;
             break;
         case 4:
             cardgame_info_clear(game, board);
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
-            game->effect_vars[3] = 1;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
+            game->effect.vars[3] = 1;
             break;
         case 3:
             cardgame_info_clear(game, board);
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
-            game->effect_vars[3] = 2;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
+            game->effect.vars[3] = 2;
             break;
         case 8:
-            board->cards[game->cursor].highlight &= ~1;
-            board->cards[game->cursor].zooming = 0;
+            board->cards[game->effect.cursor].highlight &= ~1;
+            board->cards[game->effect.cursor].zooming = 0;
             board->close_popup(board, 4);
             board->close_popup(board, 1);
             board->close_popup(board, 2);
             board->close_popup(board, 3);
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
             break;
         case 9:
-            board->cards[game->cursor + 12].highlight &= ~1;
-            board->cards[game->cursor + 12].zooming = 0;
+            board->cards[game->effect.cursor + 12].highlight &= ~1;
+            board->cards[game->effect.cursor + 12].zooming = 0;
             board->close_popup(board, 4);
             board->close_popup(board, 1);
             board->close_popup(board, 2);
             board->close_popup(board, 3);
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
             break;
         case 10:
-            board->cards[game->cursor + 6].highlight &= ~1;
-            board->cards[game->cursor + 6].zooming = 0;
+            board->cards[game->effect.cursor + 6].highlight &= ~1;
+            board->cards[game->effect.cursor + 6].zooming = 0;
             board->close_popup(board, 4);
             board->close_popup(board, 1);
             board->close_popup(board, 2);
             board->close_popup(board, 3);
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
             break;
         case 11:
             board->close_panels(board);
@@ -1436,173 +1436,173 @@ s32 cardgame_view_board_update(CardgameGame *game, CardgameBoard *board) {
         case 15:
             break;
         }
-        game->effect_step = game->next_step;
-        game->next_step = 0;
+        game->effect.step = game->effect.next_step;
+        game->effect.next_step = 0;
     }
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         if (board->panels[0].state == 2 && game->display.state == 0) {
             if (game->slots[0].count != 0) {
-                game->next_step = 2;
-                game->effect_vars[3] = 0;
+                game->effect.next_step = 2;
+                game->effect.vars[3] = 0;
             } else if (game->slots[1].count != 0) {
-                game->next_step = 4;
-                game->effect_vars[3] = 1;
+                game->effect.next_step = 4;
+                game->effect.vars[3] = 1;
             } else if (game->turn > 0) {
-                game->next_step = 3;
-                game->effect_vars[3] = 2;
+                game->effect.next_step = 3;
+                game->effect.vars[3] = 2;
             } else {
-                game->next_step = 12;
-                game->effect_vars[3] = 3;
+                game->effect.next_step = 12;
+                game->effect.vars[3] = 3;
             }
         }
         break;
     case 2:
     case 3:
     case 4:
-        game->effect_vars[0] = cardgame_info_open_windows(game, board, game->effect_vars[3], 0, game->effect_time, game->effect_vars[0]);
-        cardgame_info_show(game, board, cardgame_row_first_card[game->effect_vars[3]]);
-        game->effect_time++;
-        if (game->effect_time >= 11) {
-            cardgame_view_board_move_cursor(game, board, game->effect_vars[3], 0);
-            game->next_step = cardgame_view_board_next[game->effect_vars[3]];
+        game->effect.vars[0] = cardgame_info_open_windows(game, board, game->effect.vars[3], 0, game->effect.time, game->effect.vars[0]);
+        cardgame_info_show(game, board, cardgame_row_first_card[game->effect.vars[3]]);
+        game->effect.time++;
+        if (game->effect.time >= 11) {
+            cardgame_view_board_move_cursor(game, board, game->effect.vars[3], 0);
+            game->effect.next_step = cardgame_view_board_next[game->effect.vars[3]];
         }
         break;
     case 5:
         if (PAD_PRESSED(4) && (game->turn > 0 || game->slots[1].count != 0)) {
-            game->next_step = 8;
+            game->effect.next_step = 8;
         }
         if (((pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 5))) |
              (pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 5)))) &&
-            game->cursor < game->slots[0].count - 1) {
+            game->effect.cursor < game->slots[0].count - 1) {
             cardgame_view_board_move_cursor(game, board, 0, 1);
         }
         if (((pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 7))) |
              (pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 7)))) &&
-            game->cursor > 0) {
+            game->effect.cursor > 0) {
             cardgame_view_board_move_cursor(game, board, 0, -1);
         }
         cardgame_info_show_row(game, board, 0);
         if (PAD_PRESSED(14)) {
             sound_module.play(0x800450BD);
-            game->next_step = 11;
+            game->effect.next_step = 11;
         }
         break;
     case 6:
         if (PAD_PRESSED(6) && (game->turn > 0 || game->slots[0].count != 0)) {
-            game->next_step = 10;
+            game->effect.next_step = 10;
         }
         if (((pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 5))) |
              (pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 5)))) &&
-            game->cursor < game->slots[1].count - 1) {
+            game->effect.cursor < game->slots[1].count - 1) {
             cardgame_view_board_move_cursor(game, board, 1, 1);
         }
         if (((pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 7))) |
              (pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 7)))) &&
-            game->cursor > 0) {
+            game->effect.cursor > 0) {
             cardgame_view_board_move_cursor(game, board, 1, -1);
         }
         cardgame_info_show_row(game, board, 1);
         if (PAD_PRESSED(14)) {
             sound_module.play(0x800450BD);
-            game->next_step = 11;
+            game->effect.next_step = 11;
         }
         break;
     case 7:
         if (PAD_PRESSED(4)) {
             if (game->slots[1].count != 0) {
-                game->effect_vars[1] = 1;
-                game->next_step = 9;
+                game->effect.vars[1] = 1;
+                game->effect.next_step = 9;
             }
         } else if (PAD_PRESSED(6) && game->slots[0].count != 0) {
-            game->effect_vars[1] = 0;
-            game->next_step = 9;
+            game->effect.vars[1] = 0;
+            game->effect.next_step = 9;
         }
         if (((pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 5))) |
              (pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 5)))) &&
-            game->cursor < game->turn - 1) {
+            game->effect.cursor < game->turn - 1) {
             cardgame_view_board_move_cursor(game, board, 2, 1);
         }
         if (((pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 7))) |
              (pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 7)))) &&
-            game->cursor > 0) {
+            game->effect.cursor > 0) {
             cardgame_view_board_move_cursor(game, board, 2, -1);
         }
         if (PAD_PRESSED(14)) {
             sound_module.play(0x800450BD);
-            game->next_step = 11;
+            game->effect.next_step = 11;
         }
         cardgame_info_show_row(game, board, 2);
         break;
     case 8:
-        game->effect_time++;
-        if (game->effect_time >= 11) {
+        game->effect.time++;
+        if (game->effect.time >= 11) {
             if (game->turn > 0) {
-                game->next_step = 3;
-                game->cursor /= 2;
-                if (game->turn - 1 < game->cursor) {
-                    game->cursor = game->turn - 1;
+                game->effect.next_step = 3;
+                game->effect.cursor /= 2;
+                if (game->turn - 1 < game->effect.cursor) {
+                    game->effect.cursor = game->turn - 1;
                 }
             } else if (game->slots[1].count != 0) {
-                game->next_step = 4;
-                if (game->slots[1].count - 1 < game->cursor) {
-                    game->cursor = game->slots[1].count - 1;
+                game->effect.next_step = 4;
+                if (game->slots[1].count - 1 < game->effect.cursor) {
+                    game->effect.cursor = game->slots[1].count - 1;
                 }
             }
         }
         break;
     case 9:
-        game->effect_time++;
-        if (game->effect_time >= 11) {
-            game->cursor = game->cursor * 2 + 1;
-            if (game->effect_vars[1] != 0) {
-                game->next_step = 4;
-                if (game->slots[1].count - 1 < game->cursor) {
-                    game->cursor = game->slots[1].count - 1;
+        game->effect.time++;
+        if (game->effect.time >= 11) {
+            game->effect.cursor = game->effect.cursor * 2 + 1;
+            if (game->effect.vars[1] != 0) {
+                game->effect.next_step = 4;
+                if (game->slots[1].count - 1 < game->effect.cursor) {
+                    game->effect.cursor = game->slots[1].count - 1;
                 }
             } else {
-                game->next_step = 2;
-                if (game->slots[0].count - 1 < game->cursor) {
-                    game->cursor = game->slots[0].count - 1;
+                game->effect.next_step = 2;
+                if (game->slots[0].count - 1 < game->effect.cursor) {
+                    game->effect.cursor = game->slots[0].count - 1;
                 }
             }
         }
         break;
     case 10:
-        game->effect_time++;
-        if (game->effect_time >= 11) {
+        game->effect.time++;
+        if (game->effect.time >= 11) {
             if (game->turn > 0) {
-                game->next_step = 3;
-                game->cursor /= 2;
-                if (game->turn - 1 < game->cursor) {
-                    game->cursor = game->turn - 1;
+                game->effect.next_step = 3;
+                game->effect.cursor /= 2;
+                if (game->turn - 1 < game->effect.cursor) {
+                    game->effect.cursor = game->turn - 1;
                 }
             } else if (game->slots[0].count != 0) {
-                game->next_step = 2;
-                if (game->slots[0].count - 1 < game->cursor) {
-                    game->cursor = game->slots[0].count - 1;
+                game->effect.next_step = 2;
+                if (game->slots[0].count - 1 < game->effect.cursor) {
+                    game->effect.cursor = game->slots[0].count - 1;
                 }
             }
         }
         break;
     case 11:
         if (board->panels[0].state == 0 && game->display.state == 0) {
-            game->next_step = 15;
+            game->effect.next_step = 15;
         }
         break;
     case 12:
         if (board->dialog.state == 2) {
-            game->next_step = 13;
+            game->effect.next_step = 13;
         }
         break;
     case 13:
         if (PAD_PRESSED(13) || PAD_PRESSED(14)) {
-            game->next_step = 14;
+            game->effect.next_step = 14;
         }
         break;
     case 14:
         if (board->dialog.state == 0) {
-            game->next_step = 15;
+            game->effect.next_step = 15;
         }
         break;
     case 15:
@@ -1615,8 +1615,8 @@ s32 cardgame_view_board_update(CardgameGame *game, CardgameBoard *board) {
 }
 
 void cardgame_choose_slot_start(CardgameGame *game, CardgameBoard *board, s32 arg2) {
-    game->effect_vars[4] = arg2;
-    game->next_step = 1;
+    game->effect.vars[4] = arg2;
+    game->effect.next_step = 1;
 }
 
 s32 cardgame_choose_slot_get_duration(CardgameGame *game, CardgameBoard *board) {
@@ -1632,22 +1632,22 @@ s32 cardgame_choose_slot_update(CardgameGame *game, CardgameBoard *board) {
     s32 i;
     s32 j;
 
-    if (game->next_step != 0) {
-        switch (game->next_step) {
+    if (game->effect.next_step != 0) {
+        switch (game->effect.next_step) {
         case 1:
-            if (game->effect_vars[4] != 0) {
+            if (game->effect.vars[4] != 0) {
                 for (i = 0; i < 3; i++) {
                     game->display.dimmed[12 + i] = 1;
                 }
                 for (i = 0; i < 12; i++) {
-                    if (game->selectable[i] != 0) {
+                    if (game->effect.selectable[i] != 0) {
                         game->display.dimmed[i] = 0;
                     } else {
                         game->display.dimmed[i] = 1;
                     }
                 }
                 game->display.request = 1;
-                game->cursor = 0;
+                game->effect.cursor = 0;
                 board->reset_panels(board);
                 board->open_panels(board);
                 board->place_card(board, 15, 0xE500, 0x6100);
@@ -1659,54 +1659,54 @@ s32 cardgame_choose_slot_update(CardgameGame *game, CardgameBoard *board) {
                     board->cards[12 + j].dimmed = 1;
                 }
                 for (j = 0; j < 12; j++) {
-                    if (game->selectable[j] != 0) {
+                    if (game->effect.selectable[j] != 0) {
                         board->cards[j].dimmed = 0;
                     } else {
                         board->cards[j].dimmed = 1;
                     }
                 }
             }
-            game->effect_vars[1] = cardgame_choose_slot_get_duration(game, board);
+            game->effect.vars[1] = cardgame_choose_slot_get_duration(game, board);
             cardgame_info_clear(game, board);
             break;
         case 2:
             cardgame_info_clear(game, board);
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
-            game->effect_vars[3] = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
+            game->effect.vars[3] = 0;
             break;
         case 3:
             cardgame_info_clear(game, board);
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
-            game->effect_vars[3] = 1;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
+            game->effect.vars[3] = 1;
             break;
         case 7:
-            board->cards[game->cursor].highlight &= ~1;
-            board->cards[game->cursor].zooming = 0;
+            board->cards[game->effect.cursor].highlight &= ~1;
+            board->cards[game->effect.cursor].zooming = 0;
             board->close_popup(board, 4);
             board->close_popup(board, 1);
             board->close_popup(board, 2);
             board->close_popup(board, 3);
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
             break;
         case 8:
-            board->cards[game->cursor + 6].highlight &= ~1;
-            board->cards[game->cursor + 6].zooming = 0;
+            board->cards[game->effect.cursor + 6].highlight &= ~1;
+            board->cards[game->effect.cursor + 6].zooming = 0;
             board->close_popup(board, 4);
             board->close_popup(board, 1);
             board->close_popup(board, 2);
             board->close_popup(board, 3);
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
             break;
         case 6:
             board->close_popup(board, 4);
             board->close_popup(board, 1);
             board->close_popup(board, 2);
             board->close_popup(board, 3);
-            board->flash_card(board, game->choice);
+            board->flash_card(board, game->effect.choice);
             sound_module.play(0x4001C);
             break;
         case 9:
@@ -1726,102 +1726,102 @@ s32 cardgame_choose_slot_update(CardgameGame *game, CardgameBoard *board) {
         case 14:
             break;
         }
-        game->effect_step = game->next_step;
-        game->next_step = 0;
+        game->effect.step = game->effect.next_step;
+        game->effect.next_step = 0;
     }
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
-        if (game->effect_vars[4] == 0 || (board->panels[0].state == 2 && game->display.state == 0)) {
-            if (game->target_rows & 1) {
+        if (game->effect.vars[4] == 0 || (board->panels[0].state == 2 && game->display.state == 0)) {
+            if (game->effect.target_rows & 1) {
                 if (game->slots[0].count != 0) {
-                    game->next_step = 2;
-                    game->effect_vars[3] = 0;
+                    game->effect.next_step = 2;
+                    game->effect.vars[3] = 0;
                 } else {
-                    game->target_rows &= ~1;
+                    game->effect.target_rows &= ~1;
                 }
             }
-            if (game->target_rows & 2) {
+            if (game->effect.target_rows & 2) {
                 if (game->slots[1].count != 0) {
-                    game->next_step = 3;
-                    game->effect_vars[3] = 1;
+                    game->effect.next_step = 3;
+                    game->effect.vars[3] = 1;
                 } else {
-                    game->target_rows &= ~2;
+                    game->effect.target_rows &= ~2;
                 }
             }
-            if (game->target_rows == 0) {
-                game->next_step = 12;
-                game->effect_vars[3] = 3;
+            if (game->effect.target_rows == 0) {
+                game->effect.next_step = 12;
+                game->effect.vars[3] = 3;
             }
         }
         break;
     case 2:
     case 3:
-        game->effect_vars[0] = cardgame_info_open_windows(game, board, game->effect_vars[3], 0, game->effect_time, game->effect_vars[0]);
-        cardgame_info_show(game, board, cardgame_row_first_card[game->effect_vars[3]]);
-        game->effect_time++;
-        if (game->effect_time >= 11) {
-            switch (game->effect_vars[3]) {
+        game->effect.vars[0] = cardgame_info_open_windows(game, board, game->effect.vars[3], 0, game->effect.time, game->effect.vars[0]);
+        cardgame_info_show(game, board, cardgame_row_first_card[game->effect.vars[3]]);
+        game->effect.time++;
+        if (game->effect.time >= 11) {
+            switch (game->effect.vars[3]) {
             case 0:
                 cardgame_choose_slot_move_cursor(game, board, 0, 0);
-                game->next_step = 4;
+                game->effect.next_step = 4;
                 break;
             case 1:
                 cardgame_choose_slot_move_cursor(game, board, 1, 0);
-                game->next_step = 5;
+                game->effect.next_step = 5;
                 break;
             }
         }
         break;
     case 4:
-        if ((game->target_rows & 2) && PAD_PRESSED(4) && game->slots[1].count != 0) {
-            game->next_step = 7;
+        if ((game->effect.target_rows & 2) && PAD_PRESSED(4) && game->slots[1].count != 0) {
+            game->effect.next_step = 7;
         }
         if (((pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 5))) |
              (pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 5)))) &&
-            game->cursor < game->slots[0].count - 1) {
+            game->effect.cursor < game->slots[0].count - 1) {
             cardgame_view_board_move_cursor(game, board, 0, 1);
         }
         if (((pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 7))) |
              (pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 7)))) &&
-            game->cursor > 0) {
+            game->effect.cursor > 0) {
             cardgame_view_board_move_cursor(game, board, 0, -1);
         }
         cardgame_info_show_row(game, board, 0);
-        if (game->effect_vars[4] != 0 && PAD_PRESSED(14)) {
+        if (game->effect.vars[4] != 0 && PAD_PRESSED(14)) {
             sound_module.play(0x800450BD);
-            game->next_step = 9;
+            game->effect.next_step = 9;
         }
-        if (PAD_PRESSED(13) && game->selectable[game->cursor] != 0) {
-            game->next_step = 6;
-            game->choice = game->cursor;
+        if (PAD_PRESSED(13) && game->effect.selectable[game->effect.cursor] != 0) {
+            game->effect.next_step = 6;
+            game->effect.choice = game->effect.cursor;
         }
         break;
     case 5:
-        if ((game->target_rows & 1) && PAD_PRESSED(6) && game->slots[0].count != 0) {
-            game->next_step = 8;
+        if ((game->effect.target_rows & 1) && PAD_PRESSED(6) && game->slots[0].count != 0) {
+            game->effect.next_step = 8;
         }
         if (((pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 5))) |
              (pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 5)))) &&
-            game->cursor < game->slots[1].count - 1) {
+            game->effect.cursor < game->slots[1].count - 1) {
             cardgame_view_board_move_cursor(game, board, 1, 1);
         }
         if (((pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 7))) |
              (pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 7)))) &&
-            game->cursor > 0) {
+            game->effect.cursor > 0) {
             cardgame_view_board_move_cursor(game, board, 1, -1);
         }
         cardgame_info_show_row(game, board, 1);
-        if (game->effect_vars[4] != 0 && PAD_PRESSED(14)) {
+        if (game->effect.vars[4] != 0 && PAD_PRESSED(14)) {
             sound_module.play(0x800450BD);
-            game->next_step = 9;
-        } else if (PAD_PRESSED(13) && game->selectable[game->cursor + 6] != 0) {
-            game->next_step = 6;
-            game->choice = game->cursor + 6;
+            game->effect.next_step = 9;
+        } else if (PAD_PRESSED(13) && game->effect.selectable[game->effect.cursor + 6] != 0) {
+            game->effect.next_step = 6;
+            game->effect.choice = game->effect.cursor + 6;
         }
         break;
     case 6:
-        if (board->cards[game->choice].state == 1) {
-            if (game->effect_vars[4] == 0) {
+        if (board->cards[game->effect.choice].state == 1) {
+            if (game->effect.vars[4] == 0) {
                 for (j = 0; j < 3; j++) {
                     board->cards[12 + j].dimmed = 0;
                 }
@@ -1829,40 +1829,40 @@ s32 cardgame_choose_slot_update(CardgameGame *game, CardgameBoard *board) {
                     board->cards[j].dimmed = 0;
                 }
             }
-            game->next_step = 14;
+            game->effect.next_step = 14;
         }
         break;
     case 7:
-        game->effect_time++;
-        if (game->effect_time >= 11) {
-            game->next_step = 3;
-            if (game->slots[1].count - 1 < game->cursor) {
-                game->cursor = game->slots[1].count - 1;
+        game->effect.time++;
+        if (game->effect.time >= 11) {
+            game->effect.next_step = 3;
+            if (game->slots[1].count - 1 < game->effect.cursor) {
+                game->effect.cursor = game->slots[1].count - 1;
             }
         }
         break;
     case 8:
-        game->effect_time++;
-        if (game->effect_time >= 11) {
-            game->next_step = 2;
-            if (game->slots[0].count - 1 < game->cursor) {
-                game->cursor = game->slots[0].count - 1;
+        game->effect.time++;
+        if (game->effect.time >= 11) {
+            game->effect.next_step = 2;
+            if (game->slots[0].count - 1 < game->effect.cursor) {
+                game->effect.cursor = game->slots[0].count - 1;
             }
         }
         break;
     case 11:
-        game->next_step = 14;
+        game->effect.next_step = 14;
         break;
     case 9:
     case 10:
         if (board->panels[0].state == 0 && game->display.state == 0) {
-            game->next_step = 13;
+            game->effect.next_step = 13;
         }
         break;
     case 12:
         if (PAD_PRESSED(14)) {
             sound_module.play(0x800450BD);
-            game->next_step = 10;
+            game->effect.next_step = 10;
         }
         break;
     case 13:
@@ -1870,10 +1870,10 @@ s32 cardgame_choose_slot_update(CardgameGame *game, CardgameBoard *board) {
         break;
     case 14:
         for (j = 0; j < 15; j++) {
-            game->marked[j] = 0;
+            game->effect.marked[j] = 0;
         }
         done = 2;
-        game->marked[game->choice] = 1;
+        game->effect.marked[game->effect.choice] = 1;
         break;
     }
     return done;
@@ -1884,41 +1884,41 @@ void cardgame_choose_card_start(CardgameGame *game, CardgameBoard *board, s32 si
 
     switch (mode) {
     case 0:
-        game->effect_vars[4] = side == 0 ? 5 : 11;
-        game->effect_vars[3] = game->players[side].hand_count;
+        game->effect.vars[4] = side == 0 ? 5 : 11;
+        game->effect.vars[3] = game->players[side].hand_count;
         break;
     case 1:
     case 2:
         if (side == 0) {
-            game->effect_vars[4] = 7;
+            game->effect.vars[4] = 7;
             game->sort_cards(game, game->players[0].deck, game->players[0].deck_pos | (40 << 16), 2);
         } else {
-            game->effect_vars[4] = 13;
+            game->effect.vars[4] = 13;
             if (mode != 2) {
                 game->sort_cards(game, game->players[1].deck, game->players[1].deck_pos | (40 << 16), 3);
             }
         }
-        game->effect_vars[3] = game->players[side].deck_count;
+        game->effect.vars[3] = game->players[side].deck_count;
         break;
     case 3:
-        game->effect_vars[4] = side == 0 ? 9 : 15;
-        game->effect_vars[3] = game->players[side].discard_count;
+        game->effect.vars[4] = side == 0 ? 9 : 15;
+        game->effect.vars[3] = game->players[side].discard_count;
         break;
     }
     for (i = 0; i < 40; i++) {
-        if (i < game->effect_vars[3]) {
-            game->marked[i] = 0;
-            if (game->selectable[i] != 0) {
+        if (i < game->effect.vars[3]) {
+            game->effect.marked[i] = 0;
+            if (game->effect.selectable[i] != 0) {
                 game->display.dimmed[i] = 0;
             } else {
                 game->display.dimmed[i] = 1;
             }
         }
     }
-    game->next_step = 1;
+    game->effect.next_step = 1;
     cardgame_info_clear(game, board);
-    game->cursor = 0;
-    game->choice = -1;
+    game->effect.cursor = 0;
+    game->effect.choice = -1;
 }
 
 void cardgame_choose_hand_card_start(CardgameGame *game, CardgameBoard *board, s32 arg2) {
@@ -1927,43 +1927,43 @@ void cardgame_choose_hand_card_start(CardgameGame *game, CardgameBoard *board, s
 
 void cardgame_choose_card_move_cursor(CardgameGame *game, CardgameBoard *board, s32 delta) {
     sound_module.play(0x4001B);
-    board->slide_card(board, game->cursor, 5, board->get_card_x(game->effect_vars[3], game->cursor) + 0x1800, 0x6100);
-    board->cards[game->cursor].highlight &= ~1;
-    board->cards[game->cursor].zooming = 0;
-    game->cursor += delta;
-    board->slide_card(board, game->cursor, 1, board->get_card_x(game->effect_vars[3], game->cursor) + 0x1800, 0x5C00);
-    board->cards[game->cursor].highlight |= 1;
-    board->cards[game->cursor].zooming = 1;
+    board->slide_card(board, game->effect.cursor, 5, board->get_card_x(game->effect.vars[3], game->effect.cursor) + 0x1800, 0x6100);
+    board->cards[game->effect.cursor].highlight &= ~1;
+    board->cards[game->effect.cursor].zooming = 0;
+    game->effect.cursor += delta;
+    board->slide_card(board, game->effect.cursor, 1, board->get_card_x(game->effect.vars[3], game->effect.cursor) + 0x1800, 0x5C00);
+    board->cards[game->effect.cursor].highlight |= 1;
+    board->cards[game->effect.cursor].zooming = 1;
 }
 
 void cardgame_choose_card_input(CardgameGame *game, CardgameBoard *board) {
-    board->cards[game->cursor].highlight |= 1;
-    board->cards[game->cursor].zooming = 1;
+    board->cards[game->effect.cursor].highlight |= 1;
+    board->cards[game->effect.cursor].zooming = 1;
     if ((pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 7))) |
         (pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 7)))) {
-        if (game->cursor > 0) {
+        if (game->effect.cursor > 0) {
             cardgame_choose_card_move_cursor(game, board, -1);
         }
     } else if ((pad_state.get_repeat(0) & (1 << pad_state.get_button_map(0, 5))) |
                (pad_state.get_pressed(0) & (1 << pad_state.get_button_map(0, 5)))) {
-        if (game->cursor < game->effect_vars[3] - 1) {
+        if (game->effect.cursor < game->effect.vars[3] - 1) {
             cardgame_choose_card_move_cursor(game, board, 1);
         }
-    } else if (PAD_PRESSED(13) && game->selectable[game->cursor] != 0) {
-        game->next_step = 3;
+    } else if (PAD_PRESSED(13) && game->effect.selectable[game->effect.cursor] != 0) {
+        game->effect.next_step = 3;
     }
-    game->target_rows = 0;
+    game->effect.target_rows = 0;
 }
 
 s32 cardgame_choose_card_update(CardgameGame *game, CardgameBoard *board, s32 mode) {
     s32 done = 0;
     s32 t;
 
-    if (game->next_step != 0) {
-        switch (game->next_step) {
+    if (game->effect.next_step != 0) {
+        switch (game->effect.next_step) {
         case 1:
-            game->display.request = game->effect_vars[4];
-            switch (game->effect_vars[4]) {
+            game->display.request = game->effect.vars[4];
+            switch (game->effect.vars[4]) {
             case 5:
                 cardgame_choose_card_title = 0x19;
                 break;
@@ -1984,24 +1984,24 @@ s32 cardgame_choose_card_update(CardgameGame *game, CardgameBoard *board, s32 mo
             if (mode == 2) {
                 board->open_side_panel(board, 0);
             }
-            game->effect_vars[1] = 0;
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
-            game->choice = 0;
-            game->selected = 0;
+            game->effect.vars[1] = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
+            game->effect.choice = 0;
+            game->effect.selected = 0;
             break;
         case 3:
             sound_module.play(0x4001C);
         case 2:
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
             break;
         case 4:
             if (mode == 1) {
                 board->zoom_card(board, 15, 8, 0, 0x1000);
             }
-            game->effect_vars[0] = 0;
-            game->effect_time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.time = 0;
             game->display.request = game->display.reopen;
             board->close_popup(board, 4);
             board->close_popup(board, 0);
@@ -2010,40 +2010,40 @@ s32 cardgame_choose_card_update(CardgameGame *game, CardgameBoard *board, s32 mo
             board->close_popup(board, 3);
             break;
         }
-        game->effect_step = game->next_step;
-        game->next_step = 0;
+        game->effect.step = game->effect.next_step;
+        game->effect.next_step = 0;
     }
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
-        game->effect_vars[1] = cardgame_info_open_windows(game, board, 2, cardgame_choose_card_title, game->effect_time, game->effect_vars[1]);
+        game->effect.vars[1] = cardgame_info_open_windows(game, board, 2, cardgame_choose_card_title, game->effect.time, game->effect.vars[1]);
         cardgame_info_show(game, board, 0);
-        if (game->effect_time == 2 && mode == 1) {
+        if (game->effect.time == 2 && mode == 1) {
             board->place_card(board, 15, cardgame_slot_origins[main_screen_pos][0].x, cardgame_slot_origins[main_screen_pos][0].y);
             board->set_card(board, 15, game->turns[game->turn].card);
             board->cards[15].scale_x = 0;
             board->zoom_card(board, 15, 8, 0x1000, 0x1000);
         }
-        if (game->display.count * 4 + 14 < game->effect_time) {
-            game->next_step = 2;
+        if (game->display.count * 4 + 14 < game->effect.time) {
+            game->effect.next_step = 2;
             board->slide_card(board, 0, 5, 0x1800, 0x5C00);
-            board->cards[game->cursor].highlight |= 1;
-            board->cards[game->cursor].zooming = 1;
+            board->cards[game->effect.cursor].highlight |= 1;
+            board->cards[game->effect.cursor].zooming = 1;
         }
-        game->effect_time++;
+        game->effect.time++;
         break;
     case 2:
         cardgame_choose_card_input(game, board);
         if (mode == 1 && PAD_PRESSED(14)) {
             sound_module.play(0x800450BD);
-            game->target_rows = mode;
-            game->next_step = 4;
+            game->effect.target_rows = mode;
+            game->effect.next_step = 4;
         }
         cardgame_info_show(game, board, 0);
         break;
     case 3:
         if (cardgame_hand_pulse_card(game, board) != 0) {
-            game->target_rows = 2;
-            game->next_step = 4;
+            game->effect.target_rows = 2;
+            game->effect.next_step = 4;
             if (mode == 2) {
                 board->close_side_panel(board, 0);
             }
@@ -2051,28 +2051,28 @@ s32 cardgame_choose_card_update(CardgameGame *game, CardgameBoard *board, s32 mo
         cardgame_info_show(game, board, 0);
         break;
     case 4:
-        if (game->effect_time++ > game->effect_vars[3] * 4 + 5) {
-            game->choice = game->cursor;
-            switch (game->effect_vars[4]) {
+        if (game->effect.time++ > game->effect.vars[3] * 4 + 5) {
+            game->effect.choice = game->effect.cursor;
+            switch (game->effect.vars[4]) {
             case 7:
                 t = game->players[0].deck[game->players[0].deck_pos];
                 game->players[0].deck[game->players[0].deck_pos] =
-                    game->players[0].deck[game->players[0].deck_pos + game->choice];
-                game->players[0].deck[game->players[0].deck_pos + game->choice] = t;
-                game->choice = game->players[0].deck_pos;
+                    game->players[0].deck[game->players[0].deck_pos + game->effect.choice];
+                game->players[0].deck[game->players[0].deck_pos + game->effect.choice] = t;
+                game->effect.choice = game->players[0].deck_pos;
                 game->shuffle_deck(game, game->players[0].deck_pos + 1, game->players[0].deck_count - 1);
                 break;
             case 13:
-                game->choice = game->cpu_deck_info[game->choice + game->players[1].deck_pos].pos;
+                game->effect.choice = game->cpu_deck_info[game->effect.choice + game->players[1].deck_pos].pos;
                 cardgame_restore_cpu_deck(game);
                 break;
             }
-            game->marked[game->choice] = 1;
-            done = game->target_rows;
-            game->next_step = 0;
-            game->new_effect = 0;
-            game->effect = 0;
-            game->new_effect = 0;
+            game->effect.marked[game->effect.choice] = 1;
+            done = game->effect.target_rows;
+            game->effect.next_step = 0;
+            game->effect.new_id = 0;
+            game->effect.id = 0;
+            game->effect.new_id = 0;
         }
         break;
     }
@@ -2084,14 +2084,14 @@ s32 cardgame_cpu_select_cards(CardgameGame *game, CardgameBoard *board) {
     s16 card;
 
     for (i = 0; i < game->players[1].hand_count; i++) {
-        game->marked[i] = 0;
-        if (game->selected < 6 &&
+        game->effect.marked[i] = 0;
+        if (game->effect.selected < 6 &&
             cardgame_can_play_card(game, game->players[1].points, game->players[1].hand[i]) != 0) {
             card = game->players[1].hand[i];
             if (game->cpu_cards[card - 40].kind != 5) {
                 cardgame_player_change_points(game, board, &game->players[1], 0, card);
-                game->marked[i] = 1;
-                game->selected++;
+                game->effect.marked[i] = 1;
+                game->effect.selected++;
             }
         }
     }
@@ -2107,7 +2107,7 @@ void cardgame_cpu_choose_card_by_value(CardgameGame *game, CardgameBoard *board,
     s32 found;
     s32 i;
 
-    switch (game->effect_vars[4]) {
+    switch (game->effect.vars[4]) {
     case 5:
         n = game->players[0].hand_count;
         break;
@@ -2132,8 +2132,8 @@ void cardgame_cpu_choose_card_by_value(CardgameGame *game, CardgameBoard *board,
     card_init(&pic);
     found = -1;
     for (i = 0; i < n; i++) {
-        if (game->selectable[i] != 0) {
-            switch (game->effect_vars[4]) {
+        if (game->effect.selectable[i] != 0) {
+            switch (game->effect.vars[4]) {
             case 5:
                 card = game->players[0].hand[i];
                 break;
@@ -2169,7 +2169,7 @@ void cardgame_cpu_choose_card_by_value(CardgameGame *game, CardgameBoard *board,
             }
         }
     }
-    game->choice = found;
+    game->effect.choice = found;
 }
 
 void cardgame_cpu_choose_own_deck_card(CardgameGame *game, CardgameBoard *board) {
@@ -2177,21 +2177,21 @@ void cardgame_cpu_choose_own_deck_card(CardgameGame *game, CardgameBoard *board)
     s32 i;
 
     for (i = game->players[1].deck_pos; i < game->cpu_deck_end; i++) {
-        if (game->selectable[i - game->players[1].deck_pos] != 0) {
-            game->choice = i;
+        if (game->effect.selectable[i - game->players[1].deck_pos] != 0) {
+            game->effect.choice = i;
             found = 1;
             break;
         }
     }
     if (!found) {
         for (i = 39; game->players[1].deck_pos < i; i--) {
-            if (game->selectable[i - game->players[1].deck_pos] != 0) {
+            if (game->effect.selectable[i - game->players[1].deck_pos] != 0) {
                 break;
             }
         }
-        game->choice = i;
+        game->effect.choice = i;
     }
-    game->marked[game->choice] = 1;
+    game->effect.marked[game->effect.choice] = 1;
 }
 
 void cardgame_cpu_choose_player_deck_card(CardgameGame *game, CardgameBoard *board) {
@@ -2209,7 +2209,7 @@ void cardgame_cpu_choose_player_deck_card(CardgameGame *game, CardgameBoard *boa
             best = i;
         }
     }
-    game->choice = best;
+    game->effect.choice = best;
 }
 
 void cardgame_ask_use_start(CardgameGame *game, CardgameBoard *board, s32 flags) {
@@ -2217,9 +2217,9 @@ void cardgame_ask_use_start(CardgameGame *game, CardgameBoard *board, s32 flags)
 
     board->reset_panels(board);
     board->set_lamps(board, flags);
-    game->choice = 0;
-    game->effect_step = 1;
-    game->effect_vars[4] = flags;
+    game->effect.choice = 0;
+    game->effect.step = 1;
+    game->effect.vars[4] = flags;
     board->place_card(board, 15, 0xE500, 0x6100);
     board->set_card(board, 15, game->turns[game->turn].card);
     board->cards[15].scale_x = 0;
@@ -2228,7 +2228,7 @@ void cardgame_ask_use_start(CardgameGame *game, CardgameBoard *board, s32 flags)
     game->display.set_dimmed = 2;
     game->display.dimmed[15] = 0;
     for (i = 0; i < 15; i++) {
-        game->marked[i] = 0;
+        game->effect.marked[i] = 0;
     }
     game->display.request = 1;
 }
@@ -2236,15 +2236,15 @@ void cardgame_ask_use_start(CardgameGame *game, CardgameBoard *board, s32 flags)
 s32 cardgame_ask_use_update(CardgameGame *game, CardgameBoard *board) {
     s32 result = -1;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         if (board->panels[0].state == 2 && game->display.state == 0) {
-            game->effect_step = 2;
+            game->effect.step = 2;
         }
         break;
     case 2:
         if (PAD_PRESSED(13)) {
-            switch (game->effect_vars[4]) {
+            switch (game->effect.vars[4]) {
             case 0x400:
             case 0x1400:
                 if (game->players[0].discard_count != 0) {
@@ -2281,8 +2281,8 @@ s32 cardgame_ask_use_update(CardgameGame *game, CardgameBoard *board) {
         } else if (PAD_PRESSED(14)) {
             sound_module.play(0x800450BD);
             board->close_panels(board);
-            game->choice = 1;
-            game->effect_step = 3;
+            game->effect.choice = 1;
+            game->effect.step = 3;
             board->zoom_card(board, 15, 4, 0, 0x1000);
             game->display.request = 2;
         }
@@ -2306,9 +2306,9 @@ void cardgame_ask_cancel_start(CardgameGame *game, CardgameBoard *board, s32 mod
     s32 ok;
 
     board->reset_panels(board);
-    game->choice = 0;
-    game->effect_step = 1;
-    game->effect_vars[4] = 0;
+    game->effect.choice = 0;
+    game->effect.step = 1;
+    game->effect.vars[4] = 0;
     board->place_card(board, 15, 0xE500, 0x6100);
     board->set_card(board, 15, game->turns[game->turn].card);
     board->cards[15].scale_x = 0;
@@ -2319,7 +2319,7 @@ void cardgame_ask_cancel_start(CardgameGame *game, CardgameBoard *board, s32 mod
     }
     game->display.dimmed[15] = 0;
     for (j = 0; j < 15; j++) {
-        game->marked[j] = 0;
+        game->effect.marked[j] = 0;
     }
     if (game->turn != 0) {
         ok = 0;
@@ -2338,7 +2338,7 @@ void cardgame_ask_cancel_start(CardgameGame *game, CardgameBoard *board, s32 mod
             k = game->turn + 11;
             board->cards[k].highlight |= 1;
             game->display.dimmed[k] = 0;
-            game->effect_vars[4] = 1;
+            game->effect.vars[4] = 1;
         }
     }
     game->display.request = 1;
@@ -2348,10 +2348,10 @@ s32 cardgame_ask_cancel_update(CardgameGame *game, CardgameBoard *board) {
     s32 result = -1;
     s32 k;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         if (board->panels[0].state == 2 && game->display.state == 0) {
-            game->effect_step = 2;
+            game->effect.step = 2;
             if (game->turn != 0) {
                 board->cards[game->turn + 11].highlight |= 1;
             }
@@ -2359,19 +2359,19 @@ s32 cardgame_ask_cancel_update(CardgameGame *game, CardgameBoard *board) {
         break;
     case 2:
         if (PAD_PRESSED(13)) {
-            if (game->effect_vars[4] == 1) {
+            if (game->effect.vars[4] == 1) {
                 sound_module.play(0x4001C);
                 k = game->turn + 11;
                 board->cards[k].highlight &= ~1;
-                game->marked[k] = game->turn + 1;
+                game->effect.marked[k] = game->turn + 1;
                 result = 1;
                 game->turns[game->turn - 1].mark = game->turn;
             }
         } else if (PAD_PRESSED(14)) {
             sound_module.play(0x800450BD);
             board->close_panels(board);
-            game->choice = 1;
-            game->effect_step = 3;
+            game->effect.choice = 1;
+            game->effect.step = 3;
             board->zoom_card(board, 15, 4, 0, 0x1000);
             game->display.request = 2;
         }
@@ -2394,16 +2394,16 @@ void cardgame_ask_area_start(CardgameGame *game, CardgameBoard *board, s32 side,
     s32 j;
 
     board->reset_panels(board);
-    game->choice = 0;
-    game->effect_step = 1;
+    game->effect.choice = 0;
+    game->effect.step = 1;
     board->place_card(board, 15, 0xE500, 0x6100);
     board->set_card(board, 15, game->turns[game->turn].card);
     board->cards[15].scale_x = 0;
     board->zoom_card(board, 15, 8, 0x1000, 0x1000);
     board->open_panels(board);
-    game->effect_vars[4] = 0;
+    game->effect.vars[4] = 0;
     for (i = 0, found = 0; i < 12; i++, found = 0) {
-        game->marked[i] = 0;
+        game->effect.marked[i] = 0;
         game->display.dimmed[i] = 1;
         board->cards[i].highlight &= ~1;
         if (i < 6) {
@@ -2466,9 +2466,9 @@ void cardgame_ask_area_start(CardgameGame *game, CardgameBoard *board, s32 side,
             break;
         }
         if (found) {
-            game->marked[i] = 1;
+            game->effect.marked[i] = 1;
             game->display.dimmed[i] = 0;
-            game->effect_vars[4] = 1;
+            game->effect.vars[4] = 1;
         }
     }
     for (j = 0; j < 3; j++) {
@@ -2484,12 +2484,12 @@ s32 cardgame_ask_area_update(CardgameGame *game, CardgameBoard *board) {
     s32 j;
     s32 k;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         if (board->panels[0].state == 2 && game->display.state == 0) {
-            game->effect_step = 2;
+            game->effect.step = 2;
             for (i = 0; i < 12; i++) {
-                if (game->marked[i] != 0) {
+                if (game->effect.marked[i] != 0) {
                     board->cards[i].highlight |= 1;
                 }
             }
@@ -2497,11 +2497,11 @@ s32 cardgame_ask_area_update(CardgameGame *game, CardgameBoard *board) {
         break;
     case 2:
         if (PAD_PRESSED(13)) {
-            if (game->effect_vars[4] != 0) {
+            if (game->effect.vars[4] != 0) {
                 sound_module.play(0x4001C);
                 result = 1;
                 for (j = 0; j < 12; j++) {
-                    if (game->marked[j] != 0) {
+                    if (game->effect.marked[j] != 0) {
                         board->cards[j].highlight &= ~1;
                     }
                 }
@@ -2509,8 +2509,8 @@ s32 cardgame_ask_area_update(CardgameGame *game, CardgameBoard *board) {
         } else if (PAD_PRESSED(14)) {
             sound_module.play(0x800450BD);
             board->close_panels(board);
-            game->choice = 1;
-            game->effect_step = 3;
+            game->effect.choice = 1;
+            game->effect.step = 3;
             board->zoom_card(board, 15, 4, 0, 0x1000);
             game->display.request = 2;
         }
@@ -2521,7 +2521,7 @@ s32 cardgame_ask_area_update(CardgameGame *game, CardgameBoard *board) {
             result = 0;
             board->clear_lamps(board);
             for (k = 0; k < 12; k++) {
-                if (game->marked[k] != 0) {
+                if (game->effect.marked[k] != 0) {
                     board->cards[k].highlight &= ~1;
                 }
             }
@@ -2553,15 +2553,15 @@ s32 cardgame_player_add_card_point(CardgameGame *game, CardgameBoard *board, s32
 s32 cardgame_slot_animate_discard(CardgameGame *game, CardgameBoard *board, s32 i) {
     s32 done = 0;
 
-    switch (game->effect_time) {
+    switch (game->effect.time) {
     case 0:
     default:
         board->jolt_card(board, i);
-        game->effect_time = 1;
+        game->effect.time = 1;
         break;
     case 1:
         if (board->cards[i].state == 1) {
-            game->effect_time = 2;
+            game->effect.time = 2;
             board->zoom_card(board, i, 5, 0, 0x1000);
         }
         break;
@@ -2604,10 +2604,10 @@ s32 cardgame_slot_discard(CardgameGame *game, CardgameBoard *board, s32 side, s3
 s32 cardgame_slot_animate_return(CardgameGame *game, CardgameBoard *board, s32 i) {
     s32 done = 0;
 
-    switch (game->effect_time) {
+    switch (game->effect.time) {
     case 0:
     default:
-        game->effect_time = 1;
+        game->effect.time = 1;
         board->cards[i].zooming = 1;
         board->move_card(board, i, 15, -0x5000, 0x6100);
         board->set_card_scale(board, i, 0x1200, 0x1200);
@@ -2656,7 +2656,7 @@ void cardgame_card_effect_start(CardgameGame *game, CardgameBoard *board, s32 mo
     s32 i;
 
     for (i = 0; i < 12; i++) {
-        if (game->marked[i] != 0) {
+        if (game->effect.marked[i] != 0) {
             if (i < 6) {
                 if (i < game->slots[0].count) {
                     board->show_card_effect(board, i, mode);
@@ -2681,12 +2681,12 @@ void cardgame_card_effect_start(CardgameGame *game, CardgameBoard *board, s32 mo
             break;
         }
     }
-    game->effect_time = 0;
+    game->effect.time = 0;
 }
 
 s32 cardgame_card_effect_update(CardgameGame *game, CardgameBoard *board, s32 limit) {
-    game->effect_time += gfx_module.funcs.get_frame_ticks();
-    return limit < game->effect_time;
+    game->effect.time += gfx_module.funcs.get_frame_ticks();
+    return limit < game->effect.time;
 }
 
 void cardgame_change_stats_start(CardgameGame *game, CardgameBoard *board, s32 delta, s32 mode) {
@@ -2694,19 +2694,19 @@ void cardgame_change_stats_start(CardgameGame *game, CardgameBoard *board, s32 d
     s16 dx = delta;
     s32 i;
 
-    game->effect_time = 0;
-    game->effect_vars[0] = dy;
-    game->effect_vars[1] = dx;
-    game->effect_vars[2] = dy;
+    game->effect.time = 0;
+    game->effect.vars[0] = dy;
+    game->effect.vars[1] = dx;
+    game->effect.vars[2] = dy;
     if (dy < 0) {
-        game->effect_vars[2] = -dy;
+        game->effect.vars[2] = -dy;
     }
-    game->effect_vars[3] = dx;
+    game->effect.vars[3] = dx;
     if (dx < 0) {
-        game->effect_vars[3] = -dx;
+        game->effect.vars[3] = -dx;
     }
     for (i = 0; i < 12; i++) {
-        if (game->marked[i] != 0) {
+        if (game->effect.marked[i] != 0) {
             if (i < 6) {
                 if (i >= game->slots[0].count) {
                     continue;
@@ -2739,14 +2739,14 @@ s32 cardgame_change_stats_update(CardgameGame *game, CardgameBoard *board) {
     s32 done = 1;
     s32 i;
 
-    if (game->effect_time < game->effect_vars[2]) {
+    if (game->effect.time < game->effect.vars[2]) {
         for (i = 0; i < 12; i++) {
-            if (game->marked[i] != 0) {
+            if (game->effect.marked[i] != 0) {
                 if (i < 6) {
                     if (i >= game->slots[0].count) {
                         continue;
                     }
-                    if (game->effect_vars[0] > 0) {
+                    if (game->effect.vars[0] > 0) {
                         if (game->slots[0].slots[i].attack < 99) {
                             game->slots[0].slots[i].attack++;
                             board->cards[i].attack++;
@@ -2759,7 +2759,7 @@ s32 cardgame_change_stats_update(CardgameGame *game, CardgameBoard *board) {
                     if (i - 6 >= game->slots[1].count) {
                         continue;
                     }
-                    if (game->effect_vars[0] > 0) {
+                    if (game->effect.vars[0] > 0) {
                         if (game->slots[1].slots[i - 6].attack < 99) {
                             game->slots[1].slots[i - 6].attack++;
                             board->cards[i].attack++;
@@ -2773,14 +2773,14 @@ s32 cardgame_change_stats_update(CardgameGame *game, CardgameBoard *board) {
         }
         done = 0;
     }
-    if (game->effect_time < game->effect_vars[3]) {
+    if (game->effect.time < game->effect.vars[3]) {
         for (i = 0; i < 12; i++) {
-            if (game->marked[i] != 0) {
+            if (game->effect.marked[i] != 0) {
                 if (i < 6) {
                     if (i >= game->slots[0].count) {
                         continue;
                     }
-                    if (game->effect_vars[1] > 0) {
+                    if (game->effect.vars[1] > 0) {
                         if (game->slots[0].slots[i].hp < 99) {
                             game->slots[0].slots[i].hp++;
                             board->cards[i].hp++;
@@ -2793,7 +2793,7 @@ s32 cardgame_change_stats_update(CardgameGame *game, CardgameBoard *board) {
                     if (i - 6 >= game->slots[1].count) {
                         continue;
                     }
-                    if (game->effect_vars[1] > 0) {
+                    if (game->effect.vars[1] > 0) {
                         if (game->slots[1].slots[i - 6].hp < 99) {
                             game->slots[1].slots[i - 6].hp++;
                             board->cards[i].hp++;
@@ -2807,16 +2807,16 @@ s32 cardgame_change_stats_update(CardgameGame *game, CardgameBoard *board) {
         }
         done = 0;
     }
-    game->effect_time++;
+    game->effect.time++;
     if (done) {
         for (i = 0; i < 12; i++) {
-            game->marked[i] = 0;
+            game->effect.marked[i] = 0;
             if (i < 6) {
                 if (i < game->slots[0].count && game->slots[0].slots[i].hp <= 0) {
-                    game->marked[i] = 1;
+                    game->effect.marked[i] = 1;
                 }
             } else if (i - 6 < game->slots[1].count && game->slots[1].slots[i - 6].hp <= 0) {
-                game->marked[i] = 1;
+                game->effect.marked[i] = 1;
             }
         }
     }
@@ -2830,7 +2830,7 @@ void cardgame_mark_turn_area(CardgameGame *game, CardgameBoard *board) {
     s32 i;
 
     for (i = 0; i < 12; i++) {
-        game->marked[i] = 0;
+        game->effect.marked[i] = 0;
         if (i < 6) {
             if (i >= game->slots[0].count) {
                 continue;
@@ -2846,47 +2846,47 @@ void cardgame_mark_turn_area(CardgameGame *game, CardgameBoard *board) {
         case 1:
             if (side == 0) {
                 if (i < 6) {
-                    game->marked[i] = 1;
+                    game->effect.marked[i] = 1;
                 }
             } else if (i >= 6) {
-                game->marked[i] = 1;
+                game->effect.marked[i] = 1;
             }
             break;
         case 2:
             if (side == 0) {
                 if (i >= 6) {
-                    game->marked[i] = 1;
+                    game->effect.marked[i] = 1;
                 }
             } else if (i < 6) {
-                game->marked[i] = 1;
+                game->effect.marked[i] = 1;
             }
             break;
         case 3:
-            game->marked[i] = 1;
+            game->effect.marked[i] = 1;
             break;
         case 4:
             if (board->get_card_kind(board, card) != 1) {
-                game->marked[i] = 1;
+                game->effect.marked[i] = 1;
             }
             break;
         case 5:
             if (board->get_card_kind(board, card) != 2) {
-                game->marked[i] = 1;
+                game->effect.marked[i] = 1;
             }
             break;
         case 6:
             if (board->get_card_kind(board, card) == 3) {
-                game->marked[i] = 1;
+                game->effect.marked[i] = 1;
             }
             break;
         case 7:
             if (board->get_card_kind(board, card) != 4) {
-                game->marked[i] = 1;
+                game->effect.marked[i] = 1;
             }
             break;
         case 8:
             if (board->get_card_kind(board, card) == 6) {
-                game->marked[i] = 1;
+                game->effect.marked[i] = 1;
             }
             break;
         }
@@ -2894,7 +2894,7 @@ void cardgame_mark_turn_area(CardgameGame *game, CardgameBoard *board) {
 }
 
 void cardgame_compact_slots_start(CardgameGame *game, CardgameBoard *board) {
-    game->effect_step = 1;
+    game->effect.step = 1;
 }
 
 s32 cardgame_compact_slots_update(CardgameGame *game, CardgameBoard *board) {
@@ -2911,14 +2911,14 @@ s32 cardgame_compact_slots_update(CardgameGame *game, CardgameBoard *board) {
     s32 from;
     s32 to;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         cardgame_slot_removed_counts[1] = 0;
         cardgame_slot_removed_counts[0] = 0;
         cardgame_slot_move_counts[1] = 0;
         cardgame_slot_move_counts[0] = 0;
         for (side = 0; side < 2; side++) {
-            flags = &game->marked[side * 6];
+            flags = &game->effect.marked[side * 6];
             for (k = 0; k < game->slots[side].count; k++) {
                 if (flags[k] == 1) {
                     cardgame_slot_removed_counts[side]++;
@@ -2956,16 +2956,16 @@ s32 cardgame_compact_slots_update(CardgameGame *game, CardgameBoard *board) {
             }
         }
         if (cardgame_slot_removed_counts[0] + cardgame_slot_removed_counts[1] != 0) {
-            game->effect_step = 2;
-            game->effect_time = 20;
+            game->effect.step = 2;
+            game->effect.time = 20;
         } else {
-            game->effect_step = 4;
+            game->effect.step = 4;
         }
         break;
     case 2:
-        game->effect_time -= gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time <= 0) {
-            game->effect_step = 3;
+        game->effect.time -= gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time <= 0) {
+            game->effect.step = 3;
         }
         break;
     case 3:
@@ -2988,7 +2988,7 @@ s32 cardgame_compact_slots_update(CardgameGame *game, CardgameBoard *board) {
                 }
             }
         }
-        game->effect_step = 4;
+        game->effect.step = 4;
         break;
     case 4:
         done = 1;
@@ -3019,7 +3019,7 @@ s32 cardgame_mark_selectable_cards(CardgameGame *game, CardgameBoard *board, s32
     }
     card = 0;
     for (i = 0; i < n; i++) {
-        game->selectable[i] = 0;
+        game->effect.selectable[i] = 0;
         switch (where) {
         case 2:
             card = game->players[side].hand[i];
@@ -3043,7 +3043,7 @@ s32 cardgame_mark_selectable_cards(CardgameGame *game, CardgameBoard *board, s32
         if (t) {
             for (k = 0; k < 6; k++) {
                 if ((flags & cardgame_kind_masks[k]) && pic.record[0] == k + 1) {
-                    game->selectable[i] = 1;
+                    game->effect.selectable[i] = 1;
                     found = 1;
                     break;
                 }
@@ -3062,12 +3062,12 @@ s32 cardgame_mark_selectable_slots(CardgameGame *game, CardgameBoard *board, s32
     s32 k;
 
     card_init(&pic);
-    game->target_rows = 0;
+    game->effect.target_rows = 0;
     for (i = 0, skip = 0; i < 15; i++, skip = 0) {
-        game->selectable[i] = 0;
+        game->effect.selectable[i] = 0;
         if (i < 6) {
             if ((mode == 0 && (flags & 0x100)) || (mode != 0 && (flags & 0x200))) {
-                game->target_rows |= 1;
+                game->effect.target_rows |= 1;
                 if (i < game->slots[0].count) {
                     card = game->slots[0].slots[i].card;
                 } else {
@@ -3078,7 +3078,7 @@ s32 cardgame_mark_selectable_slots(CardgameGame *game, CardgameBoard *board, s32
             }
         } else if (i < 12) {
             if ((mode == 0 && (flags & 0x200)) || (mode != 0 && (flags & 0x100))) {
-                game->target_rows |= 2;
+                game->effect.target_rows |= 2;
                 if (i - 6 < game->slots[1].count) {
                     card = game->slots[1].slots[i - 6].card;
                 } else {
@@ -3094,7 +3094,7 @@ s32 cardgame_mark_selectable_slots(CardgameGame *game, CardgameBoard *board, s32
             pic.select(game->card_ids[card] + 1);
             for (k = 0; k < 6; k++) {
                 if ((flags & cardgame_kind_masks[k]) && pic.record[0] == k + 1) {
-                    game->selectable[i] = 1;
+                    game->effect.selectable[i] = 1;
                     found = 1;
                     break;
                 }
@@ -3105,11 +3105,11 @@ s32 cardgame_mark_selectable_slots(CardgameGame *game, CardgameBoard *board, s32
 }
 
 void cardgame_discard_hand_start(CardgameGame *game, CardgameBoard *board, s32 side) {
-    game->effect_step = 1;
-    game->effect_time = 0;
-    game->effect_vars[0] = game->players[side].hand_count;
-    game->effect_vars[1] = game->players[side].discard_count;
-    game->effect_vars[2] = 0;
+    game->effect.step = 1;
+    game->effect.time = 0;
+    game->effect.vars[0] = game->players[side].hand_count;
+    game->effect.vars[1] = game->players[side].discard_count;
+    game->effect.vars[2] = 0;
 }
 
 s32 cardgame_discard_hand_update(CardgameGame *game, CardgameBoard *board, s32 side) {
@@ -3117,23 +3117,23 @@ s32 cardgame_discard_hand_update(CardgameGame *game, CardgameBoard *board, s32 s
     s32 more;
     s32 i;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        game->effect_vars[2] += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_vars[2] >= 7) {
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        game->effect.vars[2] += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.vars[2] >= 7) {
             more = 0;
-            if (game->effect_vars[0] > 0) {
+            if (game->effect.vars[0] > 0) {
                 more = 1;
-                game->effect_vars[0]--;
-                game->effect_vars[1]++;
+                game->effect.vars[0]--;
+                game->effect.vars[1]++;
             }
             if (!more) {
-                game->effect_step = 2;
+                game->effect.step = 2;
             }
-            board->set_panel_value(board, side, 6, game->effect_vars[0]);
-            board->set_panel_value(board, side, 7, game->effect_vars[1]);
-            game->effect_vars[2] -= 7;
+            board->set_panel_value(board, side, 6, game->effect.vars[0]);
+            board->set_panel_value(board, side, 7, game->effect.vars[1]);
+            game->effect.vars[2] -= 7;
         }
         break;
     case 2:
@@ -3149,52 +3149,52 @@ s32 cardgame_discard_hand_update(CardgameGame *game, CardgameBoard *board, s32 s
 }
 
 void cardgame_points_start(CardgameGame *game, CardgameBoard *board, s32 delta, s32 ticks) {
-    game->effect_vars[2] = ticks;
-    game->effect_vars[3] = delta;
-    game->next_step = 1;
+    game->effect.vars[2] = ticks;
+    game->effect.vars[3] = delta;
+    game->effect.next_step = 1;
 }
 
 s32 cardgame_points_update(CardgameGame *game, CardgameBoard *board, s32 side, s32 kind) {
     s32 done = 0;
 
-    if (game->next_step != 0) {
-        switch (game->next_step) {
+    if (game->effect.next_step != 0) {
+        switch (game->effect.next_step) {
         case 1:
             board->set_lamps(board, (1 << kind * 2) << side);
-            game->effect_time = 0;
-            game->effect_vars[0] = 0;
+            game->effect.time = 0;
+            game->effect.vars[0] = 0;
             break;
         case 2:
             board->clear_lamps(board);
             break;
         }
-        game->effect_step = game->next_step;
-        game->next_step = 0;
+        game->effect.step = game->effect.next_step;
+        game->effect.next_step = 0;
     }
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
-        if (game->effect_time == game->effect_vars[2] / 2) {
-            if (game->effect_vars[3] > 0) {
+        if (game->effect.time == game->effect.vars[2] / 2) {
+            if (game->effect.vars[3] > 0) {
                 if (game->players[side].points[kind] < 99) {
                     game->players[side].points[kind]++;
                 }
-                game->effect_vars[3]--;
+                game->effect.vars[3]--;
                 sound_module.play(0x800452C6);
             } else {
                 if (game->players[side].points[kind] != 0) {
                     game->players[side].points[kind]--;
                 }
-                game->effect_vars[3]++;
+                game->effect.vars[3]++;
                 sound_module.play(0x800452C6);
             }
             board->set_panel_value(board, side, kind, game->players[side].points[kind]);
         }
-        game->effect_time++;
-        if (game->effect_vars[2] < game->effect_time) {
-            if (game->effect_vars[3] == 0 || game->players[side].points[kind] == 0) {
-                game->next_step = 2;
+        game->effect.time++;
+        if (game->effect.vars[2] < game->effect.time) {
+            if (game->effect.vars[3] == 0 || game->players[side].points[kind] == 0) {
+                game->effect.next_step = 2;
             } else {
-                game->next_step = 1;
+                game->effect.next_step = 1;
             }
         }
         break;
@@ -3207,7 +3207,7 @@ s32 cardgame_points_update(CardgameGame *game, CardgameBoard *board, s32 side, s
 
 void cardgame_clear_points_start(CardgameGame *game, CardgameBoard *board) {
     cardgame_points_start(game, board, -0x80, 0x10);
-    game->effect_vars[4] = 0;
+    game->effect.vars[4] = 0;
 }
 
 s32 cardgame_clear_points_update(CardgameGame *game, CardgameBoard *board) {
@@ -3218,23 +3218,23 @@ s32 cardgame_clear_points_update(CardgameGame *game, CardgameBoard *board) {
     s32 side2;
     s32 k2;
 
-    if (game->next_step != 0) {
-        switch (game->next_step) {
+    if (game->effect.next_step != 0) {
+        switch (game->effect.next_step) {
         case 1:
             board->set_lamps(board, 0x3FF);
-            game->effect_time = 0;
-            game->effect_vars[0] = 0;
+            game->effect.time = 0;
+            game->effect.vars[0] = 0;
             break;
         case 2:
             board->clear_lamps(board);
             break;
         }
-        game->effect_step = game->next_step;
-        game->next_step = 0;
+        game->effect.step = game->effect.next_step;
+        game->effect.next_step = 0;
     }
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
-        if (game->effect_time == game->effect_vars[2] / 2) {
+        if (game->effect.time == game->effect.vars[2] / 2) {
             for (side = 0; side < 2; side++) {
                 for (k = 0; k < 5; k++) {
                     if (game->players[side].points[k] != 0) {
@@ -3244,8 +3244,8 @@ s32 cardgame_clear_points_update(CardgameGame *game, CardgameBoard *board) {
                 }
             }
         }
-        game->effect_time++;
-        if (game->effect_vars[2] < game->effect_time) {
+        game->effect.time++;
+        if (game->effect.vars[2] < game->effect.time) {
             any = 0;
             for (side2 = 0; side2 < 2; side2++) {
                 for (k2 = 0; k2 < 5; k2++) {
@@ -3255,9 +3255,9 @@ s32 cardgame_clear_points_update(CardgameGame *game, CardgameBoard *board) {
                 }
             }
             if (any) {
-                game->next_step = 1;
+                game->effect.next_step = 1;
             } else {
-                game->next_step = 2;
+                game->effect.next_step = 2;
             }
         }
         break;
@@ -3269,8 +3269,8 @@ s32 cardgame_clear_points_update(CardgameGame *game, CardgameBoard *board) {
 }
 
 void cardgame_cancel_card_start(CardgameGame *game, CardgameBoard *board) {
-    game->effect_time = 0;
-    game->effect_step = 1;
+    game->effect.time = 0;
+    game->effect.step = 1;
     board->close_turn_mark(board, game->turn - 2);
 }
 
@@ -3280,11 +3280,11 @@ s32 cardgame_cancel_card_update(CardgameGame *game, CardgameBoard *board) {
     s32 side;
     s32 i;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         if (cardgame_slot_animate_discard(game, board, game->turn + 10) != 0) {
-            game->effect_vars[0] = 10;
-            game->effect_step = 2;
+            game->effect.vars[0] = 10;
+            game->effect.step = 2;
             side = game->turns[game->turn - 2].side;
             game->players[side].discard[game->players[side].discard_count] = game->turns[game->turn - 2].card;
             game->players[side].discard_count++;
@@ -3293,10 +3293,10 @@ s32 cardgame_cancel_card_update(CardgameGame *game, CardgameBoard *board) {
         }
         break;
     case 2:
-        game->effect_vars[0] -= gfx_module.funcs.get_frame_ticks();
-        if (game->effect_vars[0] <= 0) {
+        game->effect.vars[0] -= gfx_module.funcs.get_frame_ticks();
+        if (game->effect.vars[0] <= 0) {
             t = game->turn - 1;
-            game->effect_step = 3;
+            game->effect.step = 3;
             if (t >= 2) {
                 game->turns[t - 2].mark = 0;
             }
@@ -3328,18 +3328,18 @@ void cardgame_discard_card_start(CardgameGame *game, CardgameBoard *board, s32 s
     board->cards[17].scale_x = 0;
     switch (which) {
     case 0:
-        card = game->players[side].hand[game->choice];
-        game->effect_vars[4] = card;
+        card = game->players[side].hand[game->effect.choice];
+        game->effect.vars[4] = card;
         break;
     case 1:
-        card = game->players[side].deck[game->choice];
-        game->effect_vars[4] = card;
+        card = game->players[side].deck[game->effect.choice];
+        game->effect.vars[4] = card;
         break;
     }
     board->set_card(board, 17, card);
     board->zoom_card(board, 17, 8, 0x1000, 0x1000);
-    game->effect_time = 0;
-    game->effect_step = 1;
+    game->effect.time = 0;
+    game->effect.step = 1;
 }
 
 s32 cardgame_discard_card_update(CardgameGame *game, CardgameBoard *board, s32 side, s32 which) {
@@ -3348,37 +3348,37 @@ s32 cardgame_discard_card_update(CardgameGame *game, CardgameBoard *board, s32 s
     s32 j;
     s32 k;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time >= 21) {
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time >= 21) {
             board->move_card(board, 17, 10, cardgame_discard_pos[side].x, cardgame_discard_pos[side].y);
             board->set_card_scale(board, 17, 0, 0);
-            game->effect_step = 2;
+            game->effect.step = 2;
         }
         break;
     case 2:
         if (board->cards[17].state == 1) {
-            game->effect_step = 3;
-            game->effect_time = 0;
-            game->players[side].discard[game->players[side].discard_count] = game->effect_vars[4];
+            game->effect.step = 3;
+            game->effect.time = 0;
+            game->players[side].discard[game->players[side].discard_count] = game->effect.vars[4];
             game->players[side].discard_count++;
             switch (which) {
             case 0:
-                for (i = game->choice; i < game->players[side].hand_count - 1; i++) {
+                for (i = game->effect.choice; i < game->players[side].hand_count - 1; i++) {
                     game->players[side].hand[i] = game->players[side].hand[i + 1];
                 }
                 board->set_panel_value(board, side, 6, --game->players[side].hand_count);
                 break;
             case 1:
                 if (side == 0) {
-                    for (j = game->choice; j >= game->players[side].deck_pos + 1; j--) {
+                    for (j = game->effect.choice; j >= game->players[side].deck_pos + 1; j--) {
                         game->players[side].deck[j] = game->players[side].deck[j - 1];
                     }
                     game->players[side].deck_pos++;
                     game->players[side].deck_count--;
                 } else {
-                    for (k = game->choice; k >= game->players[side].deck_pos + 1; k--) {
+                    for (k = game->effect.choice; k >= game->players[side].deck_pos + 1; k--) {
                         game->players[side].deck[k] = game->players[side].deck[k - 1];
                         game->cpu_deck_info[k] = game->cpu_deck_info[k - 1];
                     }
@@ -3401,9 +3401,9 @@ s32 cardgame_discard_card_update(CardgameGame *game, CardgameBoard *board, s32 s
         }
         break;
     case 3:
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time >= 46) {
-            game->effect_step = 4;
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time >= 46) {
+            game->effect.step = 4;
         }
         break;
     case 4:
@@ -3417,15 +3417,15 @@ void cardgame_take_card_start(CardgameGame *game, CardgameBoard *board, s32 side
     s32 i;
     s32 card;
 
-    game->effect_vars[4] = game->players[side].hand_count;
+    game->effect.vars[4] = game->players[side].hand_count;
     if (which == 4) {
-        card = game->players[side].discard[game->choice];
+        card = game->players[side].discard[game->effect.choice];
     } else {
-        card = game->players[side].deck[game->choice];
+        card = game->players[side].deck[game->effect.choice];
     }
     game->players[side].hand[game->players[side].hand_count] = card;
     game->players[side].hand_count++;
-    if (game->effect_vars[4] != 0) {
+    if (game->effect.vars[4] != 0) {
         if (side == 0) {
             game->display.request = 5;
         } else {
@@ -3444,7 +3444,7 @@ void cardgame_take_card_start(CardgameGame *game, CardgameBoard *board, s32 side
     for (i = 0; i < 40; i++) {
         game->display.dimmed[i] = 0;
     }
-    game->effect_step = 1;
+    game->effect.step = 1;
 }
 
 /* The opponent's deck-shift loops have their own counter (pos). */
@@ -3463,7 +3463,7 @@ s32 cardgame_take_card_update(CardgameGame *game, CardgameBoard *board, s32 side
     s32 v;
     s32 card2;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         ok = 0;
         if (side == 0) {
@@ -3477,41 +3477,41 @@ s32 cardgame_take_card_update(CardgameGame *game, CardgameBoard *board, s32 side
             v = board->get_card_x(game->players[side].hand_count, n);
             board->cards[n].scale_x = 0x1000;
             board->move_card(board, n, 15, v + 0x1800, 0x6100);
-            game->effect_step = 2;
+            game->effect.step = 2;
         }
         break;
     case 2:
         k = game->players[side].hand_count - 1;
         if (board->cards[k].state == 1) {
             if (which == 4) {
-                for (i = game->choice; i < game->players[side].discard_count - 1; i++) {
+                for (i = game->effect.choice; i < game->players[side].discard_count - 1; i++) {
                     game->players[side].discard[i] = game->players[side].discard[i + 1];
                 }
                 game->players[side].discard_count--;
-                game->effect_step = 4;
-                game->effect_time = 45;
+                game->effect.step = 4;
+                game->effect.time = 45;
             } else {
                 if (side == 0) {
-                    for (j = game->choice; j >= game->players[0].deck_pos + 1; j--) {
+                    for (j = game->effect.choice; j >= game->players[0].deck_pos + 1; j--) {
                         game->players[0].deck[j] = game->players[0].deck[j - 1];
                     }
                 } else {
-                    if (game->choice < game->cpu_deck_end) {
-                        for (pos = game->choice; pos >= game->players[1].deck_pos + 1; pos--) {
+                    if (game->effect.choice < game->cpu_deck_end) {
+                        for (pos = game->effect.choice; pos >= game->players[1].deck_pos + 1; pos--) {
                             game->players[1].deck[pos] = game->players[1].deck[pos - 1];
                             game->cpu_deck_info[pos] = game->cpu_deck_info[pos - 1];
                         }
                     } else {
-                        if (game->cpu_deck_info[game->choice].stage == 7) {
-                            for (pos = game->choice; pos >= game->players[1].deck_pos + 1; pos--) {
+                        if (game->cpu_deck_info[game->effect.choice].stage == 7) {
+                            for (pos = game->effect.choice; pos >= game->players[1].deck_pos + 1; pos--) {
                                 game->players[1].deck[pos] = game->players[1].deck[pos - 1];
                                 game->cpu_deck_info[pos] = game->cpu_deck_info[pos - 1];
                             }
                             game->cpu_deck_end++;
                             game->cpu_deck_last++;
                         } else {
-                            t = game->players[1].deck[game->choice];
-                            game->players[1].deck[game->choice] = game->players[1].deck[39];
+                            t = game->players[1].deck[game->effect.choice];
+                            game->players[1].deck[game->effect.choice] = game->players[1].deck[39];
                             game->players[1].deck[39] = t;
                             for (pos = 39; pos >= game->players[1].deck_pos + 1; pos--) {
                                 game->players[1].deck[pos] = game->players[1].deck[pos - 1];
@@ -3531,11 +3531,11 @@ s32 cardgame_take_card_update(CardgameGame *game, CardgameBoard *board, s32 side
                 card_init(&pic);
                 pic.select(game->card_ids[card2] + 1);
                 if (pic.record[0] < 6) {
-                    game->effect_step = 3;
+                    game->effect.step = 3;
                     board->flash_card(board, k);
                 } else {
-                    game->effect_step = 4;
-                    game->effect_time = 45;
+                    game->effect.step = 4;
+                    game->effect.time = 45;
                 }
             }
             board->set_panel_value(board, 0, 5, game->players[0].deck_count);
@@ -3549,8 +3549,8 @@ s32 cardgame_take_card_update(CardgameGame *game, CardgameBoard *board, s32 side
     case 3:
         m = game->players[side].hand_count - 1;
         if (board->cards[m].state == 1) {
-            game->effect_step = 4;
-            game->effect_time = 45;
+            game->effect.step = 4;
+            game->effect.time = 45;
             card = game->players[side].hand[m];
             card_init(&pic);
             pic.select(game->card_ids[card] + 1);
@@ -3563,9 +3563,9 @@ s32 cardgame_take_card_update(CardgameGame *game, CardgameBoard *board, s32 side
         }
         break;
     case 4:
-        game->effect_time -= gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time <= 0) {
-            game->effect_step = 5;
+        game->effect.time -= gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time <= 0) {
+            game->effect.step = 5;
             board->close_side_panel(board, side);
             game->display.request = game->display.reopen;
         }
@@ -3578,7 +3578,7 @@ s32 cardgame_take_card_update(CardgameGame *game, CardgameBoard *board, s32 side
             t = 1;
         }
         if (t && game->display.state == 0) {
-            game->effect_step = 6;
+            game->effect.step = 6;
         }
         break;
     case 6:
@@ -3589,11 +3589,11 @@ s32 cardgame_take_card_update(CardgameGame *game, CardgameBoard *board, s32 side
 }
 
 void cardgame_recycle_discard_start(CardgameGame *game, CardgameBoard *board, s32 side) {
-    game->effect_time = 0;
-    game->effect_vars[3] = 0;
-    game->effect_vars[0] = game->players[side].discard_count;
-    game->effect_vars[1] = game->players[side].deck_count;
-    game->effect_step = 1;
+    game->effect.time = 0;
+    game->effect.vars[3] = 0;
+    game->effect.vars[0] = game->players[side].discard_count;
+    game->effect.vars[1] = game->players[side].deck_count;
+    game->effect.step = 1;
 }
 
 s32 cardgame_recycle_discard_update(CardgameGame *game, CardgameBoard *board, s32 side) {
@@ -3605,23 +3605,23 @@ s32 cardgame_recycle_discard_update(CardgameGame *game, CardgameBoard *board, s3
     s32 i;
     s32 j;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        game->effect_vars[3] += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_vars[3] >= 7) {
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        game->effect.vars[3] += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.vars[3] >= 7) {
             more = 0;
-            if (game->effect_vars[0] > 0) {
+            if (game->effect.vars[0] > 0) {
                 more = 1;
-                game->effect_vars[0]--;
-                game->effect_vars[1]++;
+                game->effect.vars[0]--;
+                game->effect.vars[1]++;
             }
             if (!more) {
-                game->effect_step = 2;
+                game->effect.step = 2;
             }
-            board->set_panel_value(board, side, 7, game->effect_vars[0]);
-            board->set_panel_value(board, side, 5, game->effect_vars[1]);
-            game->effect_vars[3] -= 7;
+            board->set_panel_value(board, side, 7, game->effect.vars[0]);
+            board->set_panel_value(board, side, 5, game->effect.vars[1]);
+            game->effect.vars[3] -= 7;
         }
         break;
     case 2:
@@ -3666,10 +3666,10 @@ void cardgame_mark_draw_start(CardgameGame *game, CardgameBoard *board, s32 n) {
     s32 i;
 
     for (i = 0; i < 40; i++) {
-        game->marked[i] = 0;
+        game->effect.marked[i] = 0;
     }
-    game->selected = n;
-    game->target_rows = 0;
+    game->effect.selected = n;
+    game->effect.target_rows = 0;
 }
 
 s32 cardgame_mark_draw_update(CardgameGame *game, CardgameBoard *board, s32 side) {
@@ -3678,31 +3678,31 @@ s32 cardgame_mark_draw_update(CardgameGame *game, CardgameBoard *board, s32 side
     s32 lo;
     s32 hi;
 
-    if (game->selected != 0) {
+    if (game->effect.selected != 0) {
         if (side == 0) {
             n = 0;
-            for (i = game->players[0].deck_pos; i < game->players[0].deck_pos + game->selected; i++) {
+            for (i = game->players[0].deck_pos; i < game->players[0].deck_pos + game->effect.selected; i++) {
                 if (i >= 40) {
-                    game->target_rows = 1;
-                    game->selected = n;
+                    game->effect.target_rows = 1;
+                    game->effect.selected = n;
                     break;
                 }
-                game->marked[i] = 1;
+                game->effect.marked[i] = 1;
                 n++;
             }
         } else {
             lo = game->players[1].deck_pos;
             hi = 39;
-            if (game->selected > game->players[1].deck_count) {
-                game->target_rows = 1;
-                game->selected = game->players[1].deck_count;
+            if (game->effect.selected > game->players[1].deck_count) {
+                game->effect.target_rows = 1;
+                game->effect.selected = game->players[1].deck_count;
             }
-            for (i = 0; i < game->selected; i++) {
+            for (i = 0; i < game->effect.selected; i++) {
                 if (game->cpu_deck_info[lo].stage == game->round * 2 + 2) {
-                    game->marked[lo] = 1;
+                    game->effect.marked[lo] = 1;
                     lo++;
                 } else {
-                    game->marked[hi] = 1;
+                    game->effect.marked[hi] = 1;
                     hi--;
                 }
             }
@@ -3716,20 +3716,20 @@ void cardgame_draw_start(CardgameGame *game, CardgameBoard *board, s32 side) {
     s32 j;
     s32 card;
 
-    game->effect_vars[4] = game->players[side].hand_count;
-    game->effect_vars[1] = 0;
+    game->effect.vars[4] = game->players[side].hand_count;
+    game->effect.vars[1] = 0;
     for (i = game->players[side].deck_pos; i < 40; i++) {
-        if (game->marked[i] != 0) {
+        if (game->effect.marked[i] != 0) {
             card = game->players[side].deck[i];
             game->players[side].hand[game->players[side].hand_count] = card;
             game->players[side].hand_count++;
-            game->effect_vars[1] = 1;
+            game->effect.vars[1] = 1;
         }
     }
     for (j = 0; j < 40; j++) {
         game->display.dimmed[j] = 0;
     }
-    if (game->effect_vars[4] != 0) {
+    if (game->effect.vars[4] != 0) {
         if (side == 0) {
             game->display.request = 5;
         } else {
@@ -3745,7 +3745,7 @@ void cardgame_draw_start(CardgameGame *game, CardgameBoard *board, s32 side) {
         }
     }
     board->open_side_panel(board, side);
-    game->effect_step = 1;
+    game->effect.step = 1;
 }
 
 /* The original reuses `v` (case 2) as the last loop's counter and `found` as case 9's flag (register
@@ -3763,7 +3763,7 @@ s32 cardgame_draw_update(CardgameGame *game, CardgameBoard *board, s32 side) {
     s32 j;
     s32 k;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         ok = 0;
         if (side == 0) {
@@ -3771,29 +3771,29 @@ s32 cardgame_draw_update(CardgameGame *game, CardgameBoard *board, s32 side) {
         } else if (board->panels[1].state == 2) {
             ok = 1;
         }
-        for (i = game->effect_vars[4]; i < game->players[side].hand_count; i++) {
+        for (i = game->effect.vars[4]; i < game->players[side].hand_count; i++) {
             board->cards[i].x = 0x14A00;
         }
         if (ok && game->display.state == 0) {
-            if (game->effect_vars[1] == 0) {
+            if (game->effect.vars[1] == 0) {
                 board->open_dialog(board, 0x35, 0, 0, side == 0 ? 2 : 0);
-                game->effect_step = 5;
+                game->effect.step = 5;
             } else {
-                game->effect_step = 2;
+                game->effect.step = 2;
             }
-            game->effect_time = 0;
-            game->effect_vars[0] = game->effect_vars[4];
+            game->effect.time = 0;
+            game->effect.vars[0] = game->effect.vars[4];
         }
         break;
     case 2:
-        v = board->get_card_x(game->players[side].hand_count, game->effect_vars[0]);
-        board->cards[game->effect_vars[0]].scale_x = 0x1000;
-        board->move_card(board, game->effect_vars[0], 15, v + 0x1800, 0x6100);
-        game->effect_step = 3;
+        v = board->get_card_x(game->players[side].hand_count, game->effect.vars[0]);
+        board->cards[game->effect.vars[0]].scale_x = 0x1000;
+        board->move_card(board, game->effect.vars[0], 15, v + 0x1800, 0x6100);
+        game->effect.step = 3;
         break;
     case 3:
-        if (board->cards[game->effect_vars[0]].state == 1) {
-            card = game->players[side].hand[game->effect_vars[0]];
+        if (board->cards[game->effect.vars[0]].state == 1) {
+            card = game->players[side].hand[game->effect.vars[0]];
             card_init(&pic);
             pic.select(game->card_ids[card] + 1);
             if (pic.record[0] < 6) {
@@ -3801,45 +3801,45 @@ s32 cardgame_draw_update(CardgameGame *game, CardgameBoard *board, s32 side) {
                     game->players[side].points[pic.record[0] - 1]++;
                 }
                 board->set_panel_value(board, side, pic.record[0] - 1, game->players[side].points[pic.record[0] - 1]);
-                board->flash_card(board, game->effect_vars[0]);
-                game->effect_step = 4;
+                board->flash_card(board, game->effect.vars[0]);
+                game->effect.step = 4;
             } else {
-                game->effect_vars[0]++;
-                if (game->effect_vars[0] < game->players[side].hand_count) {
-                    game->effect_step = 2;
-                } else if (game->target_rows != 0) {
+                game->effect.vars[0]++;
+                if (game->effect.vars[0] < game->players[side].hand_count) {
+                    game->effect.step = 2;
+                } else if (game->effect.target_rows != 0) {
                     board->open_dialog(board, 0x35, 0, 0, side == 0 ? 2 : 0);
-                    game->effect_step = 5;
+                    game->effect.step = 5;
                 } else {
-                    game->effect_time = 45;
-                    game->effect_step = 8;
+                    game->effect.time = 45;
+                    game->effect.step = 8;
                 }
             }
             for (i = 39, found = 0; i >= 0; i--) {
-                if (game->marked[i] != 0) {
+                if (game->effect.marked[i] != 0) {
                     found = 1;
                     break;
                 }
             }
             if (found) {
-                game->marked[i] = 0;
+                game->effect.marked[i] = 0;
                 if (side == 0) {
                     for (k = i; k >= game->players[0].deck_pos + 1; k--) {
                         game->players[0].deck[k] = game->players[0].deck[k - 1];
-                        game->marked[k] = game->marked[k - 1];
+                        game->effect.marked[k] = game->effect.marked[k - 1];
                     }
                 } else {
                     if (i < game->cpu_deck_end) {
                         for (j = i; j >= game->players[1].deck_pos + 1; j--) {
                             game->players[1].deck[j] = game->players[1].deck[j - 1];
-                            game->marked[j] = game->marked[j - 1];
+                            game->effect.marked[j] = game->effect.marked[j - 1];
                             game->cpu_deck_info[j] = game->cpu_deck_info[j - 1];
                         }
                     } else {
                         if (game->cpu_deck_info[i].stage == 7) {
                             for (j = i; j >= game->players[1].deck_pos + 1; j--) {
                                 game->players[1].deck[j] = game->players[1].deck[j - 1];
-                                game->marked[j] = game->marked[j - 1];
+                                game->effect.marked[j] = game->effect.marked[j - 1];
                                 game->cpu_deck_info[j] = game->cpu_deck_info[j - 1];
                             }
                             game->cpu_deck_end++;
@@ -3850,7 +3850,7 @@ s32 cardgame_draw_update(CardgameGame *game, CardgameBoard *board, s32 side) {
                             game->players[1].deck[39] = t;
                             for (j = 39; j >= game->players[1].deck_pos + 1; j--) {
                                 game->players[1].deck[j] = game->players[1].deck[j - 1];
-                                game->marked[j] = game->marked[j - 1];
+                                game->effect.marked[j] = game->effect.marked[j - 1];
                                 game->cpu_deck_info[j] = game->cpu_deck_info[j - 1];
                             }
                             game->cpu_deck_end++;
@@ -3867,34 +3867,34 @@ s32 cardgame_draw_update(CardgameGame *game, CardgameBoard *board, s32 side) {
         }
         break;
     case 4:
-        if (board->cards[game->effect_vars[0]].state == 1) {
-            game->effect_vars[0]++;
-            if (game->effect_vars[0] < game->players[side].hand_count) {
-                game->effect_step = 2;
-            } else if (game->target_rows != 0) {
+        if (board->cards[game->effect.vars[0]].state == 1) {
+            game->effect.vars[0]++;
+            if (game->effect.vars[0] < game->players[side].hand_count) {
+                game->effect.step = 2;
+            } else if (game->effect.target_rows != 0) {
                 board->open_dialog(board, 0x35, 0, 0, side == 0 ? 2 : 0);
-                game->effect_step = 5;
+                game->effect.step = 5;
             } else {
-                game->effect_time = 45;
-                game->effect_step = 8;
+                game->effect.time = 45;
+                game->effect.step = 8;
             }
         }
         break;
     case 5:
         if (board->dialog.state == 2) {
-            game->effect_step = 6;
+            game->effect.step = 6;
         }
         break;
     case 6:
         if (PAD_PRESSED(13) || PAD_PRESSED(14)) {
-            game->effect_step = 7;
+            game->effect.step = 7;
             board->close_dialog(board);
         }
         break;
     case 7:
         if (board->dialog.state == 0) {
-            game->effect_time = 45;
-            game->effect_step = 8;
+            game->effect.time = 45;
+            game->effect.step = 8;
         }
         break;
     case 8:
@@ -3904,9 +3904,9 @@ s32 cardgame_draw_update(CardgameGame *game, CardgameBoard *board, s32 side) {
         board->set_panel_value(board, 1, 5, game->players[1].deck_count);
         board->set_panel_value(board, 1, 6, game->players[1].hand_count);
         board->set_panel_value(board, 1, 7, game->players[1].discard_count);
-        game->effect_time -= gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time <= 0) {
-            game->effect_step = 9;
+        game->effect.time -= gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time <= 0) {
+            game->effect.step = 9;
             board->close_side_panel(board, side);
             game->display.request = game->display.reopen;
         }
@@ -3919,7 +3919,7 @@ s32 cardgame_draw_update(CardgameGame *game, CardgameBoard *board, s32 side) {
             found = 1;
         }
         if (found && game->display.state == 0) {
-            game->effect_step = 10;
+            game->effect.step = 10;
         }
         break;
     case 10:
@@ -3930,8 +3930,8 @@ s32 cardgame_draw_update(CardgameGame *game, CardgameBoard *board, s32 side) {
 }
 
 void cardgame_remove_marked_start(CardgameGame *game, CardgameBoard *board) {
-    game->effect_vars[0] = 0;
-    game->effect_step = 1;
+    game->effect.vars[0] = 0;
+    game->effect.step = 1;
 }
 
 s32 cardgame_remove_marked_update(CardgameGame *game, CardgameBoard *board, s32 mode) {
@@ -3939,34 +3939,34 @@ s32 cardgame_remove_marked_update(CardgameGame *game, CardgameBoard *board, s32 
     s32 i;
     s32 found;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
-        for (i = game->effect_vars[0]; i < 12; i++) {
-            if (game->marked[i] != 0) {
-                game->effect_step = 2;
-                game->effect_time = 0;
-                game->effect_vars[0] = i;
-                game->effect_vars[1] = i >= 6;
-                game->effect_vars[2] = i;
+        for (i = game->effect.vars[0]; i < 12; i++) {
+            if (game->effect.marked[i] != 0) {
+                game->effect.step = 2;
+                game->effect.time = 0;
+                game->effect.vars[0] = i;
+                game->effect.vars[1] = i >= 6;
+                game->effect.vars[2] = i;
                 if (i >= 6) {
-                    game->effect_vars[2] = i - 6;
+                    game->effect.vars[2] = i - 6;
                 }
                 break;
             }
         }
         if (i >= 12) {
-            game->effect_step = 3;
+            game->effect.step = 3;
         }
         break;
     case 2:
         if (mode == 0) {
-            found = cardgame_slot_discard(game, board, game->effect_vars[1], game->effect_vars[2]);
+            found = cardgame_slot_discard(game, board, game->effect.vars[1], game->effect.vars[2]);
         } else {
-            found = cardgame_slot_return(game, board, game->effect_vars[1], game->effect_vars[2]);
+            found = cardgame_slot_return(game, board, game->effect.vars[1], game->effect.vars[2]);
         }
         if (found != 0) {
-            game->effect_step = 1;
-            game->effect_vars[0]++;
+            game->effect.step = 1;
+            game->effect.vars[0]++;
         }
         break;
     case 3:
@@ -4060,7 +4060,7 @@ void cardgame_summon_start(CardgameGame *game, CardgameBoard *board, s32 side, s
     board->cards[k].hp = slots->slots[n].hp;
     board->cards[k].scale_x = 0;
     cardgame_set_card_turn_marks(game, board, side, k);
-    game->effect_step = 1;
+    game->effect.step = 1;
     board->zoom_card(board, k, 20, 0x1000, 0x1000);
 }
 
@@ -4096,7 +4096,7 @@ void cardgame_summon_from_hand_start(CardgameGame *game, CardgameBoard *board, s
     board->cards[k].hp = slots->slots[n].hp;
     board->cards[k].scale_x = 0;
     cardgame_set_card_turn_marks(game, board, side, k);
-    game->effect_step = 1;
+    game->effect.step = 1;
     board->set_panel_value(board, side, 6, player->hand_count);
     board->zoom_card(board, k, 20, 0x1000, 0x1000);
 }
@@ -4121,23 +4121,23 @@ s32 cardgame_summon_update(CardgameGame *game, CardgameBoard *board, s32 side) {
     } else {
         y = cardgame_slot_origins[main_screen_pos][1].y;
     }
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         if (board->cards[k].state == 1) {
             board->flash_card(board, k);
-            game->effect_step = 2;
+            game->effect.step = 2;
         }
         break;
     case 2:
         if (board->cards[k].state == 1) {
             board->move_card(board, k, 20, x, y);
             board->cards[k].zooming = 1;
-            game->effect_step = 3;
+            game->effect.step = 3;
         }
         break;
     case 3:
         if (board->cards[k].state == 1) {
-            game->effect_step = 4;
+            game->effect.step = 4;
             board->cards[k].zooming = 0;
             slots->count++;
         }
@@ -4175,7 +4175,7 @@ void cardgame_copy_slot_start(CardgameGame *game, CardgameBoard *board, s32 side
             }
             src = &game->slots[1].slots[i - 6];
         }
-        if (game->marked[i] != 0) {
+        if (game->effect.marked[i] != 0) {
             found = i;
             break;
         }
@@ -4191,9 +4191,9 @@ void cardgame_copy_slot_start(CardgameGame *game, CardgameBoard *board, s32 side
             board->cards[k].turn_marks[j] = 1;
         }
     }
-    game->effect_step = 1;
+    game->effect.step = 1;
     board->zoom_card(board, found, 5, 0, 0x1000);
-    game->effect_time = 7;
+    game->effect.time = 7;
 }
 
 s32 cardgame_copy_slot_update(CardgameGame *game, CardgameBoard *board, s32 side) {
@@ -4216,30 +4216,30 @@ s32 cardgame_copy_slot_update(CardgameGame *game, CardgameBoard *board, s32 side
     } else {
         y = cardgame_slot_origins[main_screen_pos][1].y;
     }
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
-        game->effect_time -= gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time <= 0) {
+        game->effect.time -= gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time <= 0) {
             board->zoom_card(board, k, 5, 0x1000, 0x1000);
-            game->effect_step = 2;
+            game->effect.step = 2;
         }
         break;
     case 2:
         if (board->cards[k].state == 1) {
             board->flash_card(board, k);
-            game->effect_step = 3;
+            game->effect.step = 3;
         }
         break;
     case 3:
         if (board->cards[k].state == 1) {
             board->move_card(board, k, 20, x, y);
             board->cards[k].zooming = 1;
-            game->effect_step = 4;
+            game->effect.step = 4;
         }
         break;
     case 4:
         if (board->cards[k].state == 1) {
-            game->effect_step = 5;
+            game->effect.step = 5;
             board->cards[k].zooming = 0;
             slots->count++;
         }
@@ -4258,7 +4258,7 @@ void cardgame_play_start(CardgameGame *game, CardgameBoard *board, s32 mode) {
     if (mode == 0 || board->panels[0].state == 0) {
         if (board->panels[0].state == 0) {
             board->reset_panels(board);
-            game->choice = 0;
+            game->effect.choice = 0;
             board->place_card(board, 15, 0xE500, 0x6100);
             board->set_card(board, 15, game->turns[game->turn].card);
             board->cards[15].scale_x = 0;
@@ -4268,24 +4268,24 @@ void cardgame_play_start(CardgameGame *game, CardgameBoard *board, s32 mode) {
             game->display.dimmed[15] = 0;
             if (mode == 0) {
                 for (j = 0; j < 15; j++) {
-                    game->marked[j] = 0;
+                    game->effect.marked[j] = 0;
                 }
             }
             game->display.request = 1;
-            game->effect_step = 1;
+            game->effect.step = 1;
         } else {
             board->move_card(board, 15, 10, cardgame_turn_card_pos[game->turn].x, cardgame_turn_card_pos[game->turn].y);
-            game->effect_step = 5;
-            game->effect_time = 0;
+            game->effect.step = 5;
+            game->effect.time = 0;
         }
     } else {
         board->place_card(board, 15, 0xE500, 0x6100);
         board->set_card(board, 15, game->turns[game->turn].card);
         board->cards[15].scale_x = 0;
         board->zoom_card(board, 15, 8, 0x1000, 0x1000);
-        game->effect_step = 2;
-        game->effect_time = 0;
-        game->effect_vars[0] = 0;
+        game->effect.step = 2;
+        game->effect.time = 0;
+        game->effect.vars[0] = 0;
     }
     board->clear_lamps(board);
     for (i = 0; i < 15; i++) {
@@ -4300,24 +4300,24 @@ s32 cardgame_play_update(CardgameGame *game, CardgameBoard *board) {
     s32 j;
     s32 k;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 2:
         board->popups[1].show_value = 0;
         board->popups[1].value = 0;
         board->popups[2].value = 0;
         board->popups[3].value = 0;
         board->popups[4].value = 0;
-        game->effect_vars[0] = cardgame_info_open_windows(game, board, 2, 0, game->effect_time, game->effect_vars[0]);
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time >= 21) {
-            game->effect_time = 0;
-            game->effect_vars[0] = 0;
-            game->effect_step = 3;
+        game->effect.vars[0] = cardgame_info_open_windows(game, board, 2, 0, game->effect.time, game->effect.vars[0]);
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time >= 21) {
+            game->effect.time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.step = 3;
         }
         break;
     case 3:
         if (PAD_PRESSED(13) || PAD_PRESSED(14)) {
-            game->effect_step = 4;
+            game->effect.step = 4;
         }
         id = game->card_ids[game->turns[game->turn].card] + 1;
         board->popups[4].card_stats[2] = 0;
@@ -4330,58 +4330,58 @@ s32 cardgame_play_update(CardgameGame *game, CardgameBoard *board) {
         board->close_popup(board, 1);
         board->close_popup(board, 2);
         board->close_popup(board, 3);
-        game->effect_step = 5;
-        game->effect_time = 0;
-        game->effect_vars[0] = 0;
+        game->effect.step = 5;
+        game->effect.time = 0;
+        game->effect.vars[0] = 0;
         break;
     case 1:
         if (board->panels[0].state == 2 && game->display.state == 0) {
             board->move_card(board, 15, 10, cardgame_turn_card_pos[game->turn].x, cardgame_turn_card_pos[game->turn].y);
-            game->effect_step = 5;
-            game->effect_time = 0;
+            game->effect.step = 5;
+            game->effect.time = 0;
         }
         break;
     case 5:
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time >= 12) {
-            game->effect_time = 0;
-            game->effect_step = 6;
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time >= 12) {
+            game->effect.time = 0;
+            game->effect.step = 6;
             board->flash_card(board, 15);
             for (i = 0; i < 15; i++) {
-                if (game->marked[i] != 0) {
+                if (game->effect.marked[i] != 0) {
                     board->flash_card(board, i);
                 }
             }
         }
         break;
     case 6:
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time >= 21) {
-            game->effect_step = 7;
-            game->effect_time = 0;
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time >= 21) {
+            game->effect.step = 7;
+            game->effect.time = 0;
             board->zoom_card(board, 15, 5, 0, 0x1000);
             for (j = 0; j < 15; j++) {
-                if (game->marked[j] != 0) {
+                if (game->effect.marked[j] != 0) {
                     board->cards[j].turn_marks[game->turn] = 1;
                 }
             }
         }
         break;
     case 7:
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time >= 7) {
-            game->effect_time = 0;
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time >= 7) {
+            game->effect.time = 0;
             board->cards[15].turn_badge = game->turn + 1;
             board->zoom_card(board, 15, 8, 0x1000, 0x1000);
-            game->effect_step = 8;
+            game->effect.step = 8;
             board->open_turn_mark(board, game->turn, game->side);
         }
         break;
     case 8:
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time >= 11) {
-            game->effect_time = 0;
-            game->effect_step = 9;
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time >= 11) {
+            game->effect.time = 0;
+            game->effect.step = 9;
             board->cards[game->turn + 12] = board->cards[15];
             board->remove_card(board, 15);
             for (k = 0; k < 12; k++) {
@@ -4403,8 +4403,8 @@ void cardgame_deal_start(CardgameGame *game, CardgameBoard *board) {
     board->set_panel_value(board, 1, 6, game->players[1].hand_count);
     board->set_panel_value(board, 0, 5, game->players[0].deck_count);
     board->set_panel_value(board, 1, 5, game->players[1].deck_count);
-    game->choice = 0;
-    game->next_step = 1;
+    game->effect.choice = 0;
+    game->effect.next_step = 1;
 }
 
 void cardgame_deal_cards(CardgameGame *game, CardgameBoard *board) {
@@ -4413,11 +4413,11 @@ void cardgame_deal_cards(CardgameGame *game, CardgameBoard *board) {
     s32 i;
     s32 j;
 
-    game->effect_time = 0;
-    game->effect_vars[0] = 0;
-    game->effect_vars[3] = 0;
-    game->effect_vars[1] = game->players[0].deck_count;
-    game->effect_vars[2] = game->players[1].deck_count;
+    game->effect.time = 0;
+    game->effect.vars[0] = 0;
+    game->effect.vars[3] = 0;
+    game->effect.vars[1] = game->players[0].deck_count;
+    game->effect.vars[2] = game->players[1].deck_count;
     for (side = 0; side < 2; side++) {
         for (k = 0; k < 6; k++) {
             game->players[side].hand[k] = game->players[side].deck[game->players[side].deck_pos];
@@ -4446,8 +4446,8 @@ void cardgame_deal_cards(CardgameGame *game, CardgameBoard *board) {
 s32 cardgame_deal_update(CardgameGame *game, CardgameBoard *board) {
     s32 done = 0;
 
-    if (game->next_step != 0) {
-        switch (game->next_step) {
+    if (game->effect.next_step != 0) {
+        switch (game->effect.next_step) {
         case 1:
             board->open_panels(board);
             break;
@@ -4456,31 +4456,31 @@ s32 cardgame_deal_update(CardgameGame *game, CardgameBoard *board) {
             break;
         case 3:
         case 4:
-            game->effect_time = 0;
-            game->effect_vars[0] = 0;
-            game->effect_vars[3] = 0;
+            game->effect.time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.vars[3] = 0;
             break;
         case 5:
-            game->effect_time = 0;
-            game->effect_vars[0] = 0;
-            game->effect_vars[3] = 0;
+            game->effect.time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.vars[3] = 0;
             board->close_panels(board);
             break;
         case 6:
             board->set_lamps(board, 0x1000);
             board->open_dialog(board, 0x21, 0, 1, 1);
-            game->choice = 1;
+            game->effect.choice = 1;
             break;
         case 7:
             sound_module.play(0x6004001E);
             board->set_lamps(board, 0x2000);
             board->open_dialog(board, 0x22, 0, 1, 1);
-            game->choice = 2;
+            game->effect.choice = 2;
             break;
         case 9:
-            game->effect_time = 0;
-            game->effect_vars[0] = 0;
-            game->effect_vars[3] = 0;
+            game->effect.time = 0;
+            game->effect.vars[0] = 0;
+            game->effect.vars[3] = 0;
             board->close_panels(board);
             board->close_dialog(board);
             break;
@@ -4490,121 +4490,121 @@ s32 cardgame_deal_update(CardgameGame *game, CardgameBoard *board) {
         case 12:
             break;
         }
-        game->effect_step = game->next_step;
-        game->next_step = 0;
+        game->effect.step = game->effect.next_step;
+        game->effect.next_step = 0;
     }
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         if (board->panels[0].state == 2) {
             if (game->players[0].deck_count < 6) {
-                game->next_step = 6;
+                game->effect.next_step = 6;
             } else if (game->players[1].deck_count < 6) {
-                game->next_step = 7;
+                game->effect.next_step = 7;
             } else {
-                game->next_step = 2;
+                game->effect.next_step = 2;
             }
         }
         break;
     case 2:
-        if (game->effect_vars[3] >= 7) {
-            if (game->effect_vars[0] < 6) {
-                board->move_card(board, game->effect_vars[0], 20, cardgame_slot_origins[main_screen_pos][0].x + game->effect_vars[0] * 0x2900,
+        if (game->effect.vars[3] >= 7) {
+            if (game->effect.vars[0] < 6) {
+                board->move_card(board, game->effect.vars[0], 20, cardgame_slot_origins[main_screen_pos][0].x + game->effect.vars[0] * 0x2900,
                                cardgame_slot_origins[main_screen_pos][0].y);
-                board->set_card_scale(board, game->effect_vars[0], 0x1000, 0x1000);
-                board->move_card(board, game->effect_vars[0] + 6, 20,
-                               cardgame_slot_origins[main_screen_pos][1].x + game->effect_vars[0] * 0x2900,
+                board->set_card_scale(board, game->effect.vars[0], 0x1000, 0x1000);
+                board->move_card(board, game->effect.vars[0] + 6, 20,
+                               cardgame_slot_origins[main_screen_pos][1].x + game->effect.vars[0] * 0x2900,
                                cardgame_slot_origins[main_screen_pos][1].y);
-                board->set_card_scale(board, game->effect_vars[0] + 6, 0x1000, 0x1000);
-                game->effect_vars[0]++;
-                game->effect_vars[1]--;
-                game->effect_vars[2]--;
-                board->set_panel_value(board, 0, 6, game->effect_vars[0]);
-                board->set_panel_value(board, 1, 6, game->effect_vars[0]);
-                board->set_panel_value(board, 0, 5, game->effect_vars[1]);
-                board->set_panel_value(board, 1, 5, game->effect_vars[2]);
+                board->set_card_scale(board, game->effect.vars[0] + 6, 0x1000, 0x1000);
+                game->effect.vars[0]++;
+                game->effect.vars[1]--;
+                game->effect.vars[2]--;
+                board->set_panel_value(board, 0, 6, game->effect.vars[0]);
+                board->set_panel_value(board, 1, 6, game->effect.vars[0]);
+                board->set_panel_value(board, 0, 5, game->effect.vars[1]);
+                board->set_panel_value(board, 1, 5, game->effect.vars[2]);
             }
-            game->effect_vars[3] -= 7;
+            game->effect.vars[3] -= 7;
         }
-        if (game->effect_time >= 61) {
-            game->next_step = 3;
+        if (game->effect.time >= 61) {
+            game->effect.next_step = 3;
         }
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        game->effect_vars[3] += gfx_module.funcs.get_frame_ticks();
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        game->effect.vars[3] += gfx_module.funcs.get_frame_ticks();
         break;
     case 3:
-        if (game->effect_vars[3] >= 7) {
-            if (game->effect_vars[0] < 6) {
-                board->flip_card(board, game->effect_vars[0]);
-                game->effect_vars[0]++;
+        if (game->effect.vars[3] >= 7) {
+            if (game->effect.vars[0] < 6) {
+                board->flip_card(board, game->effect.vars[0]);
+                game->effect.vars[0]++;
             }
-            game->effect_vars[3] -= 7;
+            game->effect.vars[3] -= 7;
         }
-        if (game->effect_time >= 66) {
-            game->next_step = 4;
+        if (game->effect.time >= 66) {
+            game->effect.next_step = 4;
         }
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        game->effect_vars[3] += gfx_module.funcs.get_frame_ticks();
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        game->effect.vars[3] += gfx_module.funcs.get_frame_ticks();
         break;
     case 4:
-        if (game->effect_vars[3] >= 7) {
-            if (game->effect_vars[0] < 6) {
-                if (cardgame_player_add_card_point(game, board, 0, game->players[0].hand[game->effect_vars[0]]) != 0) {
-                    board->flash_card(board, game->effect_vars[0]);
+        if (game->effect.vars[3] >= 7) {
+            if (game->effect.vars[0] < 6) {
+                if (cardgame_player_add_card_point(game, board, 0, game->players[0].hand[game->effect.vars[0]]) != 0) {
+                    board->flash_card(board, game->effect.vars[0]);
                 }
-                if (cardgame_player_add_card_point(game, board, 1, game->players[1].hand[game->effect_vars[0]]) != 0) {
-                    board->flash_card(board, game->effect_vars[0] + 6);
+                if (cardgame_player_add_card_point(game, board, 1, game->players[1].hand[game->effect.vars[0]]) != 0) {
+                    board->flash_card(board, game->effect.vars[0] + 6);
                 }
-                game->effect_vars[0]++;
+                game->effect.vars[0]++;
             }
-            game->effect_vars[3] -= 7;
+            game->effect.vars[3] -= 7;
         }
-        if (game->effect_time >= 81) {
-            game->next_step = 5;
+        if (game->effect.time >= 81) {
+            game->effect.next_step = 5;
         }
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        game->effect_vars[3] += gfx_module.funcs.get_frame_ticks();
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        game->effect.vars[3] += gfx_module.funcs.get_frame_ticks();
         break;
     case 5:
-        if (game->effect_vars[3] >= 3) {
-            if (game->effect_vars[0] < 6) {
-                board->zoom_card(board, game->effect_vars[0], 5, 0, 0x1000);
-                board->zoom_card(board, game->effect_vars[0] + 6, 5, 0, 0x1000);
-                game->effect_vars[0]++;
+        if (game->effect.vars[3] >= 3) {
+            if (game->effect.vars[0] < 6) {
+                board->zoom_card(board, game->effect.vars[0], 5, 0, 0x1000);
+                board->zoom_card(board, game->effect.vars[0] + 6, 5, 0, 0x1000);
+                game->effect.vars[0]++;
             }
-            game->effect_vars[3] -= 3;
+            game->effect.vars[3] -= 3;
         }
-        if (game->effect_time >= 41) {
-            game->next_step = 10;
+        if (game->effect.time >= 41) {
+            game->effect.next_step = 10;
         }
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        game->effect_vars[3] += gfx_module.funcs.get_frame_ticks();
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        game->effect.vars[3] += gfx_module.funcs.get_frame_ticks();
         break;
     case 6:
     case 7:
         if (board->dialog.state == 2) {
-            game->next_step = 8;
+            game->effect.next_step = 8;
         }
         break;
     case 8:
         if (PAD_PRESSED(13) || PAD_PRESSED(14)) {
-            game->next_step = 9;
+            game->effect.next_step = 9;
         }
         break;
     case 9:
         if (board->dialog.state == 0 && board->panels[0].state == 0) {
-            game->next_step = 10;
+            game->effect.next_step = 10;
         }
         break;
     case 10:
-        if (game->choice == 2) {
-            game->next_step = 11;
+        if (game->effect.choice == 2) {
+            game->effect.next_step = 11;
         } else {
             done = 1;
         }
         break;
     case 11:
         if (board->dialog.state == 2) {
-            game->next_step = 12;
+            game->effect.next_step = 12;
         }
         break;
     case 12:
@@ -4617,23 +4617,23 @@ s32 cardgame_deal_update(CardgameGame *game, CardgameBoard *board) {
 }
 
 void cardgame_attack_start(CardgameGame *game, CardgameBoard *board, s32 side) {
-    game->effect_time = 0;
-    game->effect_vars[0] = 0;
-    game->effect_vars[1] = game->players[side].attack;
-    game->effect_vars[2] = game->players[side ^ 1].hp << 8;
+    game->effect.time = 0;
+    game->effect.vars[0] = 0;
+    game->effect.vars[1] = game->players[side].attack;
+    game->effect.vars[2] = game->players[side ^ 1].hp << 8;
     game->players[side ^ 1].hp -= game->players[side].attack;
     if (game->players[side ^ 1].hp < 0) {
         game->players[side ^ 1].hp = 0;
     }
     if (game->slots[side].count != 0) {
-        game->effect_vars[3] = (game->effect_vars[2] - (game->players[side ^ 1].hp << 8)) / (game->slots[side].count * 28 - 16);
-        if (game->effect_vars[3] == 0) {
-            game->effect_vars[3] = 1;
+        game->effect.vars[3] = (game->effect.vars[2] - (game->players[side ^ 1].hp << 8)) / (game->slots[side].count * 28 - 16);
+        if (game->effect.vars[3] == 0) {
+            game->effect.vars[3] = 1;
         }
     } else {
-        game->effect_vars[3] = 1;
+        game->effect.vars[3] = 1;
     }
-    game->effect_step = 1;
+    game->effect.step = 1;
 }
 
 s32 cardgame_attack_update(CardgameGame *game, CardgameBoard *board, s32 side) {
@@ -4644,10 +4644,10 @@ s32 cardgame_attack_update(CardgameGame *game, CardgameBoard *board, s32 side) {
     s32 v;
     s32 i;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
-        if (game->effect_time % 27 == 0 && game->effect_vars[0] < game->slots[side].count) {
-            k = game->effect_vars[0];
+        if (game->effect.time % 27 == 0 && game->effect.vars[0] < game->slots[side].count) {
+            k = game->effect.vars[0];
             if (side != 0) {
                 k += 6;
             }
@@ -4657,36 +4657,36 @@ s32 cardgame_attack_update(CardgameGame *game, CardgameBoard *board, s32 side) {
             } else {
                 board->lunge_card(board, k, 6, x, 0x6100);
             }
-            game->effect_vars[0]++;
+            game->effect.vars[0]++;
             board->cards[k].zooming = 1;
         }
-        if (game->effect_time >= 16) {
+        if (game->effect.time >= 16) {
             v = 0;
-            if (game->effect_time < game->slots[side].count * 28) {
-                v = game->effect_vars[1] - (game->effect_vars[1] / (game->slots[side].count * 56 + 1) + 1) * game->effect_time;
+            if (game->effect.time < game->slots[side].count * 28) {
+                v = game->effect.vars[1] - (game->effect.vars[1] / (game->slots[side].count * 56 + 1) + 1) * game->effect.time;
                 if (v < 0) {
                     v = 0;
                 }
             }
             board->set_panel_value(board, side, 8, v);
-            if (game->effect_time < game->slots[side].count * 28) {
-                game->effect_vars[2] -= game->effect_vars[3];
-                if (game->effect_vars[2] < game->players[other].hp << 8) {
-                    game->effect_vars[2] = game->players[other].hp << 8;
+            if (game->effect.time < game->slots[side].count * 28) {
+                game->effect.vars[2] -= game->effect.vars[3];
+                if (game->effect.vars[2] < game->players[other].hp << 8) {
+                    game->effect.vars[2] = game->players[other].hp << 8;
                 }
             } else {
-                game->effect_vars[2] = game->players[other].hp << 8;
+                game->effect.vars[2] = game->players[other].hp << 8;
             }
-            board->set_panel_value(board, other, 9, game->effect_vars[2] >> 8);
+            board->set_panel_value(board, other, 9, game->effect.vars[2] >> 8);
         }
         if (board->card_flags & 2) {
             for (i = 0; i < game->slots[other].count; i++) {
                 board->shake_card(board, side == 0 ? i + 6 : i);
             }
         }
-        game->effect_time++;
-        if (game->slots[side].count * 28 + 25 < game->effect_time) {
-            game->effect_step = 2;
+        game->effect.time++;
+        if (game->slots[side].count * 28 + 25 < game->effect.time) {
+            game->effect.step = 2;
         }
         break;
     case 2:
@@ -4697,20 +4697,20 @@ s32 cardgame_attack_update(CardgameGame *game, CardgameBoard *board, s32 side) {
 }
 
 void cardgame_discard_slots_start(CardgameGame *game, CardgameBoard *board, s32 side) {
-    game->effect_time = 0;
-    game->effect_vars[0] = game->slots[side].count - 1;
-    game->effect_step = 1;
+    game->effect.time = 0;
+    game->effect.vars[0] = game->slots[side].count - 1;
+    game->effect.step = 1;
 }
 
 s32 cardgame_discard_slots_update(CardgameGame *game, CardgameBoard *board, s32 side) {
     s32 done = 0;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
-        if (cardgame_slot_discard(game, board, side, game->effect_vars[0]) != 0) {
-            game->effect_time = 0;
-            if (--game->effect_vars[0] < 0) {
-                game->effect_step = 2;
+        if (cardgame_slot_discard(game, board, side, game->effect.vars[0]) != 0) {
+            game->effect.time = 0;
+            if (--game->effect.vars[0] < 0) {
+                game->effect.step = 2;
                 game->slots[side].count = 0;
             }
         }
@@ -4746,7 +4746,7 @@ void cardgame_swap_totals_start(CardgameGame *game, CardgameBoard *board) {
     board->set_card(board, 17, game->swap_card - 1);
     board->cards[17].scale_x = 0;
     board->zoom_card(board, 17, 10, 0x1000, 0x1000);
-    game->effect_step = 1;
+    game->effect.step = 1;
 }
 
 s32 cardgame_swap_totals_update(CardgameGame *game, CardgameBoard *board) {
@@ -4754,26 +4754,26 @@ s32 cardgame_swap_totals_update(CardgameGame *game, CardgameBoard *board) {
     s32 t0;
     s32 t2;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         if (board->cards[17].state == 1) {
             board->flash_card(board, 17);
-            game->effect_step = 2;
+            game->effect.step = 2;
         }
         break;
     case 2:
         if (board->cards[17].state == 1) {
-            game->effect_step = 3;
-            game->effect_time = 0;
+            game->effect.step = 3;
+            game->effect.time = 0;
         }
         break;
     case 3:
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time < 15) {
-            board->set_panel_value(board, 0, 8, cardgame_lerp(game->players[1].attack, game->players[0].attack, 15, game->effect_time));
-            board->set_panel_value(board, 0, 9, cardgame_lerp(game->players[1].hp, game->players[0].hp, 15, game->effect_time));
-            board->set_panel_value(board, 1, 8, cardgame_lerp(game->players[0].attack, game->players[1].attack, 15, game->effect_time));
-            board->set_panel_value(board, 1, 9, cardgame_lerp(game->players[0].hp, game->players[1].hp, 15, game->effect_time));
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time < 15) {
+            board->set_panel_value(board, 0, 8, cardgame_lerp(game->players[1].attack, game->players[0].attack, 15, game->effect.time));
+            board->set_panel_value(board, 0, 9, cardgame_lerp(game->players[1].hp, game->players[0].hp, 15, game->effect.time));
+            board->set_panel_value(board, 1, 8, cardgame_lerp(game->players[0].attack, game->players[1].attack, 15, game->effect.time));
+            board->set_panel_value(board, 1, 9, cardgame_lerp(game->players[0].hp, game->players[1].hp, 15, game->effect.time));
         } else {
             t0 = game->players[0].attack;
             t2 = game->players[0].hp;
@@ -4786,29 +4786,29 @@ s32 cardgame_swap_totals_update(CardgameGame *game, CardgameBoard *board) {
             board->set_panel_value(board, 1, 8, game->players[1].attack);
             board->set_panel_value(board, 1, 9, game->players[1].hp);
             board->zoom_card(board, 17, 10, 0, 0x1000);
-            game->effect_step = 4;
+            game->effect.step = 4;
         }
         break;
     case 4:
         if (board->cards[17].state == 1) {
-            game->effect_step = 5;
+            game->effect.step = 5;
             board->open_dialog(board, 0x2D, 0, 0, 1);
         }
         break;
     case 5:
         if (board->dialog.state == 2) {
-            game->effect_step = 6;
+            game->effect.step = 6;
         }
         break;
     case 6:
         if (PAD_PRESSED(13) || PAD_PRESSED(14)) {
-            game->effect_step = 7;
+            game->effect.step = 7;
             board->close_dialog(board);
         }
         break;
     case 7:
         if (board->dialog.state == 0) {
-            game->effect_step = 8;
+            game->effect.step = 8;
         }
         break;
     case 8:
@@ -4826,60 +4826,60 @@ void cardgame_combo_start(CardgameGame *game, CardgameBoard *board, s32 side) {
     s32 j;
     s32 k;
 
-    game->effect_vars[1] = 0;
-    game->effect_vars[2] = 0;
+    game->effect.vars[1] = 0;
+    game->effect.vars[2] = 0;
     n = 0;
     for (i = 0; i < game->slots[side].count; i++) {
-        if (game->selectable[i] != 0) {
-            game->effect_vars[1] += game->slots[side].slots[i].attack;
-            if (game->effect_vars[1] >= 100) {
-                game->effect_vars[1] = 99;
+        if (game->effect.selectable[i] != 0) {
+            game->effect.vars[1] += game->slots[side].slots[i].attack;
+            if (game->effect.vars[1] >= 100) {
+                game->effect.vars[1] = 99;
             }
-            game->effect_vars[2] += game->slots[side].slots[i].hp;
-            if (game->effect_vars[2] >= 100) {
-                game->effect_vars[2] = 99;
+            game->effect.vars[2] += game->slots[side].slots[i].hp;
+            if (game->effect.vars[2] >= 100) {
+                game->effect.vars[2] = 99;
             }
             n++;
         }
     }
     if (n >= 4) {
-        game->effect_vars[1] += 20;
-        if (game->effect_vars[1] >= 100) {
-            game->effect_vars[1] = 99;
+        game->effect.vars[1] += 20;
+        if (game->effect.vars[1] >= 100) {
+            game->effect.vars[1] = 99;
         }
-        game->effect_vars[2] += 20;
-        if (game->effect_vars[2] >= 100) {
-            game->effect_vars[2] = 99;
+        game->effect.vars[2] += 20;
+        if (game->effect.vars[2] >= 100) {
+            game->effect.vars[2] = 99;
         }
     }
     board->place_card(board, 17, 0x8300, 0x6100);
     card = 0;
     for (j = 89; j < game->card_count; j++) {
-        if (game->card_ids[j] == game->effect_vars[4] - 1) {
+        if (game->card_ids[j] == game->effect.vars[4] - 1) {
             card = j;
             break;
         }
     }
     if (card == 0) {
         card = 87;
-        game->effect_vars[4] = 315;
+        game->effect.vars[4] = 315;
     }
     board->set_card(board, 17, card);
     board->cards[17].color = 5;
-    board->cards[17].attack = game->effect_vars[1];
-    board->cards[17].hp = game->effect_vars[2];
+    board->cards[17].attack = game->effect.vars[1];
+    board->cards[17].hp = game->effect.vars[2];
     base = 0;
     if (side != 0) {
         base = 6;
     }
     for (k = 0; k < game->slots[side].count; k++) {
-        if (game->selectable[k] != 0) {
+        if (game->effect.selectable[k] != 0) {
             board->cards[base + k].highlight |= 4;
         }
     }
     board->cards[17].scale_x = 0;
-    game->effect_time = 0;
-    game->effect_step = 1;
+    game->effect.time = 0;
+    game->effect.step = 1;
 }
 
 s32 cardgame_combo_update(CardgameGame *game, CardgameBoard *board, s32 side) {
@@ -4891,34 +4891,34 @@ s32 cardgame_combo_update(CardgameGame *game, CardgameBoard *board, s32 side) {
     s32 j;
     s32 v;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time >= 21) {
-            game->effect_step = 2;
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time >= 21) {
+            game->effect.step = 2;
             base = 0;
             if (side != 0) {
                 base = 6;
             }
             for (i = 0; i < game->slots[side].count; i++) {
-                if (game->selectable[i] != 0) {
+                if (game->effect.selectable[i] != 0) {
                     k = base + i;
                     board->flash_card(board, k);
-                    game->effect_vars[3] = k;
+                    game->effect.vars[3] = k;
                 }
             }
         }
         break;
     case 2:
-        if (board->cards[game->effect_vars[3]].state == 1) {
+        if (board->cards[game->effect.vars[3]].state == 1) {
             board->zoom_card(board, 17, 10, 0x1000, 0x1000);
             first = 0;
-            game->effect_step = 3;
+            game->effect.step = 3;
             if (side != 0) {
                 first = 6;
             }
             for (j = 0; j < game->slots[side].count; j++) {
-                if (game->selectable[j] != 0) {
+                if (game->effect.selectable[j] != 0) {
                     board->cards[first + j].highlight &= ~4;
                 }
             }
@@ -4926,55 +4926,55 @@ s32 cardgame_combo_update(CardgameGame *game, CardgameBoard *board, s32 side) {
         break;
     case 3:
         if (board->cards[17].state == 1) {
-            game->effect_step = 4;
-            board->open_popup(board, 2, 1, game->effect_vars[4], cardgame_popup_pos[main_screen_pos][side].x,
+            game->effect.step = 4;
+            board->open_popup(board, 2, 1, game->effect.vars[4], cardgame_popup_pos[main_screen_pos][side].x,
                            cardgame_popup_pos[main_screen_pos][side].y);
         }
         break;
     case 4:
         if (board->popups[2].state == 2) {
-            game->effect_step = 5;
-            game->effect_time = 90;
+            game->effect.step = 5;
+            game->effect.time = 90;
         }
         break;
     case 5:
-        game->effect_time -= gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time <= 0 || PAD_PRESSED(13) || PAD_PRESSED(14)) {
-            game->effect_step = 6;
+        game->effect.time -= gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time <= 0 || PAD_PRESSED(13) || PAD_PRESSED(14)) {
+            game->effect.step = 6;
             board->close_popup(board, 2);
         }
         break;
     case 6:
         if (board->popups[2].state == 0) {
             board->flash_card(board, 17);
-            game->effect_step = 7;
+            game->effect.step = 7;
         }
         break;
     case 7:
         if (board->cards[17].state == 1) {
-            game->effect_step = 8;
-            game->effect_time = 0;
+            game->effect.step = 8;
+            game->effect.time = 0;
         }
         break;
     case 8:
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time < 20) {
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time < 20) {
             v = game->players[side].attack;
-            board->set_panel_value(board, side, 8, cardgame_lerp(v + game->effect_vars[1], v, 20, game->effect_time));
+            board->set_panel_value(board, side, 8, cardgame_lerp(v + game->effect.vars[1], v, 20, game->effect.time));
             v = game->players[side].hp;
-            board->set_panel_value(board, side, 9, cardgame_lerp(v + game->effect_vars[2], v, 20, game->effect_time));
+            board->set_panel_value(board, side, 9, cardgame_lerp(v + game->effect.vars[2], v, 20, game->effect.time));
         } else {
-            game->players[side].attack += game->effect_vars[1];
-            game->players[side].hp += game->effect_vars[2];
+            game->players[side].attack += game->effect.vars[1];
+            game->players[side].hp += game->effect.vars[2];
             board->set_panel_value(board, side, 8, game->players[side].attack);
             board->set_panel_value(board, side, 9, game->players[side].hp);
             board->zoom_card(board, 17, 10, 0, 0x1000);
-            game->effect_step = 9;
+            game->effect.step = 9;
         }
         break;
     case 9:
         if (board->cards[17].state == 1) {
-            game->effect_step = 10;
+            game->effect.step = 10;
         }
         break;
     case 10:
@@ -4985,12 +4985,12 @@ s32 cardgame_combo_update(CardgameGame *game, CardgameBoard *board, s32 side) {
 }
 
 void cardgame_recount_totals_start(CardgameGame *game, CardgameBoard *board) {
-    game->effect_step = 1;
-    game->effect_time = 0;
-    game->effect_vars[0] = 0;
-    game->effect_vars[1] = 0;
-    game->effect_vars[2] = 0;
-    game->effect_vars[3] = 0;
+    game->effect.step = 1;
+    game->effect.time = 0;
+    game->effect.vars[0] = 0;
+    game->effect.vars[1] = 0;
+    game->effect.vars[2] = 0;
+    game->effect.vars[3] = 0;
 }
 
 s32 cardgame_recount_totals_update(CardgameGame *game, CardgameBoard *board) {
@@ -4998,46 +4998,46 @@ s32 cardgame_recount_totals_update(CardgameGame *game, CardgameBoard *board) {
     s32 i;
     s32 j;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         for (i = 0; i < game->slots[0].count; i++) {
-            game->effect_vars[0] += game->slots[0].slots[i].attack;
-            game->effect_vars[1] += game->slots[0].slots[i].hp;
+            game->effect.vars[0] += game->slots[0].slots[i].attack;
+            game->effect.vars[1] += game->slots[0].slots[i].hp;
         }
         for (j = 0; j < game->slots[1].count; j++) {
-            game->effect_vars[2] += game->slots[1].slots[j].attack;
-            game->effect_vars[3] += game->slots[1].slots[j].hp;
+            game->effect.vars[2] += game->slots[1].slots[j].attack;
+            game->effect.vars[3] += game->slots[1].slots[j].hp;
         }
-        if (game->players[0].attack != game->effect_vars[0] || game->players[0].hp != game->effect_vars[1] ||
-            game->players[1].attack != game->effect_vars[2] || game->players[1].hp != game->effect_vars[3]) {
-            game->effect_time = 0;
-            game->effect_step = 2;
+        if (game->players[0].attack != game->effect.vars[0] || game->players[0].hp != game->effect.vars[1] ||
+            game->players[1].attack != game->effect.vars[2] || game->players[1].hp != game->effect.vars[3]) {
+            game->effect.time = 0;
+            game->effect.step = 2;
         } else {
-            game->effect_step = 4;
+            game->effect.step = 4;
         }
         break;
     case 2:
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time < 15) {
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time < 15) {
             sound_module.play(0x800452C6);
-            board->set_panel_value(board, 0, 8, cardgame_lerp(game->effect_vars[0], game->players[0].attack, 15, game->effect_time));
-            board->set_panel_value(board, 0, 9, cardgame_lerp(game->effect_vars[1], game->players[0].hp, 15, game->effect_time));
-            board->set_panel_value(board, 1, 8, cardgame_lerp(game->effect_vars[2], game->players[1].attack, 15, game->effect_time));
-            board->set_panel_value(board, 1, 9, cardgame_lerp(game->effect_vars[3], game->players[1].hp, 15, game->effect_time));
+            board->set_panel_value(board, 0, 8, cardgame_lerp(game->effect.vars[0], game->players[0].attack, 15, game->effect.time));
+            board->set_panel_value(board, 0, 9, cardgame_lerp(game->effect.vars[1], game->players[0].hp, 15, game->effect.time));
+            board->set_panel_value(board, 1, 8, cardgame_lerp(game->effect.vars[2], game->players[1].attack, 15, game->effect.time));
+            board->set_panel_value(board, 1, 9, cardgame_lerp(game->effect.vars[3], game->players[1].hp, 15, game->effect.time));
         } else {
-            game->players[0].attack = game->effect_vars[0];
-            game->players[0].hp = game->effect_vars[1];
-            game->players[1].attack = game->effect_vars[2];
-            game->players[1].hp = game->effect_vars[3];
+            game->players[0].attack = game->effect.vars[0];
+            game->players[0].hp = game->effect.vars[1];
+            game->players[1].attack = game->effect.vars[2];
+            game->players[1].hp = game->effect.vars[3];
             board->set_panel_value(board, 0, 8, game->players[0].attack);
             board->set_panel_value(board, 0, 9, game->players[0].hp);
             board->set_panel_value(board, 1, 8, game->players[1].attack);
             board->set_panel_value(board, 1, 9, game->players[1].hp);
-            game->effect_step = 3;
+            game->effect.step = 3;
         }
         break;
     case 3:
-        game->effect_step = 4;
+        game->effect.step = 4;
         break;
     case 4:
         done = 1;
@@ -5047,13 +5047,13 @@ s32 cardgame_recount_totals_update(CardgameGame *game, CardgameBoard *board) {
 }
 
 void cardgame_clear_slots_start(CardgameGame *game, CardgameBoard *board) {
-    game->effect_step = 1;
-    game->effect_time = 0;
-    game->effect_vars[0] = 0;
-    game->effect_vars[1] = 0;
-    game->effect_vars[2] = 0;
-    game->effect_vars[3] = 0;
-    game->effect_vars[4] = 0;
+    game->effect.step = 1;
+    game->effect.time = 0;
+    game->effect.vars[0] = 0;
+    game->effect.vars[1] = 0;
+    game->effect.vars[2] = 0;
+    game->effect.vars[3] = 0;
+    game->effect.vars[4] = 0;
 }
 
 s32 cardgame_clear_slots_update(CardgameGame *game, CardgameBoard *board, s32 side) {
@@ -5061,81 +5061,81 @@ s32 cardgame_clear_slots_update(CardgameGame *game, CardgameBoard *board, s32 si
     s32 k;
     s32 more;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
-        if (game->effect_vars[4] >= 3) {
-            if (game->effect_vars[0] < game->slots[side].count) {
-                k = game->effect_vars[0];
+        if (game->effect.vars[4] >= 3) {
+            if (game->effect.vars[0] < game->slots[side].count) {
+                k = game->effect.vars[0];
                 if (side != 0) {
                     k += 6;
                 }
                 board->zoom_card(board, k, 4, 0, 0x1000);
-                cardgame_slot_to_discard(game, board, side, game->effect_vars[0]);
-                game->effect_vars[0]++;
+                cardgame_slot_to_discard(game, board, side, game->effect.vars[0]);
+                game->effect.vars[0]++;
             }
-            game->effect_vars[4] -= 3;
+            game->effect.vars[4] -= 3;
         }
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        game->effect_vars[4] += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_time >= 61) {
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        game->effect.vars[4] += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.time >= 61) {
             game->slots[side].count = 0;
-            game->effect_time = 0;
-            game->effect_step = 2;
-            game->effect_vars[4] = 0;
-            game->effect_vars[0] = game->players[0].hand_count;
-            game->effect_vars[1] = game->players[0].deck_count;
-            game->effect_vars[2] = game->players[1].hand_count;
-            game->effect_vars[3] = game->players[1].deck_count;
+            game->effect.time = 0;
+            game->effect.step = 2;
+            game->effect.vars[4] = 0;
+            game->effect.vars[0] = game->players[0].hand_count;
+            game->effect.vars[1] = game->players[0].deck_count;
+            game->effect.vars[2] = game->players[1].hand_count;
+            game->effect.vars[3] = game->players[1].deck_count;
         }
         break;
     case 2:
-        game->effect_time += gfx_module.funcs.get_frame_ticks();
-        game->effect_vars[4] += gfx_module.funcs.get_frame_ticks();
-        if (game->effect_vars[4] >= 3) {
+        game->effect.time += gfx_module.funcs.get_frame_ticks();
+        game->effect.vars[4] += gfx_module.funcs.get_frame_ticks();
+        if (game->effect.vars[4] >= 3) {
             more = 0;
-            if (game->effect_vars[0] > 0) {
+            if (game->effect.vars[0] > 0) {
                 more = 1;
-                game->effect_vars[0]--;
-                game->effect_vars[1]++;
+                game->effect.vars[0]--;
+                game->effect.vars[1]++;
             }
-            if (game->effect_vars[2] > 0) {
+            if (game->effect.vars[2] > 0) {
                 more = 1;
-                game->effect_vars[2]--;
-                game->effect_vars[3]++;
+                game->effect.vars[2]--;
+                game->effect.vars[3]++;
             }
             if (!more) {
-                game->effect_step = 4;
+                game->effect.step = 4;
                 board->open_popup(board, 5, 5, 0x14, 0, 0x6E);
             } else {
                 sound_module.play(0x800452C6);
             }
-            board->set_panel_value(board, 0, 6, game->effect_vars[0]);
-            board->set_panel_value(board, 0, 5, game->effect_vars[1]);
-            board->set_panel_value(board, 1, 6, game->effect_vars[2]);
-            board->set_panel_value(board, 1, 5, game->effect_vars[3]);
-            game->effect_vars[4] -= 3;
+            board->set_panel_value(board, 0, 6, game->effect.vars[0]);
+            board->set_panel_value(board, 0, 5, game->effect.vars[1]);
+            board->set_panel_value(board, 1, 6, game->effect.vars[2]);
+            board->set_panel_value(board, 1, 5, game->effect.vars[3]);
+            game->effect.vars[4] -= 3;
         }
         break;
     case 3:
         if (board->popups[5].state == 2) {
-            game->effect_step = 4;
+            game->effect.step = 4;
         }
         break;
     case 4:
         if (PAD_PRESSED(13) || PAD_PRESSED(14)) {
-            game->effect_step = 5;
+            game->effect.step = 5;
             board->close_popup(board, 5);
         }
         break;
     case 5:
         if (board->popups[5].state == 0) {
-            game->effect_step = 6;
+            game->effect.step = 6;
             board->close_panels(board);
         }
         break;
     case 6:
         if (board->panels[0].state == 0) {
-            game->effect_step = 7;
+            game->effect.step = 7;
         }
         break;
     case 7:
@@ -5146,30 +5146,30 @@ s32 cardgame_clear_slots_update(CardgameGame *game, CardgameBoard *board, s32 si
 }
 
 void cardgame_message_start(CardgameGame *game, CardgameBoard *board, s32 arg2) {
-    game->effect_time = 0;
+    game->effect.time = 0;
     board->open_dialog(board, arg2, 0, 0, 1);
-    game->effect_step = 1;
+    game->effect.step = 1;
 }
 
 s32 cardgame_message_update(CardgameGame *game, CardgameBoard *board) {
     s32 done = 0;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         if (board->dialog.state == 2) {
-            game->effect_step = 2;
+            game->effect.step = 2;
         }
         break;
     case 2:
         if (((pad_state.get_pressed(0) >> pad_state.get_button_map(0, 13)) & 1) ||
             ((pad_state.get_pressed(0) >> pad_state.get_button_map(0, 14)) & 1)) {
-            game->effect_step = 3;
+            game->effect.step = 3;
             board->close_dialog(board);
         }
         break;
     case 3:
         if (board->dialog.state == 0) {
-            game->effect_step = 4;
+            game->effect.step = 4;
         }
         break;
     case 4:
@@ -5184,19 +5184,19 @@ void cardgame_hide_panels_start(CardgameGame *game, CardgameBoard *board, s32 fo
         game->turn--;
         board->close_panels(board);
         game->display.request = 2;
-        game->effect_step = 1;
+        game->effect.step = 1;
     } else {
-        game->effect_step = 2;
+        game->effect.step = 2;
     }
 }
 
 s32 cardgame_hide_panels_update(CardgameGame *game, CardgameBoard *board) {
     s32 done = 0;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         if (board->panels[0].state == 0 && game->display.state == 0) {
-            game->effect_step = 2;
+            game->effect.step = 2;
             game->turn++;
         }
         break;
@@ -5212,20 +5212,20 @@ void cardgame_show_panels_start(CardgameGame *game, CardgameBoard *board, s32 fo
         board->open_panels(board);
         game->display.set_dimmed = 1;
         game->display.request = 1;
-        game->effect_step = 1;
+        game->effect.step = 1;
         game->turn--;
     } else {
-        game->effect_step = 2;
+        game->effect.step = 2;
     }
 }
 
 s32 cardgame_show_panels_update(CardgameGame *game, CardgameBoard *board) {
     s32 done = 0;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
         if (game->display.state == 0 && board->panels[0].state == 2) {
-            game->effect_step = 2;
+            game->effect.step = 2;
             game->turn++;
         }
         break;
@@ -5243,14 +5243,14 @@ s32 cardgame_sync_slot_values(CardgameGame *game, CardgameBoard *board) {
     s32 i;
     CardgameBoardCard *card;
 
-    switch (game->effect_step) {
+    switch (game->effect.step) {
     case 1:
     default:
         for (i = 0; i < 12; i++) {
-            game->marked[i] = 0;
+            game->effect.marked[i] = 0;
         }
-        game->effect_step = 2;
-        game->effect_vars[4] = 0;
+        game->effect.step = 2;
+        game->effect.vars[4] = 0;
         break;
     case 2:
         done = 1;
@@ -5277,14 +5277,14 @@ s32 cardgame_sync_slot_values(CardgameGame *game, CardgameBoard *board) {
                     }
                     done = 0;
                     if (game->slots[side].slots[i].hp == 0) {
-                        game->marked[i + side * 6] = 1;
-                        game->effect_vars[4] = 1;
+                        game->effect.marked[i + side * 6] = 1;
+                        game->effect.vars[4] = 1;
                     }
                     changed = 1;
                 }
             }
         }
-        if (done && game->effect_vars[4] != 0) {
+        if (done && game->effect.vars[4] != 0) {
             done = 2;
         }
         if (changed) {
