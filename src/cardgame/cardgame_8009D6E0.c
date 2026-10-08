@@ -46,7 +46,7 @@ extern s16 cardgame_played_card_pos[2][2][2];
 
 /* A card in an opponent's deck (CardgameOpponent.cards). */
 typedef struct CardgameOpponentCard {
-    /* 0x0 */ s16 card;  /* bits 0-11: card number + 1; bit 15: flag (CardgameCardInfo.unk_01) */
+    /* 0x0 */ s16 card;  /* bits 0-11: card number + 1; bit 15: CardgameCardInfo.may_counter */
     /* 0x2 */ u8 stage;  /* the CPU can draw it from this stage of the match on (CardgamePair.stage); 7: last */
     /* 0x3 */ u8 kind;   /* its play class for the CPU (CardgameCardInfo.kind) */
 } CardgameOpponentCard;
@@ -90,7 +90,7 @@ void cardgame_game_load_opponent(CardgameGame *game, CardgameGameData *data) {
         game->cpu_deck_info[i].pos = i;
         game->cpu_deck_info[i].stage = opp->cards[i].stage;
         game->cpu_cards[i].kind = opp->cards[i].kind;
-        game->cpu_cards[i].unk_01 = (opp->cards[i].card & 0x8000) != 0;
+        game->cpu_cards[i].may_counter = (opp->cards[i].card & 0x8000) != 0;
         switch (game->cpu_cards[i].kind) {
         case 1:
             game->cpu_cards[i].order = i + 400;
@@ -1230,7 +1230,7 @@ s32 cardgame_game_run_turns(CardgameGame *game, CardgameGameData *data) {
             game->display.resolve_step = 0;
             game->menu.timer = 0;
             game->display.substep = 0;
-            game->display.unk_46 = game->turn;
+            game->display.resolve_count = game->turn;
         } else {
             game->turn_state = 14;
         }
@@ -1245,7 +1245,7 @@ s32 cardgame_game_run_turns(CardgameGame *game, CardgameGameData *data) {
         game->turns[1].mark = 0;
         game->turns[2].mark = 0;
         game->side = game->round_first ^= 1;
-        game->unk_576++;
+        game->turn_cycles++;
         if (game->passes >= 2) {
             game->turn_state = 15;
             game->display.substep = 0;
@@ -1476,7 +1476,7 @@ s32 cardgame_game_find_combo(CardgameGame *game, s32 side, s32 start) {
         for (; j >= 0; j--) {
             game->selectable[list[i - j].index] = 1;
         }
-        game->unk_438 = value;
+        game->effect_vars[4] = value;
         result = i + 1;
     }
     return result;

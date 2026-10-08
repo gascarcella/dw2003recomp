@@ -199,7 +199,7 @@ def effect_pick_cases():
     out = []
 
     def by_value(name, which, mode, ids, sel, comment):
-        g = Game().put("unk_438", which, 4)
+        g = Game().put("effect_vars", which, 4, 0x10)
         side, pile = {5: (0, "hand"), 11: (1, "hand"), 15: (1, "discard"), 0: (0, "hand")}[which]
         if pile == "hand":
             g.hand(side, ids, kinds=[0] * len(ids))
@@ -213,7 +213,7 @@ def effect_pick_cases():
     by_value("cpu_hand_highest_tie", 11, 0, [64, 65, 65], (1, 1, 1), "0xAA: the CPU's hand, highest value, ties to the later: 2")
     by_value("cpu_discard_lowest_tie", 15, 1, [62, 62, 64], (1, 1, 1), "0xAB: the CPU's discard pile, lowest, ties to the first: 0")
     by_value("none_selectable", 5, 1, [64, 60], (0, 0), "nothing selectable -> choice -1")
-    by_value("unknown_source", 0, 1, [64, 60], (1, 1), "unk_438 0 (no source): n = 0 -> -1")
+    by_value("unknown_source", 0, 1, [64, 60], (1, 1), "effect_vars[4] 0 (no source): n = 0 -> -1")
 
     def own_deck(name, pos, end, sel, comment):
         g = Game().put("cpu_deck_end", end)

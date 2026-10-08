@@ -670,7 +670,7 @@ s32 cardgame_cpu_choose_card(CardgameGame *game, CardgameBoard *board) {
                 for (i = start; i < game->players[1].hand_count; i++) {
                     card = game->players[1].hand[i];
                     if ((game->cpu_cards[card - 40].kind == kind || game->cpu_cards[card - 40].kind == 4) &&
-                        game->cpu_cards[card - 40].unk_01 != 0) {
+                        game->cpu_cards[card - 40].may_counter != 0) {
                         pic.select(game->card_ids[card] + 1);
                         data = pic.record;
                         if (played[3] == 3) {

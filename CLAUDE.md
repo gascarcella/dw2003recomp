@@ -108,6 +108,7 @@ tools/venv/bin/python tools/data_to_c.py [-t <overlay>] <symbol>   # a data symb
 tools/venv/bin/python tools/wstag_groups.py [--funcs|--add|--propagate]   # WSTAG code groups; copy a matched function to its group
 tools/venv/bin/python tools/overlay_xref.py fieldstg   # per-function evidence for an overlay's file boundaries
 tools/venv/bin/python tools/ref_names.py --ref <dw3_decomp built for EU>   # US decomp's names as candidates for our unk_ fields and func_/D_ (by address + member accesses; clang from llvm-mingw) -> build/ref_names/report.md, fields.tsv (issue #56)
+tools/venv/bin/python tools/renames.py [tools/renames/<list>.txt ...] [-n]   # replay rename lists (`OLD NEW`, `Struct.field NEW`; whole-word, struct-qualified via the host gcc's errors); idempotent, catches a branch up after a rename batch
 tools/venv/bin/python tools/disc_files.py   # file ID <-> disc path map (importable read(id)/subfile() helpers; docs/FORMATS.md)
 tools/venv/bin/python tools/dump_text.py TALK08 [-s N] [-r] | --check   # print/decode the game's text files
 tools/venv/bin/python tools/hacks.py [--list] [--check] [--update]   # the matching workarounds (FAKE:, LOOP_BLOCK, holdouts) and the all-C gate; --check (CI, test.sh) = the rules + the counts docs/STATUS.md quotes (<1 s)

@@ -187,8 +187,8 @@ void cardgame_skip_if_slots_free(CardgameGame *game, s32 side, s32 n) {
 }
 
 s32 cardgame_effect_wait(CardgameGame *game, CardgameBoard *board) {
-    game->unk_424 -= gfx_module.funcs.get_frame_ticks();
-    return game->unk_424 <= 0;
+    game->effect_time -= gfx_module.funcs.get_frame_ticks();
+    return game->effect_time <= 0;
 }
 
 void cardgame_choose_deck_top(CardgameGame *game, CardgameBoard *board, s32 arg2) {
@@ -442,7 +442,7 @@ void cardgame_run_effect(CardgameGame *game, CardgameBoard *board) {
     if (game->new_effect != 0) {
         switch (game->new_effect) {
         case 0x01:
-            game->unk_424 = 45;
+            game->effect_time = 45;
             break;
         case 0x12:
             cardgame_play_start(game, board, 0);
@@ -646,27 +646,27 @@ void cardgame_run_effect(CardgameGame *game, CardgameBoard *board) {
             break;
         case 0x6A:
             game->fade = 1;
-            game->unk_424 = 10;
+            game->effect_time = 10;
             break;
         case 0x6B:
             game->fade = 2;
-            game->unk_424 = 10;
+            game->effect_time = 10;
             break;
         case 0x6C:
             game->fade = 3;
-            game->unk_424 = 10;
+            game->effect_time = 10;
             break;
         case 0x6D:
             game->fade = 4;
-            game->unk_424 = 10;
+            game->effect_time = 10;
             break;
         case 0x6E:
             game->fade = 5;
-            game->unk_424 = 15;
+            game->effect_time = 15;
             break;
         case 0x6F:
             game->fade = 6;
-            game->unk_424 = 10;
+            game->effect_time = 10;
             break;
         case 0x98:
             cardgame_ask_play_start(game, board, 14);
