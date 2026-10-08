@@ -308,7 +308,7 @@ def main():
                              "video.internal_scale: an integer from 1 to 8"),
         "a card path not a string": ({"schema": 1, "memcard1": 3}, "memcard1: a path"),
         "an unknown filter": ({"schema": 1, "video": {"filter": "blur"}},
-                              'video.filter: "none", "sharp", "scanlines" or "crt", not "blur"'),
+                              'video.filter: "none", "sharp", "scanlines", "crt" or "smooth", not "blur"'),
         "crt not an object": ({"schema": 1, "video": {"crt": 50}}, "video.crt: an object, not a number"),
         "a crt value out of range": ({"schema": 1, "video": {"crt": {"mask": 101}}},
                                      "video.crt.mask: an integer from 0 to 100"),

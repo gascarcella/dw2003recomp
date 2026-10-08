@@ -14,7 +14,8 @@ Builds build/port-sdl if needed (-DPSXSTACK_SDL=ON: tools/sdl3 and tools/dxc), t
     which tests/port/render_gpu.py checks against the software image), at internal scales 1, 2 and 3 (RUNS: integer
     and non-integer scales, letterboxing, a window smaller than the picture). A filter's reference mirrors its shader (psxstack/shaders/present_<filter>.frag.hlsl) in float64;
     the GPU computes in float32, so each filter has a tolerance per channel (TOLERANCE: the largest difference, and
-    the share of channels that may differ at all).
+    the share of channels that may differ at all). `smooth` filters the 1x software image at every internal scale,
+    so its reference starts from --screenshot's picture.
 --lavapipe runs on Mesa's software Vulkan driver (VK_DRIVER_FILES) instead of the default device.
 Exit codes: 0 pass (parts may be skipped), 1 fail, 2 something missing for the build.
 """
@@ -43,11 +44,12 @@ RUNS = ((1, (2, 900, 1800), ((960, 720), (1366, 768), (300, 200))),
 #   the channels at 3/2, 0.16 % at 4/3; lavapipe 6.5 % at 3/2, none at 4/3;
 # - scanlines: off by 1 in up to 5.3 % (NVIDIA) and 7.4 % (lavapipe) of the channels, at full strength;
 # - crt: off by 1 in up to 0.06 % (NVIDIA) and 0.04 % (lavapipe), the curvature's edge included (it fades over a pixel:
-#   a hard edge was a tie, 215 apart).
-TOLERANCE = {"sharp": (1, 0.10), "scanlines": (1, 0.10), "crt": (1, 0.01)}
+#   a hard edge was a tie, 215 apart);
+# - smooth: its decisions are integers; off by 1 in up to 0.75 % (NVIDIA) of the channels; lavapipe exact.
+TOLERANCE = {"sharp": (1, 0.10), "scanlines": (1, 0.10), "crt": (1, 0.01), "smooth": (1, 0.02)}
 # The filters as the runs set them (`--filter`): each with video.crt's defaults, and the scanlines filters at full
 # strength (the CRT with its grille strong and the curvature on).
-SPECS = ("sharp", "scanlines", "scanlines:scanlines=100", "crt", "crt:scanlines=100,mask=80,curvature=40")
+SPECS = ("sharp", "scanlines", "scanlines:scanlines=100", "crt", "crt:scanlines=100,mask=80,curvature=40", "smooth")
 FAILURES = []
 
 
@@ -179,9 +181,83 @@ def crt(fr, params, ox, oy):
     return out
 
 
+def yuv(c):
+    r, g, b = c
+    return 299 * r + 587 * g + 114 * b, -169 * r - 331 * g + 500 * b, 500 * r - 419 * g - 81 * b
+
+
+def dist(a, b):
+    return 48 * abs(a[0] - b[0]) + 7 * abs(a[1] - b[1]) + 6 * abs(a[2] - b[2])
+
+
+def smooth_corners(fr, px, py, cache):
+    """present_smooth.frag.hlsl cell()'s decisions for source pixel (px, py), integers: [(sx, sy, the colour beyond,
+    shallow, steep)] for each corner an edge crosses."""
+    key = (px, py)
+    if key in cache:
+        return cache[key]
+    n = {(x, y): fr.fetch(px + x, py + y) for x in range(-2, 3) for y in range(-2, 3)}
+    yv = {k: yuv(v) for k, v in n.items()}
+    eq = lambda a, b: dist(a, b) < 15000  # noqa: E731
+    corners = []
+    for corner in range(4):
+        sx, sy = (-1 if corner & 1 else 1), (-1 if corner & 2 else 1)
+        N = lambda x, y: yv[(sx * x, sy * y)]  # noqa: E731
+        E, F, H, I, B, D = N(0, 0), N(1, 0), N(0, 1), N(1, 1), N(0, -1), N(-1, 0)
+        C, G, F4, I4, H5, I5 = N(1, -1), N(-1, 1), N(2, 0), N(2, 1), N(0, 2), N(1, 2)
+        slash = dist(E, C) + dist(E, G) + dist(I, F4) + dist(I, H5) + 4 * dist(H, F)
+        backslash = dist(H, D) + dist(H, I5) + dist(F, I4) + dist(F, B) + 4 * dist(E, I)
+        restriction = (not eq(E, F) and not eq(E, H) and
+                       ((not eq(F, B) and not eq(H, D)) or (eq(E, I) and not eq(F, I4) and not eq(H, I5))
+                        or eq(E, G) or eq(E, C)))
+        if slash < backslash and restriction:
+            beyond = n[(sx, 0)] if dist(E, F) <= dist(E, H) else n[(0, sy)]
+            shallow = 2 * dist(F, G) <= dist(H, C) and not eq(E, G) and not eq(D, G)
+            steep = dist(F, G) >= 2 * dist(H, C) and not eq(E, C) and not eq(B, C)
+            corners.append((sx, sy, beyond, shallow, steep))
+    cache[key] = corners
+    return corners
+
+
+def smooth(fr, params, ox, oy):
+    """present_smooth.frag.hlsl: xBR level 2 on the 1x image at cells k times smaller, bilinear between cells."""
+    if fr.shrink:
+        return fr.box(ox, oy)
+    cache = params.setdefault("_cache", {})
+    kx, ky = max(fr.dw // fr.w, 1), max(fr.dh // fr.h, 1)
+    w = 1.0 / max(kx, ky)
+    ramp = lambda x: min(max(x / w + 0.5, 0.0), 1.0)  # noqa: E731
+
+    def cell(qx, qy):
+        px, py = qx // kx, qy // ky
+        u, v = (qx - px * kx + 0.5) / kx, (qy - py * ky + 0.5) / ky
+        res = [float(c) for c in fr.fetch(px, py)]
+        for sx, sy, beyond, shallow, steep in smooth_corners(fr, px, py, cache):
+            uu, vv = (u if sx > 0 else 1.0 - u), (v if sy > 0 else 1.0 - v)
+            a = ramp((uu + vv - 1.5) * 0.70710678)
+            if shallow:
+                a = max(a, ramp((0.5 * uu + vv - 1.0) * 0.89442719))
+            if steep:
+                a = max(a, ramp((uu + 0.5 * vv - 1.0) * 0.89442719))
+            res = [res[i] + (beyond[i] - res[i]) * a for i in range(3)]
+        return res
+
+    sx = (ox + 0.5) * fr.w * kx / fr.dw - 0.5
+    sy = (oy + 0.5) * fr.h * ky / fr.dh - 0.5
+    ax, ay = math.floor(sx), math.floor(sy)
+    fx, fy = sx - ax, sy - ay
+    c00, c10, c01, c11 = cell(ax, ay), cell(ax + 1, ay), cell(ax, ay + 1), cell(ax + 1, ay + 1)
+    out = []
+    for i in range(3):
+        top = c00[i] + (c10[i] - c00[i]) * fx
+        bottom = c01[i] + (c11[i] - c01[i]) * fx
+        out.append(math.floor(top + (bottom - top) * fy + 0.5))
+    return out
+
+
 # name: (the reference, the parameters it reads with video.crt's defaults, every how many rows it is compared)
 REFERENCES = {"sharp": (sharp, {}, 1), "scanlines": (scanlines, {"scanlines": 50}, 1),
-              "crt": (crt, {"scanlines": 50, "mask": 30, "curvature": 0}, 5)}
+              "crt": (crt, {"scanlines": 50, "mask": 30, "curvature": 0}, 5), "smooth": (smooth, {}, 3)}
 
 
 def reference(spec, image, scale, ow, oh):
@@ -189,6 +265,8 @@ def reference(spec, image, scale, ow, oh):
     name, _, rest = spec.partition(":")
     pixel, params, step = REFERENCES[name]
     params = dict(params, **{k: int(v) for k, v in (kv.split("=") for kv in rest.split(",") if kv)})
+    if name == "smooth":   # the 1x software image whatever the internal scale (image is then --screenshot's)
+        scale = 1
     fr = Frame(image, scale, ow, oh)
     rows = {}
     for y in range(0, oh, step):
@@ -216,7 +294,7 @@ def compare(got, ow, want):
 def options(sdl, headless, env):
     print("render_filters: the options and the software renderer")
     rc, out = run([sdl, "--filter", "blur"], env)
-    check(rc == 64 and "--filter: none, sharp, scanlines or crt, not \"blur\"" in out,
+    check(rc == 64 and "--filter: none, sharp, scanlines, crt or smooth, not \"blur\"" in out,
           f"--filter blur: exit 64 with the choices (exit {rc})")
     for spec, message in (("sharp:scanlines=3", "sharp takes no parameters"),
                           ("scanlines:mask=3", "scanlines takes scanlines, not mask"),
@@ -256,7 +334,8 @@ def pictures(sdl, env, out, spec):
     for scale, frames, sizes in RUNS:
         args = []
         for f in frames:
-            args += ["--gpu-screenshot", f"{f}:{out / f'{tag}{scale}_{f}.ppm'}"]
+            args += ["--gpu-screenshot", f"{f}:{out / f'{tag}{scale}_{f}.ppm'}",
+                     "--screenshot", f"{f}:{out / f'{tag}{scale}_{f}_sw.ppm'}"]
             for w, h in sizes:
                 args += ["--gpu-screenshot", f"{f}@{w}x{h}:{out / f'{tag}{scale}_{f}_{w}x{h}.ppm'}"]
         rc, text = run([sdl, "--disc", DISC, "--script", SCRIPTS / "new_game.json", "--max-frames",
@@ -266,7 +345,7 @@ def pictures(sdl, env, out, spec):
             print("\n".join(text.splitlines()[-10:]))
             continue
         for f in frames:
-            image = ppm(out / f"{tag}{scale}_{f}.ppm")
+            image = ppm(out / f"{tag}{scale}_{f}{'_sw' if name == 'smooth' else ''}.ppm")
             bad = []
             for w, h in sizes:
                 got = ppm(out / f"{tag}{scale}_{f}_{w}x{h}.ppm")

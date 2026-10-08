@@ -76,7 +76,8 @@ The plan's milestones (`docs/PORT.md`):
 - **Present filters** ([#69](https://github.com/gascarcella/dw2003recomp/issues/69), the plan and the owner's
   decisions there): `--filter`, `video.filter`, `video.crt`, the launcher's Filter combo and sliders (GPU renderer
   only). Done: `none` (the default, the picture unchanged), `sharp` (sharp bilinear), `scanlines` and `crt` (beams,
-  aperture grille, curvature), one shader pass each in psxstack's present. Next: `smooth` (on the 1x software image).
+  aperture grille, curvature), `smooth` (xBR level 2 on the 1x software image at any internal scale), each a shader
+  pass in psxstack's present. The filters' look (the CRT's beams, grille, curvature) awaits the owner's play-test.
 - **The port stack (psxstack):** the runtime, the Psy-Q shim, the build (`psxstack_add_game()`), the launcher and the
   debug tools live in the `psxstack` repository (gascarcella/psxstack; its `docs/PORT.md`, `docs/RUNTIME.md`,
   `docs/LAUNCHER.md`), consumed as the `psxstack` submodule pinned at its tag `v0.1.0` (`scripts/worktree_init.sh`
