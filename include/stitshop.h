@@ -36,7 +36,7 @@ typedef struct StitshopList {
     /* 0x05C */ s32 player_items; /* 0: the shop's goods, 1: the player's items */
     /* 0x060 */ s32 shop;   /* the shop, or the kind of item */
     /* 0x064 */ s16 owned_items[0x194]; /* the player's items of the kind */
-    /* 0x38C */ s16 kind_items[0x194]; /* all the items of the kind (records_state.unk_88) */
+    /* 0x38C */ s16 kind_items[0x194]; /* all the items of the kind (records_funcs.list_items) */
     /* 0x6B4 */ s16 *goods;   /* the shop's goods */
     /* 0x6B8 */ s32 input_enabled; /* input enabled */
     /* 0x6BC */ s32 cursor;  /* cursor */

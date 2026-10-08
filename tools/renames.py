@@ -11,7 +11,8 @@ A list has one rename per line, `OLD NEW`, `#` starts a comment:
     tools/, tests/, launcher/, docs/ and the top-level *.md and *.py (not in tools/renames/ itself). For names that
     mean one thing repo-wide: symbols (functions, globals; an EXE symbol's address line in config/symbol_addrs.txt is
     added by hand) and fields whose name no other struct declares. A field name declared by several structs is refused:
-    qualify it.
+    qualify it, or write `*.field NEW` when every struct declaring it means the same thing (a struct that mirrors
+    another's fields, like the port's copy of a few of gamestate_data's).
   * `Struct.field NEW`: the field of that struct (typedef or tag name) only. Its declaration in the struct's body is
     renamed (include/, src/, port/), then every C file of src/ is compiled with the host gcc (-fsyntax-only, once as
     the port's probe sees it: -DNON_MATCHING -DPC_PORT, once as the PS1 build's side: neither) and each
@@ -34,7 +35,7 @@ LISTS = ROOT / "tools" / "renames"
 SCAN_DIRS = ("src", "include", "config", "port", "tools", "tests", "launcher", "docs")
 C_SUFFIXES = {".c", ".h", ".cpp", ".hpp", ".inc"}
 IDENT = r"[A-Za-z_]\w*"
-ENTRY = re.compile(rf"^(?:(?P<struct>{IDENT})\.)?(?P<old>{IDENT})\s+(?P<new>{IDENT}(?:\[\w+\])*)$")
+ENTRY = re.compile(rf"^(?:(?P<struct>{IDENT}|\*)\.)?(?P<old>{IDENT})\s+(?P<new>{IDENT}(?:\[\w+\])*)$")
 NO_MEMBER = re.compile(r"^(?P<file>[^:\s][^:]*):(?P<line>\d+):(?P<col>\d+): error: '(?P<type>[^']+)'"
                        r"(?: \{aka '(?P<aka>[^']+)'\})? has no member named '(?P<field>\w+)'")
 PROBE_FLAGS = ["-std=gnu99", "-fsyntax-only", "-fno-builtin", "-fsigned-char", "-w", "-fmax-errors=0",
@@ -61,7 +62,7 @@ def read_lists(paths):
                 continue
             m = ENTRY.match(" ".join(line.split()))
             if not m:
-                sys.exit(f"{p}:{n}: not `OLD NEW` or `Struct.field NEW`: {line}")
+                sys.exit(f"{p}:{n}: not `OLD NEW`, `Struct.field NEW` or `*.field NEW`: {line}")
             entries.append((m.group("struct"), m.group("old"), m.group("new"), f"{Path(p).name}:{n}"))
     return entries
 
@@ -246,9 +247,9 @@ def main():
     qualified = {}
     for struct, old, new, where in entries:
         plain = re.fullmatch(IDENT, new) is not None
-        if struct is None:
+        if struct in (None, "*"):
             decls = declarations(files, old)
-            if len(decls) > 1:
+            if struct is None and len(decls) > 1:
                 sys.exit(f"{where}: `{old}` is a field of several structs "
                          f"({', '.join('/'.join(sorted(n)) for _, n in decls)}): qualify it as Struct.{old}")
             word = re.compile(rf"\b{re.escape(old)}\b")

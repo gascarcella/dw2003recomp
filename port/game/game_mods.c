@@ -142,7 +142,7 @@ typedef struct GsRecord {
     u8 map_flags[3];  /* gamestate_flags.map_flags: the type-0 (per-visit) flags, cleared on a fresh entry */
     u8 pad2;
     s32 attr_layer;   /* gamestate_data's fields after the slot that a fresh entry resets */
-    s32 unk_26E4;
+    s32 alt_layout;
     s32 player_depth;
     s32 spot_target;
     s32 screen_white;
@@ -200,7 +200,7 @@ void port_global_save_record(void *slot) {
     r.version = GS_RECORD_VERSION;
     memcpy(r.map_flags, gamestate_flags.map_flags, sizeof(r.map_flags));
     r.attr_layer = gamestate_data.attr_layer;
-    r.unk_26E4 = gamestate_data.unk_26E4;
+    r.alt_layout = gamestate_data.alt_layout;
     r.player_depth = gamestate_data.player_depth;
     r.spot_target = gamestate_data.spot_target;
     r.screen_white = gamestate_data.screen_white;
@@ -225,7 +225,7 @@ void port_global_save_restore(const void *slot) {
     }
     memcpy(gamestate_flags.map_flags, r.map_flags, sizeof(r.map_flags));
     gamestate_data.attr_layer = r.attr_layer;
-    gamestate_data.unk_26E4 = r.unk_26E4;
+    gamestate_data.alt_layout = r.alt_layout;
     gamestate_data.player_depth = r.player_depth;
     gamestate_data.spot_target = r.spot_target;
     gamestate_data.screen_white = r.screen_white;

@@ -1185,7 +1185,7 @@ s32 fightstg_enemy_check_condition(u8 type, s16 value) {
         }
         break;
     case 13:
-        if (records_state.unk_3D == value) {
+        if (records_state.battle_kind == value) {
             result = 1;
         }
         break;

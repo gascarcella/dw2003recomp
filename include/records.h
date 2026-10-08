@@ -9,8 +9,9 @@ typedef struct RecordsDigimon {
     /* 0x0E */ u16 resists[7]; /* base resistances, copied to GamestateStats.resists (FightstgStats.resists[0..6]) */
     /* 0x1C */ u16 techniques[7]; /* techniques it learns ([1..6], STFGTREP); [0] and [6] are read by FIGHTSTG
                                * (fightstg_counter_update, fightstg_status_update) */
-    /* 0x2A */ u8 unk_2A[0x7]; /* [2..6]: FightstgStats.resists[7..11] (fightstg_rules_get_stats); [0..1] a u16 the
-                                * switch menu reads */
+    /* 0x2A */ u16 pair_technique; /* offered when its partner is switched in: level_thresholds[6] is that Digimon's
+                                 * name_id (fightstg_switch_menu_update) */
+    /* 0x2C */ u8 status_resists[5]; /* FightstgStats.resists[7..11] (fightstg_rules_get_stats) */
     /* 0x31 */ u8 technique_levels[6]; /* the level at which it learns techniques[i + 1] */
     /* 0x37 */ u8 level_thresholds[7]; /* level thresholds ([1..5], STFGTREP) */
     /* 0x3E */ u8 exp_curve; /* experience curve factor (STFGTREP) */
@@ -23,7 +24,7 @@ typedef struct RecordsDigimon {
                                    * index + 1 (WFIGHTMN) */
     /* 0x55 */ u8 name_id;    /* its entry in the Digimon names (?SDIGNAM) */
     /* 0x56 */ u8 type;   /* its type (FightstgStats.type: a technique or weapon whose strong_type is it does 1.5x) */
-    /* 0x57 */ u8 unk_57;
+    /* 0x57 */ u8 pad_57;
 } RecordsDigimon; /* size 0x58 */
 
 /* RecordsItem.category (records_is_item_category; STITSHOP sells and buys categories 3-5). */
@@ -43,7 +44,7 @@ typedef struct RecordsItem {
     /* 0x08 */ u8 category; /* RecordsItemCategory (records_is_item_category) */
     /* 0x09 */ u8 type;     /* 2-14 weapons, 15-20 armour, 21-24 accessories, 25-28 usable, 29 key items; its icon is
                              * records_item_icons[type] */
-    /* 0x0A */ u8 unk_0A[0x2];
+    /* 0x0A */ u8 pad_0A[0x2];
 } RecordsItem; /* size 0xC */
 
 /* An equipment item's bonus stats (RecordsWeapon.bonus_stats, RecordsArmor.bonus_stats, RecordsAccessory.bonus_stat;
@@ -77,7 +78,7 @@ typedef struct RecordsEquip {
                              * group) */
     /* 0x3 */ u8 group;     /* group: two of a group can't be worn together (STITSHOP, STSTATUS) */
     /* 0x4 */ u8 members;   /* bit i: gamestate_data.digimon[i] can wear it (stitshop_can_equip) */
-    /* 0x5 */ u8 unk_05;
+    /* 0x5 */ u8 pad_05;
 } RecordsEquip; /* size 0x6 */
 
 /* RecordsItem.data of a weapon (types 2-14). */
@@ -86,7 +87,7 @@ typedef struct RecordsWeapon {
     /* 0x02 */ u8 slot;
     /* 0x03 */ u8 group;
     /* 0x04 */ u8 members;
-    /* 0x05 */ u8 unk_05;
+    /* 0x05 */ u8 pad_05;
     /* 0x06 */ s16 bonus_values[2]; /* added to bonus_stats[i] (gamestate_add_stat_bonus) */
     /* 0x0A */ u16 power;           /* added to GamestateStats.stats[0] */
     /* 0x0C */ u8 bonus_stats[2];   /* RecordsBonusStat */
@@ -95,7 +96,7 @@ typedef struct RecordsWeapon {
     /* 0x10 */ u8 status_chance;    /* chance of its status effect, for the items fightstg_rules_get_stats knows */
     /* 0x11 */ u8 status_power;     /* power of that effect (or the critical-hit rate) */
     /* 0x12 */ u8 strong_type;      /* FightstgStats.strong_types when >= 2 */
-    /* 0x13 */ u8 unk_13;
+    /* 0x13 */ u8 pad_13;
 } RecordsWeapon; /* size 0x14 */
 
 /* RecordsItem.data of armour (types 15-20). */
@@ -104,7 +105,7 @@ typedef struct RecordsArmor {
     /* 0x02 */ u8 slot;
     /* 0x03 */ u8 group;
     /* 0x04 */ u8 members;
-    /* 0x05 */ u8 unk_05;
+    /* 0x05 */ u8 pad_05;
     /* 0x06 */ s16 bonus_values[2]; /* added to bonus_stats[i] (gamestate_add_stat_bonus) */
     /* 0x0A */ u8 bonus_stats[2];   /* RecordsBonusStat */
     /* 0x0C */ u16 guard;           /* added to GamestateStats.stats[1] */
@@ -120,7 +121,7 @@ typedef struct RecordsAccessory {
     /* 0x2 */ u8 slot;
     /* 0x3 */ u8 group;
     /* 0x4 */ u8 members;
-    /* 0x5 */ u8 unk_05;
+    /* 0x5 */ u8 pad_05;
     /* 0x6 */ s16 bonus_value; /* added to bonus_stat; a crest's strength (FIGHTSTG) */
     /* 0x8 */ u8 bonus_stat;   /* RecordsBonusStat (17-21 too) */
     /* 0x9 */ u8 unk_09[0x3];
@@ -148,15 +149,15 @@ typedef struct RecordsEnemy {
 typedef struct RecordsState {
     /* 0x00 */ s32 encounters; /* non-zero: random battles on (fieldstg_encounter_step; STAGSLCT's debug menu
                                 * toggles it) */
-    /* 0x04 */ s32 unk_04; /* -1..3 (STAGSLCT's debug menu) */
-    /* 0x08 */ s32 unk_08; /* -1..7 (STAGSLCT's debug menu) */
+    /* 0x04 */ s32 debug_up_down;    /* -1..3: STAGSLCT's debug menu steps it (pad 2 up/down); nothing reads it */
+    /* 0x08 */ s32 debug_left_right; /* -1..7: the same with pad 2's right/left */
     /* 0x0C */ s32 stage;  /* the battle stage (SFSTDATA record; fightstg_stage_create) */
     /* 0x10 */ s32 battle; /* index into FIELDSTG's fieldstg_battles */
     /* 0x14 */ s32 music;  /* the battle music (a sound key, played by FIGHTSTG) */
     /* 0x18 */ RecordsEnemy enemies[3];
     /* 0x3C */ u8 first_strike_chance; /* from FIELDSTG's battle table, like the next two: the party's chance to strike
                                      * first, 0: never (WFIGHTMN) */
-    /* 0x3D */ u8 unk_3D;   /* FIGHTSTG's script condition 13 compares it */
+    /* 0x3D */ u8 battle_kind; /* FieldstgBattle.kind (1-5); FIGHTSTG's script condition 13 compares it */
     /* 0x3E */ u8 blocked[12]; /* set: the effect fails against this battle's enemy (FIGHTSTG): [0] poison, [1] paralysis,
                              * [2] confusion, [3] sleep, [4] knockout, [5] drain and item 0x55, [7] steal, [8] power down,
                              * [9] guard down, [10] item 0x59, [11] escape (fightstg_rules_roll_*, the item effects) */

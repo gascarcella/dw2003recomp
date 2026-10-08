@@ -26,8 +26,8 @@ the original's code too.
 - Stat order [C]: `GamestateStats.values[]` = level, (a second value, +5 per level up, cap 99), HP, max HP, MP,
   max MP; `.stats[0..5]` = Power, Guard, Spirit, Wisdom, Boost (speed), Charisma; `.resists[0..6]` = Fire, Water, Ice,
   Wind, Thunder, Machine, Dark. In battle `FightstgStats.stats[0..4]` are the first five (no Charisma), `.resists[0..6]` the
-  same seven, `.resists[7..11]` = poison, paralysis, confusion, sleep, knockout resistances (from the Digimon's
-  `unk_2A[2..6]` and ring items 0x11..0x15).
+  same seven, `.resists[7..11]` = poison, paralysis, confusion, sleep, knockout resistances (from the
+  Digimon's `RecordsDigimon.status_resists` and ring items 0x11..0x15).
 - Element numbers [C]: an element `e >= 2` indexes `resists[e - 2]`: 2 Fire, 3 Water, 4 Ice, 5 Wind, 6 Thunder, 7 Machine,
   8 Dark. `RecordsTechnique.defense_stat >= 2` is that same number (the stat/resist the technique is "against").
   `element < 2` means none.
@@ -207,7 +207,7 @@ clamped, and the enemies' raw stats are >= 40 (`SDIGIEDT`, 193 records), their e
 still guard the divisions.
 
 Code map: `fightstg_rules_scale_damage`, `fightstg_rules_get_field_bonus`, `fightstg_rules_get_stats` (item/Digimon resist fill),
-`fightstg_rules_opposite_elements`; `RecordsDigimon.resists/type/unk_2A`, `RecordsWeapon.strong_type`, `RecordsBonusStat`.
+`fightstg_rules_opposite_elements`; `RecordsDigimon.resists/type/status_resists`, `RecordsWeapon.strong_type`, `RecordsBonusStat`.
 
 What a test should check: the `opposite_elements` table verbatim; field bonus signs (+ for equal, - for opposite, 0 for none or
 `field.element < 2`); weapon strong type applies once even when two weapons match; element crest ranges map 0x153-0x155 -> element 2
@@ -281,7 +281,7 @@ slot, statuses, crests; all `(next() & 0x7F) < chance` unless noted; `blocked[]`
   `(s16)(max_hp / 100) * (value * 100 / 128)` `>` hp / `<=` hp, both divisions truncated (max_hp 450, value 26: 80, not 90 or
   91; max_hp < 100: 0, never under); 4/5 own MP `<` / `>=` value; 6/7 as 2/3 on the party's current member; 8 the party member's
   Digimon is `records_digimon[0..7].id` (the partners); 9 the party member asleep; 10 another enemy slot alive with Digimon
-  `value` (0: any), never the current slot; 11 field element; 12 `records_state.battle`; 13 `records_state.unk_3D`; 14 own
+  `value` (0: any), never the current slot; 11 field element; 12 `records_state.battle`; 13 `records_state.battle_kind`; 14 own
   `power_up`; 15..17 own `modifiers[0..2] < 0`; 18 own `turns % value == 0` (turn 0 holds; values 2..4 in the data, never 0);
   > 18: 1. Actions `fightstg_enemy_get_action(type)` [T]: 1 attack (`fightstg_attack_create`), 2/3 `tech_2`/`tech_3` of the current
   enemy's record, 4 flee (`fightstg_events_add_escape(0x10)`), 5..8 call member 0/1/2/any (-2..-5), else 0. A technique costs its
