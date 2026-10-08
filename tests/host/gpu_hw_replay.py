@@ -11,7 +11,7 @@ software VRAM again, so every case starts equal.
 
 Needs a GPU device (Vulkan; --lavapipe uses Mesa's software driver) and SDL's offscreen video driver; without a device
 it prints why and exits 0 (skipped), as CI does. It builds build/port-sdl first (the shaders' headers; tools/sdl3 and
-tools/dxc), then the harness (tests/host/gpu_harness.c with -DGPU_HW, psxstack/runtime/render_gpu.c, SDL3).
+tools/dxc), then the harness (tests/host/gpu_harness.c with -DGPU_HW, psxstack/runtime/render_gpu*.c, SDL3).
 Exit codes: 0 pass or skipped (no device, no tools/sdl3 or tools/dxc: said so), 1 a difference the ledger does not
 list (or a ledger entry that no longer differs), 2 --lavapipe without lavapipe."""
 import argparse
@@ -68,8 +68,11 @@ def build(out, env):
             f"-I{ROOT / 'include'}", f"-I{ROOT}", f"-I{psyq}", f"-I{gpu_replay.PSXSTACK / 'include'}", f"-I{gpu_replay.PSXSTACK / 'include/psxstack'}", f"-I{gpu_replay.PSXSTACK / 'runtime'}", f"-I{ROOT / 'build/port-sdl/gen/include'}",
             f"-I{ROOT / 'build/port-sdl/gen/shaders'}", f"-I{sdl / 'include'}",
             str(ROOT / "tests/host/gpu_harness.c"), str(psyq / "libgpu.c"), str(psyq / "gpu.c"), str(psyq / "psyq.c"),
-            str(psyq / "gte_shadow.c"), str(gpu_replay.PSXSTACK / "runtime/render_gpu.c"),
-            str(gpu_replay.PSXSTACK / "runtime/render_gpu_subpixel.c"), "-ffunction-sections", "-Wl,--gc-sections", "-o", str(binary)]
+            str(psyq / "gte_shadow.c"),
+            # the renderer's files (render_gpu.c and its render_gpu_<part>.c) and the filters' names they log
+            *[str(p) for p in sorted((gpu_replay.PSXSTACK / "runtime").glob("render_gpu*.c"))],
+            str(gpu_replay.PSXSTACK / "runtime/video_filter.c"),
+            "-ffunction-sections", "-Wl,--gc-sections", "-o", str(binary)]
            + libs)
     subprocess.run(cmd, check=True)
     return binary
