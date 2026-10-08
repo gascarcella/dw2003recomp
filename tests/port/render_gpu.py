@@ -44,6 +44,7 @@ Exit codes: 0 pass (parts may be skipped), 1 fail, 2 something missing for the b
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -238,6 +239,11 @@ def scaled(sdl, env, out):
         if rc != 0:
             check(False, f"scale {n}: the run (exit {rc})")
             continue
+        # Sub-pixel vertices (video.subpixel, on by default above scale 1; issue #68): the battle's 3D found its
+        # positions in the GTE shadow (the averages below then cover the precise path).
+        m = re.search(r"sub-pixel: (\d+) polygon vertices drawn, (\d+) at their sub-pixel position", text)
+        check(m is not None and int(m.group(2)) > 0,
+              f"scale {n}: sub-pixel vertices: {m.group(0) if m else 'no renderer line'}")
         for f in SCALED_FRAMES:
             w, h, lo = ppm(out / f"sc_sw{f}.ppm")
             W, H, hi = ppm(out / f"sc{n}_{f}.ppm")
