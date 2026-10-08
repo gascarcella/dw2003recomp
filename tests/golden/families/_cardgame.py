@@ -23,7 +23,7 @@ OBJECT = 0x50   # the Object header (pointers): left zero, the host remaps the r
 OFF = dict(card_ids=0x50, card_count=0x244, effect_state=0x2F4, phase=0x2F8, step=0x2F9, timer=0x2FC, round=0x300,
            round_winner=0x301, winner=0x302, swap_card=0x304, swap_count=0x305, next_slot_id=0x308,
            cpu_deck_info=0x30A, cpu_cards=0x35C, cpu_counter_ids=0x400, cpu_deck_end=0x41B, cpu_deck_last=0x41C,
-           effect=0x420, new_effect=0x421, effect_step=0x422, next_step=0x423, unk_424=0x424, unk_438=0x438,
+           effect=0x420, new_effect=0x421, effect_step=0x422, next_step=0x423, effect_time=0x424, effect_vars=0x428,
            cursor=0x43C, choice=0x440, selected=0x444, target_rows=0x445, selectable=0x446, marked=0x46F,
            resolve_step=0x4DC, cancelled=0x4DD, script_pos=0x4E0, repeat_count=0x4E2, repeat_pos=0x4E4,
            turn=0x575, side=0x579, answer=0x57A, turns=0x580, players=0x59C, slots=0x72C, end=0x810)

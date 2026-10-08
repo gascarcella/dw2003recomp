@@ -6602,7 +6602,7 @@
      "ret_type": "void",
      "ret": null,
      "v0": 8,
-     "comment": "unk_438 0 (no source): n = 0 -> -1",
+     "comment": "effect_vars[4] 0 (no source): n = 0 -> -1",
      "reads": [
       {
        "symbol": "buf:game",

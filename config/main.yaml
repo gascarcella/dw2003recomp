@@ -416,7 +416,7 @@ segments:
       # 0x8004DC10-0x8004DCA0: 16 zero bytes, an identity MATRIX (FIGHTSTG reads it) and 3 scale
       # matrices, which no EXE code uses (only FIGHTSTG reads the identity; nothing reads the rest): the
       # end of pad's or the start of message's data, or a data-only file. Defined in message.c (C initializers).
-      - [0x3E410, .data, message]             # 0x8004DC10 D_8004DC10 .. D_8004DC80, message_control_handlers ... message_module
+      - [0x3E410, .data, message]             # 0x8004DC10 message_zero_vector .., message_control_handlers ... message_module
       - [0x3E610, .data, gfx]                 # 0x8004DE10 module struct gfx_module
       - [0x3E7B8, .data, card]                # 0x8004DFB8
       # sprite has no .data. font's own tables, then glyph tables only message's message_fonts points

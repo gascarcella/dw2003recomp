@@ -1185,7 +1185,7 @@ s32 fightstg_enemy_check_condition(u8 type, s16 value) {
         }
         break;
     case 13:
-        if (records_state.unk_3D == value) {
+        if (records_state.battle_kind == value) {
             result = 1;
         }
         break;
@@ -1963,7 +1963,7 @@ void fightstg_lights_update(FightstgLighting *obj) {
             }
             SetBackColor(obj->lights.ambient_r, obj->lights.ambient_g, obj->lights.ambient_b);
             layer = gfx_module.funcs.get_layer(obj->layer_id);
-            layer->save_world_screen(layer, 1);
+            layer->save_light(layer, 1);
             if (obj->fade_pos == 0x1000) {
                 obj->base.next_step(obj);
             }
@@ -1971,7 +1971,7 @@ void fightstg_lights_update(FightstgLighting *obj) {
         break;
     case OBJECT_STATE_END:
         layer = gfx_module.funcs.get_layer(obj->layer_id);
-        layer->save_world_screen(layer, 0);
+        layer->save_light(layer, 0);
         break;
     }
 }

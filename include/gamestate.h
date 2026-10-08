@@ -7,7 +7,7 @@
 typedef struct GamestateForm {
     /* 0x00 */ s16 id;
     /* 0x02 */ s8 level;   /* level; set to 1 by gamestate_add_form; read as s8 by FIGHTSTG (fightstg_status_update) */
-    /* 0x03 */ u8 unk_03;
+    /* 0x03 */ u8 pad_03;
     /* 0x04 */ s32 exp;  /* the form's experience, <= 9999999 (STFGTREP adds it and raises level from it) */
     /* 0x08 */ s16 techniques[6]; /* techniques learnt (STFGTREP); flags 0x2000, 0x4000 (FIGHTSTG
                                  * fightstg_status_update), 0x8000 */
@@ -30,12 +30,12 @@ typedef struct GamestateRecord {
     /* 0x018 */ s32 exp;     /* experience (STFGTREP) */
     /* 0x01C */ GamestateStats stats;
     /* 0x048 */ s16 chosen_forms[3];
-    /* 0x04E */ u8 unk_04E[0x2];
+    /* 0x04E */ u8 pad_04E[0x2];
     /* 0x050 */ GamestateForm forms[44];
     /* 0x3C0 */ s16 equipment[6]; /* equipment: item IDs (gamestate_unequip_item, gamestate_get_stats) */
     /* 0x3CC */ u8 last_bonus_training; /* the training whose bonus round it won last (STGTRAIN: no bonus for the
                                        * same training twice in a row), 0: none */
-    /* 0x3CD */ u8 unk_3CD[0x3];
+    /* 0x3CD */ u8 pad_3CD[0x3];
 } GamestateRecord; /* size 0x3D0 */
 
 /* A Digimon's record: gamestate_data.digimon[i] (0x80049490). The overlays take the record's address as
@@ -123,7 +123,7 @@ typedef struct GamestateData {
     /* 0x04DF */ u8 cards_obtained[0x13D]; /* set by gamestate_add_card; cards the player owns (STCRDABM reads it as u8) */
     /* 0x061C */ u8 unk_061C[0xC];
     /* 0x0628 */ GamestateDeck decks[3];
-    /* 0x075A */ u8 unk_075A[0x2];
+    /* 0x075A */ u8 pad_075A[0x2];
     /* 0x075C */ GamestateDigimon digimon[8];  /* the eight Digimon's records */
     /* 0x263C */ s32 progress; /* a progress value (gamestate_cond_progress, gamestate_check_progress; set by STAGSLCT's stage list,
                                 * compared by FIELDSTG and STDWTITL); was "record 7's unk_3D0" */
@@ -151,7 +151,8 @@ typedef struct GamestateData {
                               * the map flags) */
     /* 0x26DC */ s32 field_last_map; /* the map (funcs.get_map) FIELDSTG last saw; map_is_new: it changed */
     /* 0x26E0 */ s32 attr_layer; /* attribute layer (FIELDSTG) */
-    /* 0x26E4 */ s32 unk_26E4; /* WSTAG810: the second attribute layer is set (0x20) */
+    /* 0x26E4 */ s32 alt_layout; /* WSTAG810: its second layout is set (0x20: attribute file 0x06ED0004, its second
+                               * map events), kept when the same map is entered again */
     /* 0x26E8 */ s32 player_depth; /* the player actor's depth: set by FIELDSTG's map events (type 5,
                                  * fieldstg_map_events_enter), 4 on a new map */
     /* 0x26EC */ s32 spot_target;  /* the spot to find (fieldstg_spots_pick_target) */

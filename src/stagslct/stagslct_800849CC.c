@@ -53,8 +53,8 @@ typedef struct StageSelectData {
     /* 0x88 */ MessageWindow *encounters; /* records_state.encounters */
     /* 0x8C */ MessageWindow *stat_11;     /* stat 11 of the first party member */
     /* 0x90 */ MessageWindow *level;     /* level of the first party member */
-    /* 0x94 */ MessageWindow *unk_94;     /* records_state.cursor */
-    /* 0x98 */ MessageWindow *unk_98;     /* records_state.names */
+    /* 0x94 */ MessageWindow *debug_up_down;    /* records_state.debug_up_down + 1, hidden at -1 */
+    /* 0x98 */ MessageWindow *debug_left_right; /* records_state.debug_left_right + 1, hidden at -1 */
 } StageSelectData; /* size 0x9C */
 
 /* The tables' strings start .rodata: GCC emits an initializer's strings where the table is defined, last
@@ -548,8 +548,8 @@ void stagslct_update(Object *obj, StageSelectData *data) {
         data->level = message_create_window(0x1000, 1, 0x100, 0xDC);
         data->encounters = message_create_window(0x1000, 1, 0x10, 0xDC);
         data->encounters->set_line_number(data->encounters, 0, records_state.encounters);
-        data->unk_94 = message_create_window(0x1000, 1, 0x30, 0xDC);
-        data->unk_98 = message_create_window(0x1000, 1, 0x50, 0xDC);
+        data->debug_up_down = message_create_window(0x1000, 1, 0x30, 0xDC);
+        data->debug_left_right = message_create_window(0x1000, 1, 0x50, 0xDC);
         obj->next_state(obj);
         break;
     case OBJECT_STATE_RUN:
@@ -662,33 +662,33 @@ void stagslct_update(Object *obj, StageSelectData *data) {
             data->stat_11->set_line_number(data->stat_11, 0, stat);
             data->level->set_line_number(data->level, 0, level);
             if (pad_state.get_pressed(1) & 0x10) {
-                if (records_state.unk_04 != 3) {
-                    records_state.unk_04++;
+                if (records_state.debug_up_down != 3) {
+                    records_state.debug_up_down++;
                 }
             } else if (pad_state.get_pressed(1) & 0x40) {
-                if (records_state.unk_04 != -1) {
-                    records_state.unk_04--;
+                if (records_state.debug_up_down != -1) {
+                    records_state.debug_up_down--;
                 }
             } else if (pad_state.get_pressed(1) & 0x20) {
-                if (records_state.unk_08 != 7) {
-                    records_state.unk_08++;
+                if (records_state.debug_left_right != 7) {
+                    records_state.debug_left_right++;
                 }
             } else if (pad_state.get_pressed(1) & 0x80) {
-                if (records_state.unk_08 != -1) {
-                    records_state.unk_08--;
+                if (records_state.debug_left_right != -1) {
+                    records_state.debug_left_right--;
                 }
             }
-            if (records_state.unk_04 != -1) {
-                data->unk_94->set_line_number(data->unk_94, 0, records_state.unk_04 + 1);
-                data->unk_94->set_visible(data->unk_94, 1);
+            if (records_state.debug_up_down != -1) {
+                data->debug_up_down->set_line_number(data->debug_up_down, 0, records_state.debug_up_down + 1);
+                data->debug_up_down->set_visible(data->debug_up_down, 1);
             } else {
-                data->unk_94->set_visible(data->unk_94, 0);
+                data->debug_up_down->set_visible(data->debug_up_down, 0);
             }
-            if (records_state.unk_08 != -1) {
-                data->unk_98->set_line_number(data->unk_98, 0, records_state.unk_08 + 1);
-                data->unk_98->set_visible(data->unk_98, 1);
+            if (records_state.debug_left_right != -1) {
+                data->debug_left_right->set_line_number(data->debug_left_right, 0, records_state.debug_left_right + 1);
+                data->debug_left_right->set_visible(data->debug_left_right, 1);
             } else {
-                data->unk_98->set_visible(data->unk_98, 0);
+                data->debug_left_right->set_visible(data->debug_left_right, 0);
             }
             break;
         }

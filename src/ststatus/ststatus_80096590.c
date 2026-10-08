@@ -969,7 +969,7 @@ StstatusBar *ststatus_create_bar(void) {
 }
 
 /* The menu's root object (ststatus_create_root): loads the files, draws the scrolling background and
- * opens the page D_8005CCF0 selects. */
+ * opens the page records_field_menu_choice selects. */
 
 /* In the other files (each returns its own page type there). */
 Object *ststatus_create_items_page(Object *parent);
@@ -1026,8 +1026,9 @@ void ststatus_open_page(StstatusRoot *obj, StstatusRootData *data) {
     switch (obj->base.step) {
     case 0:
     default:
-        if (ststatus_pages[D_8005CCF0.extended][D_8005CCF0.option] != NULL) {
-            data->page = ststatus_pages[D_8005CCF0.extended][D_8005CCF0.option](&obj->base);
+        if (ststatus_pages[records_field_menu_choice.extended][records_field_menu_choice.option] != NULL) {
+            data->page =
+                ststatus_pages[records_field_menu_choice.extended][records_field_menu_choice.option](&obj->base);
         } else {
             data->page = ststatus_create_items_page(&obj->base);
         }
@@ -1035,7 +1036,7 @@ void ststatus_open_page(StstatusRoot *obj, StstatusRootData *data) {
         break;
     case 1:
         if (data->page == NULL) {
-            data->menu = fieldmenu_create(obj->layer_id, D_8005CCF0.option);
+            data->menu = fieldmenu_create(obj->layer_id, records_field_menu_choice.option);
             obj->base.set_state(obj, OBJECT_STATE_DONE);
         }
         break;

@@ -29,8 +29,8 @@ typedef struct CardgameFade {
 /* A short open/close animation (the board's 0xDC0 entries): level goes 0 -> 0x1000 while opening (state 1),
  * stays at 0x1000 (2) and goes back to 0 while closing (3). */
 typedef struct CardgameTurnMark {
-    /* 0x0 */ s16 unk_00;
-    /* 0x2 */ s16 level;    /* 0..0x1000 */
+    /* 0x0 */ s16 scale_x;  /* set to 0x1000 by open/close, never read: the draw passes 0x1000 for x */
+    /* 0x2 */ s16 level;    /* 0..0x1000: the y scale */
     /* 0x4 */ s16 timer;    /* ticks left */
     /* 0x6 */ s16 duration;
     /* 0x8 */ s16 state;    /* 0 hidden, 1 opening, 2 open, 3 closing */
@@ -42,7 +42,7 @@ typedef struct CardgameBoardPanel {
     /* 0x00 */ s16 timer;
     /* 0x02 */ s16 duration;
     /* 0x04 */ s16 state;
-    /* 0x06 */ s16 unk_06;
+    /* 0x06 */ s16 event;  /* for one update: 1 the bar closed, 2 it starts opening (open_panels, open_side_panel) */
     /* 0x08 */ s32 ticks;  /* frame counter, wrapped to 16 bits */
     /* 0x0C */ s16 x;      /* the panel's bar (slides in and out with state) */
     /* 0x0E */ s16 y;
@@ -50,7 +50,7 @@ typedef struct CardgameBoardPanel {
     /* 0x12 */ s16 hp;
     /* 0x14 */ u8 unk_14[4];
     /* 0x18 */ u8 counts[7]; /* set_panel_value fields 0-6: [0..4] CardgamePlayer.points, [5] deck_count, [6] hand_count */
-    /* 0x1F */ u8 unk_1F;
+    /* 0x1F */ u8 pad_1F;
     /* 0x20 */ s16 discard_x; /* the discard pile's box, with discard_count and lamp 5 */
     /* 0x22 */ s16 discard_y;
     /* 0x24 */ u8 unk_24[4];
@@ -67,7 +67,7 @@ typedef struct CardgameBoardPanel {
     /* 0x4C */ s16 anim_timer;
     /* 0x4E */ s16 anim_duration;
     /* 0x50 */ u8 anim_state;
-    /* 0x51 */ u8 unk_51[3];
+    /* 0x51 */ u8 pad_51[3];
 } CardgameBoardPanel; /* size 0x54 */
 
 /* A card on the board display (CardgameBoard.cards). */
@@ -104,7 +104,7 @@ typedef struct CardgameBoardCard {
     /* 0x47 */ u8 effect;    /* an effect drawn over it: 1 shake/jolt, 2 boost, 3 attack, 4 destroy */
     /* 0x48 */ u8 highlight; /* frame flags: 1 the cursor (also while lunging), 2 selected, 4 blinking */
     /* 0x49 */ u8 dimmed;    /* drawn shaded (not selectable; CardgameDisplay.dimmed) */
-    /* 0x4A */ u8 unk_4A[2];
+    /* 0x4A */ u8 pad_4A[2];
 } CardgameBoardCard; /* size 0x4C */
 
 /* CardgameBoard.marks entries. */
@@ -119,7 +119,7 @@ typedef struct CardgameBoardMark {
     /* 0x0E */ u8 timer;
     /* 0x0F */ u8 duration;
     /* 0x10 */ u8 state;
-    /* 0x11 */ u8 unk_11;
+    /* 0x11 */ u8 pad_11;
 } CardgameBoardMark; /* size 0x12 */
 
 /* CardgameBoard.dialog. */
@@ -150,7 +150,7 @@ typedef struct CardgamePopup {
     /* 0x00 */ s16 x;
     /* 0x02 */ s16 y;
     /* 0x04 */ s16 scale;    /* x scale while opening/closing, 0x1000 open */
-    /* 0x06 */ s16 unk_06;
+    /* 0x06 */ s16 scale_y;  /* set to 0x1000 by open/close, never read: the draw passes 0x1000 for y */
     /* 0x08 */ s16 timer;
     /* 0x0A */ s16 duration;
     /* 0x0C */ s16 kind;     /* index into cardgame_popup_styles */
@@ -179,7 +179,7 @@ typedef struct CardgameBoard {
     /* 0xE9C */ u8 bg_palette; /* the background's fade-in: palette 0..11, one step per 4 ticks */
     /* 0xE9D */ u8 bg_ticks;
     /* 0xE9E */ u8 bg_state;   /* the background's fade-in: 0 none, 1 running (phase 1 starts it), 2 done */
-    /* 0xE9F */ u8 unk_E9F;
+    /* 0xE9F */ u8 pad_E9F;
     /* 0xEA0 */ void (*set_panel_value)(struct CardgameBoard *obj, s32 side, u32 field, s32 value);
     /* 0xEA4 */ void (*open_turn_mark)(struct CardgameBoard *obj, s32 i, s16 side);
     /* 0xEA8 */ void (*close_turn_mark)(struct CardgameBoard *obj, s32 i);
@@ -251,7 +251,8 @@ typedef struct CardgamePair {
 /* CardgameGame.cpu_cards entries. */
 typedef struct CardgameCardInfo {
     /* 0x0 */ u8 kind;   /* CardgameOpponentCard.kind: the CPU's play class (cardgame_cpu_choose_card) */
-    /* 0x1 */ u8 unk_01;
+    /* 0x1 */ u8 may_counter; /* bit 15 of its CardgameOpponentCard entry: the CPU may answer a played class 3/9 card
+                            * with it (cardgame_cpu_choose_card) */
     /* 0x2 */ s16 order; /* sort key of the CPU's hand: a rank per kind * 100 + deck position */
 } CardgameCardInfo; /* size 0x4 */
 
@@ -263,7 +264,7 @@ typedef struct CardgameTurn {
     /* 0x4 */ u8 side;
     /* 0x5 */ u8 target_kind; /* the card's data field 3: 0 one slot (target), 1-3 a side or both, 4-8 by card kind */
     /* 0x6 */ u8 target;
-    /* 0x7 */ u8 unk_07;
+    /* 0x7 */ u8 pad_07;
 } CardgameTurn; /* size 0x8 */
 
 /* A card placed on the table (CardgameGame.slots, cardgame_game_set_slot): its attack and hp (from the card's picture
@@ -277,13 +278,13 @@ typedef struct CardgameSlot {
     /* 0xA */ u8 owner;
     /* 0xB */ u8 side;
     /* 0xC */ u8 id; /* unique (CardgameGame.next_slot_id), a turn's target */
-    /* 0xD */ u8 unk_0D;
+    /* 0xD */ u8 pad_0D;
 } CardgameSlot; /* size 0xE */
 
 /* CardgameGame.slots. */
 typedef struct CardgameSlots {
     /* 0x00 */ u8 count;
-    /* 0x01 */ u8 unk_01;
+    /* 0x01 */ u8 pad_01;
     /* 0x02 */ CardgameSlot slots[8];
 } CardgameSlots; /* size 0x72 */
 
@@ -298,7 +299,7 @@ typedef struct CardgameDisplay {
     /* 0x04 */ u8 face_down; /* the next view's cards are shown face down */
     /* 0x05 */ u8 set_dimmed; /* cardgame_game_update_dimmed: 1 undims, 2 dims cards 0-14 */
     /* 0x06 */ u8 dimmed[40];
-    /* 0x2E */ u8 unk_2E[2];
+    /* 0x2E */ u8 pad_2E[2];
     /* 0x30 */ s32 time;
     /* 0x34 */ s32 shown;
     /* 0x38 */ s32 step_time;
@@ -306,24 +307,36 @@ typedef struct CardgameDisplay {
     /* 0x40 */ s32 duration;
     /* 0x44 */ u8 resolve_step; /* step of cardgame_game_resolve_effect */
     /* 0x45 */ u8 cancelled; /* the card cancelled the one before it (effect 0x41): two turns are taken off */
-    /* 0x46 */ u8 unk_46;
-    /* 0x47 */ u8 unk_47;
+    /* 0x46 */ u8 resolve_count; /* the turns played as the resolution starts (CardgameGame.turn); never read */
+    /* 0x47 */ u8 pad_47;
     /* 0x48 */ s16 script_pos;   /* next entry of the played card's script (CardgameCardData.script) */
     /* 0x4A */ s16 repeat_count; /* script effects 3-6: repeat */
     /* 0x4C */ s16 repeat_pos;
-    /* 0x4E */ u8 unk_4E[2];
+    /* 0x4E */ u8 pad_4E[2];
     /* 0x50 */ s32 substep;  /* the game phases' sub-step (cardgame_game_close_panels, ...) */
 } CardgameDisplay; /* size 0x54 */
 
-/* A copy of CardgameGame 0x420..0x497 (the effect state: effect to marked), kept while the in-game menu runs. */
-typedef struct CardgameEffectSave {
-    /* 0x00 */ s32 words[0x78 / 4];
-} CardgameEffectSave; /* size 0x78 */
+/* The effect running and its state (CardgameGame 0x420, member effect). The in-game menu copies it whole
+ * (CardgameGameMenu.saved) while it runs, so it was one struct in the original too. */
+typedef struct CardgameEffectState {
+    /* 0x00 */ u8 id; /* the effect running (cardgame_run_effect) */
+    /* 0x01 */ u8 new_id; /* the effect to start */
+    /* 0x02 */ u8 step;
+    /* 0x03 */ u8 next_step; /* step to take on the next update (0: none) */
+    /* 0x04 */ s32 time; /* the step's frame count (cardgame_effect_wait counts it down) or sub-state */
+    /* 0x08 */ s32 vars[5]; /* values each effect uses its own way */
+    /* 0x1C */ s32 cursor; /* card under the cursor */
+    /* 0x20 */ s32 choice; /* an effect's result */
+    /* 0x24 */ u8 selected; /* hand cards selected (at most 6) */
+    /* 0x25 */ u8 target_rows; /* rows with selectable targets: 1 slots[0], 2 slots[1] (some effects reuse it) */
+    /* 0x26 */ s8 selectable[41]; /* per card: may be selected (the CPU: candidate targets) */
+    /* 0x4F */ s8 marked[41]; /* per card: selected, or a target */
+} CardgameEffectState; /* size 0x78 */
 
 /* CardgameGame.menu (0x4EC): the in-game menu (cardgame_game_run_menu). */
 typedef struct CardgameGameMenu {
     /* 0x00 */ s32 timer;
-    /* 0x04 */ CardgameEffectSave saved;
+    /* 0x04 */ CardgameEffectState saved; /* the game's effect state while the menu runs */
     /* 0x7C */ u8 state;
     /* 0x7D */ u8 sel;
 } CardgameGameMenu; /* size 0x80 with padding */
@@ -352,7 +365,7 @@ typedef struct CardgameGame {
     /* 0x2F7 */ u8 next_phase; /* 0: none */
     /* 0x2F8 */ u8 phase;
     /* 0x2F9 */ u8 step; /* of the phase */
-    /* 0x2FA */ u8 unk_2FA[2];
+    /* 0x2FA */ u8 pad_2FA[2];
     /* 0x2FC */ s32 timer;
     /* 0x300 */ u8 round;
     /* 0x301 */ u8 round_winner;
@@ -372,35 +385,18 @@ typedef struct CardgameGame {
     /* 0x41B */ u8 cpu_deck_end;  /* the CPU may take deck cards up to here (stage <= round * 2 + 2) */
     /* 0x41C */ u8 cpu_deck_last; /* the end of its cards before the stage-7 ones */
     /* 0x41D */ u8 unk_41D[3];
-    /* 0x420 */ u8 effect; /* the effect running (cardgame_run_effect) */
-    /* 0x421 */ u8 new_effect; /* the effect to start */
-    /* 0x422 */ u8 effect_step;
-    /* 0x423 */ u8 next_step; /* effect_step to take on the next update (0: none) */
-    /* 0x424..0x438: six words each effect uses for its own counters, timers and values (cardgame_effect_wait counts
-     * down unk_424) */
-    /* 0x424 */ s32 unk_424;
-    /* 0x428 */ s32 unk_428;
-    /* 0x42C */ s32 unk_42C;
-    /* 0x430 */ s32 unk_430;
-    /* 0x434 */ s32 unk_434;
-    /* 0x438 */ s32 unk_438;
-    /* 0x43C */ s32 cursor; /* card under the cursor */
-    /* 0x440 */ s32 choice; /* an effect's result */
-    /* 0x444 */ u8 selected; /* hand cards selected (at most 6) */
-    /* 0x445 */ u8 target_rows; /* rows with selectable targets: 1 slots[0], 2 slots[1] (some effects reuse it) */
-    /* 0x446 */ s8 selectable[41]; /* per card: may be selected (the CPU: candidate targets) */
-    /* 0x46F */ s8 marked[41]; /* per card: selected, or a target */
+    /* 0x420 */ CardgameEffectState effect;
     /* 0x498 */ CardgameDisplay display;
     /* 0x4EC */ CardgameGameMenu menu;
     /* 0x56C */ u8 unk_56C[0x574 - 0x56C];
     /* 0x574 */ u8 turn_state; /* cardgame_game_run_turns: 2 the player plays, 3 the CPU, 12-15 the end */
     /* 0x575 */ s8 turn; /* cards played this round, 0..3 */
-    /* 0x576 */ u8 unk_576;
+    /* 0x576 */ u8 turn_cycles; /* rounds of turns played (counted when turn goes back to 0); never read */
     /* 0x577 */ u8 passes; /* sides that played nothing (2: the play phase ends) */
     /* 0x578 */ u8 round_first; /* the side that plays first */
     /* 0x579 */ u8 side; /* the side playing */
     /* 0x57A */ s8 answer; /* -1: no answer yet */
-    /* 0x57B */ u8 unk_57B;
+    /* 0x57B */ u8 pad_57B;
     /* 0x57C */ s32 pass_timer;
     /* 0x580 */ CardgameTurn turns[3]; /* indexed by turn - 1 */
     /* 0x598 */ u8 unk_598[4];

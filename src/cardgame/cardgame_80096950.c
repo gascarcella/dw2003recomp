@@ -885,14 +885,14 @@ void cardgame_board_draw_panel_values(CardgameBoardPanel *panel, CardgameBoardDa
         shut_x2 = 0x13A;
         shut_y2 = 0x26;
     }
-    switch (panel->unk_06) {
+    switch (panel->event) {
     case 0:
         break;
     case 1:
-        panel->unk_06 = 0;
+        panel->event = 0;
         break;
     case 2:
-        panel->unk_06 = 0;
+        panel->event = 0;
         break;
     }
     switch (panel->state) {
@@ -931,7 +931,7 @@ void cardgame_board_draw_panel_values(CardgameBoardPanel *panel, CardgameBoardDa
             panel->wins_y = shut_y2 - (shut_y2 - open_y2) * panel->timer / panel->duration;
         } else {
             panel->state = 0;
-            panel->unk_06 = 1;
+            panel->event = 1;
             panel->timer = 0;
             panel->duration = 0;
             panel->x = shut_x0;
@@ -970,7 +970,7 @@ void cardgame_board_draw_panel_values(CardgameBoardPanel *panel, CardgameBoardDa
             panel->y = shut_y0 - (shut_y0 - open_y0) * panel->timer / panel->duration;
         } else {
             panel->state = 0;
-            panel->unk_06 = 1;
+            panel->event = 1;
             panel->timer = 0;
             panel->duration = 0;
             panel->x = shut_x0;
@@ -1656,7 +1656,7 @@ void cardgame_board_update(CardgameBoard *obj, CardgameBoardData *data) {
 }
 
 void cardgame_board_open_turn_mark(CardgameBoard *obj, s32 i, s16 side) {
-    obj->turn_marks[i].unk_00 = 0x1000;
+    obj->turn_marks[i].scale_x = 0x1000;
     obj->turn_marks[i].state = 1;
     obj->turn_marks[i].level = 0;
     obj->turn_marks[i].side = side;
@@ -1665,7 +1665,7 @@ void cardgame_board_open_turn_mark(CardgameBoard *obj, s32 i, s16 side) {
 }
 
 void cardgame_board_close_turn_mark(CardgameBoard *obj, s32 i) {
-    obj->turn_marks[i].unk_00 = 0x1000;
+    obj->turn_marks[i].scale_x = 0x1000;
     obj->turn_marks[i].level = 0x1000;
     obj->turn_marks[i].state = 3;
     obj->turn_marks[i].duration = 5;
@@ -1676,7 +1676,7 @@ void cardgame_board_open_popup(CardgameBoard *obj, s32 i, s16 kind, s32 message,
     sound_module.play(0x40019);
     obj->popups[i].x = x;
     obj->popups[i].y = y;
-    obj->popups[i].unk_06 = 0x1000;
+    obj->popups[i].scale_y = 0x1000;
     obj->popups[i].state = 1;
     obj->popups[i].scale = 0;
     obj->popups[i].kind = kind;
@@ -1688,7 +1688,7 @@ void cardgame_board_open_popup(CardgameBoard *obj, s32 i, s16 kind, s32 message,
 void cardgame_board_close_popup(CardgameBoard *obj, s32 i) {
     sound_module.play(0x4001A);
     obj->popups[i].scale = 0x1000;
-    obj->popups[i].unk_06 = 0x1000;
+    obj->popups[i].scale_y = 0x1000;
     obj->popups[i].state = 3;
     obj->popups[i].duration = 6;
     obj->popups[i].timer = 6;
@@ -1802,7 +1802,7 @@ void cardgame_board_open_panels(CardgameBoard *obj) {
     s16 y = 0x140;
 
     obj->panels[0].state = state;
-    obj->panels[0].unk_06 = 2;
+    obj->panels[0].event = 2;
     obj->panels[0].timer = obj->panels[0].duration = ticks;
     obj->panels[0].x = 0;
     obj->panels[0].y = 0xF1;
@@ -1847,7 +1847,7 @@ void cardgame_board_close_panels(CardgameBoard *obj) {
 void cardgame_board_open_side_panel(CardgameBoard *obj, s32 side) {
     obj->panels[side].state = 4;
     obj->panels[side ^ 1].state = 0;
-    obj->panels[side].unk_06 = 2;
+    obj->panels[side].event = 2;
     obj->panels[side].duration = 10;
     obj->panels[side].timer = 10;
     if (side == 0) {

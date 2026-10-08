@@ -1857,9 +1857,9 @@ void fieldstg_start_battle(s32 battle) {
     mgr->base.set_state(mgr, OBJECT_STATE_DONE);
     records_state.battle = battle;
     records_state.first_strike_chance = fieldstg_battles[battle].first_strike;
-    records_state.unk_3D = fieldstg_battles[battle].unk_0D;
+    records_state.battle_kind = fieldstg_battles[battle].kind;
     for (i = 0; i < 12; i++) {
-        records_state.blocked[i] = fieldstg_battles[battle].unk_0E[i];
+        records_state.blocked[i] = fieldstg_battles[battle].blocked[i];
     }
     for (i = 0; i < 3; i++) {
         records_state.enemies[i] = *fieldstg_battles[battle].enemies[i];

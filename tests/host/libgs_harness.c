@@ -6,13 +6,13 @@
  *   V <fn> <regs> <view> <a0> <a1>          GsSetRefView2(a0) or GsGetLw(a0, a1) on the view buffer (the family's
  *                                           VIEW_LAYOUT at the PS1 address VIEW_ADDR; a0/a1 are PS1 addresses in it),
  *                                           the 64 GTE registers loaded from <regs> first ->
- *                                           D_80081358, D_80081338, the view buffer, the 64 registers, v0
+ *                                           GsWSMATRIX, D_80081338, the view buffer, the 64 registers, v0
  *   F <fn> <regs> <a0> <a1> <a2>            a LIBGTE function; each argument is a hex buffer, or "=N" (the same buffer
  *                                           as argument N), or "#V" (the number V) -> each distinct buffer argument
  *                                           after the call, the 64 registers, v0
  *   L <regs> <id> <light> <first>           GsSetFlatLight(id, &light), the 16-byte GsF_LIGHT given in hex; first = 1
  *                                           starts a case: both light matrices back to GsInitGraph's zero (the oracle
- *                                           restores them after each case) -> D_800812F8, D_80081318, the 64
+ *                                           restores them after each case) -> GsLIGHTWSMATRIX, D_80081318, the 64
  *                                           registers, v0
  * The view buffer is unpacked into host structs (its PS1 pointers become host pointers when they point into it) and
  * packed back in the PS1's layout, so the host's pointer size does not matter. */
@@ -24,7 +24,7 @@
 #include "psyq/libgs.h"
 
 /* psxstack/psyq/libgs.c and libgte.c: what the game does not call (no header declares them). */
-extern MATRIX D_80081358, D_80081338, D_80081398, D_800812F8, D_80081318;
+extern MATRIX GsWSMATRIX, D_80081338, D_80081398, GsLIGHTWSMATRIX, D_80081318;
 extern u32 D_800812D8;
 void GsGetLw(GsCOORDINATE2 *coord, MATRIX *m);
 MATRIX *MulMatrix(MATRIX *m0, MATRIX *m1);
@@ -188,7 +188,7 @@ int main(void) {
 
             /* the oracle restores both matrices after each case: every case starts from the boot's (zero: the game has
              * not called GsSetRefView2 yet when the oracle runs), which GsSetRefView2's return 1 leaves in the copy */
-            memset(&D_80081358, 0, sizeof(MATRIX));
+            memset(&GsWSMATRIX, 0, sizeof(MATRIX));
             memset(&D_80081338, 0, sizeof(MATRIX));
             unpack_view(bufs[0]);
             load_regs(regs);
@@ -198,7 +198,7 @@ int main(void) {
                 GsGetLw(host_ptr(a0), host_ptr(a1));
             }
             pack_view(bufs[0]);
-            put_hex(&D_80081358, sizeof(MATRIX), " ");
+            put_hex(&GsWSMATRIX, sizeof(MATRIX), " ");
             put_hex(&D_80081338, sizeof(MATRIX), " ");
             put_hex(bufs[0], VIEW_SIZE, " ");
             put_regs();
@@ -253,13 +253,13 @@ int main(void) {
             s32 v0;
 
             if (atoi(argv[4]) != 0) {
-                memset(&D_800812F8, 0, sizeof(MATRIX));
+                memset(&GsLIGHTWSMATRIX, 0, sizeof(MATRIX));
                 memset(&D_80081318, 0, sizeof(MATRIX));
             }
             memcpy(&light, bufs[0], 16); /* s32 vx, vy, vz; u8 r, g, b: the PS1's layout is the host's */
             load_regs(regs);
             v0 = GsSetFlatLight((s32)(u32)strtoul(argv[2], NULL, 0), &light);
-            put_hex(&D_800812F8, sizeof(MATRIX), " ");
+            put_hex(&GsLIGHTWSMATRIX, sizeof(MATRIX), " ");
             put_hex(&D_80081318, sizeof(MATRIX), " ");
             put_regs();
             printf("%08x\n", (u32)v0);

@@ -22,8 +22,10 @@ ready; the release itself is still to be published.
   on game code that is not C: any `INCLUDE_ASM` or `NON_MATCHING`, a `LOOP_BLOCK` without its evidence comment, ...).
 - **Data:** split per object and in C, except crt0's `.sbss`, a FIELDSTG zero block with psylink padding, and
   STDWTITL's LIBPRESS data.
-- **Names:** every EXE game unit, most overlays and all WSTAG functions are named; about 1,100 `unk_` field uses remain
-  (mostly never read or not yet understood) and a dozen `func_` names.
+- **Names:** every function is named; the EXE's C uses no default name but `D_80056088` (libgte's sin table) and the
+  overlay addresses it calls through `LATE_FUNC`. 229 `unk_` fields remain, 27 of them accessed by the C (37 accesses;
+  issue #56: `tools/ref_names.py` lists the US decomp's candidates, `tools/renames.py` replays the rename lists), the
+  rest never read; 40 FIELDSTG and 3 FIGHTSTG data tables and the WSTAG stage scripts' data keep their `D_` names.
 
 ## Reference tests
 `scripts/test.sh` runs every layer that the machine can run (`tests/README.md` has the details):

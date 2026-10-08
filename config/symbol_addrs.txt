@@ -413,7 +413,7 @@ records_item_392 = 0x8005CC94;
 records_item_393 = 0x8005CC98;
 records_item_394 = 0x8005CC9C;
 records_file_count = 0x8005CCA4;
-D_8005CCF0 = 0x8005CCF0; // size:0x8
+records_field_menu_choice = 0x8005CCF0; // size:0x8
 
 // cdload (src/main/cdload.c)
 cdload_check_sector = 0x80013694; // type:func
@@ -487,6 +487,7 @@ memcard_run_command = 0x80015288; // type:func
 memcard_list_files = 0x80015480; // type:func
 memcard_create_file = 0x800154B8; // type:func
 memcard_format = 0x800154F0; // type:func
+memcard_unformat = 0x80015528; // type:func
 memcard_check_checksum = 0x80015530; // type:func
 memcard_get_checksum = 0x80015564; // type:func
 memcard_state = 0x80048750; // size:0x328
@@ -596,7 +597,9 @@ pad_get_repeat = 0x8001889C; // type:func
 pad_reset_button_map = 0x800188C0; // type:func
 pad_swap_buttons = 0x80018928; // type:func
 pad_get_button_map = 0x80018980; // type:func
-pad_check_playback = 0x800189B8; // type:func
+pad_start_recording = 0x800189A8; // type:func
+pad_stop_recording = 0x800189B0; // type:func
+pad_is_recording_port = 0x800189B8; // type:func
 pad_start_playback = 0x800189F0; // type:func
 pad_stop_playback = 0x80018A64; // type:func
 pad_is_playback_port = 0x80018AA0; // type:func
@@ -638,6 +641,7 @@ message_set_scale = 0x8001A420; // type:func
 message_set_center = 0x8001A43C; // type:func
 message_set_ot_depth = 0x8001A448; // type:func
 message_set_page_lines = 0x8001A450; // type:func
+message_set_unk_C4 = 0x8001A458; // type:func
 message_is_done = 0x8001A460; // type:func
 message_is_visible = 0x8001A46C; // type:func
 message_is_waiting = 0x8001A478; // type:func
@@ -739,8 +743,8 @@ gfx_append_callback = 0x8001E324; // type:func
 gfx_run_callbacks = 0x8001E38C; // type:func
 gfx_save_camera = 0x8001E404; // type:func
 gfx_restore_camera = 0x8001E470; // type:func
-gfx_save_world_screen = 0x8001E4F4; // type:func
-gfx_restore_world_screen = 0x8001E55C; // type:func
+gfx_save_light = 0x8001E4F4; // type:func
+gfx_restore_light = 0x8001E55C; // type:func
 gfx_new_layer = 0x8001E5BC; // type:func
 gfx_module = 0x8004DE10; // size:0x190
 gfx_ot_lengths = 0x8004DFA0;
@@ -1101,6 +1105,9 @@ gte_rotate_z_matrix = 0x8002A7CC; // type:func
 GsGetLw = 0x8002A88C; // type:func
 // LIBGS.LIB/MATRIX9.OBJ
 GsMulCoord3 = 0x8002AB4C; // type:func
+// LIBGS's .bss (psyq/libgs/bss), by what LIBGS does with them (port/psyq/libgs.c): Sony's names
+GsLIGHTWSMATRIX = 0x800812F8;
+GsWSMATRIX = 0x80081358;
 // LIBGTE.LIB/GEO_00.OBJ
 rsin = 0x8002ABCC; // type:func
 sin_1 = 0x8002AC08; // type:func
@@ -1150,6 +1157,8 @@ DeliverEvent = 0x8002BACC; // type:func
 CdPosToInt = 0x8002BADC; // type:func
 // LIBCD.LIB/CDREAD2.OBJ
 CdRead2 = 0x8002BB5C; // type:func
+// LIBCD's .bss (psyq/libcd/bss): the flag STDWTITL's movie player polls (Sony's name)
+StCdIntrFlag = 0x80081454;
 // LIBCD.LIB/C_002.OBJ
 StClearRing = 0x8002BC0C; // type:func
 // LIBCD.LIB/C_003.OBJ
@@ -1657,8 +1666,8 @@ MemCardUnformat = 0x8003ED1C; // type:func
 
 // The data block at 0x8004DC10 (message.c): a zero VECTOR, an identity MATRIX (overlays read its columns and its t by
 // offset: FIGHTSTG fightstg_battle_to_screen) and three scale matrices.
-D_8004DC10 = 0x8004DC10; // size:0x10
-D_8004DC20 = 0x8004DC20; // size:0x20
-D_8004DC40 = 0x8004DC40; // size:0x20
-D_8004DC60 = 0x8004DC60; // size:0x20
-D_8004DC80 = 0x8004DC80; // size:0x20
+message_zero_vector = 0x8004DC10; // size:0x10
+message_identity_matrix = 0x8004DC20; // size:0x20
+message_double_x_matrix = 0x8004DC40; // size:0x20
+message_double_y_matrix = 0x8004DC60; // size:0x20
+message_double_xy_matrix = 0x8004DC80; // size:0x20

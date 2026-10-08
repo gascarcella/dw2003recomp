@@ -344,7 +344,7 @@ def bonus_cases():
 
 def combo_cases():
     out = []
-    reads = [SELECTABLE, read("unk_438", 4, "game.unk_438 (the combination's card + 1)")]
+    reads = [SELECTABLE, read("effect_vars", 4, "game.effect_vars[4] (the combination's card + 1)", 0x10)]
 
     def c(name, cards, start, comment, side=1):
         g = Game()
@@ -354,10 +354,10 @@ def combo_cases():
 
     c("none", [60, 61, 62], 0, "no combinable card -> -1, flags untouched")
     c("pair", [69, 69, 60], 0, "a pair of 69 (combinable): j = 1 -> -1")
-    c("triple", [69, 60, 69, 69], 0, "three 69 split by 60: sorted 60, 69 x 3: flags the three, unk_438 193, returns 4")
+    c("triple", [69, 60, 69, 69], 0, "three 69 split by 60: sorted 60, 69 x 3: flags the three, effect_vars[4] 193, returns 4")
     c("four", [69, 69, 69, 69], 0, "four 69: all four flagged, returns 4")
     c("two_groups_first", [72, 69, 72, 69, 72, 69], 0, "69 x 3 and 72 x 3: the first group (69s), returns 3")
-    c("two_groups_second", [72, 69, 72, 69, 72, 69], 3, "start 3: the 72s, unk_438 62, returns 6")
+    c("two_groups_second", [72, 69, 72, 69, 72, 69], 3, "start 3: the 72s, effect_vars[4] 62, returns 6")
     c("noncombinable_triple", [60, 60, 60], 0, "three 60 (record +10 = 0): no combination -> -1")
     c("player_side", [69, 69, 69], 0, "side 0", side=0)
     return out
@@ -480,19 +480,19 @@ def deck_cases():
 
 
 def deal_cases(sym):
-    """cardgame_deal_cards(game, board) (effect 0x14, the deal): unk_424/428/434 = 0, unk_42C/430 = the two deck counts;
+    """cardgame_deal_cards(game, board) (effect 0x14, the deal): effect_time, effect_vars[0], [3] = 0, effect_vars[1], [2] = the two deck counts;
     for each side, 6 times: hand[k] = deck[deck_pos], hand_count++, deck_pos++, deck_count-- (k from 0 whatever the hand
     held; no check of the deck's end); then the board shows the 12 cards (a stub board: every method heap_nop)."""
     board = struct.pack("<I", sym["heap_nop"]) * (0xF48 // 4)
     reads = [pread(0, "deck_pos", 8), pread(0, "hand", 12), pread(1, "deck_pos", 8), pread(1, "hand", 12),
-             read("unk_424", 0x14, "game.unk_424..unk_434")]
+             read("effect_time", 0x14, "game.effect_time..effect_vars[3]")]
     out = []
-    g = Game().put("unk_424", 7, 4)
+    g = Game().put("effect_time", 7, 4)
     g.deck(0, list(range(60, 70)))
     g.deck(1, list(range(70, 80)))
     out.append(call_case("deal_round", g, "cardgame_deal_cards", [("buf", "game"), ("buf", "board")], "void", reads,
                          "decks of 10 from position 0: hands = the first 6, deck_pos 6, deck_count 4, hand_count 6; "
-                         "unk_42C/430 = 10", {"board": board}))
+                         "effect_vars[1], [2] = 10", {"board": board}))
     g = Game()
     g.deck(0, [60 + k % 10 for k in range(40)])
     g.pfield(0, "deck_pos", 30).pfield(0, "deck_count", 10)

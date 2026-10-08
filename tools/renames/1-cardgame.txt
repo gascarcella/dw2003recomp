@@ -1,0 +1,33 @@
+# Batch 1 of issue #56: include/cardgame.h. Candidates from ReGame-Labs/dw3_decomp (docs/THIRD_PARTY.md), named
+# from what our code does with them. Apply with tools/renames.py.
+
+# CardgameGame 0x424..0x438: the running effect step's frame count and its five scratch words (the header declares
+# effect_time and effect_vars[5]; their own effectStep.time / vars[])
+unk_424 effect_time
+unk_428 effect_vars[0]
+unk_42C effect_vars[1]
+unk_430 effect_vars[2]
+unk_434 effect_vars[3]
+unk_438 effect_vars[4]
+unk_576 turn_cycles
+
+CardgameBoardPanel.unk_06 event
+CardgamePopup.unk_06 scale_y
+CardgameTurnMark.unk_00 scale_x
+CardgameCardInfo.unk_01 may_counter
+CardgameDisplay.unk_46 resolve_count
+
+# alignment padding (the gap the next member's or the struct's alignment makes; nothing reads it)
+CardgameBoardPanel.unk_1F pad_1F
+CardgameBoardPanel.unk_51 pad_51
+CardgameBoardCard.unk_4A pad_4A
+CardgameBoardMark.unk_11 pad_11
+CardgameBoard.unk_E9F pad_E9F
+CardgameTurn.unk_07 pad_07
+CardgameSlot.unk_0D pad_0D
+CardgameSlots.unk_01 pad_01
+CardgameDisplay.unk_2E pad_2E
+CardgameDisplay.unk_47 pad_47
+CardgameDisplay.unk_4E pad_4E
+CardgameGame.unk_2FA pad_2FA
+CardgameGame.unk_57B pad_57B
