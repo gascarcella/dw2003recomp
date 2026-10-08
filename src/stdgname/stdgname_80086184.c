@@ -99,7 +99,7 @@ void stdgname_main_update(StdgnameMain *obj, StdgnameMainData *data) {
         stdgname_main_draw_background(obj);
         break;
     case OBJECT_STATE_DONE:
-        if (data->unk_0C == NULL) {
+        if (data->waited == NULL) {
             obj->base.set_state(obj, OBJECT_STATE_RUN);
         }
         stdgname_main_draw_background(obj);

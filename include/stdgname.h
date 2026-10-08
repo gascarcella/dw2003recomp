@@ -61,7 +61,7 @@ typedef struct StdgnameNameEntry {
     /* 0xB4 */ s32 arrows_frame;
     /* 0xB8 */ s32 arrows_time;
     /* 0xBC */ s32 unk_BC;
-    /* 0xC0 */ WindowAnim unk_C0;
+    /* 0xC0 */ WindowAnim unused_anim; /* only its duration is set (10): nothing starts it */
     /* 0xD0 */ WindowAnim keyboard_anim;
     /* 0xE0 */ WindowAnim warning_anim;
     /* 0xF0 */ void (*get_name)(struct StdgnameNameEntry *obj, u8 *dst); /* stdgname_entry_get_name */
@@ -73,7 +73,7 @@ typedef struct StdgnameMainData {
     /* 0x0 */ Object *party;         /* the party member choice (stdgname_party_create) */
     /* 0x4 */ StdgnameNameEntry *name_entry; /* the name entry */
     /* 0x8 */ Fade *fade;        /* the fade */
-    /* 0xC */ Object *unk_0C;
+    /* 0xC */ Object *waited; /* the done state waits for it, then runs again; nothing here fills it */
 } StdgnameMainData; /* size 0x10 */
 
 /* stdgname_80082F8C.c */

@@ -106,7 +106,7 @@ typedef struct StstatusItemList {
     /* 0x6D8 */ s32 unk_6D8;
     /* 0x6DC */ WindowAnim frame_anim;
     /* 0x6EC */ WindowAnim title_anim;
-    /* 0x6FC */ WindowAnim unk_6FC;
+    /* 0x6FC */ WindowAnim unused_anim; /* nothing starts it: the sprite it scales (0x26) never shows */
 } StstatusItemList; /* size 0x70C */
 
 s32 ststatus_items_categories[5] = { 1, 0x80000002, 0x80000003, 0x80000004, 0 };
@@ -1300,10 +1300,10 @@ void ststatus_item_list_draw(StstatusItemList *obj) {
         spr.set_scale(0x1000, 0x1000, 0x1000);
     }
     spr.draw(cdload_module.get_subfile_by_id(0x04040000), 0x2E, 0, 0x1E);
-    if (obj->unk_6FC.level != 0) {
+    if (obj->unused_anim.level != 0) {
         spr.set_layer_id(obj->layer_id, obj->ot_depth - 2);
-        if (obj->unk_6FC.level != 0x1000) {
-            spr.set_scale(obj->unk_6FC.level, 0x1000, 0x1000);
+        if (obj->unused_anim.level != 0x1000) {
+            spr.set_scale(obj->unused_anim.level, 0x1000, 0x1000);
             spr.set_pivot(0x140, 0x26);
         } else {
             spr.set_scale(0x1000, 0x1000, 0x1000);

@@ -33,7 +33,7 @@ struct StcrddekEditor {
     /* 0x084 */ s32 blink_time; /* time of the last blink */
     /* 0x088 */ s16 spare[315];  /* the cards the player has spare, in ID order */
     /* 0x2FE */ s8 spare_copies[315]; /* per card ID: copies not in the deck */
-    /* 0x439 */ u8 unk_439[0x3];
+    /* 0x439 */ u8 pad_439[0x3];
     /* 0x43C */ s32 details;
     /* 0x440 */ s32 hint_time;
     /* 0x444 */ WindowAnim anims[5];
@@ -90,7 +90,7 @@ typedef struct StcrddekGrid {
  * has the same skeleton, stgtrain_stub_update). */
 typedef struct StcrddekStub {
     /* 0x00 */ Object base;
-    /* 0x50 */ s32 unk_50;
+    /* 0x50 */ s32 unk_50; /* create's argument */
     /* 0x54 */ s32 layer_id; /* layer */
     /* 0x58 */ s32 ot_depth; /* ordering table entry */
     /* 0x5C */ u8 unk_5C[0x10];

@@ -138,7 +138,7 @@ typedef struct StdwtitlAnim {
  * pictures and eight animations. */
 typedef struct StdwtitlBackground {
     /* 0x00 */ Object base;
-    /* 0x50 */ s32 unk_50;
+    /* 0x50 */ s32 unk_50; /* create's argument (0); nothing reads it */
     /* 0x54 */ StdwtitlAnim anims[8];
     /* 0x74 */ s16 anim6_x; /* x, y of animation 6 */
     /* 0x76 */ s16 anim6_y;

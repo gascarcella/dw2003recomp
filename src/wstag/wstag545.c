@@ -22,7 +22,7 @@ typedef struct Wstag545Lid {
 typedef struct Wstag545Board {
     /* 0x00 */ Object base;
     /* 0x50 */ s32 mark; /* the mark to show (1-5), 0: none */
-    /* 0x54 */ s32 unk_54;
+    /* 0x54 */ s32 silent; /* else a message plays sound 0x8004474A (cleared at the start, never set) */
     /* 0x58 */ WstagSpriteAnim sprite;
 } Wstag545Board; /* size 0x60 */
 
@@ -257,7 +257,7 @@ void wstag545_board_update(Wstag545Board *obj, Wstag545BoardData *data) {
             data->marks[i] = wstag545_mark_create(D_WSTAG545_800A6DF4[i].type, D_WSTAG545_800A6DF4[i].x,
                                                     D_WSTAG545_800A6DF4[i].y);
         }
-        obj->unk_54 = 0;
+        obj->silent = 0;
         obj->mark = 0;
         obj->base.next_state(obj);
         break;
@@ -327,7 +327,7 @@ void wstag545_board_message(void *arg0, s32 msg) {
     Wstag545Board *obj = arg0;
 
     if (obj != NULL) {
-        if (obj->unk_54 == 0) {
+        if (obj->silent == 0) {
             sound_module.play(0x8004474A);
         }
         switch (msg) {

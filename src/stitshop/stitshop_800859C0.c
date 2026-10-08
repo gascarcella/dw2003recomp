@@ -143,10 +143,10 @@ void stitshop_sell_draw(StitshopSell *obj, StitshopSellData *data) {
 
     sprite_init(&spr);
     spr.set_vram_pos(0x280, 0x100);
-    if (obj->unk_AC.level != 0) {
+    if (obj->unused_anim.level != 0) {
         spr.set_layer_id(obj->layer_id, 1);
-        if (obj->unk_AC.level != 0x1000) {
-            spr.set_scale(obj->unk_AC.level, 0x1000, 0x1000);
+        if (obj->unused_anim.level != 0x1000) {
+            spr.set_scale(obj->unused_anim.level, 0x1000, 0x1000);
             spr.set_pivot(0x140, 0x41);
         }
         spr.draw(cdload_module.get_subfile_by_id(0x04020000), 0xD, 0xA0, 0x24);
@@ -538,7 +538,7 @@ void stitshop_sell_update(StitshopSell *obj, StitshopSellData *data) {
         obj->kinds_anim.duration = 10;
         obj->count_anim.duration = 10;
         obj->question_anim.duration = 10;
-        obj->unk_AC.duration = 10;
+        obj->unused_anim.duration = 10;
         obj->nothing_anim.duration = 10;
         obj->count = 1;
         break;

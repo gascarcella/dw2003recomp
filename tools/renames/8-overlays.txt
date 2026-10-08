@@ -1,0 +1,42 @@
+# Batch 6 of issue #56: the other overlays' structs (STGTRAIN, STDGNAME, STPLNMET, STITSHOP, STSTATUS, STCRDDEK,
+# STGMCARD, STFGTREP, WSTAG): only the fields our C reads or writes, and alignment gaps. Candidates from
+# ReGame-Labs/dw3_decomp (docs/THIRD_PARTY.md), named from what our code does with them. Apply with tools/renames.py.
+# By hand (not a rename):
+#   - StstatusMapPage 0x190..0x19F (s32 unk_190, u8 unk_194[0xC]) became WindowAnim unused_anim (the line below
+#     renames the use).
+#   - StfgtrepMember: StfgtrepTechLevelUp starts with the unused word (unk_0, then level_up, step, time), so
+#     tech_level_ups[3] starts at 0x0FC (unk_FC was the first one's) and the word after them is its own field, s32
+#     learned at 0x12C (was tech_level_ups[2].unk_C: set when step 41 teaches a technique, independent of the three).
+# Left unk_ (meaning not shown by our code): StgtrainSprite.unk_84/86 (copied from the sprite data's header, never
+# read), StgtrainAnimPart.unk_0C and StgdglabIdEntry.unk_04 (read only by getters nothing calls),
+# StcrddekStub.unk_50 and StdwtitlBackground.unk_50 (their create's argument, never read).
+
+# stgtrain
+StgtrainAnimFile.unk_C same_depth
+StgtrainFuncs.get_file_unk_C get_file_same_depth
+stgtrain_anim_get_file_unk_C stgtrain_anim_get_file_same_depth
+StgtrainSpritePart.unk_4 clut_row
+StgtrainSpritePart.unk_6 tpage
+
+# stdgname
+StdgnameMainData.unk_0C waited
+
+# window animations only their duration is set for (nothing starts them; the two that are drawn never show)
+StdgnameNameEntry.unk_C0 unused_anim
+StplnmetNameEntry.unk_BC unused_anim
+StitshopSell.unk_AC unused_anim
+StstatusItemList.unk_6FC unused_anim
+StstatusStatusPage.unk_138 unused_anim
+StstatusMapPage.unk_190 unused_anim.duration
+
+# wstag
+WstagAnimKeyB.unk_3 end_value
+Wstag545Board.unk_54 silent
+
+# alignment padding (the gap the next member's or the struct's alignment makes; nothing reads it; in the disc's
+# training animations every StgtrainSpriteFrame's byte 3 is 0)
+StgtrainSpriteFrame.unk_3 pad_3
+WstagSoundAnimObject.unk_52 pad_52
+StcrddekEditor.unk_439 pad_439
+StgmcardSaveHeader.unk_03 pad_03
+StgmcardSlotSummary.unk_42 pad_42

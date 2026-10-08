@@ -557,8 +557,7 @@ typedef struct StstatusMapPage {
     /* 0x184 */ s32 area;    /* which (from 1) */
     /* 0x188 */ s32 area_cursor; /* the cursor when it got there */
     /* 0x18C */ s32 area_cursor_y;
-    /* 0x190 */ s32 unk_190;
-    /* 0x194 */ u8 unk_194[0xC];
+    /* 0x190 */ WindowAnim unused_anim; /* only its duration is set (10): nothing starts it */
 } StstatusMapPage; /* size 0x1A0 */
 
 /* The map cursor's animation (sprite offsets, by cursor_frame). */
@@ -833,7 +832,7 @@ void ststatus_map_update(StstatusMapPage *obj, StstatusMapPageData *data) {
         case 1:
             data->area_name = message_create_window(obj->layer_id, 1, 0x14, 0x16);
             data->area_name->set_page_lines(data->area_name, 2);
-            obj->unk_190 = 10;
+            obj->unused_anim.duration = 10;
             ststatus_map.mark_visited(obj->visited);
             area = ststatus_map.get_area() + 1;
             obj->current_pos = ststatus_module.area_layout[area].x + 0xC;

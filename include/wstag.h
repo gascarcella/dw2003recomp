@@ -72,7 +72,7 @@ typedef struct WstagAnimKey {
 typedef struct WstagAnimKeyB {
     /* 0x0 */ s16 frame;
     /* 0x2 */ u8 time;
-    /* 0x3 */ u8 unk_3;
+    /* 0x3 */ u8 end_value; /* on the end key (frame 0xFF): the key to go back to (WSTAG805), a drop's dy (WSTAG680) */
 } WstagAnimKeyB; /* size 0x4 */
 
 /* A running sprite animation: its key and the time left. */
@@ -177,7 +177,7 @@ typedef struct WstagGlow2Object {
 typedef struct WstagSoundAnimObject {
     /* 0x00 */ Object base;
     /* 0x50 */ s16 voice;  /* the sound's voice */
-    /* 0x52 */ s16 unk_52;
+    /* 0x52 */ s16 pad_52;
     /* 0x54 */ WstagSpriteAnim sprite;
 } WstagSoundAnimObject; /* size 0x5C */
 

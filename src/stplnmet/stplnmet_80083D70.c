@@ -530,7 +530,7 @@ void stplnmet_entry_update(StplnmetNameEntry *obj, StplnmetNameEntryData *data) 
             stplnmet_keyboard.titles = stplnmet_key_tabs_latin;
             stplnmet_keyboard.keys = stplnmet_key_pages_latin;
         }
-        obj->unk_BC.duration = 10;
+        obj->unused_anim.duration = 10;
         obj->warning_anim.duration = 10;
         obj->keyboard_anim.duration = 10;
         stplnmet_entry_create_windows(obj, data);

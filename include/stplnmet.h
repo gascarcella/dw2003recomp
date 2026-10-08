@@ -34,7 +34,7 @@ typedef struct StplnmetNameEntry {
     /* 0xB0 */ s32 arrows_frame;
     /* 0xB4 */ s32 arrows_time;
     /* 0xB8 */ s32 unk_B8;
-    /* 0xBC */ WindowAnim unk_BC;
+    /* 0xBC */ WindowAnim unused_anim; /* only its duration is set (10): nothing starts it */
     /* 0xCC */ WindowAnim keyboard_anim;
     /* 0xDC */ WindowAnim warning_anim;
     /* 0xEC */ void (*get_name)(struct StplnmetNameEntry *obj, u8 *dst);  /* stplnmet_entry_get_name */
