@@ -123,7 +123,8 @@ jobs:
 
       - name: The port and launcher areas need psxstack
         if: steps.areas.outputs.port == 'true' && steps.stack.outputs.present != 'true'
-        run: echo "::warning::no PSXSTACK_DEPLOY_KEY (a fork pull request): the psxstack submodule cannot be fetched, so the port and launcher areas are skipped here; a maintainer's run of the branch tests them"
+        run: |
+          echo "::warning::no PSXSTACK_DEPLOY_KEY (a fork pull request): the psxstack submodule cannot be fetched, so the port and launcher areas are skipped here; a maintainer's run of the branch tests them"
 
   # Disc-free, always: the scripts parse, the Python compiles; for the game area the workaround census
   # (tools/hacks.py --check, stdlib only, <1 s: no INCLUDE_ASM beyond its HOLDOUTS, every FAKE: with its reason and
