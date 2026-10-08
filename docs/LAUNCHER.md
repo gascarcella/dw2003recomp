@@ -176,6 +176,28 @@ with the mod on, with `manual` and party_xp, and capped without `manual`; that b
 `form_exp` is not reached by a scripted run.
 
 
+### Widescreen battles
+
+`widescreen`. No options, no hotkey: while enabled, the battle (FIGHTSTG) is shown 16:9 through the GPU renderer's wide
+canvas (psxstack `runtime/render_gpu_wide.c`; issue #71). The game is unchanged: FIGHTSTG already sends the 3D a 16:9
+frame needs (its only screen-space cull, `fightstg_model_mesh_is_visible`, keeps a mesh with a bounding point within
+the clip plus 64 pixels: 224 from the centre, against the 213.5 of a 16:9 frame), and the GPU clipped it to the
+320-wide drawing area. The mod's frame callback (`port/game/game_mods.c`) calls `port_video_widescreen(1)` while FIGHTSTG
+is the tier-1 overlay; its start asks for the canvas and a 16:9 window (`port_video_widescreen_enable`).
+
+- **What widens:** the battle's stage and models (more of the arena at both sides); the background clear, fades and
+  flashes cover the whole width. The HUD, the menus and the portrait window stay as drawn, in the middle 4:3.
+- **What stays 4:3:** the field, the menus and every other overlay (320-wide 2D whose art ends at the screen's edge;
+  the field's widening is issue #78), the movies, and everything with the software renderer (logged once).
+- **The window** keeps its size; the picture switches between 4:3 and 16:9 inside it. A new window opens 16:9
+  (`video.scale` x 427 x 240) when the mod is on and `video.renderer` is `gpu`.
+- **Known limits:** the digivolution's 2D effects are 320-wide art and may show their edges at the sides; a stage
+  modelled only at the front (stage kind 4) may show its back at the sides. Both are for the play-test.
+
+`tests/port/render_gpu.py` (a GPU device): a battle frame's middle 320 columns equal the software image byte for byte,
+its sides are drawn, the present is 16:9, the field stays 4:3, the frame log equals the run without the mod.
+`tests/port/mods.py` (headless): the frame log unchanged and the software path's 4:3 logged once.
+
 ## 50/60 Hz
 
 A setting, not a mod: `video.refresh: 60` or `--refresh 60` (default 50, PAL). It sets, before `port_overlay_init()`

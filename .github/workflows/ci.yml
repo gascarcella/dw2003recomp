@@ -294,6 +294,7 @@ jobs:
         if: needs.areas.outputs.port == 'true'
         run: |
           tools/venv/bin/python tests/port/render_gpu.py
+          tools/venv/bin/python tests/port/render_filters.py   # the filters' options; their pictures run locally
           tools/venv/bin/python tests/host/gpu_hw_replay.py   # builds the exactness test's harness; no device: skipped
           tools/venv/bin/python tests/port/textures.py        # the texture dump (issue #70): no device needed
 

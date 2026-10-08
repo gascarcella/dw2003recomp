@@ -223,7 +223,8 @@ def main():
     _, s, _ = printed(binary, a / "settings.json")
     check(s["disc"]["path"] == "" and s["video"] == {"window": True, "scale": 2, "fullscreen": False, "refresh": 50,
                                                      "renderer": "software", "internal_scale": 1,
-                                                     "subpixel": "on"}
+                                                     "subpixel": "on",
+                                                     "filter": "none"}
           and s["audio"] == {"mute": False} and s["watchdog"] == 0, "the defaults of an empty file")
     check(s["memcard1"] == str(a / "card1.mcd") and s["memcard2"] == str(a / "card2.mcd"),
           "the cards default to card1.mcd and card2.mcd beside the file")
@@ -241,6 +242,7 @@ def main():
         "mod_order": ["pack_b", "pack_a"],
         "launcher": {"window": [10, 20], "note": "tab\tquote\" é"},
     }
+    full["video"]["filter"] = "sharp"   # the hardware renderer's present filter (issue #69)
     write(a / "full.json", full)
     text1, s, _ = printed(binary, a / "full.json")
     check(s["disc"]["path"] == str(a / "../discs/dw2003.cue") and s["memcard1"] == str(a / "cards/one.mcd"),
@@ -268,6 +270,9 @@ def main():
           "--renderer, --internal-scale")
     _, s, _ = printed(binary, a / "full.json", "--subpixel", "on")
     check(s["video"]["subpixel"] == "on", "--subpixel on overrides video.subpixel \"off\"")
+
+    _, s, _ = printed(binary, a / "full.json", "--filter", "none")
+    check(s["video"]["filter"] == "none", "--filter overrides video.filter")
 
     print("settings: the mods and their manifests")
     mods_check(binary)
@@ -306,6 +311,7 @@ def main():
                                 'video.subpixel: "off" or "on", not "smooth"'),
         "subpixel not a string": ({"schema": 1, "video": {"subpixel": True}}, "video.subpixel: a string"),
         "a card path not a string": ({"schema": 1, "memcard1": 3}, "memcard1: a path"),
+        "an unknown filter": ({"schema": 1, "video": {"filter": "blur"}}, 'video.filter: "none" or "sharp", not "blur"'),
         "mods not an object": ({"schema": 1, "mods": []}, "mods: an object, not an array"),
         "mod_order not a list": ({"schema": 1, "mod_order": "a"}, "mod_order: an array, not a string"),
         "mod_order not of ids": ({"schema": 1, "mod_order": ["a", 1]}, "mod_order: a list of data mods' ids"),
