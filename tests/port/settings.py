@@ -223,7 +223,8 @@ def main():
     _, s, _ = printed(binary, a / "settings.json")
     check(s["disc"]["path"] == "" and s["video"] == {"window": True, "scale": 2, "fullscreen": False, "refresh": 50,
                                                      "renderer": "software", "internal_scale": 1,
-                                                     "filter": "none"}
+                                                     "filter": "none",
+                                                     "crt": {"scanlines": 50, "mask": 30, "curvature": 0}}
           and s["audio"] == {"mute": False} and s["watchdog"] == 0, "the defaults of an empty file")
     check(s["memcard1"] == str(a / "card1.mcd") and s["memcard2"] == str(a / "card2.mcd"),
           "the cards default to card1.mcd and card2.mcd beside the file")
@@ -240,6 +241,7 @@ def main():
         "launcher": {"window": [10, 20], "note": "tab\tquote\" é"},
     }
     full["video"]["filter"] = "sharp"   # the hardware renderer's present filter (issue #69)
+    full["video"]["crt"] = {"scanlines": 80, "mask": 0, "curvature": 100}
     write(a / "full.json", full)
     text1, s, _ = printed(binary, a / "full.json")
     check(s["disc"]["path"] == str(a / "../discs/dw2003.cue") and s["memcard1"] == str(a / "cards/one.mcd"),
@@ -267,6 +269,9 @@ def main():
 
     _, s, _ = printed(binary, a / "full.json", "--filter", "none")
     check(s["video"]["filter"] == "none", "--filter overrides video.filter")
+    _, s, _ = printed(binary, a / "full.json", "--filter", "crt:mask=40")
+    check(s["video"]["filter"] == "crt" and s["video"]["crt"] == {"scanlines": 80, "mask": 40, "curvature": 100},
+          "--filter crt:mask=40 overrides video.filter and the one parameter it names")
 
     print("settings: the mods and their manifests")
     mods_check(binary)
@@ -302,7 +307,11 @@ def main():
         "internal scale 9": ({"schema": 1, "video": {"internal_scale": 9}},
                              "video.internal_scale: an integer from 1 to 8"),
         "a card path not a string": ({"schema": 1, "memcard1": 3}, "memcard1: a path"),
-        "an unknown filter": ({"schema": 1, "video": {"filter": "blur"}}, 'video.filter: "none" or "sharp", not "blur"'),
+        "an unknown filter": ({"schema": 1, "video": {"filter": "blur"}},
+                              'video.filter: "none", "sharp", "scanlines" or "crt", not "blur"'),
+        "crt not an object": ({"schema": 1, "video": {"crt": 50}}, "video.crt: an object, not a number"),
+        "a crt value out of range": ({"schema": 1, "video": {"crt": {"mask": 101}}},
+                                     "video.crt.mask: an integer from 0 to 100"),
         "mods not an object": ({"schema": 1, "mods": []}, "mods: an object, not an array"),
         "not JSON": ('{"schema": 1,}', "not JSON"),
         "not an object": ("[1]", "the settings are an object"),

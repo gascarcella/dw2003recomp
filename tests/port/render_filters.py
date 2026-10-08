@@ -3,7 +3,7 @@
 video.filter. The options and the software renderer's refusal run everywhere (CI too); the pictures need a GPU device
 and the disc and run locally.
 
-Usage: tests/port/render_filters.py [--out DIR] [-j N] [--lavapipe] [--filter NAME ...]
+Usage: tests/port/render_filters.py [--out DIR] [-j N] [--build DIR] [--lavapipe] [--filter NAME ...]
 
 Builds build/port-sdl if needed (-DPSXSTACK_SDL=ON: tools/sdl3 and tools/dxc), then:
   - the options: a bad --filter exits 64 with the choices; the headless build accepts a filter; the software
@@ -37,10 +37,17 @@ from render_gpu import LAVAPIPE, dest, ppm, run  # noqa: E402  (video.c's placem
 RUNS = ((1, (2, 900, 1800), ((960, 720), (1366, 768), (300, 200))),
         (2, (900, 1800), ((960, 720), (1366, 768), (1000, 700))),
         (3, (1800,), ((1920, 1080), (300, 200))))
-# filter: (the largest difference per channel, the share of channels that may differ). Measured, sharp: exact at
-# integer scales on both devices; off by 1 where a weight is not exact in float32 (thirds at 3/2): NVIDIA RTX 4070 Ti
-# SUPER 3.4 % of the channels at 3/2, 0.16 % at 4/3; lavapipe 6.5 % at 3/2, none at 4/3.
-TOLERANCE = {"sharp": (1, 0.10)}
+# filter: (the largest difference per channel, the share of channels that may differ). The references compute in
+# float64, the GPU in float32 (and its own cos, exp and pow). Measured on NVIDIA RTX 4070 Ti SUPER and lavapipe:
+# - sharp: exact at integer scales; off by 1 where a weight is not exact in float32 (thirds at 3/2): NVIDIA 3.4 % of
+#   the channels at 3/2, 0.16 % at 4/3; lavapipe 6.5 % at 3/2, none at 4/3;
+# - scanlines: off by 1 in up to 5.3 % (NVIDIA) and 7.4 % (lavapipe) of the channels, at full strength;
+# - crt: off by 1 in up to 0.06 % (NVIDIA) and 0.04 % (lavapipe), the curvature's edge included (it fades over a pixel:
+#   a hard edge was a tie, 215 apart).
+TOLERANCE = {"sharp": (1, 0.10), "scanlines": (1, 0.10), "crt": (1, 0.01)}
+# The filters as the runs set them (`--filter`): each with video.crt's defaults, and the scanlines filters at full
+# strength (the CRT with its grille strong and the curvature on).
+SPECS = ("sharp", "scanlines", "scanlines:scanlines=100", "crt", "crt:scanlines=100,mask=80,curvature=40")
 FAILURES = []
 
 
@@ -50,91 +57,174 @@ def check(cond, what):
         FAILURES.append(what)
 
 
-def box(px, w, h, ox, oy, dw, dh):
-    """present_source.hlsli box(): output pixel (ox, oy) of the rectangle as the average of the source pixels whose
-    centres fall in it (at most 8 x 8)."""
-    lo_x = (2 * ox * w + dw - 1) // (2 * dw)
-    hi_x = max(((2 * ox + 2) * w + dw - 1) // (2 * dw), lo_x + 1)
-    lo_y = (2 * oy * h + dh - 1) // (2 * dh)
-    hi_y = max(((2 * oy + 2) * h + dh - 1) // (2 * dh), lo_y + 1)
-    s, n = [0, 0, 0], 0
-    for y in range(lo_y, min(hi_y, lo_y + 8)):
-        row = min(max(y, 0), h - 1) * w
-        for x in range(lo_x, min(hi_x, lo_x + 8)):
-            i = (row + min(max(x, 0), w - 1)) * 3
-            s[0] += px[i]
-            s[1] += px[i + 1]
-            s[2] += px[i + 2]
-            n += 1
-    return [math.floor(c / n + 0.5) for c in s]
+class Frame:
+    """The unfiltered picture (w x h at the internal scale) placed in an ow x oh output as video.c places it, with the
+    present filters' sampling (psxstack/shaders/present_source.hlsli) in float64."""
 
+    def __init__(self, image, scale, ow, oh):
+        self.w, self.h, self.px = image
+        self.lines = self.h // scale   # the display's lines
+        self.x0, self.y0, self.dw, self.dh = dest(ow, oh, self.w // scale, self.lines)
+        self.shrink = self.dw < self.w or self.dh < self.h
 
-def sharp_axis(s, k):
-    """present_source.hlsli sharp_axis(): the two source pixels and the second one's weight."""
-    sk = s * k - 0.5
-    j = math.floor(sk)
-    return j // k, (j + 1) // k, sk - j
+    def fetch(self, x, y):
+        i = (min(max(y, 0), self.h - 1) * self.w + min(max(x, 0), self.w - 1)) * 3
+        return self.px[i], self.px[i + 1], self.px[i + 2]
 
+    def box(self, ox, oy):
+        """box(): the average of the source pixels whose centres fall in output pixel (ox, oy) (at most 8 x 8)."""
+        w, h, dw, dh = self.w, self.h, self.dw, self.dh
+        lo_x = (2 * ox * w + dw - 1) // (2 * dw)
+        hi_x = max(((2 * ox + 2) * w + dw - 1) // (2 * dw), lo_x + 1)
+        lo_y = (2 * oy * h + dh - 1) // (2 * dh)
+        hi_y = max(((2 * oy + 2) * h + dh - 1) // (2 * dh), lo_y + 1)
+        s, n = [0, 0, 0], 0
+        for y in range(lo_y, min(hi_y, lo_y + 8)):
+            for x in range(lo_x, min(hi_x, lo_x + 8)):
+                c = self.fetch(x, y)
+                s = [s[i] + c[i] for i in range(3)]
+                n += 1
+        return [math.floor(c / n + 0.5) for c in s]
 
-def present_filter(image, scale, ow, oh, pixel):
-    """The ow x oh output of a filter: black around video.c's rectangle, pixel(px, w, h, ox, oy, dw, dh) inside,
-    the average where the rectangle is smaller than the picture (present_source.hlsli shrinking())."""
-    w, h, px = image
-    x0, y0, dw, dh = dest(ow, oh, w // scale, h // scale)
-    out = bytearray(ow * oh * 3)
-    shrink = dw < w or dh < h
-    for y in range(max(y0, 0), min(y0 + dh, oh)):
-        for x in range(max(x0, 0), min(x0 + dw, ow)):
-            ox, oy = x - x0, y - y0
-            c = box(px, w, h, ox, oy, dw, dh) if shrink else pixel(px, w, h, ox, oy, dw, dh)
-            o = (y * ow + x) * 3
-            out[o:o + 3] = bytes(c)
-    return bytes(out)
+    @staticmethod
+    def sharp_axis(s, k):
+        """sharp_axis(): the two source pixels and the second one's weight."""
+        sk = s * k - 0.5
+        j = math.floor(sk)
+        return j // k, (j + 1) // k, sk - j
 
-
-def sharp(image, scale, ow, oh):
-    """present_sharp.frag.hlsl: nearest by the largest integer multiple per axis, then bilinear."""
-    w, h, _ = image
-    x0, y0, dw, dh = dest(ow, oh, w // scale, h // scale)
-    kx, ky = max(dw // w, 1), max(dh // h, 1)
-    cols = [sharp_axis((ox + 0.5) * w / dw, kx) for ox in range(max(dw, 1))]
-    rows = [sharp_axis((oy + 0.5) * h / dh, ky) for oy in range(max(dh, 1))]
-
-    def pixel(px, w, h, ox, oy, dw, dh):
-        ax, bx, fx = cols[ox]
-        ay, by, fy = rows[oy]
-        ax, bx = min(max(ax, 0), w - 1), min(max(bx, 0), w - 1)
-        ay, by = min(max(ay, 0), h - 1), min(max(by, 0), h - 1)
-        a, b, c, d = (ay * w + ax) * 3, (ay * w + bx) * 3, (by * w + ax) * 3, (by * w + bx) * 3
+    def sharp_at(self, qx, qy):
+        """sharp_at(): sharp bilinear at output position (qx, qy) of the rectangle, unrounded."""
+        ax, bx, fx = self.sharp_axis(qx * self.w / self.dw, max(self.dw // self.w, 1))
+        ay, by, fy = self.sharp_axis(qy * self.h / self.dh, max(self.dh // self.h, 1))
+        a, b, c, d = self.fetch(ax, ay), self.fetch(bx, ay), self.fetch(ax, by), self.fetch(bx, by)
         out = []
         for i in range(3):
-            top = px[a + i] + (px[b + i] - px[a + i]) * fx
-            bottom = px[c + i] + (px[d + i] - px[c + i]) * fx
-            out.append(math.floor(top + (bottom - top) * fy + 0.5))
+            top = a[i] + (b[i] - a[i]) * fx
+            bottom = c[i] + (d[i] - c[i]) * fx
+            out.append(top + (bottom - top) * fy)
         return out
 
-    return present_filter(image, scale, ow, oh, pixel)
+    def row_at(self, y, qx):
+        """row_at(): source row y along x at output position qx (averaged where the rectangle is narrower)."""
+        if self.dw < self.w:
+            p = math.floor(qx)
+            lo = (2 * p * self.w + self.dw - 1) // (2 * self.dw)
+            hi = max(((2 * p + 2) * self.w + self.dw - 1) // (2 * self.dw), lo + 1)
+            cols = [self.fetch(x, y) for x in range(lo, min(hi, lo + 8))]
+            return [sum(c[i] for c in cols) / len(cols) for i in range(3)]
+        a, b, f = self.sharp_axis(qx * self.w / self.dw, max(self.dw // self.w, 1))
+        ca, cb = self.fetch(a, y), self.fetch(b, y)
+        return [ca[i] + (cb[i] - ca[i]) * f for i in range(3)]
+
+    def beam_lines(self):
+        return self.lines // 2 if self.lines > 288 else self.lines
+
+    def beam_strength(self, s):
+        return s * min(max(self.dh / self.beam_lines() - 1.0, 0.0), 1.0)
 
 
-REFERENCES = {"sharp": sharp}
+def sharp(fr, params, ox, oy):
+    """present_sharp.frag.hlsl."""
+    if fr.shrink:
+        return fr.box(ox, oy)
+    return [math.floor(c + 0.5) for c in fr.sharp_at(ox + 0.5, oy + 0.5)]
 
 
-def compare(got, want):
-    """(the largest difference, the share of channels that differ)."""
-    worst, n = 0, 0
-    for a, b in zip(got, want):
-        if a != b:
-            n += 1
-            worst = max(worst, abs(a - b))
-    return worst, n / max(len(want), 1)
+def scanlines(fr, params, ox, oy):
+    """present_scanlines.frag.hlsl: sharp, times a raised cosine per line."""
+    c = fr.box(ox, oy) if fr.shrink else fr.sharp_at(ox + 0.5, oy + 0.5)
+    s = fr.beam_strength(params["scanlines"] / 100)
+    ly = (oy + 0.5) * fr.beam_lines() / fr.dh
+    t = ly - math.floor(ly)
+    w = (1.0 - s * (0.5 + 0.5 * math.cos(2 * math.pi * t))) * (1.0 + 0.5 * s)
+    return [min(math.floor(v * w + 0.5), 255) for v in c]
+
+
+def crt(fr, params, ox, oy):
+    """present_crt.frag.hlsl: Gaussian beams in linear light, the aperture grille, the curvature."""
+    qx, qy = ox + 0.5, oy + 0.5
+    k = params["curvature"] / 100
+    if k > 0:
+        cx, cy = qx / fr.dw * 2 - 1, qy / fr.dh * 2 - 1
+        cx, cy = cx * (1 + k * 0.12 * cy * cy), cy * (1 + k * 0.12 * cx * cx)
+        qx, qy = (cx * 0.5 + 0.5) * fr.dw, (cy * 0.5 + 0.5) * fr.dh
+    clamp01 = lambda v: min(max(v, 0.0), 1.0)  # noqa: E731
+    edge = clamp01(min(qx, fr.dw - qx)) * clamp01(min(qy, fr.dh - qy)) if k > 0 else 1.0
+    if edge <= 0:
+        return [0, 0, 0]
+    lines = fr.beam_lines()
+    per = max(fr.h // lines, 1)
+    s = fr.beam_strength(params["scanlines"] / 100)
+    ly = qy * lines / fr.dh - 0.5
+    l0 = math.floor(ly)
+    d = ly - l0
+    col = [0.0, 0.0, 0.0]
+    for i in range(-1, 3):
+        line = min(max(l0 + i, 0), lines - 1)
+        a, b = fr.row_at(line * per + per // 4, qx), fr.row_at(line * per + (3 * per) // 4, qx)
+        dd = d - i
+        tent = max(0.0, 1.0 - abs(dd))
+        for ch in range(3):
+            c = ((a[ch] + b[ch]) * 0.5 / 255) ** 2.2
+            sigma = 0.22 + (0.45 - 0.22) * math.sqrt(c)
+            g = math.exp(-(dd * dd) / (2 * sigma * sigma)) / (sigma * 2.50662827463)
+            col[ch] += (tent + (g - tent) * s) * c
+    m = params["mask"] / 100
+    x = (fr.x0 + ox) % 3
+    out = []
+    for ch in range(3):
+        v = col[ch] * (1.0 if ch == x else 1.0 - 0.75 * m) / (1.0 - 0.5 * m) * edge
+        out.append(math.floor(min(max(v, 0.0), 1.0) ** (1 / 2.2) * 255 + 0.5))
+    return out
+
+
+# name: (the reference, the parameters it reads with video.crt's defaults, every how many rows it is compared)
+REFERENCES = {"sharp": (sharp, {}, 1), "scanlines": (scanlines, {"scanlines": 50}, 1),
+              "crt": (crt, {"scanlines": 50, "mask": 30, "curvature": 0}, 5)}
+
+
+def reference(spec, image, scale, ow, oh):
+    """{output row: its RGB bytes} of filter `spec` ("NAME[:KEY=V,...]") for the rows its entry compares."""
+    name, _, rest = spec.partition(":")
+    pixel, params, step = REFERENCES[name]
+    params = dict(params, **{k: int(v) for k, v in (kv.split("=") for kv in rest.split(",") if kv)})
+    fr = Frame(image, scale, ow, oh)
+    rows = {}
+    for y in range(0, oh, step):
+        row = bytearray(ow * 3)
+        oy = y - fr.y0
+        if 0 <= oy < fr.dh:
+            for x in range(max(fr.x0, 0), min(fr.x0 + fr.dw, ow)):
+                row[x * 3:x * 3 + 3] = bytes(pixel(fr, params, x - fr.x0, oy))
+        rows[y] = bytes(row)
+    return rows
+
+
+def compare(got, ow, want):
+    """(the largest difference, the share of channels that differ) over want's rows."""
+    worst, n, total = 0, 0, 0
+    for y, row in want.items():
+        for a, b in zip(got[y * ow * 3:(y + 1) * ow * 3], row):
+            if a != b:
+                n += 1
+                worst = max(worst, abs(a - b))
+        total += len(row)
+    return worst, n / max(total, 1)
 
 
 def options(sdl, headless, env):
     print("render_filters: the options and the software renderer")
     rc, out = run([sdl, "--filter", "blur"], env)
-    check(rc == 64 and "--filter: none or sharp" in out, f"--filter blur: exit 64 with the choices (exit {rc})")
-    rc, out = run([sdl, "--filter", "sharp:strength=3"], env)
-    check(rc == 64 and "--filter: sharp takes no parameters" in out, f"--filter sharp:strength=3: exit 64 (exit {rc})")
+    check(rc == 64 and "--filter: none, sharp, scanlines or crt, not \"blur\"" in out,
+          f"--filter blur: exit 64 with the choices (exit {rc})")
+    for spec, message in (("sharp:scanlines=3", "sharp takes no parameters"),
+                          ("scanlines:mask=3", "scanlines takes scanlines, not mask"),
+                          ("crt:scanlines=101", "crt: scanlines from 0 to 100"),
+                          ("crt:mask", "crt: KEY=V,... (scanlines, mask, curvature)"),
+                          ("crt:glow=3", "crt takes scanlines, mask, curvature, not glow")):
+        rc, out = run([sdl, "--filter", spec], env)
+        check(rc == 64 and f"--filter: {message}" in out, f"--filter {spec}: exit 64, {message} (exit {rc})")
     if headless.exists():
         rc, out = run([headless, "--filter", "sharp", "--max-frames", "2"], env)
         check(rc == 0, f"the headless build takes --filter sharp (exit {rc})")
@@ -157,31 +247,33 @@ def device(sdl, env, out):
     return None
 
 
-def pictures(sdl, env, out, name):
+def pictures(sdl, env, out, spec):
+    name = spec.split(":")[0]
+    tag = spec.replace(":", "_").replace(",", "_").replace("=", "")
     worst_max, worst_share = TOLERANCE[name]
-    print(f"render_filters: {name}: new_game's pictures against the reference (at most {worst_max} per channel in "
+    print(f"render_filters: {spec}: new_game's pictures against the reference (at most {worst_max} per channel in "
           f"{worst_share:.0%} of the channels)")
     for scale, frames, sizes in RUNS:
         args = []
         for f in frames:
-            args += ["--gpu-screenshot", f"{f}:{out / f'{name}{scale}_{f}.ppm'}"]
+            args += ["--gpu-screenshot", f"{f}:{out / f'{tag}{scale}_{f}.ppm'}"]
             for w, h in sizes:
-                args += ["--gpu-screenshot", f"{f}@{w}x{h}:{out / f'{name}{scale}_{f}_{w}x{h}.ppm'}"]
+                args += ["--gpu-screenshot", f"{f}@{w}x{h}:{out / f'{tag}{scale}_{f}_{w}x{h}.ppm'}"]
         rc, text = run([sdl, "--disc", DISC, "--script", SCRIPTS / "new_game.json", "--max-frames",
-                        str(max(frames) + 1), "--internal-scale", str(scale), "--filter", name, *args], env)
+                        str(max(frames) + 1), "--internal-scale", str(scale), "--filter", spec, *args], env)
         check(rc == 0 and f"renderer: gpu: filter {name}" in text, f"internal scale {scale}: the run (exit {rc})")
         if rc != 0:
             print("\n".join(text.splitlines()[-10:]))
             continue
         for f in frames:
-            image = ppm(out / f"{name}{scale}_{f}.ppm")
+            image = ppm(out / f"{tag}{scale}_{f}.ppm")
             bad = []
             for w, h in sizes:
-                got = ppm(out / f"{name}{scale}_{f}_{w}x{h}.ppm")
+                got = ppm(out / f"{tag}{scale}_{f}_{w}x{h}.ppm")
                 if got[:2] != (w, h):
                     bad.append(f"{w}x{h}: the size is {got[0]}x{got[1]}")
                     continue
-                worst, share = compare(got[2], REFERENCES[name](image, scale, w, h))
+                worst, share = compare(got[2], w, reference(spec, image, scale, w, h))
                 if worst > worst_max or share > worst_share:
                     bad.append(f"{w}x{h}: up to {worst} in {share:.2%}")
             check(not bad, f"internal scale {scale}, vsync {f} ({image[0]}x{image[1]}): "
@@ -192,6 +284,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", default=str(ROOT / "build/render-filters-test"), help="where the pictures go")
     ap.add_argument("-j", "--jobs", type=int, default=0, help="build jobs (default: ninja's)")
+    ap.add_argument("--build", default="build/port-sdl", help="the SDL build directory (default: build/port-sdl)")
     ap.add_argument("--lavapipe", action="store_true",
                     help="Mesa's software Vulkan driver instead of the default device")
     ap.add_argument("--filter", action="append", choices=sorted(REFERENCES), help="only these filters' pictures")
@@ -203,7 +296,7 @@ def main():
             if not (ROOT / "tools" / tool).exists():
                 print(f"render_filters: no tools/{tool} (scripts/setup.sh {tool}): skipped")
                 return 0
-        sdl = build("build/port-sdl", ["-DPSXSTACK_SDL=ON"], args.jobs, env)
+        sdl = build(args.build, ["-DPSXSTACK_SDL=ON"], args.jobs, env)
     except Missing as e:
         print(f"render_filters: {e}")
         return 2
@@ -224,8 +317,9 @@ def main():
         if why is not None:
             print(f"render_filters: no GPU device ({why}): the pictures are skipped")
         else:
-            for name in args.filter or sorted(REFERENCES):
-                pictures(sdl, env, out, name)
+            for spec in SPECS:
+                if not args.filter or spec.split(":")[0] in args.filter:
+                    pictures(sdl, env, out, spec)
     print(f"render_filters test: {'FAIL (' + str(len(FAILURES)) + ')' if FAILURES else 'pass'}")
     return 1 if FAILURES else 0
 
