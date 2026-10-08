@@ -134,7 +134,7 @@ jobs:
       - name: Scripts parse, Python compiles
         run: |
           bash -n scripts/*.sh tools/*.sh tests/*/*.sh .claude/hooks/*.sh
-          tools/venv/bin/python -m py_compile configure.py diff_settings.py tools/*.py tests/golden/*.py tests/golden/families/*.py tests/replay/*.py tests/host/*.py tests/holdouts/*.py tests/port/*.py
+          tools/venv/bin/python -m py_compile configure.py diff_settings.py tools/*.py tests/golden/*.py tests/golden/families/*.py tests/replay/*.py tests/host/*.py tests/port/*.py
 
       - name: Workaround census (the game code all C, the FAKE/LOOP_BLOCK markers, the counts in docs/STATUS.md)
         if: needs.areas.outputs.game == 'true'

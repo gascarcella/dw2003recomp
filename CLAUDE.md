@@ -80,7 +80,6 @@ tests/golden/oracle.py gen|check|list [families] [--bios retail]   # layer-1 gol
 tests/host/replay.py [families] [--findings]   # the goldens through the C compiled with gcc -m64; mismatches = tests/host/FINDINGS.md
 tests/replay/replay.py run tests/replay/scripts/<name>.json [--record] [--repeat 2]   # layer-2 script; `check` replays them all
 tools/venv/bin/python tools/coverage.py run [--oracle] [--replay NAME ...] | report [--module X]   # function coverage of the emulator tests -> build/coverage/report.md (~23 min; --oracle alone ~40 s)
-tests/holdouts/run.sh [--control] [--no-probe]   # NON_MATCHING build -> scratch disc image -> replays: validates the holdouts' WIP C (~11 min; not in test.sh)
 tools/redux/pcsx-redux -no-ui -stdout -testmode -run -iso iso/dw2003.cue -bios <bin> -dofile <lua>   # headless run with a Lua script (tools/redux_boot_check.lua is the template)
 tools/venv/bin/python tools/port_inventory.py counts [--sites KIND[:TAG]]   # PC port inventory (`docs/PORT.md`): Psy-Q calls, macros, literal sizes, PS1 addresses, port.h hooks; --sites lists file:line
 tools/venv/bin/python tools/port_inventory.py probe [FILES...] [-v] [--warnings] [--m32]   # host-compile gate (-m64, -Werror on pointer/int casts, implicit declarations, incompatible pointers); exit 0 = clean (~1 s); test.sh and CI run it

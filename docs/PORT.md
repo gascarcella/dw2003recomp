@@ -35,9 +35,8 @@ formats are in `port/README.md`; the shim's per-function behaviour is in `port/p
   links PIE by default). Nothing else needs it: the arena needs no link address (see "Memory arena") and the
   overlay sections are orphan sections the linker places after `.data`/`.bss`, outside GNU_RELRO (see "Overlays").
 - **`INCLUDE_ASM`** is empty on the host. No game function is left in asm (the last 8 holdouts matched on
-  2026-10-07), so the port compiles the same matching C as the PS1 build. Should a holdout come back, its
-  `NON_MATCHING` WIP C is what the port compiles, and `tests/holdouts/run.sh` validates it by running a
-  `NON_MATCHING` PS1 image through the replays (see "Testing").
+  2026-10-07), so the port compiles the same matching C as the PS1 build. `tools/hacks.py --check` keeps it so (no
+  `INCLUDE_ASM` or `NON_MATCHING` in game code).
 - **FAKE matches** (`grep -rn "FAKE:" src`) are valid C and compile as they are.
 - **`gte_*` macros** (`include/psyq/gtemac.h`, MIPS `cop2` sequences) are replaced at build time by a generated header
   that turns each sequence into the same register accesses on the software GTE (`tools/port_gen.py overrides`;
@@ -316,7 +315,6 @@ mods); without `--config` the binary depends on nothing on the machine. Built-in
 | Debug channel | One `--debug` run to CNTY_SEL: step and pad advance the frame exactly, the state map and the host symbol read the same, poke/peek, screenshot, hash, quit status; `tools/mcp`'s offline self-test | `tests/port/debug.py` (the `port` layer), `tools/mcp/selftest.py` |
 | Hardware renderer | Its picture byte for byte the software image, its present at six output sizes against the reference, SDL_Renderer's present against the same reference; its rasteriser's whole VRAM target equal to the software VRAM every 10 vsyncs of both replays and after each of the gpu golden family's 715 lists; the fallback without a device (CI); everything else needs a GPU device (local, or lavapipe) | `tests/port/render_gpu.py`, `tests/host/gpu_hw_replay.py` (the `port` layer) |
 | Crash report | A forced NULL write dies of SIGSEGV with a report whose pc symbolizes to the hook's function; a fatal error's report; `--version` | `tests/port/crash.py` (the `port` layer) |
-| Holdouts | A `NON_MATCHING` PS1 image (a holdout's WIP C) replayed in the emulator without divergence; none are left today | `tests/holdouts/run.sh` |
 
 What the port and the emulator are *not* compared on: frame numbers (the port's CD timing and CPU time differ), the
 random index and the full checkpoint hash (both follow the frame count). See `tests/port/README.md`.

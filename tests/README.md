@@ -337,63 +337,12 @@ The pure-logic modules: `fightstg_rules_*` 32/32, `cardgame_cpu` 15/15, `pad_ran
 the oracle and 49/50 in the union (only `gamestate_start_card_game`, no card match), `records` 6/7 and 7/7; the rest of each
 overlay is mostly UI (object update/draw/run, windows, cursors) that the replays run: STFGTREP 34/36, STGTRAIN 37/94,
 STGDGLAB 20/71, STSTATUS 34/123 in the union. Tier-1 overlays run by the replays: 14 of 19 (not CARDGAME, STDGNAME,
-STAGSLCT, SOUNDTST, SHOCKTST); tier 2: WFIGHTMN and 15 of 293 WSTAG files, not WFIGHTTS. Holdouts and FAKE matches run: 9 of
-17 (`tests/holdouts/` validates the holdouts that run).
+STAGSLCT, SOUNDTST, SHOCKTST); tier 2: WFIGHTMN and 15 of 293 WSTAG files, not WFIGHTTS. FAKE matches run: see
+`build/coverage/report.md`.
 
-## Holdout validation (not a test)
+## Holdout validation (retired)
 
-`tests/holdouts/run.sh [--control] [--no-probe] [--scripts NAME ...] [--out DIR]` checks the WIP C of the
-`NON_MATCHING` holdouts (the functions whose C is under `#ifdef NON_MATCHING`, the original's asm in `#else`) by running
-it: DECISIONS "Reference tests: three layers" ("the `-DNON_MATCHING` build replayed through the holdouts' scenes") and
-"Holdout validation by run". It needs the matching build (`scripts/build.sh`), the emulator and the disc, and writes only
-to `DIR` (default `$TMPDIR/dw3_holdouts`, ~0.7 GB for the image); `src/`, `build/` and the matching outputs are untouched.
-
-1. **Build.** Each C file with a holdout is compiled again with `-DNON_MATCHING` (`tools/cc_psx.sh`, the build's `-G`
-   and data flags) and its overlay relinked from the build's own linker scripts with that object swapped in. A WIP
-   function of another size moves everything after it, so everything that points into a moved overlay is relinked or
-   patched: the overlay's tier-2 children against its new symbols (FIELDSTG's 293 `WSTAG` files), a parent against a
-   changed child's new addresses (`tier2_calls`), and the EXE: its absolute references to FIELDSTG (`gamestate.c`'s
-   `func_8008B770` = `fieldstg_goto_map`, `func_8008BFA4`, `func_8008C000`, `D_8009B6A4`) are relinked with the new
-   addresses, and `overlay_entries` (`src/main/overlay.c`: the stages' entry points as plain numbers) is patched.
-   Two guards: every word, `lui` and `jal` of a relinked file that holds an address of a moved range must carry a
-   relocation (the relink is linked with `-q`; otherwise the run stops), and any other EXE word holding the old address
-   of a moved symbol is printed.
-2. **Image.** `mkpsxiso` rebuilds the disc from `extracted/dw2003.xml` over a tree of symlinks to `extracted/disc`
-   with the changed files copied in. The game finds files by the EXE's table (LBA, sectors): if a file needs another
-   number of sectors, the files after it move, and the table in the EXE copy is patched from the new image's
-   directories before a second `mkpsxiso` (checked on a padded FIELDSTG: all 2,382 entries agree with the image; no
-   holdout has needed it so far, every changed file keeps its sector count).
-3. **Replay.** Every recorded layer-2 script runs on that image (`replay.py`'s `run_once(iso=...)`, also `replay.py
-   run|check --iso CUE`) twice: on the dynarec, compared with its expected file in full and in the cross-core view;
-   and under `-debugger -interpreter` with the **holdout probe** (`tools/coverage.lua` with a spec that arms only the
-   holdouts, in the NON_MATCHING files' `.text`), compared in the cross-core view, recording which holdouts ran.
-4. **Report** per holdout: compiled (size against the original), the scripts that ran it, and **validated** (every
-   script that ran it reproduced its checkpoints), **diverged** (then a `tests/host/FINDINGS.md` entry: the function and
-   the first checkpoint that differs) or **not reached**. `DIR/report.json` has the details.
-
-`--control` first runs steps 1-2 without `-DNON_MATCHING` and requires the original image back bit for bit, a check of
-the procedure itself. Cost (4 cores shared with other agents): build ~45-100 s, image 3 s, control ~50 s, dynarec replays
-~65 s, probe replays ~8 min (`first_battle_save` 438 s under `-debugger -interpreter`); ~1.7 min with `--no-probe`
-(no reach data then: it falls back to `build/coverage/*.json`), ~11 min in full. Too slow for `scripts/test.sh`; run it
-after a holdout's C changes or a new script reaches one.
-
-Since 2026-10-07 there are no holdouts (all 8 below matched; the PC port now compiles the matching C), so the script has
-nothing to run; it stays as the procedure for a future holdout. The last state:
-
-State (2026-10-05, scripts `new_game` and `first_battle_save`; both replays identical to their expected files on the
-dynarec, frames included, and the same checkpoints under the interpreter):
-
-| Holdout | Size (original -> WIP) | Run by | Result |
-|---|---|---|---|
-| `fieldstg_background_update_visible` | 0x258 -> 0x260 | `new_game`, `first_battle_save` (field from frame 2,283) | validated |
-| `fieldstg_manager_update` | 0xC94 -> 0xC94 | `new_game`, `first_battle_save` (every field frame) | validated |
-| `fightstg_rules_get_stats` | 0x9B0 -> 0x9B0 | `first_battle_save` (the battle) | validated |
-| `fightstg_model_mesh_draw` | 0x848 -> 0x848 | `first_battle_save` (the battle) | validated |
-| `stitshop_info_create_windows` | 0x3E8 -> 0x3E4 | `first_battle_save` (the item shop) | validated |
-| `stcrdshp_run_booster` | 0xE14 -> 0xE14 | - (card shop booster) | not reached |
-| `wfightts_digimon_menu_update` | 0x53C -> 0x538 | - (WFIGHTTS is not loaded by the first battle) | not reached |
-| `shocktst_convert_table` | 0x324 -> 0x308 | - (SHOCKTST is a debug overlay; the function writes to the dev PC through `sim:`) | not reached |
-
-"Validated" covers what the scripts exercise: the checkpoint hashes cover `gamestate_data` only, so a drawing function
-(`fightstg_model_mesh_draw`, `fieldstg_background_update_visible`) is validated as "the game state and the rest of the
-run did not change", not pixel for pixel.
+`tests/holdouts/run.sh` replayed a `-DNON_MATCHING` PS1 image through the layer-2 scripts to validate the holdouts' WIP
+C (the code the port compiled for them). Since #55 there are no holdouts, and `tools/hacks.py --check` keeps any new
+`INCLUDE_ASM`/`NON_MATCHING` out of game code, so the script was removed; it is in the history (`git show
+26bace0:tests/holdouts/run.py`) should a function ever have to go back to asm.
