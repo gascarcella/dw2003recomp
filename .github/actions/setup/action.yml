@@ -31,6 +31,9 @@ inputs:
   deploy-key:
     description: "The data checkout's read-only deploy key (secrets.GAMEDATA_DEPLOY_KEY; empty on fork pull requests)"
     default: ""
+  psxstack-key:
+    description: "psxstack's read-only deploy key (secrets.PSXSTACK_DEPLOY_KEY): checks the submodule out at its pin; empty on fork pull requests (the areas job then runs no port or launcher job)"
+    default: ""
 runs:
   using: composite
   steps:
@@ -41,6 +44,23 @@ runs:
       run: |
         echo "DW3_UBUNTU_MIRROR=http://azure.archive.ubuntu.com/ubuntu" >> "$GITHUB_ENV"
         echo "DW3_GAMEDATA=$GITHUB_WORKSPACE/dw2003-gamedata" >> "$GITHUB_ENV"
+
+    # The psxstack submodule (the PC port's runtime, shim, build and launcher; DECISIONS "The port stack lives in
+    # psxstack"): private until it goes public, so it is fetched over SSH with the maintainers' read-only deploy key,
+    # at the commit the gitlink names. The key lives only in $RUNNER_TEMP for the one command.
+    - name: psxstack submodule (maintainers only)
+      if: inputs.psxstack-key != ''
+      shell: bash
+      env:
+        PSXSTACK_KEY: ${{ inputs.psxstack-key }}
+      run: |
+        key="$RUNNER_TEMP/psxstack_deploy_key"
+        printf '%s\n' "$PSXSTACK_KEY" > "$key" && chmod 600 "$key"
+        mkdir -p ~/.ssh && ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
+        GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes" \
+          git -c url.git@github.com:.insteadOf=https://github.com/ submodule update --init psxstack
+        rm -f "$key"
+        echo "psxstack at $(git -C psxstack describe --tags --always)"
 
     - name: System packages (${{ inputs.apt }})
       if: inputs.apt != ''

@@ -64,14 +64,15 @@ The plan's milestones (`docs/PORT.md`):
   (texture replacement, widescreen, post-processing, sub-pixel precision, D3D12) are on the board.
 - **The port stack (psxstack):** the runtime, the Psy-Q shim, the build (`psxstack_add_game()`), the launcher and the
   debug tools live in the `psxstack` repository (gascarcella/psxstack; its `docs/PORT.md`, `docs/RUNTIME.md`,
-  `docs/LAUNCHER.md`), linked at `psxstack/` from the sibling clone by `scripts/worktree_init.sh` (the submodule
-  comes with phase 4). This repository keeps the game's side: `include/port.h` (the hooks' PS1 side and the game's own
-  hooks), `port/game/` (the adapter: `game.json`, the probes, the six mods, the asm stand-ins), `port/mods/`,
-  `tools/port_inputs.py` (the build inputs the stack takes), `tools/port_inventory.py` (the stack's inventory
-  configured here), `tools/mcp_game.py` and `.mcp.json` (the debug tools' configuration); the launcher is built from
-  `psxstack/launcher` with `port/game/game.json`. Phases 0 to 3 of the extraction are done (`docs/DECISIONS.md` "The
-  port is split into runtime and game adapter", "The PC port is built on psxstack"); phase 4 (the submodule, CI, the
-  release scripts against the pin) and phase 5 (psxstack public, `v0.1.0`) are next.
+  `docs/LAUNCHER.md`), consumed as the `psxstack` submodule pinned by commit (`v0.1.0-rc.1` plus the hardware
+  renderer's phase 3 sync, psxstack #5, until that merges; `scripts/worktree_init.sh` checks it out; CI and release.yml
+  fetch it with a read-only deploy key while it is private). This repository keeps the game's side: `include/port.h`
+  (the hooks' PS1 side and the game's own hooks), `port/game/` (the adapter: `game.json`, the probes, the six mods, the
+  asm stand-ins), `port/mods/`, `tools/port_inputs.py` (the build inputs the stack takes), `tools/port_inventory.py`
+  (the stack's inventory configured here), `tools/mcp_game.py` and `.mcp.json` (the debug tools' configuration); the
+  launcher is built from `psxstack/launcher` with `port/game/game.json`. Phases 0 to 4 of the extraction are done
+  (`docs/DECISIONS.md` "The port is split into runtime and game adapter", "The PC port is built on psxstack", "The port
+  stack lives in psxstack"); phase 5 (psxstack public, `v0.1.0`, the pin on the tag, the deploy key removed) is next.
 - **Debug channel and MCP server:** `dw2003 --debug SOCKET` lets a tool pause, step, press, read and write memory and
   take screenshots between two vsyncs; `tools/mcp/` (registered by `.mcp.json`) is the MCP server over it, with symbol
   names from `nm` and the config tables (`docs/PORT.md`; gate: `tests/port/debug.py`).

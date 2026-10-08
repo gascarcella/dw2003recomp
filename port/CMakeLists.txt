@@ -4,17 +4,18 @@
 #
 #   cmake -S port -B build/port -G Ninja && cmake --build build/port && build/port/dw2003 --max-frames 60
 #
-# psxstack is the sibling clone or the submodule at ../psxstack (PSXSTACK_DIR); tools/port_inputs.py writes the
+# psxstack is the submodule at ../psxstack (PSXSTACK_DIR; scripts/worktree_init.sh checks it out at the pin, and
+# offline links the sibling clone there instead); tools/port_inputs.py writes the
 # build inputs psxstack_add_game() takes (build/port/gen/inputs/: the units, the overlays, the tag sites, the
 # volatile ranges) from the tracked sources at configure time. The PS1 build (configure.py, build.ninja) is untouched.
 cmake_minimum_required(VERSION 3.20)
 project(dw2003port C)
 
 get_filename_component(DW3_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
-set(PSXSTACK_DIR "${DW3_ROOT}/psxstack" CACHE PATH "The psxstack checkout (the submodule, or a sibling clone linked there)")
+set(PSXSTACK_DIR "${DW3_ROOT}/psxstack" CACHE PATH "The psxstack checkout (the submodule; or another checkout of the stack)")
 if(NOT EXISTS "${PSXSTACK_DIR}/cmake/psxstack.cmake")
-    message(FATAL_ERROR "psxstack not found at ${PSXSTACK_DIR}: scripts/worktree_init.sh links the sibling clone "
-                        "(or -DPSXSTACK_DIR=<path>)")
+    message(FATAL_ERROR "psxstack not found at ${PSXSTACK_DIR}: the submodule is not checked out (git submodule update "
+                        "--init psxstack, or scripts/worktree_init.sh; or -DPSXSTACK_DIR=<path>)")
 endif()
 if(EXISTS "${DW3_ROOT}/tools/venv/bin/python" AND NOT PSXSTACK_PYTHON)
     set(PSXSTACK_PYTHON "${DW3_ROOT}/tools/venv/bin/python" CACHE FILEPATH "" FORCE)

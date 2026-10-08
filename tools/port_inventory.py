@@ -26,7 +26,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PSXSTACK = ROOT / "psxstack"   # the stack: the submodule, or the sibling clone linked there
+PSXSTACK = ROOT / "psxstack"   # the stack: the submodule (scripts/worktree_init.sh checks it out)
 MAIN = Path(subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--path-format=absolute", "--git-common-dir"],
                            capture_output=True, text=True).stdout.strip() or str(ROOT / ".git")).parent
 sys.path.insert(0, str(PSXSTACK / "tools"))

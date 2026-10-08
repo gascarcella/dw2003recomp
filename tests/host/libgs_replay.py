@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PSXSTACK = ROOT / "psxstack"   # the stack: the submodule, or the sibling clone linked there
+PSXSTACK = ROOT / "psxstack"   # the stack: the submodule (scripts/worktree_init.sh checks it out)
 GOLDEN = ROOT / "tests/golden/libgs_view.json"
 OUT_DEFAULT = ROOT / "build/host_libgs"
 sys.path.insert(0, str(ROOT / "tests/golden"))

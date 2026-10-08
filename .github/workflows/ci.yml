@@ -85,8 +85,10 @@ jobs:
     timeout-minutes: 5
     outputs:
       game: ${{ steps.areas.outputs.game }}
-      port: ${{ steps.areas.outputs.port }}
-      launcher: ${{ steps.areas.outputs.launcher }}
+      # The port and launcher areas need the psxstack submodule, private until it goes public: without its deploy key
+      # (a fork pull request) they are skipped, and a maintainer's run of the branch tests them.
+      port: ${{ steps.areas.outputs.port == 'true' && steps.stack.outputs.present == 'true' }}
+      launcher: ${{ steps.areas.outputs.launcher == 'true' && steps.stack.outputs.present == 'true' }}
       data: ${{ steps.data.outputs.present }}
     steps:
       - uses: actions/checkout@v4
@@ -115,6 +117,14 @@ jobs:
         id: data
         run: echo "present=${{ secrets.GAMEDATA_DEPLOY_KEY != '' }}" >> "$GITHUB_OUTPUT"
 
+      - name: Is the psxstack submodule available? (its deploy key)
+        id: stack
+        run: echo "present=${{ secrets.PSXSTACK_DEPLOY_KEY != '' }}" >> "$GITHUB_OUTPUT"
+
+      - name: The port and launcher areas need psxstack
+        if: steps.areas.outputs.port == 'true' && steps.stack.outputs.present != 'true'
+        run: echo "::warning::no PSXSTACK_DEPLOY_KEY (a fork pull request): the psxstack submodule cannot be fetched, so the port and launcher areas are skipped here; a maintainer's run of the branch tests them"
+
   # Disc-free, always: the scripts parse, the Python compiles; for the game area the workaround census
   # (tools/hacks.py --check, stdlib only, <1 s: no INCLUDE_ASM beyond its HOLDOUTS, every FAKE: with its reason and
   # LOOP_BLOCK with its evidence class, the counts docs/STATUS.md quotes); for the port area the host-compile probe:
@@ -130,6 +140,7 @@ jobs:
         with:
           tools: venv llvm-mingw
           cache: check
+          psxstack-key: ${{ secrets.PSXSTACK_DEPLOY_KEY }}
 
       - name: Scripts parse, Python compiles
         run: |
@@ -186,12 +197,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # the port's version stamp (port/cmake/version.cmake: git describe over the tags)
+          fetch-depth: 0   # the port's version stamp (psxstack/cmake/version.cmake: git describe over this repository's tags)
       - uses: ./.github/actions/setup
         with:
           tools: venv cmake mkpsxiso redux ccache
           apt: gcc-multilib   # the -m32 build
           cache: port
+          psxstack-key: ${{ secrets.PSXSTACK_DEPLOY_KEY }}
           ccache: "true"
           disc: "true"
           deploy-key: ${{ secrets.GAMEDATA_DEPLOY_KEY }}
@@ -230,6 +242,7 @@ jobs:
         with:
           tools: venv cmake mkpsxiso redux ccache
           cache: port-mods
+          psxstack-key: ${{ secrets.PSXSTACK_DEPLOY_KEY }}
           ccache: "true"
           disc: "true"
           deploy-key: ${{ secrets.GAMEDATA_DEPLOY_KEY }}
@@ -271,6 +284,7 @@ jobs:
         with:
           tools: venv cmake mkpsxiso sdl3 imgui ccache dxc
           cache: launcher
+          psxstack-key: ${{ secrets.PSXSTACK_DEPLOY_KEY }}
           ccache: "true"
           disc: "true"
           deploy-key: ${{ secrets.GAMEDATA_DEPLOY_KEY }}
@@ -298,7 +312,8 @@ jobs:
 
       - name: Launcher, self-test
         run: |
-          cmake -S launcher -B build/launcher -G Ninja
+          cmake -S psxstack/launcher -B build/launcher -G Ninja -DPSXSTACK_GAME_JSON="$PWD/port/game/game.json" \
+                -DPSXSTACK_VERSION_ROOT="$PWD" -DPSXSTACK_TOOLS_DIR="$PWD/tools"
           cmake --build build/launcher -j "$DW3_JOBS"
           SDL_VIDEO_DRIVER=offscreen build/launcher/dw2003-launcher --self-test build/launcher-test
 
@@ -343,6 +358,7 @@ jobs:
           tools: venv cmake mkpsxiso imgui llvm-mingw sdl3-windows dxc
           apt: wine wine64
           cache: windows
+          psxstack-key: ${{ secrets.PSXSTACK_DEPLOY_KEY }}
           disc: ${{ needs.areas.outputs.port }}
           deploy-key: ${{ secrets.GAMEDATA_DEPLOY_KEY }}
 

@@ -48,7 +48,9 @@ approach before you spend time on it.
 
 Follow the README's [Development](README.md#development) section: `tools/local.env` pointing at your disc,
 `scripts/setup.sh`, `scripts/extract.sh`, then `scripts/build.sh`. Everything installs into `tools/`; no root access is
-needed. If you work in a git worktree, run `scripts/worktree_init.sh` in it first.
+needed. The PC port's runtime and the launcher come from the `psxstack` submodule: clone with `--recursive`, or run
+`git submodule update --init psxstack` (until psxstack is public, that needs access to it). If you work in a git
+worktree, run `scripts/worktree_init.sh` in it first: it links the tools and the disc and checks the submodule out.
 
 ## Making a change
 
@@ -69,10 +71,13 @@ match are in [`docs/MATCHING.md`](docs/MATCHING.md). In short:
 
 ### The PC port and the launcher
 
-The port's runtime is `port/` (C), the launcher `launcher/` (C++17, Dear ImGui on SDL3). Read
-[`docs/PORT.md`](docs/PORT.md), [`docs/LAUNCHER.md`](docs/LAUNCHER.md), [`port/README.md`](port/README.md) and
-[`launcher/README.md`](launcher/README.md). A change in behaviour should come with a test: a layer-1 golden, a layer-2
-pad script, or the launcher's self-test ([`tests/README.md`](tests/README.md)).
+The port's game side is `port/` (C: the adapter, `game.json`, the mods); the runtime, the Psy-Q shim and the launcher
+(C++17, Dear ImGui on SDL3) are [psxstack](https://github.com/gascarcella/psxstack), pinned as the `psxstack`
+submodule. Read [`docs/PORT.md`](docs/PORT.md), [`docs/LAUNCHER.md`](docs/LAUNCHER.md), [`port/README.md`](port/README.md)
+and psxstack's `docs/RUNTIME.md` and `launcher/README.md`. A change to the runtime or the launcher is a psxstack pull
+request, then a pin bump here; a change to this game's adapter or mods is a pull request here. A change in behaviour
+should come with a test: a layer-1 golden, a layer-2 pad script, or the launcher's self-test
+([`tests/README.md`](tests/README.md)).
 
 ### Documentation
 

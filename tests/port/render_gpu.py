@@ -230,8 +230,8 @@ def scaled(sdl, env, out):
 
 def debug_channel(sdl, env, out):
     print("render_gpu: the debug channel's screenshot, renderer gpu (a headless --renderer gpu --internal-scale 2)")
-    sys.path.insert(0, str(ROOT / "tools/mcp"))
-    from game import Game, GameError  # noqa: E402  (the MCP server's client of the channel)
+    sys.path.insert(0, str(ROOT / "tools"))
+    from mcp_game import Game, GameError  # noqa: E402  (psxstack's MCP client of the channel, configured for this game)
     old = dict(os.environ)
     os.environ.update(env)
     try:

@@ -403,3 +403,18 @@ had diverged: the generated header is `psxstack_game_gen.h` from psxstack's `gam
 description's `env_prefix`). The tests that compile the shim or the runtime on their own (`tests/host/*_replay.py`,
 `tests/spu`, `tests/xa`, `tests/port/sound.py`) take them from `psxstack/`; `tests/port/settings.py` reads the
 manifests of both `psxstack/mods/` and `port/mods/`.
+
+## The port stack lives in psxstack, consumed as a pinned submodule (2026-10-08)
+Phase 4 of the extraction: `psxstack/` is a git submodule of gascarcella/psxstack pinned by commit (`.gitmodules`), no
+longer a link to a sibling clone. What a pin buys: this repository's `main` always names the exact runtime, shim and
+launcher its tests passed against, a stack change reaches the game as a reviewable pin bump, and other games pin their
+own. `scripts/worktree_init.sh` checks the submodule out in a worktree (from the main checkout's copy when it has one;
+offline it links the sibling clone and says so, so a session without network still builds). The tools are one tree,
+this repository's `tools/` (its `setup.sh` installs SDL3, DXC, ImGui, llvm-mingw, the AppImage tools), handed to the
+stack's CMake as `PSXSTACK_TOOLS_DIR`; psxstack's own `setup.sh` is for its own CI and for a stack developer, and its
+pins must stay equal to ours. The release's version is `DW3_VERSION` in release.yml and `release_local.sh`, exported
+as `PSXSTACK_VERSION` by the packaging scripts for psxstack's `version.cmake`. While psxstack is private, CI and
+release.yml fetch it with a read-only deploy key on psxstack stored as the secret `PSXSTACK_DEPLOY_KEY` here (the data
+checkout's pattern); a fork pull request has no secrets, so the areas job then skips the port and launcher areas with a
+warning and a maintainer's run tests them. The key and that gate go when psxstack is public (phase 5): the submodule
+is then a plain HTTPS fetch for everyone.

@@ -158,9 +158,14 @@ cp tools/local.env.example tools/local.env   # set DW3_DISC_BIN to your disc ima
 scripts/setup.sh                             # mipsel binutils, mkpsxiso, Python venv, old GCCs, objdiff, decomp tools; links the disc into iso/
 ```
 
+**The psxstack submodule.** The PC port's runtime, Psy-Q shim and launcher are
+[psxstack](https://github.com/gascarcella/psxstack), pinned as the `psxstack` submodule: clone with `--recursive`, or
+run `git submodule update --init psxstack` (until psxstack is public, that needs access to it; the PS1 build needs no
+submodule). `scripts/worktree_init.sh` does it in a worktree.
+
 **Git worktrees.** A worktree has only tracked files. Run `scripts/worktree_init.sh` in a new worktree: it links the
-main checkout's built tools and `tools/local.env`, links the disc and extracts it (about a second, no rebuild).
-`scripts/setup.sh` always installs tools into the main checkout and links them into worktrees.
+main checkout's built tools and `tools/local.env`, links the disc and extracts it, and checks the submodule out (about
+a second, no rebuild). `scripts/setup.sh` always installs tools into the main checkout and links them into worktrees.
 
 **Optional data checkout.** Maintainers may keep a separate, private checkout (`DW3_GAMEDATA` in `tools/local.env`,
 default `../dw2003-gamedata`; `scripts/gamedata_dir.sh`) from which `setup.sh gamedata` and `setup.sh redux` take
