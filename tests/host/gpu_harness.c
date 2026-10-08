@@ -31,6 +31,16 @@
 #include <stdarg.h>
 
 #include "render_gpu.h"
+#include "render_gpu_textures.h"
+
+/* The texture keys (render_gpu_textures.c) are off here: the rasteriser's calls into them do nothing. */
+int render_gpu_tex_active(void) {
+    return 0;
+}
+
+void render_gpu_tex_event(const GpuEvent *ev) {
+    (void)ev;
+}
 
 void port_log(const char *fmt, ...) {
     va_list ap;
