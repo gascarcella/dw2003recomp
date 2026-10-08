@@ -1,5 +1,5 @@
 /* port/psyq/libmcrd.c: LIBMCRD over raw 128 KB memory card images (docs/PORT.md "Disc, memory cards and movies"). The port runtime
- * (port/src/memcard.c) owns the images and their files and inserts them with psyq_mcrd_set_card; this file is the
+ * (port/runtime/memcard.c) owns the images and their files and inserts them with psyq_mcrd_set_card; this file is the
  * card's file system (the layout of psx-spx "Memory Card Data Format") and LIBMCRD's command interface over it, as
  * the game's src/main/memcard.c and STGMCARD use it.
  *

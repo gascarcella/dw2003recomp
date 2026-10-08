@@ -1,5 +1,7 @@
-/* The port runtime's internal interface (port/src/): the arena, the overlay manager, the interrupt pump, logging.
- * The game sees only include/port.h's port_* declarations; the Psy-Q shim (port/psyq/) sees psyq.h. */
+/* The port runtime's internal interface (port/runtime/): the arena, the overlay manager, the interrupt pump, logging.
+ * The game sees only psxstack/hooks.h's port_* declarations (through its include/port.h); the Psy-Q shim (port/psyq/)
+ * sees psyq.h; the game adapter (port/game/) implements psxstack/game.h and may use this file. The runtime includes no
+ * game header: its types are psxstack/types.h's, its game facts port_game_gen.h's (psxstack/hooks.h). */
 #ifndef PORT_RUNTIME_H
 #define PORT_RUNTIME_H
 
@@ -7,7 +9,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "common.h" /* the game's types and, with PC_PORT, include/port.h */
+#include "psxstack/desc.h"
+#include "psxstack/game.h"
+#include "psxstack/hooks.h"
+#include "psxstack/types.h"
 
 /* ---- The build (port_version.c, generated at every build by port/cmake/version.cmake from git describe) */
 extern const char port_version[]; /* "0.2.2", "0.2.2-3-gabcdef1", "dev-abcdef1" (-dirty when the tree has changes) */
@@ -20,23 +25,19 @@ void port_fatal(const char *fmt, ...) __attribute__((format(printf, 1, 2), noret
 /* A function the game needs that the skeleton does not implement (port/psyq/psyq.h): prints `fn`, exits with 3. */
 void port_unimplemented(const char *fn) __attribute__((noreturn));
 
-/* ---- The game's entry (src/main/main.c, compiled with -Dmain=game_main) */
-int game_main(void);
-
-/* ---- The arena (arena.c; the layout comes from tools/port_gen.py arena-header -> port_arena_gen.h) */
+/* ---- The arena (arena.c; the layout comes from port_game_gen.h: tools/port_gen.py game-header) */
 void port_arena_init(void);
 /* The arena's base (port_arena): a 24-bit ordering-table tag (PTR_TO_U32 & 0xFFFFFF) is an offset from it. */
 void *port_arena_base(void);
 int port_arena_contains(const void *p, size_t size);
 
 /* ---- The overlay manager (overlay.c; the tables come from tools/port_gen.py tables -> overlay_tables.c) */
-typedef void (*PortFn)(void);
 typedef struct PortOverlayFunc {
     u32 addr;  /* the function's address in the PS1 build (a tag, port.h) */
     PortFn fn; /* the host function */
 } PortOverlayFunc;
 typedef struct PortOverlay {
-    int tier;                     /* 1 or 2 */
+    int tier;                     /* the slot's 1-based index (PORT_SLOT_COUNT of them) */
     s32 file;                     /* the overlay's file ID (the game's cdload IDs) */
     const char *name;             /* FIELDSTG, WSTAG200, ... */
     const PortOverlayFunc *funcs; /* sorted by addr, terminated by { 0, NULL } */
@@ -52,35 +53,11 @@ const PortOverlay *port_overlay_current(int tier);
  * starts with (run.lua's wait_stage reads 0x80082CB0); on the host a code overlay's slot holds no code. */
 u32 port_overlay_word0(int tier);
 
-/* ---- The game-state probes (state.c; the tables come from tools/port_gen.py state -> port_state_tables.c) */
-typedef struct PortExeFunc {
-    u32 addr;  /* the EXE function's PS1 address (config/symbol_addrs.txt) */
-    PortFn fn; /* the host function */
-} PortExeFunc;
-typedef struct PortExeData {
-    u32 addr;         /* the PS1 address */
-    u32 size;         /* the PS1 size (the symbol's size: in config/symbol_addrs.txt) */
-    const char *name;
-    const void *host; /* the host object */
-    u32 identical;    /* bytes from the start that have the PS1 layout by the default rule: size, or 0 (port_gen) */
-} PortExeData;
-typedef struct PortRange {
-    u32 lo, hi; /* [lo, hi) */
-} PortRange;
-extern const PortExeFunc port_exe_funcs[];
-extern const int port_exe_func_count;
-extern const PortExeData port_exe_data[];
-extern const int port_exe_data_count;
-extern const PortRange port_gamestate_volatile[]; /* tests/replay/replay.py VOLATILE_RANGES */
-extern const int port_gamestate_volatile_count;
-
-#define PORT_GAMESTATE_PS1_SIZE 0x275C /* gamestate_data on the PS1: what a checkpoint hashes */
-/* gamestate_data's PS1 image: the pointer-free bytes before funcs as they are, then funcs as the PS1 addresses of the
- * host functions it holds (fatal if one is not an EXE function). */
-void port_state_gamestate_image(u8 out[PORT_GAMESTATE_PS1_SIZE]);
-/* The SHA-1s of the image (40 hex digits): whole, and with the volatile ranges zeroed (gamestate_sha1_stable). */
-void port_state_gamestate_sha1(char full[41], char stable[41]);
-s32 port_state_random_index(void); /* pad_random.index */
+/* ---- The checkpoint image and its hashes (framelog.c): the game's state bytes (psxstack/game.h game_state_image,
+ * game_state_image_size() of them) and their SHA-1s (40 hex digits): whole, and with the game's volatile ranges zeroed
+ * (the record's gamestate_sha1_stable). port_state_image: the image in a buffer the runtime keeps. */
+const u8 *port_state_image(void);
+void port_state_sha1(char full[41], char stable[41]);
 
 /* ---- The per-frame log's events (framelog.c), from the runtime and the script */
 /* A file copied into a slot (port_overlay_load): `name` is the overlay's, or NULL for a data file. */

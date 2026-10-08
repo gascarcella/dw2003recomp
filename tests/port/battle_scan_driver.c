@@ -1,4 +1,4 @@
-/* tests/port/battle.py's driver for port/src/battle_scan.c: reads records { s32 words, s32 stage, s16 words[] } from
+/* tests/port/battle.py's driver for port/game/battle_scan.c: reads records { s32 words, s32 stage, s16 words[] } from
  * argv[1] and prints, per record, "ok length child multi sound sound_arg". */
 #include <stdio.h>
 #include <stdlib.h>

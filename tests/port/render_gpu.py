@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The hardware renderer (port/src/render_gpu.c; issue #31), phase 1: the device, the present of the software image, the
+"""The hardware renderer (port/runtime/render_gpu.c; issue #31), phase 1: the device, the present of the software image, the
 fallback. CI only compiles the renderer and runs the fallback part; the rest needs a GPU device and runs locally.
 
 Usage: tests/port/render_gpu.py [--out DIR] [-j N] [--lavapipe]

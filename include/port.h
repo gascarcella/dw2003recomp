@@ -1,28 +1,27 @@
 #ifndef PORT_H
 #define PORT_H
 
-/* Hooks for the PC port (docs/PORT.md "Hook macros (`include/port.h`)"; DECISIONS "PC port architecture").
+/* Hooks for the PC port (docs/PORT.md "Hook macros (`include/port.h`)"; DECISIONS "PC port architecture"; the
+ * contract with the port stack: psxstack's GAME_CONTRACT.md "2. The hook header").
  *
  * Every macro here has two sides:
  *  - without PC_PORT (the PS1 matching build) it expands to exactly the code the game unit had before, so no byte of
- *    the EXE or of an overlay changes;
- *  - with -DPC_PORT (the 64-bit host build) it expands to a form that uses the port_* functions and objects declared
- *    at the end of this file. Those are implemented under port/ (overlay manager, memory arena, interrupt pump).
+ *    the EXE or of an overlay changes; this side is all here, and needs nothing from the port;
+ *  - with -DPC_PORT (the 64-bit host build) the generic macros come from the stack's port/include/psxstack/hooks.h
+ *    (included below), which expands them to forms that use the port_* functions and objects it declares, implemented
+ *    under port/runtime/ (overlay manager, memory arena, interrupt pump). This file adds the game's own hooks: the
+ *    typed slot-function macros (WSTAG_ENTRY, OVERLAY_ENTRY) and the mods' flags.
  *
  * common.h includes this file after its typedefs: no unit includes it directly.
  *
- * Addresses: the host keeps the PS1's addresses as the *names* of things that live in the overlay slots.
- *  - tier 1 slot: 0x80082CB0 (main_overlay_base), the 19 stage overlays;
- *  - tier 2 slot: 0x800A5DE0 (main_file_base), WFIGHTMN/WFIGHTTS, the 293 WSTAG files and data files;
+ * Addresses (port/game/game.json, the game's description): the host keeps the PS1's addresses as the *names* of things
+ * that live in the overlay slots.
+ *  - slot 1 (tier 1): 0x80082CB0 (main_overlay_base), the 19 stage overlays;
+ *  - slot 2 (tier 2): 0x800A5DE0 (main_file_base), WFIGHTMN/WFIGHTTS, the 293 WSTAG files and data files;
  *  - heap: 0x800AB800..0x801FF000 (heap.c).
  * A function in a slot is a *tag* on the host: the PS1 address as an integer in a function-pointer variable
  * (SLOT_FUNC), which is a constant expression and so works in the static tables. A tag is never called directly:
  * OVERLAY_FN turns it into the host function at the call. Data in a slot is slot-relative (SLOT_PTR). */
-
-#define PORT_SLOT1_BASE 0x80082CB0
-#define PORT_SLOT2_BASE 0x800A5DE0
-#define PORT_HEAP_START_ADDR 0x800AB800
-#define PORT_HEAP_END_ADDR 0x801FF000
 
 #ifndef PC_PORT
 /* ===================================================== PS1 ===================================================== */
@@ -127,105 +126,14 @@
 #else /* PC_PORT */
 /* ===================================================== Host ==================================================== */
 
-#include <stdint.h>
+#include "psxstack/hooks.h" /* the generic macros and the port_* interface (the stack's) */
 
-#define PLATFORM_WAIT() port_wait()
-#define PLATFORM_HALT() port_halt(__FILE__, __LINE__)
-
-#define PORT_SCRATCHPAD_STACK_ENTER(top) ((void)0)
-#define PORT_SCRATCHPAD_STACK_LEAVE() ((void)0)
-
-#define OVERLAY_COPY(tier, file, dst, src, size) port_overlay_load((tier), (file), (dst), (src), (size))
-
-#define PTR_ADD(type, ofs, base) ((type)((char *)(base) + (ofs)))
-#define PTR_TO_S32(p) port_ptr_to_s32(p)
-#define S32_TO_PTR(type, v) ((type)port_s32_to_ptr(v))
-/* A pointer becomes its word offset in the tag window; a tag already (addPrim's setaddr(p, getaddr(ot))) is kept. The
- * branch is chosen at compile time by the argument's type (5: a pointer, __builtin_classify_type); the other is never
- * evaluated. */
-#define PTR_TO_U32(p)                                                                                       \
-    __builtin_choose_expr(__builtin_classify_type(p) == 5, port_ptr_to_u32((const void *)(uintptr_t)(p)), \
-                          (u32)(uintptr_t)(p))
-
-#define SLOT_FUNC(type, addr) ((type)(uintptr_t)(addr))
+/* The game's typed slot functions: a map's entry in slot 2 (fieldstg_stages, fieldstg_stages_2d), a stage overlay's
+ * entry in slot 1 (overlay_entries). */
 #define WSTAG_ENTRY(addr) SLOT_FUNC(void *(*)(), addr)
 #define OVERLAY_ENTRY(addr) SLOT_FUNC(s32 (*)(void), addr)
-#define OVERLAY_FN(tier, fn) ((__typeof__(fn))port_overlay_resolve((tier), (uintptr_t)(fn)))
 
-/* The enum keeps the tier and the address (less 0x80000000, to stay an int) under the function's name. */
-#define LATE_FUNC(tier, addr, ret, name, params) \
-    typedef ret name##_late_fn params;           \
-    enum { name##_late_tier = (tier), name##_late_ofs = (int)((addr) - 0x80000000u) }
-#define LATE_CALL(name) \
-    ((name##_late_fn *)port_overlay_resolve(name##_late_tier, (uintptr_t)0x80000000u + name##_late_ofs))
-
-#define SLOT_PTR(tier, type, addr) ((type)(port_slot##tier + ((addr) - PORT_SLOT##tier##_BASE)))
-
-#define HEAP_START(type) ((type)port_heap_start)
-#define HEAP_END(type) ((type)port_heap_end)
-#define HEAP_SIZE_FROM(first) ((u32)(port_heap_end - (u8 *)(first)))
-#define HEAP_ADDR(addr) (port_heap_start + ((addr) - PORT_HEAP_START_ADDR))
-
-#define BIOS_PTR(type, addr) ((type)port_bios_ptr(addr))
-
-/* --- What the port implements (port/) --- */
-
-/* Runs the pending vsync/CD/GPU "interrupts"; may sleep until the next one is due. */
-void port_wait(void);
-/* Reports an endless loop the game entered on purpose and stops. */
-void port_halt(const char *file, int line) __attribute__((noreturn));
-/* Logs that cdload is about to free file `id` while the CD is still reading into its buffer, and waits for the read
- * (src/main/cdload.c, cdload_wait_read). */
-void port_cdload_wait_read(s32 id);
-
-/* The overlay manager. `tier` is 1 or 2.
- * port_overlay_load: `file` (a file ID) becomes the tier's current overlay, with its .data/.bss as at load time; the
- * caller has already checked that it is not the resident one. `dst`/`src`/`size` are the PS1's memcpy arguments, for
- * files that are data. Returns `dst`, as memcpy does.
- * port_overlay_resolve: the host function for `addr` in the tier's current overlay. An `addr` outside the PS1's RAM
- * (0x80000000..0x80200000) is a host function pointer already and is returned unchanged; an address the current
- * overlay does not define is a fatal error. */
-void *port_overlay_load(int tier, s32 file, void *dst, const void *src, u32 size);
-void (*port_overlay_resolve(int tier, uintptr_t addr))(void);
-
-/* The memory arena (docs/PORT.md "Memory arena"): one static block, port_arena (port/src/arena.c), that stands for the
- * PS1's RAM from the tier-1 slot up, at the PS1's distances: slot 1, slot 2, then the heap (larger than the PS1's;
- * tools/port_gen.py has the same numbers and arena.c checks them). The regions are macros on port_arena, so that their
- * addresses stay constant expressions: records.c's D_8005CB50 and FIELDSTG's script table are static initializers.
- * No alignment is assumed (PE allows none past 8 KB): an arena pointer's PS1-style address is PORT_SLOT1_BASE + its
- * offset, and an ordering-table tag is an offset in the tag window (below).
- * port_slot1/port_slot2: the buffers that stand for the two slots' data (SLOT_PTR).
- * port_heap_start/port_heap_end: the heap region's bounds (0x800AB800/0x801FF000 on the PS1; it may be larger). */
-#define PORT_SLOT2_OFS (PORT_SLOT2_BASE - PORT_SLOT1_BASE)
-#define PORT_HEAP_OFS (PORT_HEAP_START_ADDR - PORT_SLOT1_BASE)
-#define PORT_HEAP_SIZE (4u << 20)
-#define PORT_ARENA_SIZE (PORT_HEAP_OFS + PORT_HEAP_SIZE)
-extern u8 port_arena[PORT_ARENA_SIZE];
-#define port_slot1 (port_arena)
-#define port_slot2 (port_arena + PORT_SLOT2_OFS)
-#define port_heap_start (port_arena + PORT_HEAP_OFS)
-#define port_heap_end (port_arena + PORT_ARENA_SIZE)
-
-/* NULL <-> 0; an arena pointer <-> its PS1-style address; anything else is a fatal error. */
-s32 port_ptr_to_s32(const void *p);
-void *port_s32_to_ptr(s32 v);
-
-/* The tag window: the game's whole writable memory on the host, the units' .data/.bss (static ordering tables and
- * primitives: FIGHTSTG's cursor OT) and the arena, which port_overlay_init measures and port_tag_window_set records.
- * A 24-bit ordering-table tag is a word offset from port_tag_base (entries and primitives are word-aligned), so the
- * window may span up to 64 MB (it is a few MB: one image's data; a sanitizer build's redzones make it 27 MB), and
- * the shim's DrawOTag follows tags inside the window only.
- * port_ptr_to_u32: a pointer in the window -> its word offset (PTR_TO_U32); anything else is a fatal error. */
-#define PORT_TAG_SHIFT 2
-extern const u8 *port_tag_base;
-extern u32 port_tag_span;
-void port_tag_window_set(const void *lo, const void *hi);
-u32 port_ptr_to_u32(const void *p);
-
-/* The byte at the PS1 address `addr` (0x1FC00000..0x1FC80000) of the BIOS ROM. */
-void *port_bios_ptr(u32 addr);
-
-/* ---- The mods' flags (docs/LAUNCHER.md "Mod runtime"; port/src/mods.c sets them, 0 while a mod is off or under
+/* ---- The mods' flags (docs/LAUNCHER.md "Mod runtime"; port/game/game_mods.c sets them, 0 while a mod is off or under
  * --script): read only inside `#ifdef PC_PORT` blocks of the game's C, never in an expression the PS1 build sees.
  * port_mod_skip_dialogues: skip_dialogues is on (docs/LAUNCHER.md "Skip dialogues"): a revealing message window shows its page at once
  * (src/main/message.c), a wait for the confirm button goes on by itself, and so does the battle's message wait

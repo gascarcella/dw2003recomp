@@ -14,7 +14,7 @@ const std::vector<PadButton> &pad_buttons() {
     return buttons;
 }
 
-// port/src/input.c's input_keymap and input_padmap (and its triggers and left stick), in the file's names.
+// port/runtime/input.c's input_keymap and input_padmap (and its triggers and left stick), in the file's names.
 struct ButtonDefaults {
     const char *button;
     std::vector<std::string> keys, pad;

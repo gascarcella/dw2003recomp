@@ -1,6 +1,6 @@
-/* The platform layer (port/src/platform.c): the few places where the runtime needs the operating system beyond the
+/* The platform layer (port/runtime/platform.c): the few places where the runtime needs the operating system beyond the
  * C library, each with a POSIX half and a Windows half (the project board's Windows 4; DECISIONS "Windows:
- * cross-built from Linux"). Everything else in port/src/ is plain C99 and calls these. Paths are UTF-8 narrow strings
+ * cross-built from Linux"). Everything else in port/runtime/ is plain C99 and calls these. Paths are UTF-8 narrow strings
  * on both (the Windows build's manifest selects the UTF-8 code page: port/windows/dw2003.manifest). */
 #ifndef PORT_PLATFORM_H
 #define PORT_PLATFORM_H
@@ -14,8 +14,8 @@ int port_path_is_absolute(const char *path);       /* "/x" (both); "C:\x", "C:/x
 const char *port_path_last_sep(const char *path);  /* the last separator, or NULL */
 /* The canonical absolute path of an existing file (realpath / _fullpath) into out; 0 when it cannot be resolved. */
 int port_path_canonical(const char *path, char *out, size_t out_size);
-/* The per-user cache directory for this program ($XDG_CACHE_HOME or ~/.cache, then /dw2003-port; Windows:
- * %LOCALAPPDATA%\dw2003-port) into out; 0 when there is none. Not created. */
+/* The per-user cache directory for this program ($XDG_CACHE_HOME or ~/.cache, then /<game id>-port; Windows:
+ * %LOCALAPPDATA%\<game id>-port; PSXSTACK_GAME_ID) into out; 0 when there is none. Not created. */
 int port_cache_dir(char *out, size_t out_size);
 /* Creates `dir` and the missing directories above it; 0 when done (or it existed), -1 with errno set. */
 int port_make_dirs(const char *dir);

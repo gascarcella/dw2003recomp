@@ -1,6 +1,7 @@
-/* The memory arena (include/port.h; docs/PORT.md "Memory arena"): one block that stands for the PS1 RAM from the tier-1
- * slot up: slot 1 (0x80082CB0), slot 2 (0x800A5DE0) and the heap (0x800AB800..) at the PS1's distances, so that a
- * pointer's PS1-style address is PORT_SLOT1_BASE + its offset. The heap is larger than the PS1's (PORT_HEAP_SIZE).
+/* The memory arena (psxstack/hooks.h; docs/PORT.md "Memory arena"): one block that stands for the PS1 RAM from the first
+ * slot up: the PORT_SLOT_COUNT slots and the heap at the PS1's distances (port_game_gen.h, from the game's game.json),
+ * so that a pointer's PS1-style address is PORT_SLOT1_BASE + its offset. The heap is larger than the PS1's
+ * (PORT_HEAP_SIZE).
  * The block needs no alignment: an ordering-table tag's 24 bits are a pointer's word offset in the tag window
  * (PTR_TO_U32, port_ptr_to_u32: the game's static data and the arena, one image's writable memory, measured at
  * startup; words, so that a sanitizer build's redzones (22 MB of game data) fit), which the shim's DrawOTag resolves
@@ -12,29 +13,37 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "port_arena_gen.h"
 #include "port_runtime.h"
 
-_Static_assert(PORT_SLOT2_OFS == PORT_SLOT1_SIZE, "port_gen.py's slot 1 size differs from include/port.h's");
-_Static_assert(PORT_HEAP_OFS == PORT_SLOT1_SIZE + PORT_SLOT2_SIZE, "port_gen.py's slot 2 size differs from include/port.h's");
-_Static_assert(PORT_HEAP_SIZE == PORT_HEAP_GEN_SIZE, "port_gen.py's heap size differs from include/port.h's");
-_Static_assert(PORT_ARENA_SIZE == PORT_ARENA_GEN_SIZE, "port_gen.py's arena size differs from include/port.h's");
+_Static_assert(PORT_SLOT1_OFS == 0, "the first slot starts the arena");
+_Static_assert(PORT_HEAP_OFS == PORT_HEAP_START_ADDR - PORT_SLOT1_BASE, "the heap follows the slots at the PS1's distance");
 _Static_assert(PORT_ARENA_SIZE < ((u32)0xFFFFFF << PORT_TAG_SHIFT), "the arena must fit the tag window: a 24-bit tag of words");
 
 u8 port_arena[PORT_ARENA_SIZE] __attribute__((aligned(4096)));
 
-/* A stand-in for the BIOS ROM's version string (STAGSLCT's version display reads 0x1FC0012C). */
-#define BIOS_STANDIN_BASE 0x1FC00100u
-static u8 port_bios_standin[0x100] = { [0x2C] = 'P', 'C', '-', 'P', 'O', 'R', 'T', '-', 'M', '1', 0 };
+/* A stand-in for the BIOS ROM (the game's reads of it: PSXSTACK_GAME_BIOS_STANDINS, e.g. the version string STAGSLCT
+ * displays from 0x1FC0012C): 4 KB from the ROM's base, holding each stand-in's text at its address. */
+#define BIOS_STANDIN_BASE 0x1FC00000u
+static u8 port_bios_standin[0x1000];
+static const PortGameBiosStandin port_bios_standins[] = PSXSTACK_GAME_BIOS_STANDINS;
 
 void port_arena_init(void) {
+    int i;
+    for (i = 0; i < PSXSTACK_GAME_BIOS_STANDIN_COUNT; i++) {
+        const PortGameBiosStandin *b = &port_bios_standins[i];
+        size_t n = strlen(b->text) + 1;
+        if (b->address < BIOS_STANDIN_BASE || b->address - BIOS_STANDIN_BASE + n > sizeof(port_bios_standin)) {
+            port_fatal("arena: BIOS stand-in 0x%08X is outside the stand-in region", b->address);
+        }
+        memcpy(port_bios_standin + (b->address - BIOS_STANDIN_BASE), b->text, n);
+    }
     if (port_trace) {
-        port_log("arena: %p, %u KB (slot1 %#x, slot2 %#x, heap %u KB)", (void *)port_arena, PORT_ARENA_SIZE >> 10,
-                 PORT_SLOT1_SIZE, PORT_SLOT2_SIZE, PORT_HEAP_SIZE >> 10);
+        port_log("arena: %p, %u KB (%d slots, %#x; heap %u KB)", (void *)port_arena, PORT_ARENA_SIZE >> 10,
+                 PORT_SLOT_COUNT, PORT_HEAP_OFS, PORT_HEAP_SIZE >> 10);
     }
 }
 
-/* The console's reset (port/src/reset.c): the PS1's RAM is cleared (PCSX-Redux hardResetEmulator), so are the slots
+/* The console's reset (port/runtime/reset.c): the PS1's RAM is cleared (PCSX-Redux hardResetEmulator), so are the slots
  * and the heap; as at startup (.bss). The stand-in BIOS is ROM: it stays. */
 void port_arena_reset(void) {
     memset(port_arena, 0, sizeof(port_arena));

@@ -1,4 +1,4 @@
-/* The SPU core's internals (port/src/spu.c, spu_dsp.c): the pure DSP pieces and a read-only view of the voices, for
+/* The SPU core's internals (port/runtime/spu.c, spu_dsp.c): the pure DSP pieces and a read-only view of the voices, for
  * the core itself and for its host tests and tools (tests/spu/). The game's side uses port/include/spu.h only.
  * Everything here follows psx-spx "Sound Processing Unit (SPU)"; docs/SOUND.md section 6 lists what is modelled, what is
  * assumed where psx-spx is silent, and how each piece is checked. */

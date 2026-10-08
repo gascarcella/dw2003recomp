@@ -66,7 +66,7 @@ u32 mdec_decode_out(u32 *dst, u32 words);
 /* libpad.c: the controllers were polled again (run by the vsync tick). */
 void psyq_pad_vsync(void);
 
-/* libsnd.c, for the SPU write trace (port/src/spu_trace.c): psyq_snd_in_vsync is 1 while the vsync handler's
+/* libsnd.c, for the SPU write trace (port/runtime/spu_trace.c): psyq_snd_in_vsync is 1 while the vsync handler's
  * sequencer tick runs (its stores belong to the vsync being run, which the runtime's frame count counts only after the
  * handler); the call hook gets one line per LIBSND call the game makes (the oracle's `--calls` comments). */
 int psyq_snd_in_vsync(void);

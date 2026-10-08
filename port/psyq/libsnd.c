@@ -96,7 +96,7 @@ int snd_select(int vab, int prog) {
 /* ---- The console's reset ---- */
 
 void psyq_snd_reset(void) {
-    snd_call("reset()"); /* the trace's mark: the SPU is cleared too (port/src/reset.c), and no vsync handler runs */
+    snd_call("reset()"); /* the trace's mark: the SPU is cleared too (port/runtime/reset.c), and no vsync handler runs */
     memset(&snd, 0, sizeof(snd));
     snd_max_progs = 0x80;
     snd_spu_reset();

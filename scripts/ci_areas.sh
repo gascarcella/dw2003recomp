@@ -17,7 +17,7 @@
 #   launcher  `launcher`: the SDL game's build and input self-tests, the launcher's build and self-test, and its run
 #             with the disc and the SDL game
 # Each implies the next: game => port (the port compiles the game's C, and its tests replay the game's scripts) =>
-# launcher (the launcher compiles port/src/json.c and sha1.c, lists port/mods/*/mod.json, and its self-test starts the
+# launcher (the launcher compiles port/runtime/json.c and sha1.c, lists port/mods/*/mod.json, and its self-test starts the
 # game with --config: the settings contract). A path no rule below names counts as game, so a new kind of file runs
 # everything until it gets a rule (a too-narrow filter that skips a needed test is worse than a broad one).
 set -euo pipefail
@@ -33,7 +33,7 @@ area_of() {
         .github/workflows/release.yml|scripts/package_appimage.sh|packaging/*) echo none ;;
         # The launcher's own tree.
         launcher/*) echo launcher ;;
-        # The port: its sources (port/src/json.c, sha1.c are the launcher's too: port => launcher), its generator, the
+        # The port: its sources (port/runtime/json.c, sha1.c are the launcher's too: port => launcher), its generator, the
         # MCP server that drives it (tools/mcp, .mcp.json; tests/port/debug.py runs its self-test), and the tests that
         # build or run its code.
         port/*|tools/port_gen.py|tools/mcp/*|.mcp.json|tests/port/*|tests/spu/*|tests/xa/*|tests/saves/*|tests/host/*) echo port ;;

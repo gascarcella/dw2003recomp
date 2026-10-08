@@ -13,7 +13,7 @@ checkpoints (name, stage, map, stable gamestate hash) and the same overlay and m
 The sound (tests/port/sound.py): once, LIBSND replayed on the emulator's timeline must give the committed emulator SPU
 traces exactly (tests/sound/expected/*.trace, tests/port/sound/*.trace.gz); per script, the runs' SPU traces
 (--spu-trace) must be identical too, the run's trace must equal LIBSND's replay of its own calls (skipped while
-port/src/audio.c is the stub that renders nothing), and where an emulator trace is committed the game must make the
+port/runtime/audio.c is the stub that renders nothing), and where an emulator trace is committed the game must make the
 same LIBSND calls (the segments between them are reported: docs/SOUND.md section 7).
   --m32       also build build/port-m32 (-DDW3_PORT_M32=ON, needs gcc-multilib) and require its cross-core view to equal
               the 64-bit build's, and for new_game its log and record byte for byte (the layout check: pointers are 4
@@ -228,7 +228,7 @@ def check_script(name, args, env, out):
 
 
 def audio_renders(binary, out):
-    """Whether the port's audio output renders the SPU (port/src/audio.c past its M3 step-0 stub, which refuses --wav):
+    """Whether the port's audio output renders the SPU (port/runtime/audio.c past its M3 step-0 stub, which refuses --wav):
     LIBSND's replay of a run is exact only if the run rendered 882 samples a vsync, as the replay does."""
     proc = subprocess.run([*RUNNER, str(binary), "--max-frames", "1", "--wav", str(out / "audio_probe.wav")], cwd=ROOT,
                           env=dict(os.environ, **RUNNER_ENV), capture_output=True, text=True, timeout=120)

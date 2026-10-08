@@ -1,6 +1,6 @@
 # port/: the PC port
 
-The game's C (`src/`, 388 units) linked with the port runtime (`port/src/`) and our Psy-Q shim (`port/psyq/`) into
+The game's C (`src/`, 388 units) linked with the port runtime (`port/runtime/`, generic), the game adapter (`port/game/`) and our Psy-Q shim (`port/psyq/`) into
 one 64-bit host binary (`docs/PORT.md`; DECISIONS "PC port architecture"). The PS1 build
 (`configure.py`, `build.ninja`) is untouched: the hooks in `include/port.h` expand to the original code without
 `PC_PORT`, and `scripts/build.sh` proves the EXE and the overlays byte-identical.
@@ -41,29 +41,35 @@ The `-m32` build is the layout check: pointers are 4 bytes there, as on the PS1,
 | Path | Contents |
 |---|---|
 | `CMakeLists.txt` | The build (below) |
+| `include/psxstack/` | The stack's headers (psxstack's `GAME_CONTRACT.md`): `hooks.h` (the host side of `include/port.h`'s macros, the `port_*` interface), `game.h` (the adapter interface: `game_main`, `game_apply_rate`, `game_state_*`, `game_mods`), `mods.h`, `desc.h`, `types.h` |
 | `include/port_runtime.h` | The runtime's internal interface (tables, arena, pump, logging) |
-| `src/main.c` | Options, setup, `game_main()` (the game's `main`, renamed by `-Dmain=game_main` on `src/main/main.c`) |
-| `src/arena.c` | The memory arena: `port_arena`, `port_ptr_to_s32`/`port_s32_to_ptr`, the stand-in BIOS |
-| `src/overlay.c` | The overlay manager: `port_overlay_load` (snapshot restore), `port_overlay_resolve` (tag -> function); the game's `.data`/`.bss` snapshots (the reset's `port_overlay_reset`/`_check`) |
-| `src/framelog.c` | The per-frame log (`--log`) and the run's record (`--record`): `port_harness.h` |
-| `src/state.c` | The game-state probes (`port_state_*`), `port_state_read` (a PS1-address read), gamestate_data's PS1 image and hashes |
-| `src/sha1.c` | SHA-1 (our own): the disc check, the checkpoint hashes |
-| `src/disc.c` | The disc (`--disc`): the CUE/BIN, its SHA-1 check (with a stamp cache), LIBCD's sector source, `--cd-speed` |
-| `src/script.c` | The input script (`--script`): `tests/replay/run.lua`'s step engine in C, the pad through `psyq_pad_set` |
-| `src/json.c` | A small strict JSON reader and writer (our own), for the scripts and the settings |
-| `src/settings.c` | The settings file (`--config`, `--print-settings`; `settings.h`): schema 1 of docs/LAUNCHER.md "Settings file" |
+| `game/game.json` | The game's description (identity, discs, rate, slots, heap, BIOS stand-ins), generated into `port_game_gen.h` at configure time (`tools/port_gen.py game-header`): the runtime's only source of game facts |
+| `game/state.c`, `game/game.c` | The adapter: the probes (`game_state_*`), the checkpoint image, `game_apply_rate` (the 60 Hz mode) |
+| `game/game_mods.c`, `game/battle_scan.c` | The six mods that change the game (`PortMod` records for the engine), the battle scripts' scanner |
+| `game/asmdata.c` | Weak stand-ins for the data the matching build keeps in asm |
+| `runtime/game_defaults.c` | A weak default for every adapter function: the runtime links with an empty adapter |
+| `runtime/main.c` | Options, setup, `game_main()` (the game's `main`, renamed by `-Dmain=game_main` on `src/main/main.c`) |
+| `runtime/arena.c` | The memory arena: `port_arena`, `port_ptr_to_s32`/`port_s32_to_ptr`, the stand-in BIOS |
+| `runtime/overlay.c` | The overlay manager: `port_overlay_load` (snapshot restore), `port_overlay_resolve` (tag -> function); the game's `.data`/`.bss` snapshots (the reset's `port_overlay_reset`/`_check`) |
+| `runtime/framelog.c` | The per-frame log (`--log`) and the run's record (`--record`): `port_harness.h` |
+
+| `runtime/sha1.c` | SHA-1 (our own): the disc check, the checkpoint hashes |
+| `runtime/disc.c` | The disc (`--disc`): the CUE/BIN, its SHA-1 check (with a stamp cache), LIBCD's sector source, `--cd-speed` |
+| `runtime/script.c` | The input script (`--script`): `tests/replay/run.lua`'s step engine in C, the pad through `psyq_pad_set` |
+| `runtime/json.c` | A small strict JSON reader and writer (our own), for the scripts and the settings |
+| `runtime/settings.c` | The settings file (`--config`, `--print-settings`; `settings.h`): schema 1 of docs/LAUNCHER.md "Settings file" |
 | `include/port_harness.h` | The M1 harness's interfaces (disc, frame log and probes, script) |
-| `src/pump.c` | `port_wait` (the vsync and CD ticks, the frame cap, the watchdog), `port_halt`, `port_unimplemented` |
-| `src/reset.c` | The console's reset (the script's `reset` step): `port_reset_request` (longjmp to `main()`), `port_reset_state`, `DW3_PORT_RESET_CHECK` |
-| `src/video.c` | The video output: the display area of the VRAM as 32-bit pixels, `--screenshot`, the SDL3 window (below) |
-| `src/render_gpu.c` | The hardware renderer (SDL_GPU; SDL build only): the device, the present through it, `--gpu-screenshot` (below) |
+| `runtime/pump.c` | `port_wait` (the vsync and CD ticks, the frame cap, the watchdog), `port_halt`, `port_unimplemented` |
+| `runtime/reset.c` | The console's reset (the script's `reset` step): `port_reset_request` (longjmp to `main()`), `port_reset_state`, `DW3_PORT_RESET_CHECK` |
+| `runtime/video.c` | The video output: the display area of the VRAM as 32-bit pixels, `--screenshot`, the SDL3 window (below) |
+| `runtime/render_gpu.c` | The hardware renderer (SDL_GPU; SDL build only): the device, the present through it, `--gpu-screenshot` (below) |
 | `shaders/*.hlsl` | Its shaders, compiled to SPIR-V by DXC at build time and embedded (`cmake/embed.cmake`) |
-| `src/input.c` | The window's input: keyboard and gamepads to the pad (rebindable), the hotkeys, the window's close, `--input-test` (below) |
-| `src/mods.c` | The built-in mods' registry, their settings and hotkeys, `port_mods_frame` (manifests: `mods/<id>/mod.json`) |
-| `src/battle_scan.c` | The battle scripts' command lengths (battle_animations' cut; `tests/port/battle.py` checks it on the disc) |
+| `runtime/input.c` | The window's input: keyboard and gamepads to the pad (rebindable), the hotkeys, the window's close, `--input-test` (below) |
+| `runtime/mods.c` | The mods' engine: the registry (fast_forward, then the game's), their settings and hotkeys, `port_mods_frame` (manifests: `mods/<id>/mod.json`) |
+| `runtime/battle_scan.c` | The battle scripts' command lengths (battle_animations' cut; `tests/port/battle.py` checks it on the disc) |
 | `mods/` | The built-in mods' manifests (copied beside the binary) |
-| `src/audio.c` | The audio output: the SPU core rendered every vsync, `--wav`, the SDL3 audio device (below) |
-| `src/asmdata.c` | Zero data the PS1 build keeps in asm (FIELDSTG's `.bss` block; weak LIBGS/LIBCD data) |
+| `runtime/audio.c` | The audio output: the SPU core rendered every vsync, `--wav`, the SDL3 audio device (below) |
+| `runtime/asmdata.c` | Zero data the PS1 build keeps in asm (FIELDSTG's `.bss` block; weak LIBGS/LIBCD data) |
 | `include/spu.h`, `src/spu.c`, `src/spu_dsp.c`, `src/spu_internal.h` | The SPU core (M3, below): registers, SPU RAM, voices, mix, reverb; the DSP pieces; the internals the tests see |
 | `psyq/` | The Psy-Q shim (its own README) |
 | `../tools/port_gen.py` | The generators CMake runs (never by hand in the normal flow) |
@@ -207,7 +213,7 @@ sections. On PE (`--pe`) it forces the overlay's `#pragma clang section data=...
 `.pdata$fn`/`.xdata$fn` (the x64 unwind tables; a crash report's stack walk and any SEH unwinding then stop at the
 first game frame), and llvm-objcopy cannot rename COFF sections at all. Either way the launcher checks the object
 with GNU objdump, which reads COFF too (Fedora's and Ubuntu's binutils have the `x86_64-pe` target; CMake checks
-`objdump --info`). `port/src/asmdata.c` names its FIELDSTG section explicitly the same way.
+`objdump --info`). `port/game/asmdata.c` names its FIELDSTG section explicitly the same way.
 
 At build time, after the units are compiled:
 - `overlay_tables.c`: per overlay `{ tier, file ID, name, [{ PS1 address, host function }], section bounds }`.
@@ -372,11 +378,11 @@ at 24-85 ms (mean 57) with no refill and no drop, and the disk file holds the WA
   nothing has run on real Windows yet (the board's Windows 9). The arena needs nothing of the linker (no alignment,
   no link-time symbols), the overlay sections need no linker script (above), `port_gen.py state` reads symbol sizes
   from a compile of the units, not from `nm -S` (COFF has none), and the runtime's system calls are platform-split
-  (`port/src/platform.c`; `docs/PORT.md` "Known limitations"); `--debug` is refused there; a crash writes the report
+  (`port/runtime/platform.c`; `docs/PORT.md` "Known limitations"); `--debug` is refused there; a crash writes the report
   and a minidump (`docs/PORT.md` "Crash report"). macOS is not planned.
 - The snapshot copies with plain byte loops in `no_sanitize_address` functions (ASan's redzones between globals
   are inside the ranges); so a sanitizer build's overlay-load log lines show other section sizes (ASan's redzones)
   than a normal build's: compare logs only between builds of the same kind.
-- Done since this list was written (session 16): drawing (M2, `port/psyq/gpu.c`), sound (M3, `port/src/spu*.c`,
+- Done since this list was written (session 16): drawing (M2, `port/psyq/gpu.c`), sound (M3, `port/runtime/spu*.c`,
   `port/psyq/libsnd*.c`), memory cards (`.mcd` images), the movies (M5: `port/psyq/mdec.c` decodes them, the VRAM equal
   to the emulator's outside the movie buffers and within IDCT rounding inside; their XA audio through `port/psyq/xa.c`).

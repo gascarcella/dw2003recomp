@@ -287,7 +287,7 @@ static void test_input(const std::string &root) {
     check(!names_from_json(Json::string("south"), false, &names, &err) &&
               names_from_json(Json::string("south"), true, &names, &err),
           "a gamepad name is not a key name");
-    // The game's defaults (port/src/input.c) are what an empty file means.
+    // The game's defaults (port/runtime/input.c) are what an empty file means.
     Settings d;
     check(d.keys_for("start") == std::vector<std::string>({ "Return", "Keypad Enter" }) &&
               d.pad_for("up") == std::vector<std::string>({ "dpup", "lefty-" }) &&

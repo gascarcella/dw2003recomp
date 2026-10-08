@@ -1,4 +1,4 @@
-// The present's pixel shader (port/src/render_gpu.c): the image (src.xy pixels) nearest-scaled into the rectangle
+// The present's pixel shader (port/runtime/render_gpu.c): the image (src.xy pixels) nearest-scaled into the rectangle
 // dst (x, y, w, h) of the target, in integers so that the result is defined exactly: target pixel p (its centre
 // p + 0.5) reads image pixel floor((p - dst.xy + 0.5) * src.xy / dst.zw). Read with Load: no filtering, no sampler
 // state involved. SDL_GPU's binding layout (SDL_gpu.h, SDL_CreateGPUShader): fragment textures t[n] in space2,

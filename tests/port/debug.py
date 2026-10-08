@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The port's debug channel (`--debug SOCKET`, port/src/debug.c) and the MCP server's offline self-test (tools/mcp).
+"""The port's debug channel (`--debug SOCKET`, port/runtime/debug.c) and the MCP server's offline self-test (tools/mcp).
 
 Usage: tests/port/debug.py [--out DIR] [--no-selftest]
 

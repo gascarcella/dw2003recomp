@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "id": "dw2003",
+  "title": "Digimon World 2003",
+  "env_prefix": "DW3",
+  "discs": [
+    {
+      "label": "Europe (SLES-03936), unpatched",
+      "serial": "SLES-03936",
+      "sha1": "457cb233349ba841e03b33d8060f8fbcadd45cb3",
+      "size": 692146560,
+      "region": "PAL",
+      "cue": "dw2003.cue"
+    }
+  ],
+  "video": {
+    "rate": 50,
+    "rates": [50, 60],
+    "rate_note": "The game's own 60 Hz mode, as the NTSC patch gives it: time, walking and music keep their speed, other things run 20% faster. A game built before its 60 Hz mode runs at 50 Hz."
+  },
+  "memory": {
+    "ram": { "base": "0x80000000", "size": "0x200000" },
+    "slots": [
+      { "name": "stage", "base": "0x80082CB0", "size": "0x23130" },
+      { "name": "file", "base": "0x800A5DE0", "size": "0x5A20" }
+    ],
+    "heap": { "start": "0x800AB800", "end": "0x801FF000", "host_size": "0x400000" },
+    "bios_standin": [{ "address": "0x1FC0012C", "text": "PC-PORT-M1" }]
+  },
+  "launcher": {
+    "about": "Digimon World 2003 (Europe, SLES-03936) on the PC port.",
+    "disc_hint": "Your own dump of the unpatched European disc: a .cue whose first FILE line names the .bin, or the .bin itself.",
+    "website": "https://github.com/gascarcella/dw2003recomp"
+  }
+}

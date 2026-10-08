@@ -51,7 +51,7 @@ DirLookup dir_lookup_from_system(const std::string &arg);
 SettingsDir settings_dir_choose(const DirLookup &in);
 
 // ---- The settings file (schema 1, settled by the game's side): the values the launcher edits. The rest of the file is kept as it
-// was; the defaults are the game's (port/src/settings.c), so a missing member means the same on both sides.
+// was; the defaults are the game's (port/runtime/settings.c), so a missing member means the same on both sides.
 struct MemoryCard {
     bool present = true; // false: null in the file, no card in the slot
     std::string path;    // a .mcd image, relative to the settings directory (created formatted by the game)

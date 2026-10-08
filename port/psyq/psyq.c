@@ -36,7 +36,7 @@ void psyq_trace_printf(const char *fmt, ...) {
     fputc('\n', psyq_trace_stream);
 }
 
-/* The console's reset (psyq.h, port/src/reset.c): every library's state the game can observe back to power-on, as if
+/* The console's reset (psyq.h, port/runtime/reset.c): every library's state the game can observe back to power-on, as if
  * the shim had just been loaded. Kept: the runtime's settings (the vsync hook, the CD's sector source and timing model,
  * the GPU's walk window), the memory cards' contents (libmcrd.c) and the trace setting. */
 void psyq_reset(void) {

@@ -5,7 +5,7 @@ Usage: tests/port/battle.py [--out DIR] [-v]
 
 Every model's script file (FightstgModelRecord.script_file of SMDLDATA.PRO, file 0x1CC) and every script in it is
 read here with this file's own reading of src/fightstg/fightstg_8008B630.c's command readers, and by the port's
-port/src/battle_scan.c (compiled alone with tests/port/battle_scan_driver.c); both must agree on every script (that it
+port/game/battle_scan.c (compiled alone with tests/port/battle_scan_driver.c); both must agree on every script (that it
 ends, its length, whether it has a child command, a multi-hit child, its first hit-sound command), with the script's
 stage 0 and -1 (command 4 reads no fades for a stage of -1). Then the facts the mod relies on, required:
   - every script reaches its end command;
@@ -68,7 +68,7 @@ def scripts_of(sub_id):
 
 
 def scan(words, stage):
-    """This file's reading of the command readers (see port/src/battle_scan.c's table): (ok, length, child, multi,
+    """This file's reading of the command readers (see port/game/battle_scan.c's table): (ok, length, child, multi,
     sound, sound_arg, model animations set by command 2 op 0)."""
     i, child, multi, sound, sound_arg, anims = 0, 0, 0, 0, 0, []
     n = len(words)
@@ -130,8 +130,8 @@ def main():
     out = (Path(args.out) if args.out else ROOT / "build/port-test/battle").resolve()
     out.mkdir(parents=True, exist_ok=True)
     driver = out / "battle_scan_driver"
-    subprocess.run(["gcc", "-std=gnu99", "-O2", "-Wall", "-Wextra", "-Werror", "-I", str(ROOT / "port/src"),
-                    str(ROOT / "port/src/battle_scan.c"), str(ROOT / "tests/port/battle_scan_driver.c"), "-o",
+    subprocess.run(["gcc", "-std=gnu99", "-O2", "-Wall", "-Wextra", "-Werror", "-I", str(ROOT / "port/game"),
+                    str(ROOT / "port/game/battle_scan.c"), str(ROOT / "tests/port/battle_scan_driver.c"), "-o",
                     str(driver)], check=True)
     files = script_files()
     items, records = [], bytearray()
@@ -147,7 +147,7 @@ def main():
     failures = []
     disagree = [(s, k, st) for (s, k, st, r), l in zip(items, lines) if tuple(map(int, l.split())) != r[:6]]
     if disagree:
-        failures.append(f"port/src/battle_scan.c and this reading disagree on {len(disagree)} script(s): "
+        failures.append(f"port/game/battle_scan.c and this reading disagree on {len(disagree)} script(s): "
                         f"{', '.join(f'{s:#x}/{k} stage {st}' for s, k, st in disagree[:8])}")
     pal = [(s, k, r) for s, k, st, r in items if st == 0]
     nscripts = collections.Counter(len(scripts_of(s)) for s in files)

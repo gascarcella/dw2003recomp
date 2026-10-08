@@ -95,7 +95,7 @@ int port_cache_dir(char *out, size_t out_size) {
     if (base == NULL || !port_path_is_absolute(base)) {
         return 0;
     }
-    return snprintf(out, out_size, "%s\\dw2003-port", base) < (int)out_size;
+    return snprintf(out, out_size, "%s\\" PSXSTACK_GAME_ID "-port", base) < (int)out_size;
 }
 
 int port_make_dirs(const char *dir) {
@@ -318,9 +318,9 @@ int port_cache_dir(char *out, size_t out_size) {
     const char *home = getenv("HOME");
     int n;
     if (xdg != NULL && xdg[0] == '/') {
-        n = snprintf(out, out_size, "%s/dw2003-port", xdg);
+        n = snprintf(out, out_size, "%s/" PSXSTACK_GAME_ID "-port", xdg);
     } else if (home != NULL && home[0] == '/') {
-        n = snprintf(out, out_size, "%s/.cache/dw2003-port", home);
+        n = snprintf(out, out_size, "%s/.cache/" PSXSTACK_GAME_ID "-port", home);
     } else {
         return 0;
     }

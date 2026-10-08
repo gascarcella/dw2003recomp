@@ -1,5 +1,5 @@
 # A file's bytes as a C array (cmake -DIN=file -DOUT=header -DNAME=identifier -P embed.cmake): the hardware renderer's
-# compiled shaders (port/CMakeLists.txt, port/src/render_gpu.c) go into the binary, which stays one file. Aligned to
+# compiled shaders (port/CMakeLists.txt, port/runtime/render_gpu.c) go into the binary, which stays one file. Aligned to
 # 16 bytes: SPIR-V is read as 32-bit words.
 file(READ "${IN}" hex HEX)
 string(LENGTH "${hex}" len)

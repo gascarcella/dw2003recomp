@@ -6,7 +6,7 @@
 #   build/launcher/dw2003-launcher            # SDL_VIDEO_DRIVER=offscreen ... --self-test DIR: the headless self-test
 #
 # It shares two files of the port's runtime, compiled here as they are (never modified for the launcher): the JSON
-# reader (port/src/json.c) and SHA-1 (port/src/sha1.c).
+# reader (port/runtime/json.c) and SHA-1 (port/runtime/sha1.c).
 cmake_minimum_required(VERSION 3.20)
 project(dw2003launcher C CXX)
 
@@ -64,12 +64,12 @@ add_custom_target(dw3_launcher_version COMMAND "${CMAKE_COMMAND}" -DROOT=${DW3_R
                   COMMENT "port/cmake/version.cmake (the launcher's version stamp)" VERBATIM)
 
 file(GLOB DW3_LAUNCHER_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
-set(DW3_LAUNCHER_SHARED "${DW3_ROOT}/port/src/json.c" "${DW3_ROOT}/port/src/sha1.c" "${DW3_LAUNCHER_VERSION_C}")
+set(DW3_LAUNCHER_SHARED "${DW3_ROOT}/port/runtime/json.c" "${DW3_ROOT}/port/runtime/sha1.c" "${DW3_LAUNCHER_VERSION_C}")
 add_executable(dw2003-launcher ${DW3_LAUNCHER_SRCS} ${DW3_LAUNCHER_SHARED})
 add_dependencies(dw2003-launcher dw3_launcher_version)
 set_target_properties(dw2003-launcher PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF
                       C_STANDARD 99)
-target_include_directories(dw2003-launcher PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src" "${DW3_ROOT}/port/src")
+target_include_directories(dw2003-launcher PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src" "${DW3_ROOT}/port/include")
 target_link_libraries(dw2003-launcher PRIVATE dw3_imgui SDL3::SDL3)
 set_source_files_properties(${DW3_LAUNCHER_SRCS} PROPERTIES COMPILE_OPTIONS "-Wall;-Wextra;-Werror")
 # The release (scripts/package_appimage.sh) links the C++ runtime statically, so the AppImage needs only the C library

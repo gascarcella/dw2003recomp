@@ -8,7 +8,7 @@ Usage: tests/port/sound.py [replay] [TRACE ...] [--m32] [--sanitize] [--rate N] 
 ones, tests/sound/expected/*.trace and tests/port/sound/*.trace.gz; any that tests/sound/spu_trace.py `run --calls`
 wrote) becomes a replay script: the game's LIBSND calls with their arguments, the pointers resolved to the sound bank
 files they point into (the bank found by its body DMA's SHA-1, its files read from the disc), and the emulator's
-vsyncs, at the emulator's ticks. tests/port/sound_replay.c, built from port/psyq/libsnd*.c and port/src/spu*.c, makes
+vsyncs, at the emulator's ticks. tests/port/sound_replay.c, built from port/psyq/libsnd*.c and port/runtime/spu*.c, makes
 those calls on that timeline (rendering the emulator's 877.3 SPU samples per vsync) and writes its SPU trace, which
 must equal the emulator's: every store and DMA block, in order, at the same tick (comments aside, as
 tests/sound/spu_trace.py `diff` compares). The game and its timing are out of it: the port does not reproduce the
@@ -42,9 +42,9 @@ from spu_trace import events, report_diff  # noqa: E402
 EXPECTED = ROOT / "tests/sound/expected"
 PORT_EXPECTED = ROOT / "tests/port/sound"
 SRCS = ["port/psyq/libsnd.c", "port/psyq/libsnd_seq.c", "port/psyq/libsnd_voice.c", "port/psyq/libsnd_spu.c",
-        "port/src/spu.c", "port/src/spu_dsp.c", "port/src/sha1.c", "tests/port/sound_replay.c"]
+        "port/runtime/spu.c", "port/runtime/spu_dsp.c", "port/runtime/sha1.c", "tests/port/sound_replay.c"]
 CFLAGS = ["-std=gnu99", "-O2", "-fwrapv", "-fsigned-char", "-fno-strict-aliasing", "-Wall", "-Wextra", "-Werror",
-          "-DPC_PORT", "-DNON_MATCHING", "-Iport/include", "-Iport/psyq", "-Iport/src", "-Iinclude", "-I."]
+          "-DPC_PORT", "-DNON_MATCHING", "-Iport/include", "-Iport/psyq", "-Iport/runtime", "-Iinclude", "-I."]
 VARIANTS = {"m64": ["-m64"], "m32": ["-m32"],
             "san": ["-m64", "-fsanitize=address,undefined", "-fno-sanitize-recover=all", "-fno-omit-frame-pointer"]}
 # SsUtKeyOn's last three arguments are on the stack, which the trace's call comments (a0..a3) do not show; the game's
@@ -104,7 +104,7 @@ def find_bank(banks, length, sha1, seps):
 # ---- Replay ----
 
 # The emulator's call comments: `# T call Name(a0, a1, a2, a3) ra=...` (hex, the first four argument registers); the
-# port's (port/src/spu_trace.c): `# T call Name(args) [= result]` (decimal, every argument; pointers as `head+OFF`).
+# port's (port/runtime/spu_trace.c): `# T call Name(args) [= result]` (decimal, every argument; pointers as `head+OFF`).
 EMU_CALL_RE = re.compile(r"# (\d+) call (\w+)\(([^)]*)\) ra=([0-9a-f]+)")
 PORT_CALL_RE = re.compile(r"# (\d+) call (\w+)\(([^)]*)\)(?: = (-?\d+))?$")
 # Per function: the arguments the replay takes, in the emulator's registers (None: not shown there).
@@ -367,7 +367,7 @@ def check_port_run(port_trace, emu_trace, out_dir, rate=PORT_RATE, rendered=True
         print(f"sound: the port's trace against LIBSND's replay of its own calls: {port_trace}")
         failures += replay(port_trace, ["m64"], Path(out_dir), rate, against="the port run", ntsc=ntsc)
     else:
-        print("sound: the port's trace against LIBSND's replay: skipped: the port's audio output (port/src/audio.c) is"
+        print("sound: the port's trace against LIBSND's replay: skipped: the port's audio output (port/runtime/audio.c) is"
               " the step-0 stub, which renders nothing, so the envelopes LIBSND reads stay at their key-on values")
     if emu_trace is None:
         return failures

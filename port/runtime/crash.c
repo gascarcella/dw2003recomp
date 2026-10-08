@@ -17,7 +17,7 @@
  * DW3_PORT_CRASH_AT=VSYNC (tests/port/crash.py): a NULL write at that vsync, from port_crash_test_write, so that a
  * report's top frame symbolizes to a known function.
  *
- * Windows (the Windows build, port/src/platform.c): the same report. A crash is an unhandled SEH exception
+ * Windows (the Windows build, port/runtime/platform.c): the same report. A crash is an unhandled SEH exception
  * (SetUnhandledExceptionFilter): the filter writes the text (the exception code and address, rip/rsp from the CONTEXT,
  * the stack walked from that CONTEXT with RtlVirtualUnwind, so frame 0 is the faulting instruction), then a minidump
  * beside it, crash-<stamp>.dmp (MiniDumpWriteDump from dbghelp.dll, loaded only then, written by a helper thread so
@@ -178,9 +178,8 @@ static const char *crash_signal_name(int sig) {
 #endif
 
 static void crash_write_context(const char *kind, int status) {
-    const PortOverlay *o1 = port_overlay_current(1), *o2 = port_overlay_current(2);
     int i, n;
-    cw_str("dw2003 crash report\n");
+    cw_str(PSXSTACK_GAME_ID " crash report\n");
     cw_str("kind: ");
     cw_str(kind);
     cw_str("\nstatus: ");
@@ -195,16 +194,20 @@ static void crash_write_context(const char *kind, int status) {
     cw_dec(port_frames);
     cw_str("\nrate: ");
     cw_dec(port_rate);
-    cw_str(" Hz\noverlay tier 1: ");
-    cw_str(o1 != NULL ? o1->name : "(none)");
-    cw_str("\noverlay tier 2: ");
-    cw_str(o2 != NULL ? o2->name : "(none)");
+    cw_str(" Hz");
+    for (i = 1; i <= PORT_SLOT_COUNT; i++) {
+        const PortOverlay *o = port_overlay_current(i);
+        cw_str("\noverlay tier ");
+        cw_dec(i);
+        cw_str(": ");
+        cw_str(o != NULL ? o->name : "(none)");
+    }
     cw_str("\nstage: ");
-    cw_dec(port_state_stage());
+    cw_dec(game_state_stage());
     cw_str("\nfile: ");
-    cw_hex((u32)port_state_file(), 1);
+    cw_hex((u32)game_state_file(), 1);
     cw_str("\nmap: ");
-    cw_dec(port_state_map());
+    cw_dec(game_state_map());
     cw_str("\npad: ");
     cw_hex(psyq_pad_get(0), 4);
     cw_str("\nscript: ");
