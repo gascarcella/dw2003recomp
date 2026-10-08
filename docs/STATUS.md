@@ -74,6 +74,14 @@ The plan's milestones (`docs/PORT.md`):
   vertices (`tests/port/subpixel_jitter.py`: at scale 4 the vertices' motion is off by a target pixel or more 2 % of
   the time instead of 21 %); the frame hash is the same with it on. Above internal scale 1 the hardware renderer draws
   the 3D at those positions (`--subpixel on|off`, `video.subpixel`, default on; the launcher's "3D vertices" choice).
+- **Present filters** ([#69](https://github.com/gascarcella/dw2003recomp/issues/69), the plan and the owner's
+  decisions there): `--filter`, `video.filter`, the launcher's Filter combo (GPU renderer only). Done: `none` (the
+  default, the picture unchanged) and `sharp` (sharp bilinear), one shader pass in psxstack's present. Next: `scanlines`
+  and `crt` (`video.crt`), then `smooth` (on the 1x software image).
+- **Widescreen battles** ([#71](https://github.com/gascarcella/dw2003recomp/issues/71)): the `widescreen` mod shows
+  the battle 16:9 through the GPU renderer's wide canvas (psxstack `render_gpu_wide.c`): more of the arena at the
+  sides, the HUD centred as drawn, the game's output unchanged. Everything else stays 4:3 (the field: #78). Not
+  play-tested yet.
 - **Texture replacement** ([#70](https://github.com/gascarcella/dw2003recomp/issues/70), the research and the plan
   there): phase 1 done, the keys and the dump. `--dump-textures DIR` (the SDL build, either renderer) writes every
   texture the game samples as a PNG named by its key (the loaded image's and its CLUT's content, not the VRAM place)
