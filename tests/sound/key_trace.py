@@ -48,7 +48,7 @@ steps in the same order from the same start (a fresh boot to CNTY_SEL, sound_sto
 Why boots: one boot of the whole plan (~45,000 ticks) failed twice at the same step (bank 49's load, near tick
 32,500): first a Lua stack overflow in a burst, then a Lua error in the oracle's sentinel breakpoint, after which the
 CPU ran into the sentinel; each bank alone runs clean. PCSX-Redux also leaks Lua stack slots per vsync (2; see
-tests/replay/run.lua): the wrapper raises an error out of a listener every 256 vsyncs to reset the stack (the other
+psxstack/tools/replay/run.lua): the wrapper raises an error out of a listener every 256 vsyncs to reset the stack (the other
 listeners still run for that vsync: checked).
 
 Exit codes: 0 pass, 1 mismatch or emulator failure, 2 usage / missing tool.
@@ -86,7 +86,7 @@ SETUP_TICKS = 50
 PLACEHOLDER = bytes.fromhex("00c07f01903c0c013c0000ff2f00")   # the 1,016 identical two-event sequences
 LOOP_CAP = 300
 FULL_LOOPS = 3             # the shortest looping sequences played through their loop point (+ COMMON's sequence 6)
-STACK_RESET_FRAMES = 256   # the wrapper's Lua stack reset (PCSX-Redux leaks listener stack slots: tests/replay/run.lua)
+STACK_RESET_FRAMES = 256   # the wrapper's Lua stack reset (PCSX-Redux leaks listener stack slots: psxstack/tools/replay/run.lua)
 MODES = {"stop": 0, "fade": 1}
 # A boot runs at most this many ticks of steps: one boot of the whole plan (~45,000 ticks) failed twice at the same
 # step near tick 32,500 (a Lua error in the oracle's sentinel breakpoint, or before it a Lua stack overflow in a
@@ -450,7 +450,7 @@ def run_emulator(plan, out_dir, counts=False, bios=oracle.OPENBIOS):
         "    end)\n"
         "end\n"
         f"dofile({json.dumps(str(oracle.ORACLE_LUA))})\n"
-        "-- PCSX-Redux leaks Lua stack slots per listener call (tests/replay/run.lua): an error out of a listener resets\n"
+        "-- PCSX-Redux leaks Lua stack slots per listener call (psxstack/tools/replay/run.lua): an error out of a listener resets\n"
         "-- the stack; the other listeners still run for that vsync (checked), so the ticks are not disturbed.\n"
         "local frames = 0\n"
         "DW3_KEY_TRACE_RESET = PCSX.Events.createEventListener('GPU::Vsync', function()\n"

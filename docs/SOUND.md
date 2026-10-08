@@ -139,7 +139,7 @@ Register writes per run: `new_game` 20,406 SPU stores (koff/kon/eon/non 15,610; 
 215; transfer address 102; ...), 101 DMA blocks; no store's value was undecodable (0 "unknown values").
 
 ## 4. The trace oracle (`tests/sound/`)
-- **`tests/sound/spu_trace.lua`**, loaded into PCSX-Redux before `tests/replay/run.lua` (the same wrapper scheme as
+- **`tests/sound/spu_trace.lua`**, loaded into PCSX-Redux before `psxstack/tools/replay/run.lua` (the same wrapper scheme as
   `tools/coverage.py`): one `Write` breakpoint over `0x1F801C00`-`0x1F801DFF` and one over DMA4's `0x1F8010C0`-`CF`.
   Breakpoints need **`-debugger -interpreter`** (**verified**: with `-debugger` alone, under the dynarec, a write
   breakpoint over the SPU got 0 hits in 900 frames; with `-interpreter` 5,000). One breakpoint catches every segment

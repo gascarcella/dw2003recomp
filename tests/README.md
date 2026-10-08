@@ -9,7 +9,7 @@ each layer is in `docs/STATUS.md`.
 | Layer | What | Where | Oracle |
 |---|---|---|---|
 | 1 | **Golden tests of pure logic:** `fightstg_rules_*`, the card game's CPU and rules, `gamestate_*`, `records_*`, digivolution, experience and training (`stfgtrep_*`, `stgtrain_*`), items and shops, `memcard_get_checksum`, `pad_random`, the encounter redraw, the battle's event queue, the enemy's choice of action, the battle's spoils, `sprite_draw`, the GTE's commands, LIBGS's view and the GPU's drawing (25 families, table below). A fixture fills the globals a function reads, the golden records what it returned and wrote. | `tests/golden/` (fixtures and goldens, JSON, one file per function family), `tests/host/` (the host-side replay the port uses) | The game's own code run in the emulator (PCSX-Redux, Lua-driven): resolves the UB the way the original did. |
-| 2 | **Record/replay:** a pad script run from boot; at named checkpoints the SHA-1 of `gamestate_data` (the pointer-free save struct, `0x80048D34`, `0x275C` bytes), the frame, map and `pad_random.index`; plus the overlay load sequence and the map sequence. | `tests/replay/` (`run.lua`, `replay.py`, `scripts/*.json`, `expected/*.json`) | The disc in PCSX-Redux with OpenBIOS. The port replays the same script through its pad shim and compares at checkpoints only (CD latency differs, so frames do not). |
+| 2 | **Record/replay:** a pad script run from boot; at named checkpoints the SHA-1 of `gamestate_data` (the pointer-free save struct, `0x80048D34`, `0x275C` bytes), the frame, map and `pad_random.index`; plus the overlay load sequence and the map sequence. | `tests/replay/` (`replay.py` and `probes.lua`, this game's configuration of psxstack's runners `psxstack/tools/replay/`; `scripts/*.json`, `expected/*.json`) | The disc in PCSX-Redux with OpenBIOS. The port replays the same script through its pad shim and compares at checkpoints only (CD latency differs, so frames do not). |
 | 3 | **Formats and save round trips:** the `docs/FORMATS.md` verification scripts; `.mcd` saves exchanged between emulator and port. | `tests/formats/` (`run.sh` over the verification tools in `tools/`), `tests/saves/` (`run.py`, `cards.py`) | The disc files and the emulator's memory cards. |
 
 ## Rules
@@ -124,8 +124,9 @@ division by zero the R3000A does not trap on) answers `trap` instead of a return
 
 `tests/replay/replay.py run tests/replay/scripts/<name>.json [--record] [--repeat 2] [--bios retail] [--interpreter]
 [--speed S] [--iso CUE] [-v]` runs one script; `replay.py check [--interpreter] [--iso CUE]` runs every script that has an
-expected file (what `scripts/test.sh` calls). `--iso` boots another image than `iso/dw2003.cue` (the holdout validation's). The emulator runs unthrottled (PCSX-Redux's `spu.Speed` = 0, set by `run.lua` from
-`DW3_REPLAY_SPEED`; `--speed 1` is real time): about 500 game frames per wall second on the default dynarec core, 250 on
+expected file (what `scripts/test.sh` calls). `--iso` boots another image than `iso/dw2003.cue` (the holdout validation's). The runner is psxstack's (`psxstack/tools/replay/emulator.py` drives PCSX-Redux, its `run.lua` is the step engine in the emulator;
+`tests/replay/replay.py` configures them and `tests/replay/probes.lua` reads this game's state: GAME_CONTRACT.md "6. Tests"). The emulator runs unthrottled (PCSX-Redux's `spu.Speed` = 0, set by `run.lua` from
+`PSXSTACK_REPLAY_SPEED`; `--speed 1` is real time): about 500 game frames per wall second on the default dynarec core, 250 on
 `-interpreter`. The speed paces the host only: new_game's record is identical at speed 1 and 0.
 
 A script is JSON: `name`, `max_frames`, `default_timeout` (frames a wait may take) and `steps`, each one of
@@ -245,7 +246,7 @@ of 3,608 game functions (1,025 before).
 **Runner fix (backward compatible):** PCSX-Redux leaks two Lua stack slots per event-listener call; at ~32,720 vsyncs
 the stack overflows inside the runner's listener (seen in this script, the first one past that length: a "stack
 overflow" error at frame 32,727 that skipped that frame's step processing; a bare listener aborts the emulator there).
-An error raised out of a listener makes Redux reset the stack and keep the listener, so `run.lua` raises one every 8,192
+An error raised out of a listener makes Redux reset the stack and keep the listener, so psxstack's `run.lua` raises one every 8,192
 frames after the frame's work (the log shows the stack dump and "Lua stack reset"; not a failure). The emulated machine
 does not see it: new_game's and first_battle_save's earlier records are unchanged.
 

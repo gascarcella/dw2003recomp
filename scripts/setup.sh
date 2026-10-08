@@ -652,82 +652,35 @@ EOF
     log "gamedata: iso/dw2003.bin verified"
 }
 
-# PCSX-Redux into tools/redux/: app/ (the AppImage's contents), sysroot/ (only when the host glibc is too old) and the
-# wrapper tools/redux/pcsx-redux. Source: tools/prebuilt/$REDUX_ZIP, or the AppImage named by PCSX_REDUX in
-# tools/local.env when the zip is absent (public checkouts). Test: scripts/check_emulator.sh.
+# PCSX-Redux into tools/redux/ through psxstack's installer (psxstack/tools/replay/redux.sh: app/, the AppImage's
+# contents; sysroot/ only when the host glibc is too old; the wrapper tools/redux/pcsx-redux). The pins are this
+# game's (REDUX_ZIP, REDUX_URL, REDUX_SHA256, REDUX_SYSROOT_DEBS above). Source: tools/prebuilt/$REDUX_ZIP of the
+# data checkout, the cached download in tools/src/, the download, or the AppImage named by PCSX_REDUX in
+# tools/local.env when none of those (public checkouts). Test: scripts/check_emulator.sh.
 step_redux() {
-    local dir="$INSTALL/redux" gd zip src sha appimage entry file want deb
+    local dir="$INSTALL/redux" gd zip installer debs args=()
+    installer="$ROOT/psxstack/tools/replay/redux.sh"
+    [[ -f "$installer" ]] || die "redux: $installer is missing: check the psxstack submodule out (git submodule update --init psxstack, or scripts/worktree_init.sh)"
     gd="$("$ROOT/scripts/gamedata_dir.sh" 2>/dev/null)" || gd=
     zip="${gd:+$gd/tools/prebuilt/$REDUX_ZIP}"
-    if [[ -x "$dir/pcsx-redux" && -f "$dir/.sha256" && "$(cat "$dir/.sha256")" == "$REDUX_SHA256" ]]; then
-        log "redux: already installed ($dir/pcsx-redux)"
-        return
-    fi
     if [[ -n "$zip" && -f "$zip" ]]; then
-        src="$zip"; sha="$REDUX_SHA256"
-    elif [[ -f "$SRC/$REDUX_ZIP" ]] && echo "$REDUX_SHA256  $SRC/$REDUX_ZIP" | sha256sum -c --quiet - 2>/dev/null; then
-        src="$SRC/$REDUX_ZIP"; sha="$REDUX_SHA256"
-    elif mkdir -p "$SRC" && log "redux: downloading $REDUX_ZIP (86 MB)" && fetch "$REDUX_URL" "$SRC/$REDUX_ZIP.part"; then
-        mv "$SRC/$REDUX_ZIP.part" "$SRC/$REDUX_ZIP"
-        src="$SRC/$REDUX_ZIP"; sha="$REDUX_SHA256"
+        args=(--zip "$zip" --sha256 "$REDUX_SHA256")
+    elif [[ -f "$SRC/$REDUX_ZIP" ]] || fetch_ok "$REDUX_URL"; then
+        args=(--url "$REDUX_URL" --src-dir "$SRC" --sha256 "$REDUX_SHA256")
     else
-        rm -f "$SRC/$REDUX_ZIP.part"
         [[ -f "$INSTALL/local.env" ]] && source "$INSTALL/local.env"
-        src="${PCSX_REDUX:-}"
-        [[ -f "$src" ]] || { log "redux: no data checkout, no download and no PCSX_REDUX AppImage in tools/local.env; skipping"; return; }
-        sha="$(sha256sum "$src" | cut -d' ' -f1)"
+        [[ -f "${PCSX_REDUX:-}" ]] || { log "redux: no data checkout, no download and no PCSX_REDUX AppImage in tools/local.env; skipping"; return; }
+        args=(--appimage "$PCSX_REDUX" --sha256 "$(sha256sum "$PCSX_REDUX" | cut -d' ' -f1)")
     fi
-    if [[ -x "$dir/pcsx-redux" && -f "$dir/.sha256" && "$(cat "$dir/.sha256")" == "$sha" ]]; then
-        log "redux: already installed ($dir/pcsx-redux)"
-        return
-    fi
-    echo "$sha  $src" | sha256sum -c --quiet - || die "redux: checksum mismatch for $src"
-    rm -rf "$dir" "$SRC/redux-unpack"
-    mkdir -p "$dir" "$SRC/redux-unpack"
-    if [[ "$src" == *.zip ]]; then
-        log "redux: unpacking $(basename "$src")"
-        unzip -q "$src" -d "$SRC/redux-unpack"
-        appimage="$(find "$SRC/redux-unpack" -name '*.AppImage' | head -1)"
-    else
-        appimage="$src"
-    fi
-    [[ -n "$appimage" ]] || die "redux: no AppImage found in $src"
-    chmod +x "$appimage"
-    (cd "$SRC/redux-unpack" && "$appimage" --appimage-extract >/dev/null)   # no FUSE needed
-    mv "$SRC/redux-unpack/squashfs-root" "$dir/app"
-    rm -rf "$SRC/redux-unpack"
-    [[ -x "$dir/app/usr/bin/pcsx-redux" ]] || die "redux: app/usr/bin/pcsx-redux missing after extraction"
-    if (unset DISPLAY WAYLAND_DISPLAY; cd "$dir/app/usr/bin" && ./pcsx-redux -version >/dev/null 2>&1); then
-        log "redux: the AppImage runs natively (host glibc $(ldd --version | head -1 | awk '{print $NF}'))"
-    else
-        log "redux: host glibc $(ldd --version | head -1 | awk '{print $NF}') is too old; unpacking the pinned runtime sysroot"
-        mkdir -p "$SRC/redux-debs" "$dir/sysroot"
-        for entry in "${REDUX_SYSROOT_DEBS[@]}"; do
-            read -r file want <<<"$entry"
-            deb="$SRC/redux-debs/$(basename "$file")"
-            if [[ ! -f "$deb" ]] || ! echo "$want  $deb" | sha256sum -c --quiet - 2>/dev/null; then
-                fetch "$REDUX_UBUNTU/$file" "$deb.part"
-                mv "$deb.part" "$deb"
-            fi
-            echo "$want  $deb" | sha256sum -c --quiet - || die "redux: checksum mismatch for $(basename "$file")"
-            dpkg-deb -x "$deb" "$dir/sysroot"
-        done
-        [[ -x "$dir/sysroot/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2" ]] || die "redux: sysroot has no loader"
-    fi
-    cat > "$dir/pcsx-redux" <<'EOF'
-#!/usr/bin/env bash
-# Generated by scripts/setup.sh redux: runs the pinned PCSX-Redux (app/) through the pinned glibc sysroot when the
-# host's glibc is too old for it. Headless use: pcsx-redux -no-ui -stdout -testmode -run -iso <cue> -bios <bin> -dofile <lua>
-here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -d "$here/sysroot" ]]; then
-    exec "$here/sysroot/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2" \
-        --library-path "$here/sysroot/usr/lib/x86_64-linux-gnu:$here/app/usr/lib" "$here/app/usr/bin/pcsx-redux" "$@"
-fi
-exec "$here/app/usr/bin/pcsx-redux" "$@"
-EOF
-    chmod +x "$dir/pcsx-redux"
-    echo "$sha" > "$dir/.sha256"
-    log "redux: installed to $dir (openbios: app/usr/share/pcsx-redux/resources/openbios.bin)"
+    debs="$(mktemp)"
+    printf '%s\n' "${REDUX_SYSROOT_DEBS[@]}" > "$debs"
+    bash "$installer" --dest "$dir" "${args[@]}" --sysroot-debs "$debs" --mirror "$REDUX_UBUNTU"
+    rm -f "$debs"
+}
+# fetch_ok URL: whether a download could start (the redux step downloads through psxstack's installer only when it
+# can; otherwise the AppImage of tools/local.env is tried). A HEAD request with the same patience as fetch.
+fetch_ok() {
+    curl -fsIL --retry 2 --connect-timeout 30 --max-time 60 -o /dev/null "$1" 2>/dev/null
 }
 
 # In a worktree: symlink every gitignored entry of the main checkout's tools/ that is
