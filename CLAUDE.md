@@ -110,6 +110,7 @@ tools/venv/bin/python tools/wstag_groups.py [--funcs|--add|--propagate]   # WSTA
 tools/venv/bin/python tools/overlay_xref.py fieldstg   # per-function evidence for an overlay's file boundaries
 tools/venv/bin/python tools/disc_files.py   # file ID <-> disc path map (importable read(id)/subfile() helpers; docs/FORMATS.md)
 tools/venv/bin/python tools/dump_text.py TALK08 [-s N] [-r] | --check   # print/decode the game's text files
+tools/venv/bin/python tools/hacks.py [--list] [--check] [--update]   # the matching workarounds (FAKE:, LOOP_BLOCK, holdouts) and the all-C gate; --check (CI, test.sh) = the rules + the counts docs/STATUS.md quotes (<1 s)
 tools/venv/bin/python tools/flag_census.py [--type 0x72] | --check   # every flag word the game reads/writes, by type and index (from the C; asm/ for the residual-asm sweep); --check = layer 3's range check
 scripts/setup.sh psyq && tools/psyq_compare.sh [-D NON_MATCHING] src/<t>/<unit>.c <func>   # same function through Sony's real Psy-Q chain vs ours
 tools/cc_psx.sh -V 2.8.1 -Iinclude -Iinclude/asm_generated -I. in.c -o out.o   # compile like the build does

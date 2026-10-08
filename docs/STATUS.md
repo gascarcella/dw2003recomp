@@ -17,6 +17,9 @@ ready; the release itself is still to be published.
   (no `INCLUDE_ASM` or `NON_MATCHING` in game code): the last 8 matched with the shapes of ReGame-Labs/dw3_decomp's C
   for the same functions, rewritten in our names (`docs/THIRD_PARTY.md`).
 - **10 forced matches** (11 `FAKE:` comments; `grep -rn "FAKE:" src`), allowed as an endgame step (DECISIONS).
+- **39 `LOOP_BLOCK`/`LOOP_BARRIER` uses** (DECISIONS "LOOP_BLOCK"), by evidence class: A1 5, A2 6, B 14, C 14.
+- These counts are `tools/hacks.py`'s (`--list`: each one; CI's `--check` fails when they differ from this page, and
+  on game code that is not C: any `INCLUDE_ASM` or `NON_MATCHING`, a `LOOP_BLOCK` without its evidence comment, ...).
 - **Data:** split per object and in C, except crt0's `.sbss`, a FIELDSTG zero block with psylink padding, and
   STDWTITL's LIBPRESS data.
 - **Names:** every EXE game unit, most overlays and all WSTAG functions are named; about 1,100 `unk_` field uses remain

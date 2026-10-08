@@ -102,6 +102,12 @@ forced shape is allowed with a `/* FAKE: <what and why> */` comment at the line 
 reaches stays a holdout (`INCLUDE_ASM` plus its WIP C and notes). Accepted judgement calls: `heap_run_object`'s inline
 asm, one `goto`, a GNU case range, inline accessors, reads past an array the original makes.
 
+**Enforced in CI (2026-10-07, issue #57).** `tools/hacks.py --check` (the `check` job, `scripts/test.sh`) fails on game
+code that is not C (any `INCLUDE_ASM` or `NON_MATCHING` since #55 left no holdouts: its `HOLDOUTS` list is empty; split
+asm other than Psy-Q;
+inline asm outside `heap_run_object`; `#if 0`), on a `FAKE:` without its reason or a `LOOP_BLOCK` without its evidence
+class, and when the counts `docs/STATUS.md` quotes differ from the code's: the docs cannot drift from the workarounds.
+
 ## LOOP_BLOCK: loop-scoped blocks as a named macro
 _Decided: 2026-10-03_
 

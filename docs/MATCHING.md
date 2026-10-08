@@ -276,6 +276,16 @@ counter shared by loops or set inside another loop), a pointer computed from an 
 one, check the US decomp's C for the same function (by EU address through its link maps; `docs/THIRD_PARTY.md`): its
 shapes matched the last 8 holdouts and replaced 5 FAKEs with natural or milder forms.
 
+### The census: `tools/hacks.py`
+`tools/hacks.py --list` prints every workaround with file:line and function: the `FAKE:` comments, the `LOOP_BLOCK`/
+`LOOP_BARRIER` uses with their evidence class, the holdouts (`INCLUDE_ASM`, `NON_MATCHING` blocks) and the uses of the
+macros that wrap inline asm. `--check` (CI's `check` job, `scripts/test.sh`, <1 s, no build or disc) fails on a `FAKE:`
+without its reason, a `LOOP_BLOCK`/`LOOP_BARRIER` without a comment naming its class (or a `FAKE:`) within 12 lines
+above it, an `INCLUDE_ASM` not in the tool's `HOLDOUTS`, a `NON_MATCHING` block beside none, inline asm in game code
+(the macros only in `heap_run_object`), `#if 0`, a game code segment left as split asm, and on counts that differ from
+those `docs/STATUS.md` quotes. A change that adds or removes a workaround runs `tools/hacks.py --update` (it rewrites
+those counts) and commits the docs with it.
+
 ## Search techniques
 
 - **Siblings first:** copy the shape of an already matched function with the same logic (locals, re-fetched records,
