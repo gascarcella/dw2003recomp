@@ -33,13 +33,33 @@
 #include "render_gpu.h"
 #include "render_gpu_textures.h"
 
-/* The texture keys (render_gpu_textures.c) are off here: the rasteriser's calls into them do nothing. */
+/* The texture keys and packs (render_gpu_textures.c, render_gpu_packs.c) are off here: the rasteriser's calls into
+ * them do nothing. */
 int render_gpu_tex_active(void) {
     return 0;
 }
 
 void render_gpu_tex_event(const GpuEvent *ev) {
     (void)ev;
+}
+
+int render_gpu_tex_packs(void) {
+    return 0;
+}
+
+int render_gpu_tex_replacement(SDL_GPUDevice *device, const GpuEvent *ev, RenderTexReplacement *out) {
+    (void)device;
+    (void)ev;
+    (void)out;
+    return 0;
+}
+
+void render_gpu_tex_packs_frame(SDL_GPUDevice *device) {
+    (void)device;
+}
+
+void render_gpu_tex_packs_release(SDL_GPUDevice *device) {
+    (void)device;
 }
 
 void port_log(const char *fmt, ...) {

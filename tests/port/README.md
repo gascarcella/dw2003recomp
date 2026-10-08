@@ -180,15 +180,21 @@ frame-to-frame motions are off from the float projection's by a target pixel or 
 the shadow: about 2 %). `analyze LOG` prints the same numbers for a kept log (`--keep`). Needs `build/port/dw2003` and
 the disc; ~40 s. In `scripts/test.sh --layer port`.
 
-## The texture dump (`textures.py`; psxstack docs/RUNTIME.md "Texture dump", issue #70)
-`tests/port/textures.py` builds `build/port-sdl` (skipped without `tools/sdl3` and `tools/dxc`) and runs it headless
-under the software renderer, so it needs no GPU device and runs in CI. `--dump-textures` in the headless build exits 64.
-**With the disc:** `new_game` with and without `--dump-textures`: the log and the record byte for byte the same; the
-dump's files exactly `tests/port/textures/new_game.keys` (134 names: hashes and sizes only, no game data;
-`--update` rewrites it), each PNG of its key's size, indexed for 4- and 8-bit textures and RGBA for 15-bit, and
-`index.json` listing each once with the sampled ranges inside the image. A second run into the same directory reads the
-index back, writes no PNG again and doubles the draw counts. **With a GPU device:** the same dump with the
-rasteriser running (`--gpu-screenshot`, headless) gives the same files and index. ~5 s. In `scripts/test.sh --layer port`.
+## The texture dump and packs (`textures.py`; psxstack docs/RUNTIME.md "Texture dump", "Texture packs", issue #70)
+`tests/port/textures.py` builds `build/port-sdl` (skipped without `tools/sdl3` and `tools/dxc`) and runs it headless.
+`--dump-textures` and `--texture-pack` in the headless build exit 64; a directory without `mod.json` given as a pack
+exits 1. **With the disc**, under the software renderer (no device needed, so CI runs it): `new_game` with and without
+`--dump-textures`: the log and the record byte for byte the same; the dump's files exactly
+`tests/port/textures/new_game.keys` (134 names: hashes and sizes only, no game data; `--update` rewrites it), each PNG
+of its key's size, indexed for 4- and 8-bit textures and RGBA for 15-bit, and `index.json` listing each once with the
+sampled ranges inside the image. A second run into the same directory reads the index back, writes no PNG again and
+doubles the draw counts. **With a GPU device:** the same dump with the rasteriser running gives the same files and
+index; then packs made from it at runtime (nothing of the game committed), new_game's pictures at vsyncs 900, 1300 and
+1800: the dump itself as a pack (`nearest`) keeps the whole VRAM target equal to the software VRAM every 10 vsyncs and
+the pictures unchanged; a pack of 1x1 magenta PNGs for every key changes them, and the same as sub-rectangle files (each
+key's sampled range) gives the same pictures; the identity pack given first wins over the magenta one; at internal
+scale 2 the identity pack's pictures are within `SCALED_BUDGET` of those without it. ~40 s. In
+`scripts/test.sh --layer port`.
 
 ## The crash report (`crash.py`; docs/PORT.md "Crash report")
 `tests/port/crash.py` runs the headless build three times (~3 s): with `DW3_PORT_CRASH_AT=30` it must die of SIGSEGV
