@@ -65,6 +65,29 @@ static inline void gpu_touch(int y, int x0, int x1) {
 }
 
 static void gpu_segs_reset(void);
+static u32 gpu_generation; /* gpu_stamp_generation: the stamps started over this many times */
+
+/* The listener (psyq_internal.h "gpu.c's decoded commands"): the hardware renderer's, or NULL. */
+static void (*gpu_listener)(const GpuEvent *ev);
+
+void gpu_set_listener(void (*listener)(const GpuEvent *ev)) {
+    gpu_listener = listener;
+}
+
+const u32 *gpu_block_stamps(void) {
+    return &gpu_block_stamp[0][0];
+}
+
+u32 gpu_stamp_bump(void) {
+    if (gpu_stamp == 0xFFFFFFFFu) {
+        gpu_segs_reset();
+    }
+    return gpu_stamp++;
+}
+
+u32 gpu_stamp_generation(void) {
+    return gpu_generation;
+}
 
 static struct {
     /* E1: texpage bits 0-8 (base x 0-3, base y 4, semi-transparency 5-6, depth 7-8), dither 9, dfe 10. */
@@ -124,6 +147,12 @@ void gpu_power_on(void) {
         gpu_touch(y, 0, VRAM_W);
     }
     gpu_reset_state();
+    if (gpu_listener != NULL) {
+        GpuEvent ev;
+        memset(&ev, 0, sizeof(ev));
+        ev.kind = GPU_EV_POWER_ON;
+        gpu_listener(&ev);
+    }
 }
 
 static inline int sext11(u32 v) {
@@ -427,11 +456,33 @@ static inline void gpu_span_fill(int y, int xs, int xe, u16 c) {
     gpu_touch(y, xs, xe);
 }
 
-typedef struct {
-    int x, y;
-    int r, g, b;
-    int u, v;
-} Vertex;
+typedef GpuVertex Vertex;
+
+/* The event of a drawing primitive with mode m (the drawing state's area and mask settings are g's). */
+static void gpu_event_mode(GpuEvent *ev, GpuEventKind kind, const Mode *m) {
+    memset(ev, 0, sizeof(*ev));
+    ev->kind = kind;
+    ev->textured = m->textured;
+    ev->raw = m->raw;
+    ev->semi = m->semi;
+    ev->abr = m->abr;
+    ev->gouraud = m->gouraud;
+    ev->dither = m->dither;
+    ev->tex_x = m->tex_x;
+    ev->tex_y = m->tex_y;
+    ev->clut_x = m->clut_x;
+    ev->clut_y = m->clut_y;
+    ev->u_and = m->u_and;
+    ev->u_or = m->u_or;
+    ev->v_and = m->v_and;
+    ev->v_or = m->v_or;
+    ev->area_x0 = g.area_x0;
+    ev->area_y0 = g.area_y0;
+    ev->area_x1 = g.area_x1;
+    ev->area_y1 = g.area_y1;
+    ev->set_mask = g.set_mask;
+    ev->check_mask = g.check_mask;
+}
 
 /* The texture page attribute of a textured polygon (also E1's bits 0-8): sets the mode's page, depth and blend. */
 static void gpu_apply_texpage(u32 page) {
@@ -651,6 +702,7 @@ static void gpu_segs_reset(void) {
     }
     memset(gpu_block_stamp, 0, sizeof(gpu_block_stamp));
     gpu_stamp = 1;
+    gpu_generation++;
 }
 
 /* Whether pixels x .. x + n - 1 of row y are unchanged since `stamp`. */
@@ -952,6 +1004,15 @@ static void gpu_triangle(const Mode *m, const Vertex *a, const Vertex *b, const 
     if (den == 0) {
         return;
     }
+    if (gpu_listener != NULL) {
+        GpuEvent ev;
+        gpu_event_mode(&ev, GPU_EV_TRIANGLE, m);
+        ev.gouraud = gouraud;
+        ev.v[0] = *a;
+        ev.v[1] = *b;
+        ev.v[2] = *c;
+        gpu_listener(&ev);
+    }
     /* The planes: attribute(x, y) = attribute(a) + ((x - a.x) * n[0] + (y - a.y) * n[1]) / den; attributes 0..2
      * the colour (Gouraud), 3..4 the texture coordinates. */
 #define PLANE(k, f)                                                                    \
@@ -1167,6 +1228,22 @@ static void gpu_rectangle(const u32 *w) {
     }
     gpu_mode_from_texpage(&m);
     m.dither = 0;
+    if (gpu_listener != NULL) {
+        GpuEvent ev;
+        gpu_event_mode(&ev, GPU_EV_RECT, &m);
+        ev.v[0].x = x0;
+        ev.v[0].y = y0;
+        ev.v[0].r = r;
+        ev.v[0].g = gg;
+        ev.v[0].b = b;
+        ev.v[0].u = u0;
+        ev.v[0].v = v0;
+        ev.x = x0;
+        ev.y = y0;
+        ev.w = width;
+        ev.h = height;
+        gpu_listener(&ev);
+    }
     xs = x0 < g.area_x0 ? g.area_x0 : x0;
     ys = y0 < g.area_y0 ? g.area_y0 : y0;
     xe = x0 + width > g.area_x1 + 1 ? g.area_x1 + 1 : x0 + width;
@@ -1211,7 +1288,8 @@ static void gpu_rectangle(const u32 *w) {
  * coordinate moves by floor((|minor| * i + c) / major) after i steps, with c = (major + |minor| - 1) / 2 for x-major
  * segments, (major - 1) / 2 for y-major ones going right and major / 2 going left. A sloped segment leaves out the
  * draw area's last column and row (x < x1, y < y1); a horizontal or vertical one reaches them. */
-static void gpu_segment(const Mode *m, const Vertex *a, const Vertex *b, int gouraud) {
+void gpu_segment_walk(const GpuVertex *a, const GpuVertex *b, int gouraud,
+                      void (*pixel)(void *ctx, int x, int y, int r, int g, int b), void *ctx) {
     const Vertex *a0 = a, *b0 = b;
     int dx = b->x - a->x, dy = b->y - a->y;
     int adx = abs(dx), ady = abs(dy);
@@ -1271,9 +1349,25 @@ static void gpu_segment(const Mode *m, const Vertex *a, const Vertex *b, int gou
         if (x < g.area_x0 || x > xlim || y < g.area_y0 || y > ylim) {
             continue;
         }
-        gpu_pixel(m, x, y, r, gg, bb, 0, 0);
-        gpu_touch(y, x, x + 1);
+        pixel(ctx, x, y, r, gg, bb);
     }
+}
+
+static void gpu_segment_pixel(void *ctx, int x, int y, int r, int gg, int b) {
+    gpu_pixel((const Mode *)ctx, x, y, r, gg, b, 0, 0);
+    gpu_touch(y, x, x + 1);
+}
+
+static void gpu_segment(const Mode *m, const Vertex *a, const Vertex *b, int gouraud) {
+    if (gpu_listener != NULL) {
+        GpuEvent ev;
+        gpu_event_mode(&ev, GPU_EV_SEGMENT, m);
+        ev.gouraud = gouraud;
+        ev.v[0] = *a;
+        ev.v[1] = *b;
+        gpu_listener(&ev);
+    }
+    gpu_segment_walk(a, b, gouraud, gpu_segment_pixel, (void *)m);
 }
 
 static void gpu_line_vertex(Vertex *v, u32 col, u32 pos) {
@@ -1301,6 +1395,17 @@ static void gpu_fill(const u32 *w) {
     int height = (w[2] >> 16) & 0x1FF;
     int x, y;
 
+    if (gpu_listener != NULL) {
+        GpuEvent ev;
+        memset(&ev, 0, sizeof(ev));
+        ev.kind = GPU_EV_FILL;
+        ev.x = x0;
+        ev.y = y0;
+        ev.w = width;
+        ev.h = height;
+        ev.color = c;
+        gpu_listener(&ev);
+    }
     for (y = 0; y < height; y++) {
         u16 *row = &gpu_vram[((y0 + y) & 511) * VRAM_W];
 
@@ -1331,6 +1436,36 @@ static void gpu_copy(const u32 *w) {
         }
         gpu_touch((dy + y) & 511, 0, VRAM_W);
     }
+    if (gpu_listener != NULL) {
+        GpuEvent ev;
+        memset(&ev, 0, sizeof(ev));
+        ev.kind = GPU_EV_COPY;
+        ev.sx = sx;
+        ev.sy = sy;
+        ev.x = dx;
+        ev.y = dy;
+        ev.w = width;
+        ev.h = height;
+        ev.set_mask = g.set_mask;
+        ev.check_mask = g.check_mask;
+        gpu_listener(&ev);
+    }
+}
+
+/* A CPU-to-VRAM transfer finished: the listener's event. */
+static void gpu_load_done(void) {
+    if (gpu_listener != NULL) {
+        GpuEvent ev;
+        memset(&ev, 0, sizeof(ev));
+        ev.kind = GPU_EV_LOAD;
+        ev.x = g.load_x;
+        ev.y = g.load_y;
+        ev.w = g.load_w;
+        ev.h = g.load_h;
+        ev.set_mask = g.set_mask;
+        ev.check_mask = g.check_mask;
+        gpu_listener(&ev);
+    }
 }
 
 static void gpu_load_pixel(u16 p) {
@@ -1340,11 +1475,13 @@ static void gpu_load_pixel(u16 p) {
 
     g.load_i++;
     g.load_left--;
-    if (g.check_mask && (*d & 0x8000)) {
-        return;
+    if (!g.check_mask || !(*d & 0x8000)) {
+        *d = p | g.set_mask;
+        gpu_touch(y, x, x + 1);
     }
-    *d = p | g.set_mask;
-    gpu_touch(y, x, x + 1);
+    if (g.load_left == 0) {
+        gpu_load_done();
+    }
 }
 
 /* The words a command takes (its first word included); 0 for a variable-length one handled apart. */
@@ -1541,6 +1678,7 @@ void gpu_load_image(int x, int y, int w, int h, const u16 *pixels) {
         }
         g.load_i = n;
         g.load_left = 0;
+        gpu_load_done();
         return;
     }
     for (i = 0; i < n; i++) {

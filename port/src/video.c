@@ -14,12 +14,16 @@
  * The renderer (`--renderer software|gpu`, video.renderer; issue #31): `software` presents through SDL_Renderer as
  * above; `gpu` through the hardware renderer (render_gpu.c, SDL_GPU), opened before any SDL_Renderer (a window that
  * had one cannot be claimed by Vulkan on Wayland). When it cannot open (no device, no presentable surface: NVIDIA
- * on the offscreen driver, a shader) the run logs why and falls back to SDL_Renderer. Phase 1 presents the same
- * software image through it, pixel for pixel. `--gpu-screenshot FRAME[@WxH]:PATH` (SDL build) writes the hardware renderer's
- * picture of vsync FRAME: the image itself, or with @WxH its present into a W x H output (the window's layout); a
- * run without a device opens one for it (headless too), and skips the shot with a log line when there is none.
+ * on the offscreen driver, a shader) the run logs why and falls back to SDL_Renderer. Its rasteriser draws the
+ * game into a VRAM of its own (render_gpu.c) and a 15-bit display is presented from there (the same picture at the
+ * internal scale of 1); a 24-bit display and the disabled one are video_pixels, as above. Every vsync runs the
+ * rasteriser's units, presented or not (port_video_frame). `--gpu-screenshot FRAME[@WxH]:PATH` (SDL build) writes
+ * the hardware renderer's picture of vsync FRAME: the image itself, or with @WxH its present into a W x H output (the
+ * window's layout); a run without a window opens a device and the rasteriser for it at the start
+ * (port_video_gpu_headless), and skips the shot with a log line when there is none.
  * `DW3_PORT_PRESENT_READBACK=FRAME:PATH` reads SDL_Renderer's output of vsync FRAME back into a PPM (the comparison
- * of the two present paths: tests/port/render_gpu.py).
+ * of the two present paths: tests/port/render_gpu.py); `DW3_PORT_GPU_VRAM_CHECK=N` compares the rasteriser's whole
+ * target with the software VRAM every N vsyncs (video_vram_check).
  *
  * The conversion (psx-spx "GPU Display Control", "24bit RGB"): a 15-bit display reads one VRAM pixel per screen pixel
  * (bits 0-4 red, 5-9 green, 10-14 blue; bit 15, the mask bit, is not shown); a 24-bit display (`rgb24`, the movies)
@@ -62,6 +66,11 @@ static struct {
     char *path;
 } video_gpu_shots[VIDEO_MAX_SHOTS];
 static int video_gpu_shot_count;
+static int video_vram_xy[2]; /* the display's corner in the VRAM, when video_vram (a 15-bit display that is on) */
+#ifdef DW3_PORT_SDL
+static long video_check_every = -1, video_checks, video_checks_failed; /* DW3_PORT_GPU_VRAM_CHECK (below) */
+#endif
+static int video_vram;
 
 static u32 video_rgb15(u16 c) {
     u32 r = c & 31, g = (c >> 5) & 31, b = (c >> 10) & 31;
@@ -91,6 +100,9 @@ static void video_convert(void) {
     video_w = w;
     video_h = h;
     video_converted_frame = port_frames;
+    video_vram = d.enabled && d.w > 0 && d.h > 0 && !d.rgb24;
+    video_vram_xy[0] = d.x;
+    video_vram_xy[1] = d.y;
     if (!d.enabled || d.w <= 0 || d.h <= 0) {
         for (x = 0; x < w * h; x++) {
             video_pixels[x] = 0xFF000000u;
@@ -229,6 +241,8 @@ void port_video_open(int scale, int fullscreen) {
         video_gpu = render_gpu_open(video_window, why, sizeof(why));
         if (!video_gpu) {
             port_log("renderer: gpu unavailable (%s); software", why);
+        } else if (!render_gpu_raster_start(why, sizeof(why))) {
+            port_log("renderer: gpu: no rasteriser (%s); the software image through SDL_GPU", why);
         }
     }
     if (!video_gpu) {
@@ -316,7 +330,8 @@ static void video_present(void) {
     SDL_FRect dst;
     int ow, oh;
     if (video_gpu) {
-        if (render_gpu_present(video_pixels, video_w, video_h, video_dest_rect)) {
+        if (render_gpu_present(video_pixels, video_w, video_h, video_vram ? video_vram_xy : NULL,
+                               video_dest_rect)) {
             video_presents++;
         }
         return;
@@ -386,6 +401,9 @@ void port_video_close(void) {
  * drivers; driver 595.104.02) an SDL_Quit inside exit() unloads libnvidia-eglcore and the process then jumps into the
  * unloaded code (SIGSEGV after the run's "exit" line, seen in play-testing). X11 (GLX) was not affected. */
 void port_video_quit(void) {
+    if (video_checks > 0) {
+        port_log("gpu vram check: %ld checks, %ld with differences", video_checks, video_checks_failed);
+    }
     render_gpu_close(); /* the device too: destroyed before SDL_Quit, its claim before the window */
     if (video_texture != NULL) {
         SDL_DestroyTexture(video_texture);
@@ -402,11 +420,9 @@ void port_video_quit(void) {
     SDL_Quit();
 }
 
-/* The hardware renderer's screenshots due at this vsync (video_pixels converted). A run whose window does not
- * present through the renderer opens a device for them (headless: the video subsystem first); without one they are
- * skipped with a log line. */
+/* The hardware renderer's screenshots due at this vsync (video_pixels converted); without a device (none opened at
+ * the start: port_video_open, port_video_gpu_headless) they are skipped with a log line. */
 static void video_gpu_shots_due(void) {
-    static int tried;
     int i;
     for (i = 0; i < video_gpu_shot_count; i++) {
         int w, h;
@@ -414,23 +430,11 @@ static void video_gpu_shots_due(void) {
         if (video_gpu_shots[i].frame != port_frames) {
             continue;
         }
-        if (!render_gpu_active() && !tried) {
-            char why[256];
-            tried = 1;
-            if (!SDL_WasInit(SDL_INIT_VIDEO) && !SDL_InitSubSystem(SDL_INIT_VIDEO)) {
-                snprintf(why, sizeof(why), "SDL_InitSubSystem: %s", SDL_GetError());
-            } else if (render_gpu_open(NULL, why, sizeof(why))) {
-                port_log("renderer: gpu for the screenshots (%s)", render_gpu_describe());
-            }
-            if (!render_gpu_active()) {
-                port_log("renderer: gpu unavailable (%s)", why);
-            }
-        }
         w = video_gpu_shots[i].w > 0 ? video_gpu_shots[i].w : video_w;
         h = video_gpu_shots[i].h > 0 ? video_gpu_shots[i].h : video_h;
         buf = malloc((size_t)w * (size_t)h * 4);
         if (!render_gpu_active() || buf == NULL ||
-            !render_gpu_readback(video_pixels, video_w, video_h, w, h,
+            !render_gpu_readback(video_pixels, video_w, video_h, video_vram ? video_vram_xy : NULL, w, h,
                                  video_gpu_shots[i].w > 0 ? video_dest_rect : NULL, buf)) {
             port_log("gpu screenshot: frame %ld skipped (no GPU device) -> %s", port_frames, video_gpu_shots[i].path);
         } else if (!video_ppm(video_gpu_shots[i].path, buf, w, h)) {
@@ -441,9 +445,59 @@ static void video_gpu_shots_due(void) {
         free(buf);
     }
 }
+
+/* DW3_PORT_GPU_VRAM_CHECK=N: every N vsyncs the rasteriser's whole target against the software VRAM (the frame test:
+ * tests/port/render_gpu.py); a difference is logged with its count and first pixel, the run's totals at the end. */
+static void video_vram_check(void) {
+    static u16 hw[1024 * 512];
+    const u16 *sw = psyq_gpu_vram();
+    int i, n = 0, first = -1;
+    if (video_check_every < 0) {
+        const char *env = getenv("DW3_PORT_GPU_VRAM_CHECK");
+        video_check_every = env != NULL ? strtol(env, NULL, 0) : 0;
+    }
+    if (video_check_every <= 0 || port_frames % video_check_every != 0 || !render_gpu_rasterising() ||
+        !render_gpu_read_vram(hw)) {
+        return;
+    }
+    video_checks++;
+    for (i = 0; i < 1024 * 512; i++) {
+        if (hw[i] != sw[i]) {
+            first = first < 0 ? i : first;
+            n++;
+        }
+    }
+    if (n > 0) {
+        video_checks_failed++;
+        port_log("gpu vram check: frame %ld: %d pixels differ, the first at %d,%d (software %04x, gpu %04x)",
+                 port_frames, n, first % 1024, first / 1024, sw[first], hw[first]);
+    }
+}
+
+void port_video_gpu_headless(void) {
+    char why[256];
+    if (video_gpu_shot_count == 0 || render_gpu_active()) {
+        return;
+    }
+    if (!SDL_WasInit(SDL_INIT_VIDEO) && !SDL_InitSubSystem(SDL_INIT_VIDEO)) {
+        port_log("renderer: gpu unavailable (SDL_InitSubSystem: %s)", SDL_GetError());
+        return;
+    }
+    if (!render_gpu_open(NULL, why, sizeof(why))) {
+        port_log("renderer: gpu unavailable (%s)", why);
+        return;
+    }
+    if (!render_gpu_raster_start(why, sizeof(why))) {
+        port_log("renderer: gpu: no rasteriser (%s); the software image through SDL_GPU", why);
+    }
+    port_log("renderer: gpu for the screenshots (%s)", render_gpu_describe());
+}
 #else
 int port_video_available(void) {
     return 0;
+}
+
+void port_video_gpu_headless(void) {
 }
 
 static void video_gpu_shots_due(void) {
@@ -506,6 +560,10 @@ static int video_due(void) {
 
 void port_video_frame(void) {
     int i, shot = 0, present;
+#ifdef DW3_PORT_SDL
+    render_gpu_frame(); /* the rasteriser's units of this vsync, presented or not: its target is state */
+    video_vram_check();
+#endif
     for (i = 0; i < video_shot_count; i++) {
         shot |= video_shots[i].frame == port_frames;
     }

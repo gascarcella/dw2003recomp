@@ -285,7 +285,9 @@ jobs:
       # pictures through a device run locally).
       - name: PC port, the hardware renderer's fallback
         if: needs.areas.outputs.port == 'true'
-        run: tools/venv/bin/python tests/port/render_gpu.py
+        run: |
+          tools/venv/bin/python tests/port/render_gpu.py
+          tools/venv/bin/python tests/host/gpu_hw_replay.py   # builds the exactness test's harness; no device: skipped
 
       - name: Launcher, self-test
         run: |

@@ -52,6 +52,55 @@ void gpu_load_image(int x, int y, int w, int h, const u16 *pixels);
 const u16 *gpu_vram_pixels(void);
 void gpu_draw_state(u32 *e1, u32 *e3, u32 *e4, u32 *e5);
 
+/* gpu.c's decoded commands for the hardware renderer (port/src/render_gpu.c; issue #31): an optional listener, called
+ * synchronously for every triangle (a quad is two: (1, 2, 3) then (0, 1, 2)), rectangle, line segment, fill, VRAM copy
+ * and finished CPU-to-VRAM transfer gpu.c executes, and at the power-on. A triangle, rectangle or segment is reported
+ * before its pixels are drawn (the VRAM is then what its texels come from), only when gpu.c draws it (a triangle past
+ * the size limit or of zero area is not); a fill before it is done; a copy after it (an overlapping copy reads pixels
+ * it wrote: the listener may take its result from the VRAM); a transfer after its last pixel; the power-on after the
+ * VRAM is cleared. With no listener (the default) gpu.c's work and outputs are unchanged. */
+typedef struct {
+    int x, y;    /* the drawing offset applied, wrapped to 11 bits */
+    int r, g, b; /* 0..255 (128 for raw textures: the same pixels) */
+    int u, v;    /* 0..255 */
+} GpuVertex;
+typedef enum {
+    GPU_EV_TRIANGLE,
+    GPU_EV_RECT,
+    GPU_EV_SEGMENT,
+    GPU_EV_FILL,
+    GPU_EV_COPY,
+    GPU_EV_LOAD,
+    GPU_EV_POWER_ON
+} GpuEventKind;
+typedef struct {
+    GpuEventKind kind;
+    GpuVertex v[3];  /* a triangle's a, b, c as gpu.c's triangle takes them (a: the attribute planes' base); a
+                      * segment's two ends; a rectangle's corner (with u, v and the colour) */
+    int textured;    /* 0, or the texture depth + 1 (1 4-bit, 2 8-bit, 3 15-bit) */
+    int raw, semi, abr, gouraud, dither;
+    int tex_x, tex_y, clut_x, clut_y;
+    int u_and, u_or, v_and, v_or;             /* the texture window: u = (u & u_and) | u_or, the same for v */
+    int area_x0, area_y0, area_x1, area_y1;   /* the drawing area, inclusive */
+    int set_mask;    /* 0 or 0x8000 */
+    int check_mask;
+    int x, y, w, h;  /* rectangle: its size in w, h; fill, copy, transfer: the destination (x rounded down to 16 and
+                      * the width up for a fill), wrapping at the VRAM's edges */
+    int sx, sy;      /* copy: the source */
+    u16 color;       /* fill: the 15-bit colour */
+} GpuEvent;
+void gpu_set_listener(void (*listener)(const GpuEvent *ev));
+/* A segment's pixels as gpu.c draws them (the measured stepping, the drawing area), in drawing order: for a listener,
+ * from inside its call (the drawing area is the current one). */
+void gpu_segment_walk(const GpuVertex *a, const GpuVertex *b, int gouraud,
+                      void (*pixel)(void *ctx, int x, int y, int r, int g, int b), void *ctx);
+/* The write stamps (gpu.c "Write stamps"): every write stamps the 64-pixel blocks it touches (16 per row) with the
+ * current stamp. gpu_stamp_bump makes later writes carry a newer stamp than every block has now and returns the stamp
+ * the blocks have at most; gpu_stamp_generation changes when the stamps start over (every block then reads 0). */
+const u32 *gpu_block_stamps(void);
+u32 gpu_stamp_bump(void);
+u32 gpu_stamp_generation(void);
+
 /* mdec.c: the movie decoder (LIBPRESS's bit-stream decoder and the MDEC). mdec_vlc_decode expands a .STR version 2
  * frame (its 8-byte header, then the bit stream) into the MDEC's run-level words at out (the command word 0x3800xxxx,
  * then xxxx words) and returns 0. mdec_reset loads the default quantisation and IDCT tables and ends any decode;

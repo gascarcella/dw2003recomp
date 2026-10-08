@@ -145,7 +145,10 @@ the title, the field): the hardware picture must be the software image byte for 
 nearest mapping) pixel for pixel; where the device can present to the offscreen driver's window (lavapipe can, NVIDIA
 cannot) the input self-test also runs with the window through SDL_GPU. **With the disc:** SDL_Renderer's own present
 (a 960x720 window, read back with `DW3_PORT_PRESENT_READBACK`) must be the same reference, so both present paths agree.
-`--lavapipe` uses Mesa's software Vulkan driver. ~15 s. In `scripts/test.sh --layer port`.
+**The rasteriser, with a device and the disc:** `new_game` and `first_battle_save` with its whole VRAM target compared
+with the software VRAM every 10 vsyncs (`DW3_PORT_GPU_VRAM_CHECK=10`): no difference. `--lavapipe` uses Mesa's software
+Vulkan driver. ~55 s. In `scripts/test.sh --layer port`, followed by `tests/host/gpu_hw_replay.py` (the gpu golden
+family's 715 lists through the rasteriser, the whole target after each; `tests/README.md`).
 
 ## The crash report (`crash.py`; docs/PORT.md "Crash report")
 `tests/port/crash.py` runs the headless build three times (~3 s): with `DW3_PORT_CRASH_AT=30` it must die of SIGSEGV
