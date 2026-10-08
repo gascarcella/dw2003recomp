@@ -1463,80 +1463,268 @@ s32 fieldstg_map_has_no_tiles(void) {
     return gamestate_data.funcs.get_map() == 0x2DE;
 }
 
-#ifdef NON_MATCHING
-/* 99.48%: register allocation only (obj in s3 instead of s4; the constant 1, the actor-list loops and the
- * fieldstg_stage/gamestate_data bases get other saved registers); declaration orders tried. The second actor loop has
- * its own list variable. By -dg: the original needs the first loop's hoisted constant 1 (5 refs/52) above obj
- * (54/1168), list above placed in that loop, and the top constant 1 (8/92) below both case-1 bases (6/44, 6/48);
- * a placed per loop, for/index loops, segvar --fresh and cmpswap change none of them. wip-13: 30 min of permuter
- * (420 -> 250) only splits the data parameter into a copy for some cases; block-local placed/n, list reused for the
- * second loop, a for/while(id == 0) first loop: no gain. US decomp (func_8008A154): still INCLUDE_ASM.
- * final-rest: per-case copies of the first loop's test (merged by cross-jumping), a default case: no gain.
- * last-rest (final): the permuter (25 min, boosted weights) found `do { switch (obj->base.step) {...} } while (0)`
- * around case 0's inner switch (99.80: obj and the second loop right); with `placed` block-local in the first loop
- * too, 99.87: left only case 1's fieldstg_stage/gamestate_data bases and the top constant 1 (here stage s0,
- * constant s1, gamestate s2; the original gamestate s0, stage s1, constant s2). Not adopted (forced and not 100%);
- * a block-local leader pointer in case 1: worse. */
-void fieldstg_manager_update(FieldstgManager *obj, FieldstgManagerData *data) {
+/* Sets the field's display up and creates its layers. */
+static inline void fieldstg_manager_setup_screen(void) {
     RECT rect;
     GfxLayer *layer;
+
+    gfx_module.reset();
+    gfx_module.alloc_packet_buffers(0x6400);
+    gfx_module.funcs.init_display(320, 240, 0, 0);
+    rect.x = 0;
+    rect.y = 0;
+    rect.w = 320;
+    rect.h = 240;
+    layer = gfx_module.funcs.create_layer(&rect, 1, 0x1000);
+    layer->set_bg_color(layer, 1, 1, 1);
+    gfx_module.funcs.create_layer(&rect, 1, 0x1001);
+    layer = gfx_module.funcs.create_layer(&rect, 4, 0x1002);
+    layer->alloc_callbacks(layer, 50);
+    gfx_module.funcs.create_layer(&rect, 1, 0x1004);
+    layer = gfx_module.funcs.create_layer(&rect, 1, 0x1003);
+    layer->set_bg_color(layer, 1, 1, 1);
+}
+
+/* Creates the stage's placed actors (all but the player characters 1, 0x6A, 0x146 and 0x147) whose flags hold, at
+ * their place and direction. */
+static inline void fieldstg_manager_create_actors(FieldstgManagerData *data) {
+    FieldstgPlacedActor **list;
+    FieldstgPlacedActor *placed;
+    s32 n;
+
+    list = fieldstg_stage.actors;
+    if (list != NULL) {
+        n = 0;
+        while (*list != NULL) {
+            placed = *list;
+            switch (placed->id) {
+            case 1:
+            case 0x6A:
+            case 0x146:
+            case 0x147:
+                break;
+            default:
+                if (placed->flags_required == NULL || gamestate_flags.check_flags(placed->flags_required) != 0) {
+                    data->actors[n] = fieldstg_actor_create(placed->id, 1, placed->vram_place, placed);
+                    data->actors[n]->pos.x = placed->x << 8;
+                    data->actors[n]->pos.y = placed->y << 8;
+                    data->actors[n]->dir = placed->dir;
+                    n++;
+                }
+                break;
+            }
+            list++;
+        }
+    }
+}
+
+/* Ends the party and the placed actors. */
+static inline void fieldstg_manager_end_actors(FieldstgManagerData *data) {
+    s32 i;
+
+    for (i = 0; i < 4; i++) {
+        if (data->party[i] != NULL) {
+            data->party[i]->base.set_state(data->party[i], OBJECT_STATE_END);
+        }
+    }
+    for (i = 0; i < 15; i++) {
+        if (data->actors[i] != NULL) {
+            data->actors[i]->base.set_state(data->actors[i], OBJECT_STATE_END);
+        }
+    }
+}
+
+/* Creates the player: the first placed player character (1, 0x6A, 0x146, 0x147) whose flags hold, else the tamer
+ * (2) and, from progress 3 on, the party's Digimon behind him. */
+static inline void fieldstg_manager_create_party(FieldstgManagerData *data) {
     FieldstgPlacedActor **list;
     FieldstgPlacedActor *placed;
     s32 id;
-    s32 map;
-    s32 i;
-    s32 n;
-    FieldstgPlacedActor **list2;
 
+    /* Evidence (class B, register priority only; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): references inside
+     * the block weigh more, so the actor list ranks above the entry it loads and the search's hoisted 1 above obj, as
+     * in the original; as an if/else on id, or with `return` for the break, only registers differ (obj in s3 for s4,
+     * 99.36%), same layout. */
+    LOOP_BLOCK(
+        list = fieldstg_stage.actors;
+        id = 0;
+        if (list != NULL) {
+            while (*list != NULL) {
+                placed = *list;
+                switch (placed->id) {
+                case 1:
+                case 0x6A:
+                case 0x146:
+                case 0x147:
+                    if (placed->flags_required == NULL || gamestate_flags.check_flags(placed->flags_required) == 1) {
+                        id = placed->id;
+                    }
+                    break;
+                }
+                if (id != 0) {
+                    break;
+                }
+                list++;
+            }
+        }
+        if (id != 0) {
+            data->party[0] = fieldstg_actor_create(id, 0, 0, NULL);
+            break;
+        }
+        data->party[0] = fieldstg_actor_create(2, 0, 0, NULL);
+        if (gamestate_data.progress >= 3) {
+            if (gamestate_data.funcs.get_party_digimon(0) >= 0) {
+                data->party[1] = fieldstg_actor_create(gamestate_data.funcs.get_party_digimon(0) + 3, 2, 1, NULL);
+            }
+            if (gamestate_data.funcs.get_party_digimon(1) >= 0) {
+                data->party[2] = fieldstg_actor_create(gamestate_data.funcs.get_party_digimon(1) + 3, 4, 2, NULL);
+            }
+            if (gamestate_data.funcs.get_party_digimon(2) >= 0) {
+                data->party[3] = fieldstg_actor_create(gamestate_data.funcs.get_party_digimon(2) + 3, 8, 3, NULL);
+            }
+        }
+    );
+}
+
+/* The warp's steps: its effect and sound, a fade out after 60 ticks, then the actors, background and sprites ended
+ * while the warp's picture plays, and the map of the warp's parameters entered. */
+static inline void fieldstg_manager_warp(FieldstgManager *obj, FieldstgManagerData *data) {
+    switch (obj->base.substep) {
+    case 0:
+    default:
+        data->warp_effect = fieldstg_warp_effect_create(obj->warp_x, obj->warp_y, obj->warp_type);
+        sound_module.play(0x40004);
+        obj->base.next_substep(obj);
+    case 1:
+        if (obj->base.timer < 60) {
+            obj->base.timer += gfx_module.funcs.get_frame_ticks();
+            break;
+        }
+        data->fade = inn_fade_create(0x1002);
+        data->fade->start(data->fade, 0, 20);
+        obj->base.next_substep(obj);
+    case 2:
+        if (data->fade->base.state == OBJECT_STATE_DONE) {
+            fieldstg_manager_end_actors(data);
+            data->background->set_state(data->background, OBJECT_STATE_END);
+            data->sprites->set_state(data->sprites, OBJECT_STATE_END);
+            data->warp_picture = fieldstg_warp_picture_create(obj->warp_type);
+            data->fade->start(data->fade, 1, 20);
+            obj->base.next_substep(obj);
+        }
+        break;
+    case 3:
+        if (data->warp_picture->state == OBJECT_STATE_DONE) {
+            gamestate_data.route = obj->warp_params[5];
+            gamestate_data.room = obj->warp_params[6];
+            fieldstg_goto_map((s16)obj->warp_params[0], -1, (s16)obj->warp_params[1] << 8, (s16)obj->warp_params[2] << 8,
+                              (s16)obj->warp_params[3]);
+        }
+        break;
+    }
+}
+
+/* From progress 4 on, START opens the field menu while nothing else runs; the player's map, place and direction are
+ * kept to come back to. */
+static inline void fieldstg_manager_open_menu(FieldstgManager *obj, FieldstgManagerData *data) {
+    if (fieldstg_stage.menu_open != 1 && fieldstg_stage.event_running == 0 && fieldstg_stage.actor_busy == 0) {
+        /* Evidence (class B, register priority only; docs/MATCHING.md "LOOP_BLOCK and LOOP_BARRIER"): references
+         * inside the block weigh more, so the gamestate_data base ranks above the other saved registers, as in the
+         * original; as a plain if, or with `return` for the break, only registers differ (99.86%), same layout. */
+        LOOP_BLOCK(
+            if (gamestate_data.progress < 4 || !(pad_state.get_pressed(0) & 8)) {
+                break;
+            }
+            fieldstg_stage.menu_open = 1;
+            fieldstg_stage.event_running = 1;
+            data->menu = fieldmenu_create(0x1002, 0);
+            gamestate_data.field_map = gamestate_data.funcs.get_map();
+            gamestate_data.player_pos = data->party[0]->pos;
+            gamestate_data.player_dir = data->party[0]->dir;
+            data->party[0]->base.set_step(data->party[0], 1);
+            cdload_module.mark_loaded();
+            obj->base.next_step(obj);
+        );
+    }
+}
+
+/* The manager's first step: frees the file cache above the field's area and sets the screen up (unless the map has
+ * no tiles: then the cache and the top buffer are kept), loads and starts the stage's overlay, sets the map's visited
+ * flag, takes the player's place from where the field was left when coming from outside the field, and creates the
+ * map's title. */
+static inline void fieldstg_manager_start(FieldstgManager *obj, FieldstgManagerData *data) {
+    s32 map;
+
+    if (fieldstg_map_has_no_tiles() == 0) {
+        cdload_module.files.free_above(HEAP_ADDR(0x8015C674));
+    }
+    fieldstg_manager_setup_screen();
+    if (fieldstg_map_has_no_tiles() == 0) {
+        obj->buffer = heap_funcs.alloc_top(0x9615C, 2);
+    }
+    if (gamestate_data.map_is_new == 0) {
+        cdload_module.age_marked();
+    }
+    fieldstg_attr.set_file(4, 0);
+    fieldstg_stage.find_stage();
+    if (fieldstg_stage.code_file != 0) {
+        overlay_module.load_file(fieldstg_stage.code_file);
+    }
+    if (fieldstg_stage.entry != NULL) {
+        data->stage = OVERLAY_FN(2, fieldstg_stage.entry)(obj);
+    }
+    gamestate_flags.update_map_flags();
+    gamestate_flags.set_flag(gamestate_data.funcs.get_map() + 0x1E00, 1);
+    map = gamestate_data.funcs.get_prev_map();
+    if ((map & 0xFF00) != 0x200 && (map & 0xFF00) != 0x300 && (map & 0xFF00) != 0xE00 && map != 0x1500
+        && map != 0x500) {
+        gamestate_data.map_entry = -1;
+        fieldstg_stage.return_pos = gamestate_data.player_pos;
+        fieldstg_stage.return_dir = gamestate_data.player_dir;
+    }
+    data->map_title = fieldstg_map_title_create(1);
+    obj->base.next_step(obj);
+}
+
+/* The last loading step: once the CD is free, the top buffer freed and the background created (maps with tiles
+ * only), then once the background runs and the title is shown, the title told to go and the field run. */
+static inline void fieldstg_manager_show(FieldstgManager *obj, FieldstgManagerData *data) {
+    if (fieldstg_map_has_no_tiles() == 0) {
+        switch (obj->base.substep) {
+        case 0:
+        default:
+            if (cdload_reader.is_busy() != 0) {
+                break;
+            }
+            if (obj->buffer != NULL) {
+                heap_funcs.free(obj->buffer);
+            }
+            data->background = fieldstg_background_create(fieldstg_stage.background_file);
+            obj->base.next_substep(obj);
+        case 1:
+            if (data->background->state == OBJECT_STATE_RUN && data->map_title->state == OBJECT_STATE_DONE) {
+                data->map_title->set_step(data->map_title, 1);
+                obj->base.next_state(obj);
+            }
+            break;
+        }
+    } else if (data->map_title->state == OBJECT_STATE_DONE) {
+        data->map_title->set_step(data->map_title, 1);
+        obj->base.next_state(obj);
+    }
+}
+
+/* The field manager's update: sets the field up (screen, stage overlay, sound, files, sprites, map events, party,
+ * placed actors, camera, background), then runs it: the field menu, the inn, warps; when done, the battle's
+ * transition or the way out of the map. */
+void fieldstg_manager_update(FieldstgManager *obj, FieldstgManagerData *data) {
     switch (obj->base.state) {
     case OBJECT_STATE_INIT:
     default:
         switch (obj->base.step) {
         case 0:
         default:
-            if (fieldstg_map_has_no_tiles() == 0) {
-                cdload_module.files.free_above(HEAP_ADDR(0x8015C674));
-            }
-            gfx_module.reset();
-            gfx_module.alloc_packet_buffers(0x6400);
-            gfx_module.funcs.init_display(320, 240, 0, 0);
-            rect.x = 0;
-            rect.y = 0;
-            rect.w = 320;
-            rect.h = 240;
-            layer = gfx_module.funcs.create_layer(&rect, 1, 0x1000);
-            layer->set_bg_color(layer, 1, 1, 1);
-            gfx_module.funcs.create_layer(&rect, 1, 0x1001);
-            layer = gfx_module.funcs.create_layer(&rect, 4, 0x1002);
-            layer->alloc_callbacks(layer, 50);
-            gfx_module.funcs.create_layer(&rect, 1, 0x1004);
-            layer = gfx_module.funcs.create_layer(&rect, 1, 0x1003);
-            layer->set_bg_color(layer, 1, 1, 1);
-            if (fieldstg_map_has_no_tiles() == 0) {
-                obj->buffer = heap_funcs.alloc_top(0x9615C, 2);
-            }
-            if (gamestate_data.map_is_new == 0) {
-                cdload_module.age_marked();
-            }
-            fieldstg_attr.set_file(4, 0);
-            fieldstg_stage.find_stage();
-            if (fieldstg_stage.code_file != 0) {
-                overlay_module.load_file(fieldstg_stage.code_file);
-            }
-            if (fieldstg_stage.entry != NULL) {
-                data->stage = OVERLAY_FN(2, fieldstg_stage.entry)(obj);
-            }
-            gamestate_flags.update_map_flags();
-            gamestate_flags.set_flag(gamestate_data.funcs.get_map() + 0x1E00, 1);
-            map = gamestate_data.funcs.get_prev_map();
-            if ((map & 0xFF00) != 0x200 && (map & 0xFF00) != 0x300 && (map & 0xFF00) != 0xE00 && map != 0x1500
-                && map != 0x500) {
-                gamestate_data.map_entry = -1;
-                fieldstg_stage.return_pos = gamestate_data.player_pos;
-                fieldstg_stage.return_dir = gamestate_data.player_dir;
-            }
-            data->map_title = fieldstg_map_title_create(1);
-            obj->base.next_step(obj);
+            fieldstg_manager_start(obj, data);
         case 1:
             switch (obj->base.substep) {
             case 0:
@@ -1546,15 +1734,15 @@ void fieldstg_manager_update(FieldstgManager *obj, FieldstgManagerData *data) {
                 }
                 obj->base.next_substep(obj);
             case 1:
-                break;
-            }
-            if (sound_module.is_loading() == 0) {
-                if (fieldstg_stage.sound != 0) {
-                    sound_module.play(fieldstg_stage.sound);
-                } else {
-                    sound_module.stop(sound_module.current);
+                if (sound_module.is_loading() == 0) {
+                    if (fieldstg_stage.sound != 0) {
+                        sound_module.play(fieldstg_stage.sound);
+                    } else {
+                        sound_module.stop(sound_module.current);
+                    }
+                    obj->base.next_step(obj);
                 }
-                obj->base.next_step(obj);
+                break;
             }
             break;
         case 2:
@@ -1578,94 +1766,13 @@ void fieldstg_manager_update(FieldstgManager *obj, FieldstgManagerData *data) {
             if (fieldstg_stage.map_events != NULL) {
                 data->map_events = fieldstg_map_events_create(fieldstg_stage.sprite_file, fieldstg_stage.map_events);
             }
-            list = fieldstg_stage.actors;
-            id = 0;
-            if (list != NULL) {
-                while (*list != NULL) {
-                    placed = *list;
-                    switch (placed->id) {
-                    case 1:
-                    case 0x6A:
-                    case 0x146:
-                    case 0x147:
-                        if (placed->flags_required == NULL || gamestate_flags.check_flags(placed->flags_required) == 1) {
-                            id = placed->id;
-                        }
-                        break;
-                    }
-                    if (id != 0) {
-                        break;
-                    }
-                    list++;
-                }
-            }
-            if (id != 0) {
-                data->party[0] = fieldstg_actor_create(id, 0, 0, NULL);
-            } else {
-                data->party[0] = fieldstg_actor_create(2, 0, 0, NULL);
-                if (gamestate_data.progress >= 3) {
-                    if (gamestate_data.funcs.get_party_digimon(0) >= 0) {
-                        data->party[1] = fieldstg_actor_create(gamestate_data.funcs.get_party_digimon(0) + 3, 2, 1, NULL);
-                    }
-                    if (gamestate_data.funcs.get_party_digimon(1) >= 0) {
-                        data->party[2] = fieldstg_actor_create(gamestate_data.funcs.get_party_digimon(1) + 3, 4, 2, NULL);
-                    }
-                    if (gamestate_data.funcs.get_party_digimon(2) >= 0) {
-                        data->party[3] = fieldstg_actor_create(gamestate_data.funcs.get_party_digimon(2) + 3, 8, 3, NULL);
-                    }
-                }
-            }
-            list2 = fieldstg_stage.actors;
-            if (list2 != NULL) {
-                n = 0;
-                while (*list2 != NULL) {
-                    placed = *list2;
-                    switch (placed->id) {
-                    case 1:
-                    case 0x6A:
-                    case 0x146:
-                    case 0x147:
-                        break;
-                    default:
-                        if (placed->flags_required == NULL || gamestate_flags.check_flags(placed->flags_required) != 0) {
-                            data->actors[n] = fieldstg_actor_create(placed->id, 1, placed->vram_place, placed);
-                            data->actors[n]->pos.x = placed->x << 8;
-                            data->actors[n]->pos.y = placed->y << 8;
-                            data->actors[n]->dir = placed->dir;
-                            n++;
-                        }
-                        break;
-                    }
-                    list2++;
-                }
-            }
+            fieldstg_manager_create_party(data);
+            fieldstg_manager_create_actors(data);
             data->camera = fieldstg_camera_create();
             obj->base.next_step(obj);
             break;
         case 4:
-            if (fieldstg_map_has_no_tiles() == 0) {
-                switch (obj->base.substep) {
-                case 0:
-                default:
-                    if (cdload_reader.is_busy() != 0) {
-                        break;
-                    }
-                    if (obj->buffer != NULL) {
-                        heap_funcs.free(obj->buffer);
-                    }
-                    data->background = fieldstg_background_create(fieldstg_stage.background_file);
-                    obj->base.next_substep(obj);
-                case 1:
-                    if (data->background->state == OBJECT_STATE_RUN && data->map_title->state == OBJECT_STATE_DONE) {
-                        data->map_title->set_step(data->map_title, 1);
-                        obj->base.next_state(obj);
-                    }
-                    break;
-                }
-            } else if (data->map_title->state == OBJECT_STATE_DONE) {
-                data->map_title->set_step(data->map_title, 1);
-                obj->base.next_state(obj);
-            }
+            fieldstg_manager_show(obj, data);
             break;
         }
         break;
@@ -1673,18 +1780,7 @@ void fieldstg_manager_update(FieldstgManager *obj, FieldstgManagerData *data) {
         switch (obj->base.step) {
         case 0:
         default:
-            if (fieldstg_stage.menu_open != 1 && fieldstg_stage.event_running == 0 && fieldstg_stage.actor_busy == 0
-                && gamestate_data.progress >= 4 && (pad_state.get_pressed(0) & 8)) {
-                fieldstg_stage.menu_open = 1;
-                fieldstg_stage.event_running = 1;
-                data->menu = fieldmenu_create(0x1002, 0);
-                gamestate_data.field_map = gamestate_data.funcs.get_map();
-                gamestate_data.player_pos = data->party[0]->pos;
-                gamestate_data.player_dir = data->party[0]->dir;
-                data->party[0]->base.set_step(data->party[0], 1);
-                cdload_module.mark_loaded();
-                obj->base.next_step(obj);
-            }
+            fieldstg_manager_open_menu(obj, data);
             break;
         case 1:
             if (data->menu == NULL) {
@@ -1701,68 +1797,26 @@ void fieldstg_manager_update(FieldstgManager *obj, FieldstgManagerData *data) {
             }
             break;
         case 3:
-            switch (obj->base.substep) {
-            case 0:
-            default:
-                data->warp_effect = fieldstg_warp_effect_create(obj->warp_x, obj->warp_y, obj->warp_type);
-                sound_module.play(0x40004);
-                obj->base.next_substep(obj);
-            case 1:
-                if (obj->base.timer < 60) {
-                    obj->base.timer += gfx_module.funcs.get_frame_ticks();
-                    break;
-                }
-                data->fade = inn_fade_create(0x1002);
-                data->fade->start(data->fade, 0, 20);
-                obj->base.next_substep(obj);
-            case 2:
-                if (data->fade->base.state == OBJECT_STATE_DONE) {
-                    for (i = 0; i < 4; i++) {
-                        if (data->party[i] != NULL) {
-                            data->party[i]->base.set_state(data->party[i], OBJECT_STATE_END);
-                        }
-                    }
-                    for (i = 0; i < 15; i++) {
-                        if (data->actors[i] != NULL) {
-                            data->actors[i]->base.set_state(data->actors[i], OBJECT_STATE_END);
-                        }
-                    }
-                    data->background->set_state(data->background, OBJECT_STATE_END);
-                    data->sprites->set_state(data->sprites, OBJECT_STATE_END);
-                    data->warp_picture = fieldstg_warp_picture_create(obj->warp_type);
-                    data->fade->start(data->fade, 1, 20);
-                    obj->base.next_substep(obj);
-                }
-                break;
-            case 3:
-                if (data->warp_picture->state == OBJECT_STATE_DONE) {
-                    gamestate_data.route = obj->warp_params[5];
-                    gamestate_data.room = obj->warp_params[6];
-                    fieldstg_goto_map((s16)obj->warp_params[0], -1, (s16)obj->warp_params[1] << 8, (s16)obj->warp_params[2] << 8,
-                                           (s16)obj->warp_params[3]);
-                }
-                break;
-            }
+            fieldstg_manager_warp(obj, data);
             break;
         }
         break;
     case OBJECT_STATE_DONE:
         if (fieldstg_stage.battle_starting != 0) {
             fieldstg_manager_shatter(obj, data);
-        } else if (obj->delay <= 0) {
+            break;
+        }
+        if (obj->delay <= 0) {
             fieldstg_stage.title_shown = 1;
             fieldstg_manager_leave_map(obj, data);
-        } else {
-            obj->delay -= gfx_module.funcs.get_frame_ticks();
+            break;
         }
+        obj->delay -= gfx_module.funcs.get_frame_ticks();
         break;
     case OBJECT_STATE_END:
         break;
     }
 }
-#else
-INCLUDE_ASM("asm/fieldstg/nonmatchings/fieldstg_80087DB0", fieldstg_manager_update);
-#endif
 
 FieldstgManager *fieldstg_manager_create(void) {
     return object_create(fieldstg_manager_update, sizeof(FieldstgManager), sizeof(FieldstgManagerData), 7);
