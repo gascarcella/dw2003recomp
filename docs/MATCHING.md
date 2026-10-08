@@ -269,10 +269,12 @@ A bare `do { } while (0)` stays forbidden.
 
 ### Forced (FAKE) matches
 Only after natural C has been given up for that function (DECISIONS "Match status and forced (FAKE) matches"). Mark the
-forced line with `/* FAKE: <what is forced and why> */`. Forms used so far: a copy variable (`arrow = ofs`, a local
-copy of a parameter), a repeated store reorg deletes, mixed spellings of one access (`(p + i)->f` and `p[i].f`), a cast
-chain, a `volatile` cast that stops combine folding an address, a constant in a variable before a `LOOP_BARRIER`, one
-variable reused for two jobs, `q - -count`.
+forced line with `/* FAKE: <what is forced and why> */`. Forms in use: a copy variable (`arrow = ofs`, a local
+copy of a parameter), mixed spellings of one access (`(p + i)->f` and `p[i].f`), a cast chain, one variable reused for
+two jobs (a remainder then a sum, a step through a local shared with another case, one pointer over unrelated arrays, a
+counter shared by loops or set inside another loop), a pointer computed from an index instead of stepped. Before forcing
+one, check the US decomp's C for the same function (by EU address through its link maps; `docs/THIRD_PARTY.md`): its
+shapes matched the last 8 holdouts and replaced 5 FAKEs with natural or milder forms.
 
 ## Search techniques
 

@@ -16,7 +16,7 @@ ready; the release itself is still to be published.
   `tools/progress.py --readme`; Psy-Q library code is excluded): 3,606 of 3,606 functions, 100%. No holdouts are left
   (no `INCLUDE_ASM` or `NON_MATCHING` in game code): the last 8 matched with the shapes of ReGame-Labs/dw3_decomp's C
   for the same functions, rewritten in our names (`docs/THIRD_PARTY.md`).
-- **FAKE_COUNT forced matches**, marked `FAKE:` (`grep -rn "FAKE:" src`), allowed as an endgame step (DECISIONS).
+- **10 forced matches** (11 `FAKE:` comments; `grep -rn "FAKE:" src`), allowed as an endgame step (DECISIONS).
 - **Data:** split per object and in C, except crt0's `.sbss`, a FIELDSTG zero block with psylink padding, and
   STDWTITL's LIBPRESS data.
 - **Names:** every EXE game unit, most overlays and all WSTAG functions are named; about 1,100 `unk_` field uses remain

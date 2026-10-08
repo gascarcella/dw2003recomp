@@ -551,7 +551,7 @@ void shocktst_convert_table(ShockLoader *obj) {
             }
             /* FAKE: each pair's second byte is written through the next pair's pointer, computed from the arrays'
              * starts with an index k from 1, and l steps before t: this gives loop.c the original's two extra givs
-             * (t + 2 and l + 2), which a plain `t += 2` or a next-pointer local doesn't (89%). */
+             * (t + 2 and l + 2), which a plain `t += 2` (91.1%) or a next-pointer local doesn't. */
             next_t = &times[k * 2];
             next_l = &levels[k * 2];
             *types++ = type;
