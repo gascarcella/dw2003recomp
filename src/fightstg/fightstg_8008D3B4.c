@@ -6926,9 +6926,9 @@ void fightstg_battle_to_screen(GfxLayer *layer, SVECTOR *in, SVECTOR *out) {
     s32 z;
     s32 shift = 0x10 - layer->get_ot_bits(layer);
 
-    gte_MulMatrix0(&D_80081358, &D_8004DC20, &m);
-    gte_SetTransMatrix(&D_80081358);
-    gte_ldlv0(D_8004DC20.t);
+    gte_MulMatrix0(&GsWSMATRIX, &message_identity_matrix, &m);
+    gte_SetTransMatrix(&GsWSMATRIX);
+    gte_ldlv0(message_identity_matrix.t);
     gte_rt();
     gte_stlvnl(m.t);
     gte_SetRotMatrix(&m);

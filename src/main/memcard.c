@@ -410,7 +410,8 @@ s32 memcard_format(s32 arg0) {
     return ret;
 }
 
-s32 func_80015528(void) {
+/* The table's unformat: a stub. memcard_run_command's mode 3 calls MemCardUnformat, but no wrapper reaches it. */
+s32 memcard_unformat(void) {
     return 2;
 }
 
@@ -447,7 +448,7 @@ MemcardFuncs memcard_funcs = {
     memcard_list_files,
     memcard_create_file,
     memcard_format,
-    func_80015528,
+    memcard_unformat,
     memcard_check_checksum,
     memcard_get_checksum,
 };

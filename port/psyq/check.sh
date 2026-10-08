@@ -37,7 +37,7 @@ if [ ! -d build/port_inventory/m64/obj ]; then
 fi
 game_objs=$(find build/port_inventory/m64/obj -name '*.o')
 need=$($PY tools/port_inventory.py link -v 2>/dev/null | awk '/Psy-Q function:/{f=1;next} /asm-only data/{f=0} f && $2 ~ /^0x/ {print $1}' | sort -u)
-need_data="D_800812F8 D_80081358 D_80081454"
+need_data="GsLIGHTWSMATRIX GsWSMATRIX StCdIntrFlag"
 have=$(nm -g --defined-only "$OUT"/*.o | awk '$2 ~ /^[TDBR]$/ {print $3}' | sort -u)
 libc=$(nm -D --defined-only "$(gcc -print-file-name=libc.so.6)" | awk '{print $3}' | sed 's/@.*//' | sort -u)
 missing=0; via_libc=0; via_shim=0

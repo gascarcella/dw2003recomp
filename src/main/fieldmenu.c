@@ -179,10 +179,10 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
         window_anim_start(&obj->panel_anims[1], 1);
         window_anim_start(&obj->panel_anims[2], 1);
         if (gamestate_data.items[0x192] != 0) {
-            D_8005CCF0.extended = 1;
+            records_field_menu_choice.extended = 1;
             obj->extended = 1;
         } else {
-            D_8005CCF0.extended = 0;
+            records_field_menu_choice.extended = 0;
         }
         obj->option_count = obj->extended + 5;
 #ifdef PC_PORT
@@ -269,7 +269,7 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
                 } else {
                     obj->base.substep = 0;
                 }
-                D_8005CCF0.option = obj->cursor;
+                records_field_menu_choice.option = obj->cursor;
             } else if (PAD_PRESSED(14)) {
                 sound_module.play(0x800450BD);
                 done = 1;
@@ -421,7 +421,7 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
                 gamestate_data.funcs.set_next_map(gamestate_data.field_map, 0);
             } else {
                 gamestate_data.funcs.set_next_map(0x1000, 0);
-                D_8005CCF0.option = obj->cursor;
+                records_field_menu_choice.option = obj->cursor;
             }
             obj->base.step++;
             break;

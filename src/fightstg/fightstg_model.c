@@ -541,7 +541,7 @@ FightstgModel *fightstg_model_new(s32 id, s32 anim_file, FightstgPos pos, Fights
     obj->parts[0].parent = 0;
     obj->parts[0].mesh_file = 0;
     obj->parts[0].keys_file = 0;
-    obj->parts[0].parent_world = &D_8004DC20;
+    obj->parts[0].parent_world = &message_identity_matrix;
     obj->parts[0].trans.vx = 0;
     obj->parts[0].trans.vy = 0;
     obj->parts[0].trans.vz = 0;
@@ -586,7 +586,7 @@ void fightstg_model_mesh_light(FightstgMesh *obj) {
     if (n == 0) {
         return;
     }
-    gte_CompMatrix(&D_800812F8, &obj->matrix, &m);
+    gte_CompMatrix(&GsLIGHTWSMATRIX, &obj->matrix, &m);
     gte_SetLightMatrix(&m);
     if (obj->colors == NULL) {
         obj->colors = heap_funcs.alloc(n * sizeof(s32), 2);
@@ -888,7 +888,7 @@ void fightstg_model_mesh_draw(void *data, GfxLayer *layer, s32 arg) {
     s32 hi;
     s32 lo;
 
-    gte_CompMatrix(&D_80081358, &obj->matrix, &m);
+    gte_CompMatrix(&GsWSMATRIX, &obj->matrix, &m);
     gte_SetRotMatrix(&m);
     gte_SetTransMatrix(&m);
     if (fightstg_model_mesh_is_visible(obj, layer) == 0) {
@@ -972,7 +972,7 @@ void fightstg_model_mesh_draw_edges(void *data, GfxLayer *layer, s32 arg) {
     s32 i0, i1, i2, i3;
     s32 n;
 
-    gte_CompMatrix(&D_80081358, &obj->matrix, &m);
+    gte_CompMatrix(&GsWSMATRIX, &obj->matrix, &m);
     gte_SetRotMatrix(&m);
     gte_SetTransMatrix(&m);
     if (fightstg_model_mesh_is_visible(obj, layer) == 0) {

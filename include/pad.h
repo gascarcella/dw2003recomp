@@ -39,8 +39,10 @@ typedef struct PadState {
     /* 0x400 */ void (*reset_button_map)(u8 id);             /* pad_reset_button_map */
     /* 0x404 */ void (*swap_buttons)(u8 id, s32 a, s32 b);   /* pad_swap_buttons */
     /* 0x408 */ s32 (*get_button_map)(s32 port, s32 button); /* pad_get_button_map (defined returning u8; callers use the result as an int) */
-    /* 0x40C */ s32 (*unk_40C)(void);                        /* func_800189A8 */
-    /* 0x410 */ void (*unk_410)(void);                       /* func_800189B0 */
+    /* 0x40C */ s32 (*start_recording)(void);                /* pad_start_recording: a stub (returns 0) */
+    /* 0x410 */ void (*stop_recording)(void);                /* pad_stop_recording: a stub; pad_update calls it at the
+                                                           * buffer's end (0x707 frames) in the recording mode (flag
+                                                           * 0x800000), which nothing enters */
     /* 0x414 */ s32 (*check_playback)(s32);                  /* pad_check_playback */
     /* 0x418 */ s32 (*start_playback)(s16, u8 *);            /* pad_start_playback */
     /* 0x41C */ void (*stop_playback)(void);                 /* pad_stop_playback */

@@ -19,8 +19,9 @@ A list has one rename per line, `OLD NEW`, `#` starts a comment:
     "'Struct' has no member named 'field'" error is fixed at its line and column; repeated until none is left. In
     other text (docs, tests, comments) only the spelling `Struct.field` is replaced; other lines that mention both the
     struct and the old field are listed to check by hand. port/ is not compiled here: its build is the check.
-NEW may end in an index (`vars[2]`) when fields become an array: the uses are renamed, the declaration is changed by
-hand (the tool leaves declarations alone then, and leaves files other than C ones to the hand as well).
+NEW may end in an index or a member (`vars[2]`, `trans.vx`) when fields become an array or a struct: the uses are
+renamed, the declaration is changed by hand (the tool leaves declarations alone then, and files other than C ones
+to the hand as well).
 """
 import argparse
 import os
@@ -35,7 +36,7 @@ LISTS = ROOT / "tools" / "renames"
 SCAN_DIRS = ("src", "include", "config", "port", "tools", "tests", "launcher", "docs")
 C_SUFFIXES = {".c", ".h", ".cpp", ".hpp", ".inc"}
 IDENT = r"[A-Za-z_]\w*"
-ENTRY = re.compile(rf"^(?:(?P<struct>{IDENT}|\*)\.)?(?P<old>{IDENT})\s+(?P<new>{IDENT}(?:\[\w+\])*)$")
+ENTRY = re.compile(rf"^(?:(?P<struct>{IDENT}|\*)\.)?(?P<old>{IDENT})\s+(?P<new>{IDENT}(?:\[\w+\]|\.\w+)*)$")
 NO_MEMBER = re.compile(r"^(?P<file>[^:\s][^:]*):(?P<line>\d+):(?P<col>\d+): error: '(?P<type>[^']+)'"
                        r"(?: \{aka '(?P<aka>[^']+)'\})? has no member named '(?P<field>\w+)'")
 PROBE_FLAGS = ["-std=gnu99", "-fsyntax-only", "-fno-builtin", "-fsigned-char", "-w", "-fmax-errors=0",
@@ -127,8 +128,9 @@ def struct_bodies(text):
 
 
 def declarator(old):
-    """A field's declarator in a struct body: the name, then array bounds, then `;`, `,` or a bit-field's `:`."""
-    return re.compile(rf"\b{re.escape(old)}\b(?=\s*(?:\[[^\]]*\]\s*)*[;,:])")
+    """A field's declarator in a struct body: the name, then array bounds, then `;`, `,` or a bit-field's `:` (or the
+    `)` of a function pointer's `(*name)`)."""
+    return re.compile(rf"\b{re.escape(old)}\b(?=\s*(?:\[[^\]]*\]\s*)*[;,:)])")
 
 
 def declarations(files, old):

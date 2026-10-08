@@ -99,7 +99,7 @@ typedef struct MessageDialogOutline {
     /* 0x58 */ s16 w;       /* the dialog's width + 0x20 */
     /* 0x5A */ s16 h;
     /* 0x5C */ s16 scale_speed; /* added to scale per frame: 0x199 opening, 0x333 closing */
-    /* 0x5E */ u8 unk_5E[0x2];
+    /* 0x5E */ u8 pad_5E[0x2];
     /* 0x60 */ s32 scale;    /* 0..0x1000 */
     /* 0x64 */ s32 layer_id;
     /* 0x68 */ s32 unk_68;
@@ -107,10 +107,7 @@ typedef struct MessageDialogOutline {
     /* 0x6E */ s16 offset_y;
     /* 0x70 */ VECTOR scale_vec;
     /* 0x80 */ SVECTOR rotation;
-    /* 0x88 */ s32 unk_88;
-    /* 0x8C */ s32 unk_8C;
-    /* 0x90 */ s32 unk_90;
-    /* 0x94 */ u8 unk_94[0x4];
+    /* 0x88 */ VECTOR translation; /* the pivot (pivot_x, pivot_y, 0), set at init; the draw never reads it */
     /* 0x98 */ MATRIX matrix;
     /* 0xB8 */ s32 closing;  /* 0: grows to 0x1000, else shrinks to 0 (the dialog's step) */
     /* 0xBC */ s32 opened;   /* it reached full size (message_dialog_update waits for the third) */
@@ -656,7 +653,7 @@ void message_set_page_lines(MessageWindow *obj, u8 arg1) {
     obj->page_lines = arg1;
 }
 
-void func_8001A458(MessageWindow *obj, u8 arg1) {
+void message_set_unk_C4(MessageWindow *obj, u8 arg1) {
     obj->unk_C4 = arg1;
 }
 
@@ -957,7 +954,7 @@ MessageWindow *message_create_window(s16 arg0, s16 arg1, s16 arg2, s16 arg3) {
     obj->set_center = message_set_center;
     obj->set_ot_depth = message_set_ot_depth;
     obj->set_page_lines = message_set_page_lines;
-    obj->unk_164 = func_8001A458;
+    obj->set_unk_C4 = message_set_unk_C4;
     obj->is_done = message_is_done;
     obj->is_visible = message_is_visible;
     obj->is_waiting = message_is_waiting;
@@ -1534,9 +1531,9 @@ void message_dialog_outline_update(MessageDialogOutline *obj) {
         } else {
             obj->scale = 0x1000;
         }
-        obj->unk_90 = 0;
-        obj->unk_88 = obj->pivot_x;
-        obj->unk_8C = obj->pivot_y;
+        obj->translation.vz = 0;
+        obj->translation.vx = obj->pivot_x;
+        obj->translation.vy = obj->pivot_y;
         obj->base.next_state(obj);
         break;
     case OBJECT_STATE_RUN:
@@ -1797,14 +1794,15 @@ s16 message_decode_char(u8 *text, u8 arg1, MessageFont *font) {
     return 0x300;
 }
 
-/* The data block at 0x8004DC10 (DECISIONS "Data in C, split per object": owner open; placed at the start of message's .data,
- * where it fits the link order): a zero VECTOR, an identity MATRIX (D_8004DC20: FIGHTSTG points its models at it; no
- * EXE code reads any of them) and the matrices scaling x, y and both by 2. In .data: explicitly zero-initialized. */
-VECTOR D_8004DC10 = { 0, 0, 0, 0 };
-MATRIX D_8004DC20 = { { { 0x1000, 0, 0 }, { 0, 0x1000, 0 }, { 0, 0, 0x1000 } }, { 0, 0, 0 } };
-MATRIX D_8004DC40 = { { { 0x2000, 0, 0 }, { 0, 0x1000, 0 }, { 0, 0, 0x1000 } }, { 0, 0, 0 } };
-MATRIX D_8004DC60 = { { { 0x1000, 0, 0 }, { 0, 0x2000, 0 }, { 0, 0, 0x1000 } }, { 0, 0, 0 } };
-MATRIX D_8004DC80 = { { { 0x2000, 0, 0 }, { 0, 0x2000, 0 }, { 0, 0, 0x1000 } }, { 0, 0, 0 } };
+/* The data block at 0x8004DC10 (DECISIONS "Data in C, split per object": owner open; placed at the start of message's
+ * .data, where it fits the link order, hence the message_ prefix): a zero VECTOR, an identity MATRIX
+ * (message_identity_matrix: FIGHTSTG points its models at it; no EXE code reads any of them) and the matrices scaling
+ * x, y and both by 2. In .data: explicitly zero-initialized. */
+VECTOR message_zero_vector = { 0, 0, 0, 0 };
+MATRIX message_identity_matrix = { { { 0x1000, 0, 0 }, { 0, 0x1000, 0 }, { 0, 0, 0x1000 } }, { 0, 0, 0 } };
+MATRIX message_double_x_matrix = { { { 0x2000, 0, 0 }, { 0, 0x1000, 0 }, { 0, 0, 0x1000 } }, { 0, 0, 0 } };
+MATRIX message_double_y_matrix = { { { 0x1000, 0, 0 }, { 0, 0x2000, 0 }, { 0, 0, 0x1000 } }, { 0, 0, 0 } };
+MATRIX message_double_xy_matrix = { { { 0x2000, 0, 0 }, { 0, 0x2000, 0 }, { 0, 0, 0x1000 } }, { 0, 0, 0 } };
 
 /* The handlers that take only (obj, line) ignore the state. */
 #define MESSAGE_HANDLER(func) ((s32 (*)(MessageWindow *, MessageLine *, MessageDrawState *))(func))

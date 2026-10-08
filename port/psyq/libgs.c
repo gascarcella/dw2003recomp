@@ -1,8 +1,8 @@
 /* port/psyq/libgs.c: LIBGS. Owns the two LIBGS .bss matrices the game reads and writes (include/gfx.h):
- *  - D_80081358: the world-screen matrix. Evidence: GsSetRefView2 (asm/main/psyq/libgs/gs_131.s) builds it there,
+ *  - GsWSMATRIX: the world-screen matrix. Evidence: GsSetRefView2 (asm/main/psyq/libgs/gs_131.s) builds it there,
  *    starting from the identity at 0x80081398, and copies the result to 0x80081338; FIGHTSTG composes its models
  *    with it and loads it as the GTE translation (fightstg_8008D3B4.c:6919). gfx.c calls it the camera.
- *  - D_800812F8: the flat-light matrix (the three light directions as rows). Evidence: GsSetFlatLight (gs_107.s)
+ *  - GsLIGHTWSMATRIX: the flat-light matrix (the three light directions as rows). Evidence: GsSetFlatLight (gs_107.s)
  *    reads it, rewrites one row and stores it back; fightstg_model.c composes it with a model's matrix for
  *    gte_SetLightMatrix. gfx.c calls it the world-screen matrix (its save/restore pairs are what matters there).
  * Real: GsGetTimInfo (it parses a TIM header, docs/FORMATS.md "TIM"), GsSetProjection (the GTE's H), GsSetFlatLight
@@ -15,8 +15,8 @@
 #include "psyq/libgs.h"
 #include "psyq/libgpu.h"
 
-MATRIX D_80081358; /* GsSetRefView2's world-screen matrix */
-MATRIX D_800812F8; /* GsSetFlatLight's light matrix */
+MATRIX GsWSMATRIX; /* GsSetRefView2's world-screen matrix */
+MATRIX GsLIGHTWSMATRIX; /* GsSetFlatLight's light matrix */
 /* LIBGS's view and light state (the PS1's .bss; the game does not read it, tests/host/libgs_harness.c does): */
 MATRIX D_80081318; /* GsSetFlatLight's light colour matrix (the GTE's LCM): light `id`'s colour is column id */
 MATRIX D_80081338; /* GsSetRefView2's result again (GsGetLs and the like read it on the PS1) */
@@ -47,8 +47,8 @@ static struct {
 
 /* The console's reset (psyq.c psyq_reset): LIBGS's .bss (the matrices) and the recorded settings zero. */
 void psyq_gs_reset(void) {
-    memset(&D_80081358, 0, sizeof(D_80081358));
-    memset(&D_800812F8, 0, sizeof(D_800812F8));
+    memset(&GsWSMATRIX, 0, sizeof(GsWSMATRIX));
+    memset(&GsLIGHTWSMATRIX, 0, sizeof(GsLIGHTWSMATRIX));
     memset(&D_80081318, 0, sizeof(D_80081318));
     memset(&D_80081338, 0, sizeof(D_80081338));
     memset(&D_80081398, 0, sizeof(D_80081398));
@@ -74,7 +74,7 @@ void GsInitGraph(u16 w, u16 h, u16 intl, u16 dither, u16 vram) {
      * the game's); the light matrix and the light colour matrix are zero; PSDCNT starts at 1 */
     D_80081398 = psyq_gs_identity;
     D_80081398.m[1][1] = (s16)(((s32)h << 14) / (s32)w / 3);
-    memset(&D_800812F8, 0, sizeof(D_800812F8));
+    memset(&GsLIGHTWSMATRIX, 0, sizeof(GsLIGHTWSMATRIX));
     memset(&D_80081318, 0, sizeof(D_80081318));
     D_800812D8 = 1;
 }
@@ -137,8 +137,8 @@ void GsInit3D(void) {
 }
 
 /* Real (gs_107.s): light `id`'s direction, normalised to 4096 and negated (the direction light travels becomes the
- * direction to the light, which the GTE's lighting wants), is row id of the light matrix D_800812F8, and its colour,
- * (c << 12) / 255, column id of the light colour matrix D_80081318, which is then loaded as the GTE's LCM. A zero
+ * direction to the light, which the GTE's lighting wants), is row id of the light matrix GsLIGHTWSMATRIX, and its
+ * colour, (c << 12) / 255, column id of the light colour matrix D_80081318, which is then loaded as the GTE's LCM. A zero
  * direction returns -1 and changes nothing (FIGHTSTG's stage table has such lights: the row and column stay as they
  * were). An id outside 0..2 changes neither matrix but still loads LCM and returns 0, as the PS1 does. The PS1 works
  * on copies of both matrices and stores them back whole, so the translations are untouched. */
@@ -151,9 +151,9 @@ s32 GsSetFlatLight(s32 id, GsF_LIGHT *lt) {
         return -1;
     }
     if (id >= 0 && id <= 2) {
-        D_800812F8.m[id][0] = (s16)((s32)((0u - (u32)lt->vx) << 12) / r);
-        D_800812F8.m[id][1] = (s16)((s32)((0u - (u32)lt->vy) << 12) / r);
-        D_800812F8.m[id][2] = (s16)((s32)((0u - (u32)lt->vz) << 12) / r);
+        GsLIGHTWSMATRIX.m[id][0] = (s16)((s32)((0u - (u32)lt->vx) << 12) / r);
+        GsLIGHTWSMATRIX.m[id][1] = (s16)((s32)((0u - (u32)lt->vy) << 12) / r);
+        GsLIGHTWSMATRIX.m[id][2] = (s16)((s32)((0u - (u32)lt->vz) << 12) / r);
         D_80081318.m[0][id] = (s16)(((s32)lt->r << 12) / 255);
         D_80081318.m[1][id] = (s16)(((s32)lt->g << 12) / 255);
         D_80081318.m[2][id] = (s16)(((s32)lt->b << 12) / 255);
@@ -300,14 +300,14 @@ static void psyq_gs_view_points(const GsRVIEW2 *pv, s32 out[6]) {
     }
 }
 
-/* Real (gs_131.s): the world-screen matrix D_80081358 from the viewpoint vp, the reference point vr and the twist rz
+/* Real (gs_131.s): the world-screen matrix GsWSMATRIX from the viewpoint vp, the reference point vr and the twist rz
  * (1/360 degree x 4096), all in the coordinate system pv->super (NULL: the world). It starts from the base matrix
  * (GsInitGraph's aspect), turns by -rz about z, pitches so the line of sight is level (x axis) and turns it onto z
  * (y axis), translates by -vp, and, with a super, multiplies by the inverse of super's local-world matrix (whose
  * rotation is orthonormal: its transpose). The result is also copied to D_80081338. Returns 1 (and leaves the matrix
  * half built, as the PS1 does) when vp = vr, else 0. */
 s32 GsSetRefView2(GsRVIEW2 *pv) {
-    MATRIX *ws = &D_80081358;
+    MATRIX *ws = &GsWSMATRIX;
     MATRIX tmp, inv;
     VECTOR v;
     s32 p[6];

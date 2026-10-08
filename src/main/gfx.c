@@ -509,24 +509,24 @@ void gfx_save_camera(GfxLayer *obj, s32 arg1, s32 h) {
     obj->camera_saved = arg1;
     if (arg1 != 0) {
         obj->projection = h;
-        obj->cameras[gfx_module.buffer] = D_80081358;
+        obj->cameras[gfx_module.buffer] = GsWSMATRIX;
     }
 }
 
 void gfx_restore_camera(GfxLayer *obj) {
     GsSetProjection(obj->projection);
-    D_80081358 = obj->cameras[gfx_module.buffer];
+    GsWSMATRIX = obj->cameras[gfx_module.buffer];
 }
 
 void gfx_save_world_screen(GfxLayer *obj, s32 arg1) {
     obj->world_screen_saved = arg1;
     if (arg1 != 0) {
-        obj->world_screens[gfx_module.buffer] = D_800812F8;
+        obj->world_screens[gfx_module.buffer] = GsLIGHTWSMATRIX;
     }
 }
 
 void gfx_restore_world_screen(GfxLayer *obj) {
-    D_800812F8 = obj->world_screens[gfx_module.buffer];
+    GsLIGHTWSMATRIX = obj->world_screens[gfx_module.buffer];
 }
 
 /* Creates a layer with this DRAWENV and two ordering tables of 2^bits entries. */

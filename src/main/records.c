@@ -1421,4 +1421,4 @@ s32 records_60hz = 0;
 /* .sbss: the menu choice STSTATUS opens (fieldmenu.h). Neither this file nor fieldmenu uses it
  * through $gp, so its definition is in a file that doesn't use it (its slot is between crt0's and
  * cdload's: inn or this one); like records_language/CCAC, a global this file holds for other modules. */
-FieldmenuChoice D_8005CCF0;
+FieldmenuChoice records_field_menu_choice;
