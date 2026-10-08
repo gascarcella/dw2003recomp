@@ -116,14 +116,17 @@ build, also headless) writes the image of vsync FRAME as a binary PPM: the textu
 SDL_Renderer; `--renderer gpu` (or `video.renderer: "gpu"`) through the hardware renderer, `src/render_gpu.c` on SDL_GPU
 (Vulkan). It is opened before any SDL_Renderer (on Wayland a window that had an OpenGL renderer cannot be claimed by
 Vulkan); when it cannot present (no Vulkan driver, NVIDIA on the offscreen driver, a shader that does not load) the run
-logs `renderer: gpu unavailable (<why>); software` and uses SDL_Renderer. In phase 1 it shows the same image, pixel for
-pixel. Its shaders need DXC at build time (`scripts/setup.sh dxc`, or `-DDW3_DXC=<path>`): configuring the SDL build
-without it fails with that hint. `--gpu-screenshot FRAME[@WxH]:PATH` (repeatable) writes the hardware renderer's picture
+logs `renderer: gpu unavailable (<why>); software` and uses SDL_Renderer. Its rasteriser draws the game itself into a
+VRAM target of its own (`src/render_gpu.c`'s header comment) and a 15-bit display is presented from that target; 24-bit
+displays (the movies, the title) stay the software image. At the internal scale of 1 the picture is the software
+path's, pixel for pixel. Its shaders need DXC at build time (`scripts/setup.sh dxc`, or `-DDW3_DXC=<path>`):
+configuring the SDL build without it fails with that hint. `--gpu-screenshot FRAME[@WxH]:PATH` (repeatable) writes the hardware renderer's picture
 of vsync FRAME as a PPM: the image itself, or with `@WxH` its present into a W x H output, letterboxed as the window
 would be; a run that has no device opens one for it (headless too: `SDL_VIDEO_DRIVER=offscreen`), and logs the shot as
 skipped when none opens. `--screenshot` and the debug channel's screenshot stay the software image.
 `DW3_PORT_PRESENT_READBACK=FRAME:PATH` reads SDL_Renderer's output back (`tests/port/render_gpu.py` compares the two
-present paths). `VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json` picks Mesa's software Vulkan driver.
+present paths). `DW3_PORT_GPU_VRAM_CHECK=N` compares the rasteriser's whole target with the software VRAM every N
+vsyncs and logs any difference (with `--renderer gpu --window`, or `--gpu-screenshot` headless). `VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json` picks Mesa's software Vulkan driver.
 `--debug SOCKET` (any build) opens the debug channel on a Unix socket (`src/debug.c`'s header comment is the protocol;
 `tools/mcp/` drives it): pause, step, wait, the pad, memory by host or PS1 address, screenshots, the hash, reset, quit,
 each between two vsyncs; it turns the watchdog and the default frame cap off; `--debug-hold` starts the game paused at
