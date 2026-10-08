@@ -4878,15 +4878,15 @@ void fieldstg_to_screen_pos(FieldstgPos *pos) {
     pos->y -= offset[1];
 }
 
-/* Clears the player's script_flag (actor 1, else 2); fieldstg_event_funcs.player_clear_script_flag, which nothing
+/* Clears the player's unk_10C (actor 1, else 2); fieldstg_event_funcs.player_clear_unk_10C, which nothing
  * calls. */
-void fieldstg_player_clear_script_flag(void) {
+void fieldstg_player_clear_unk_10C(void) {
     FieldstgActor *obj = fieldstg_find_actor(1);
 
     if (obj == NULL) {
         obj = fieldstg_find_actor(2);
     }
-    obj->script_flag = 0;
+    obj->unk_10C = 0;
 }
 
 FieldstgScriptObject *fieldstg_find_script_object(s32 id) {
@@ -6080,7 +6080,7 @@ FieldstgStageEntry fieldstg_stages[240] = {
 FieldstgTimer fieldstg_timer = { 0, 0, fieldstg_timer_reset, fieldstg_find_actor };
 FieldstgEventFuncs fieldstg_event_funcs = {
     fieldstg_to_screen_pos, fieldstg_wait_frames, fieldstg_wait_anim_done, fieldstg_wait_walk_done,
-    fieldstg_player_clear_script_flag,
+    fieldstg_player_clear_unk_10C,
 };
 
 FieldstgScriptObject fieldstg_script_objects[58] = {

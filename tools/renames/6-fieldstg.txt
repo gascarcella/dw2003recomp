@@ -5,11 +5,6 @@
 # Left as they are: stage 528's per-actor condition flags and talks (D_FIELDSTG_80097E6C.., 80097EBC.., 8009881C..,
 # a run of small arrays each, like the stage files' D_WSTAG data) and the unreferenced byte D_FIELDSTG_80097623.
 
-# FieldstgActor 0x10C: cleared by the last entry of the event functions' table (nothing calls it), read by nothing
-fieldstg_player_clear_unk_10C fieldstg_player_clear_script_flag
-FieldstgEventFuncs.player_clear_unk_10C player_clear_script_flag
-FieldstgActor.unk_10C script_flag
-
 # FieldstgManagerData 0x10: the object the manager waits for until it ends (the loader while loading, the inn in
 # fieldstg_open_inn)
 FieldstgManagerData.unk_10 awaited
