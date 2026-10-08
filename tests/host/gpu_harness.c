@@ -115,7 +115,7 @@ int main(void) {
     {
         char why[256];
         if (!SDL_Init(SDL_INIT_VIDEO) || !render_gpu_open(NULL, why, sizeof(why)) ||
-            !render_gpu_raster_start(why, sizeof(why))) {
+            !render_gpu_raster_start(1, why, sizeof(why))) {
             printf("nodevice %s\n", SDL_WasInit(SDL_INIT_VIDEO) ? why : SDL_GetError());
             return 2;
         }

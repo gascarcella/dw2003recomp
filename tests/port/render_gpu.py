@@ -17,7 +17,10 @@ Builds build/port-sdl if needed (-DPSXSTACK_SDL=ON: tools/sdl3 and tools/dxc), t
     display) must be the software image byte for byte, and its present into outputs of several sizes (integer scales,
     letterboxing, a non-integer 4:3 width, a window smaller than the image) must be the reference below pixel for
     pixel; then new_game and first_battle_save with the rasteriser's whole VRAM target compared with the software VRAM
-    every 10 vsyncs (DW3_PORT_GPU_VRAM_CHECK): no difference anywhere (~40 s);
+    every 10 vsyncs (DW3_PORT_GPU_VRAM_CHECK): no difference anywhere (~40 s); then internal scales 2 and 4: the
+    pictures of field and battle frames are the display's size times the scale and, averaged back over each N x N
+    block, close to the software image (SCALED_BUDGET: the 3D's edges and textures sampled between texels differ, the
+    2D does not); the debug channel's screenshot with "renderer": "gpu" at the internal scale;
   - with the disc: SDL_Renderer's own present (a 960x720 window on the offscreen driver, read back through
     DW3_PORT_PRESENT_READBACK) must be the same reference: the two present paths agree.
 The reference is video.c's placement (video_dest: 4:3, as tall as an integer multiple of the image's lines allows,
@@ -36,7 +39,12 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tests/port"))
 from run import DISC, SCRIPTS, Missing, build, tool_env  # noqa: E402  (the port test's build)
 
-FRAMES = (150, 400, 900, 1300, 1800)   # new_game: CNTY_SEL's 320x576 screen, the title's menus, the field
+FRAMES = (150, 400, 900, 1300, 1800)
+SCALED_FRAMES = (10000, 15000, 19900, 20300)   # first_battle_save: the field, a field event, the first battle
+# Averaged back to 1x, a frame at a higher internal scale may differ from the software image by at most this mean
+# per channel, and by more than 32 in at most this share of the channels (measured on NVIDIA: field 0.00 / 0.00 %,
+# a field event's translucent bands in 8-bit colour 1.1 / 0.00 %, the battle's 3D up to 9.5 / 9.1 %).
+SCALED_BUDGET = (12.0, 0.12)   # new_game: CNTY_SEL's 320x576 screen, the title's menus, the field
 SIZES = ((960, 720), (1366, 768), (1920, 1080), (1280, 1024), (1000, 700), (300, 200))
 LAVAPIPE = Path("/usr/share/vulkan/icd.d/lvp_icd.x86_64.json")
 FAILURES = []
@@ -170,6 +178,83 @@ def vram_checks(sdl, env, every=10):
               f"{name}: {total}" + (f"; the first: {bad[0]}" if bad else ""))
 
 
+def reduced(hi, n, w, h):
+    """The n x n blocks of a (w n) x (h n) RGB picture averaged: (mean |difference| per channel, share > 32) against
+    the w x h picture `lo`, as a function."""
+    big = list(hi)
+    W = w * n
+
+    def against(lo):
+        total, far = 0.0, 0
+        for y in range(h):
+            rows = [((y * n + j) * W) * 3 for j in range(n)]
+            for x in range(w):
+                for c in range(3):
+                    acc = 0
+                    for r0 in rows:
+                        base = r0 + x * n * 3 + c
+                        acc += sum(big[base:base + n * 3:3])
+                    d = abs(acc / (n * n) - lo[(y * w + x) * 3 + c])
+                    total += d
+                    far += d > 32
+        return total / (w * h * 3), far / (w * h * 3)
+    return against
+
+
+def scaled(sdl, env, out):
+    print(f"render_gpu: internal scales 2 and 4, {len(SCALED_FRAMES)} frames of first_battle_save against the "
+          f"software image (block averages)")
+    for n in (2, 4):
+        args = []
+        for f in SCALED_FRAMES:
+            args += ["--screenshot", f"{f}:{out / f'sc_sw{f}.ppm'}", "--gpu-screenshot", f"{f}:{out / f'sc{n}_{f}.ppm'}"]
+        # No watchdog: software Vulkan (--lavapipe) falls far behind at these scales, and a screenshot's readback
+        # then waits on the backlog for longer than the default 10 s without a vsync.
+        rc, text = run([sdl, "--disc", DISC, "--script", SCRIPTS / "first_battle_save.json", "--max-frames",
+                        str(SCALED_FRAMES[-1] + 1), "--internal-scale", str(n), "--watchdog", "0", *args], env,
+                       timeout=1800)
+        if rc != 0:
+            check(False, f"scale {n}: the run (exit {rc})")
+            continue
+        for f in SCALED_FRAMES:
+            w, h, lo = ppm(out / f"sc_sw{f}.ppm")
+            W, H, hi = ppm(out / f"sc{n}_{f}.ppm")
+            if (W, H) != (w * n, h * n):
+                check(False, f"scale {n}, vsync {f}: {W}x{H}, not {w * n}x{h * n}")
+                continue
+            mean, far = reduced(hi, n, w, h)(lo)
+            check(mean <= SCALED_BUDGET[0] and far <= SCALED_BUDGET[1],
+                  f"scale {n}, vsync {f}: {W}x{H}, averaged back: mean |diff| {mean:.2f}, {100 * far:.2f} % of the "
+                  f"channels off by more than 32")
+
+
+def debug_channel(sdl, env, out):
+    print("render_gpu: the debug channel's screenshot, renderer gpu (a headless --renderer gpu --internal-scale 2)")
+    sys.path.insert(0, str(ROOT / "tools/mcp"))
+    from game import Game, GameError  # noqa: E402  (the MCP server's client of the channel)
+    old = dict(os.environ)
+    os.environ.update(env)
+    try:
+        g = Game.spawn([str(sdl), "--disc", str(DISC), "--cd-speed", "instant", "--renderer", "gpu",
+                        "--internal-scale", "2"], cwd=str(ROOT))
+    finally:
+        os.environ.clear()
+        os.environ.update(old)
+    try:
+        g.step(400)
+        sw = g.screenshot(str(out / "debug_sw.ppm"))
+        hw = g.screenshot(str(out / "debug_hw.ppm"), "gpu")
+        check((sw["w"], sw["h"]) == (320, 240) and (hw["w"], hw["h"]) == (640, 480) and
+              ppm(out / "debug_hw.ppm")[:2] == (640, 480), f"software {sw['w']}x{sw['h']}, gpu {hw['w']}x{hw['h']}")
+        try:
+            g.screenshot(str(out / "debug_bad.ppm"), "vulkan")
+            check(False, "renderer \"vulkan\": an error")
+        except GameError as e:
+            check("software or gpu" in str(e), f"renderer \"vulkan\": {e}")
+    finally:
+        g.quit()
+
+
 def sdl_renderer(sdl, env, out):
     print("render_gpu: SDL_Renderer's present (a 960x720 window, offscreen) against the same reference")
     for f in (FRAMES[0], FRAMES[-1]):
@@ -227,6 +312,8 @@ def main():
             window(sdl, env)
             screenshots(sdl, env, out)
             vram_checks(sdl, env)
+            scaled(sdl, env, out)
+            debug_channel(sdl, env, out)
         sdl_renderer(sdl, env, out)
     print(f"render_gpu test: {'FAIL (' + str(len(FAILURES)) + ')' if FAILURES else 'pass'}")
     return 1 if FAILURES else 0

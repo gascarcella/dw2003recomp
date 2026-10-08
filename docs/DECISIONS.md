@@ -373,6 +373,9 @@ Blending is done in the shader from a copy of the target, not by the fixed-funct
 blender gets the PS1's (B+F)/2 wrong for a quarter of the values, stacked halvings drift on every device, and the
 PS1's dither after the blend cannot be expressed at all.
 
+After the play-test (2026-10-08: internal scale 4 through the field and a battle, without a fault) the default stays
+`software` (`video.renderer`, internal scale 1): the GPU renderer is a choice in the launcher, not the default.
+
 ## The port is split into runtime and game adapter (phase 1 of psxstack)
 _Decided: 2026-10-08_
 
