@@ -162,7 +162,8 @@ cannot) the input self-test also runs with the window through SDL_GPU. **With th
 **The rasteriser, with a device and the disc:** `new_game` and `first_battle_save` with its whole VRAM target compared
 with the software VRAM every 10 vsyncs (`DW3_PORT_GPU_VRAM_CHECK=10`): no difference. At internal scales 2 and 4, field
 and battle frames of `first_battle_save` are the display's size times the scale and, averaged back over each block,
-within `SCALED_BUDGET` of the software image. The debug channel's screenshot with `"renderer": "gpu"` (a headless
+within `SCALED_BUDGET` of the software image, with the 3D at its sub-pixel positions (`video.subpixel`'s default: the
+run must log sub-pixel vertices). The debug channel's screenshot with `"renderer": "gpu"` (a headless
 `--renderer gpu --internal-scale 2`) is 640x480. `--lavapipe` uses Mesa's software Vulkan driver. ~70 s.
 **The Windows build:** `--exe build/port-win/dw2003.exe --wine` runs the device, the pictures, the VRAM checks and the
 internal scales with that binary under Wine (`scripts/build_windows.sh`; the prefix `build/wine-prefix` unless

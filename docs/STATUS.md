@@ -72,7 +72,8 @@ The plan's milestones (`docs/PORT.md`):
 - **Sub-pixel precision** ([#68](https://github.com/gascarcella/dw2003recomp/issues/68)): psxstack's GTE shadow keeps
   the fractions RTPS cuts from the screen coordinates and finds them again for 98 % of the first battle's drawn polygon
   vertices (`tests/port/subpixel_jitter.py`: at scale 4 the vertices' motion is off by a target pixel or more 2 % of
-  the time instead of 21 %); the frame hash is the same with it on.
+  the time instead of 21 %); the frame hash is the same with it on. Above internal scale 1 the hardware renderer draws
+  the 3D at those positions (`--subpixel on|off`, `video.subpixel`, default on; the launcher's "3D vertices" choice).
 - **Present filters** ([#69](https://github.com/gascarcella/dw2003recomp/issues/69), the plan and the owner's
   decisions there): `--filter`, `video.filter`, `video.crt`, the launcher's Filter combo and sliders (GPU renderer
   only). Done: `none` (the default, the picture unchanged), `sharp` (sharp bilinear), `scanlines` and `crt` (beams,
