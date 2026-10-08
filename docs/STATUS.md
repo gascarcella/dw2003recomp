@@ -64,7 +64,11 @@ The plan's milestones (`docs/PORT.md`):
   internal scale of 1 it equals the software VRAM (all 715 gpu golden lists, every 10th vsync of both replays; NVIDIA
   and lavapipe); `--internal-scale 2..8` (the launcher's Resolution slider) draws at N times the resolution. Without a
   usable device it falls back to the software path. The software GPU stays the default (DECISIONS); the follow-ups
-  (texture replacement, widescreen, post-processing, sub-pixel precision, D3D12) are on the board.
+  (texture replacement, widescreen, post-processing, sub-pixel precision) are on the board. On Windows it runs on
+  Direct3D 12 first ([#67](https://github.com/gascarcella/dw2003recomp/issues/67): the shaders also as signed DXIL,
+  SDL's backend order, `SDL_GPU_DRIVER=vulkan` switches): under Wine (its vkd3d and vkd3d-proton) the pictures are the
+  Vulkan build's byte for byte, scale 1 the software image (`tests/port/render_gpu.py --exe build/port-win/dw2003.exe
+  --wine`); not yet seen on real Windows.
 - **The port stack (psxstack):** the runtime, the Psy-Q shim, the build (`psxstack_add_game()`), the launcher and the
   debug tools live in the `psxstack` repository (gascarcella/psxstack; its `docs/PORT.md`, `docs/RUNTIME.md`,
   `docs/LAUNCHER.md`), consumed as the `psxstack` submodule pinned at its tag `v0.1.0` (`scripts/worktree_init.sh`

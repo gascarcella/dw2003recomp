@@ -149,7 +149,11 @@ cannot) the input self-test also runs with the window through SDL_GPU. **With th
 with the software VRAM every 10 vsyncs (`DW3_PORT_GPU_VRAM_CHECK=10`): no difference. At internal scales 2 and 4, field
 and battle frames of `first_battle_save` are the display's size times the scale and, averaged back over each block,
 within `SCALED_BUDGET` of the software image. The debug channel's screenshot with `"renderer": "gpu"` (a headless
-`--renderer gpu --internal-scale 2`) is 640x480. `--lavapipe` uses Mesa's software Vulkan driver. ~70 s. In `scripts/test.sh --layer port`, followed by `tests/host/gpu_hw_replay.py` (the gpu golden
+`--renderer gpu --internal-scale 2`) is 640x480. `--lavapipe` uses Mesa's software Vulkan driver. ~70 s.
+**The Windows build:** `--exe build/port-win/dw2003.exe --wine` runs the device, the pictures, the VRAM checks and the
+internal scales with that binary under Wine (`scripts/build_windows.sh`; the prefix `build/wine-prefix` unless
+`WINEPREFIX` names one): SDL_GPU on Direct3D 12 there (Wine's vkd3d, or vkd3d-proton in a prefix that has it), on
+Vulkan with `SDL_GPU_DRIVER=vulkan`; ~3 min. Skipped without a device (CI's Wine 9.0 has none: issue #67). In `scripts/test.sh --layer port`, followed by `tests/host/gpu_hw_replay.py` (the gpu golden
 family's 715 lists through the rasteriser, the whole target after each; `tests/README.md`).
 
 ## The crash report (`crash.py`; docs/PORT.md "Crash report")
