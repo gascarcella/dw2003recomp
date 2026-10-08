@@ -4,6 +4,7 @@ at internal scale 1. CI only compiles the renderer and runs the fallback part; t
 locally.
 
 Usage: tests/port/render_gpu.py [--out DIR] [-j N] [--lavapipe]
+       tests/port/render_gpu.py --exe build/port-win/dw2003.exe --wine [--lavapipe]   # the Windows build, under Wine
 
 Builds build/port-sdl if needed (-DPSXSTACK_SDL=ON: tools/sdl3 and tools/dxc), then:
   - the fallback (no device, no disc needed): `--window --renderer gpu --input-test` with a Vulkan loader that finds
@@ -26,6 +27,12 @@ Builds build/port-sdl if needed (-DPSXSTACK_SDL=ON: tools/sdl3 and tools/dxc), t
 The reference is video.c's placement (video_dest: 4:3, as tall as an integer multiple of the image's lines allows,
 centred) with target pixel p reading image pixel floor((p - x0 + 0.5) * w / dw) (render_gpu.c's present shader).
 --lavapipe runs on Mesa's software Vulkan driver (VK_DRIVER_FILES) instead of the default device.
+--exe BINARY tests that binary instead of building build/port-sdl: the device, the pictures, the VRAM checks and the
+internal scales (the fallback, the window, the debug channel and SDL_Renderer's present are the Linux build's parts).
+--wine runs it through `wine` (a Windows build: scripts/build_windows.sh), headless: SDL_GPU on Direct3D 12 there
+(Wine's vkd3d, or vkd3d-proton in a prefix that has it), Vulkan with SDL_GPU_DRIVER=vulkan. The prefix is
+build/wine-prefix unless WINEPREFIX names one; VKD3D_SHADER_CACHE_PATH=0 keeps vkd3d-proton from writing its cache
+into the working directory. Without a device under Wine (CI's Wine 9.0 has none: issue #67) the pictures are skipped.
 Exit codes: 0 pass (parts may be skipped), 1 fail, 2 something missing for the build.
 """
 import argparse
@@ -96,8 +103,13 @@ def differing(a, b):
     return sum(1 for i in range(0, len(a), 3) if a[i:i + 3] != b[i:i + 3])
 
 
+RUNNER = []   # the command prefix of a run (--wine: ["wine"])
+SLOWER = 1    # the timeouts' factor (--wine: 3)
+
+
 def run(cmd, env, timeout=300):
-    proc = subprocess.run([str(c) for c in cmd], cwd=ROOT, env=env, capture_output=True, text=True, timeout=timeout)
+    proc = subprocess.run([*RUNNER, *[str(c) for c in cmd]], cwd=ROOT, env=env, capture_output=True, text=True,
+                          timeout=timeout * SLOWER)
     return proc.returncode, proc.stdout + proc.stderr
 
 
@@ -280,8 +292,12 @@ def main():
     ap.add_argument("-j", "--jobs", type=int, default=0, help="build jobs (default: ninja's)")
     ap.add_argument("--lavapipe", action="store_true",
                     help="Mesa's software Vulkan driver instead of the default device")
+    ap.add_argument("--exe", help="test this binary instead of building build/port-sdl (its GPU parts only)")
+    ap.add_argument("--wine", action="store_true", help="run --exe through wine (a Windows build), headless")
     args = ap.parse_args()
     out = Path(args.out)
+    if args.exe:
+        return main_exe(args, out)
     try:
         env = tool_env()
         for tool in ("sdl3", "dxc"):
@@ -315,6 +331,46 @@ def main():
             scaled(sdl, env, out)
             debug_channel(sdl, env, out)
         sdl_renderer(sdl, env, out)
+    print(f"render_gpu test: {'FAIL (' + str(len(FAILURES)) + ')' if FAILURES else 'pass'}")
+    return 1 if FAILURES else 0
+
+
+def main_exe(args, out):
+    """--exe [--wine]: the device, the pictures, the VRAM checks and the internal scales of a given binary."""
+    exe = Path(args.exe).resolve()
+    if not exe.is_file():
+        print(f"render_gpu: no binary at {args.exe}")
+        return 2
+    env = dict(os.environ, SDL_VIDEO_DRIVER="offscreen", SDL_AUDIO_DRIVER="dummy")
+    if args.wine:
+        global SLOWER
+        if shutil.which("wine") is None:
+            print("render_gpu: --wine: no wine on PATH")
+            return 2
+        prefix = Path(os.environ.get("WINEPREFIX", ROOT / "build/wine-prefix"))
+        prefix.mkdir(parents=True, exist_ok=True)
+        RUNNER[:] = ["wine"]
+        SLOWER = 3
+        env.update(WINEPREFIX=str(prefix), WINEDEBUG="-all", SDL_VIDEO_DRIVER="dummy", VKD3D_SHADER_CACHE_PATH="0")
+    if args.lavapipe:
+        if not LAVAPIPE.exists():
+            print(f"render_gpu: --lavapipe: no {LAVAPIPE}")
+            return 2
+        env["VK_DRIVER_FILES"] = str(LAVAPIPE)
+    if out.exists():
+        shutil.rmtree(out)
+    out.mkdir(parents=True)
+    print(f"render_gpu: {exe}{' under wine (' + str(env['WINEPREFIX']) + ')' if args.wine else ''}")
+    if not DISC.exists():
+        print("render_gpu: no disc (iso/dw2003.cue): skipped")
+        return 0
+    why = device(exe, env, out)
+    if why is not None:
+        print(f"render_gpu: no GPU device ({why}): the hardware renderer's pictures are skipped")
+    else:
+        screenshots(exe, env, out)
+        vram_checks(exe, env)
+        scaled(exe, env, out)
     print(f"render_gpu test: {'FAIL (' + str(len(FAILURES)) + ')' if FAILURES else 'pass'}")
     return 1 if FAILURES else 0
 
