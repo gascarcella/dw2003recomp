@@ -1,4 +1,4 @@
-// The rasteriser's pixel shader (port/src/render_gpu.c; issue #31): one pixel of a unit of gpu.c's command stream into
+// The rasteriser's pixel shader (port/runtime/render_gpu.c; issue #31): one pixel of a unit of gpu.c's command stream into
 // the VRAM target, computed as port/psyq/gpu.c's gpu_pixel computes it, in integers. The target is the VRAM at the
 // internal scale N (res.x): a VRAM pixel is N x N target pixels. Each channel is held in 8-bit units, the mask bit in
 // alpha: at scale 1 exactly gpu.c's 5-bit value << 3, so every write is exact; above it gpu.c's 8-bit pipeline without

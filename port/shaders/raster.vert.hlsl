@@ -1,4 +1,4 @@
-// The rasteriser's vertex shader (port/src/render_gpu.c): no vertex buffer, the corners come from the uniforms.
+// The rasteriser's vertex shader (port/runtime/render_gpu.c): no vertex buffer, the corners come from the uniforms.
 // mode.x 0: a triangle, three vertices (v01.xy, v01.zw, v2.xy) in VRAM pixels, scaled by the internal scale N and
 // shifted by half a target pixel: a target pixel's centre then samples the geometry at its top-left corner, as gpu.c
 // samples a pixel at x (its span rule is the top-left rule), so at scale 1 the coverage is gpu.c's and above it an

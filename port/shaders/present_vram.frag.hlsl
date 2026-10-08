@@ -1,4 +1,4 @@
-// The present of a 15-bit display from the rasteriser's VRAM target (port/src/render_gpu.c): the display area (disp.xy
+// The present of a 15-bit display from the rasteriser's VRAM target (port/runtime/render_gpu.c): the display area (disp.xy
 // in VRAM pixels, wrapping at the VRAM's edges) at the internal scale N (disp.z; the target is 1024 N x 512 N, src.zw
 // its size) into the rectangle dst. The target holds each channel in 8-bit units (raster.frag.hlsl: at
 // scale 1 a 5-bit value << 3), shown as v + (v >> 5), which is video.c's (c << 3) | (c >> 2) for v = c << 3: at scale
