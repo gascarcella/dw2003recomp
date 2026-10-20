@@ -312,6 +312,28 @@ Not replayed by a golden (no case reaches these creators); found by the M0 agent
 - **For the port:** nothing to change while the layout after `name` stays as it is; a port that reorders the struct must
   keep the PS1 behaviour (no trim, step 100).
 
+## 11. `fieldstg_icon_draw` reads through a NULL actor when a script closes an icon twice (issue #98; crashes on the host)
+
+- **Where:** `src/fieldstg/fieldstg_80087DB0.c` `fieldstg_icon_draw` reads `obj->actor->pixel_pos` and `height`. The
+  icon's `actor` is set by its init state (`fieldstg_icon_update`: the player, `heap_objects.find(5, -1, 0)`) or by the
+  script messages 0x325/0x327 (`fieldstg_icon_message`: `find(5, actor_id, -1)`); the close message 0x326 only sets the
+  state to DONE, and DONE draws. `fieldstg_event_send_message` (`fieldstg_event.c`) delivers a message to the live object
+  of that ID, or starts one (`fieldstg_icon_start`, zero-allocated) and delivers it at once. The Main Lobby's event 30
+  (`src/wstag/wstag210.c` `D_WSTAG210_800A7924`: map-event tile 7, the exit towards the lab, before progress 3) sends
+  0x326 to icon 0x323, walks the player back (`FIELDSTG_EVENT_WALK`), then sends 0x326 again. The first close ends the
+  icon (8 ticks to `frame_end`, then END and destroyed), so the second one starts a fresh icon and sets it to DONE: its
+  init never ran, `actor` is NULL. The only script that does this: every other 0x326 in `src/wstag/*.c` follows a
+  0x325/0x327 to the same object.
+- **Original:** the read goes to the kernel's low RAM (`0x58`, `0x5C`, `0x64`): no trap, the sprite is drawn once
+  wherever those bytes point, and the icon ends on the same frame (`frame_end` is 0 too). Not seen: nothing reaches it
+  on the emulator's route.
+- **Host:** a NULL dereference, SIGSEGV on Linux and `EXCEPTION_ACCESS_VIOLATION` at fault address 0x88 (the host
+  offset of `pixel_pos`) on Windows: issue #98's two reports (0.4.0, map 515, `fieldstg_icon_draw` from
+  `fieldstg_icon_update`), reproduced on the Linux build by `tests/port/field.py lobby_lab_exit`.
+- **Port: done.** Under `PC_PORT`, `fieldstg_icon_draw` returns when `actor` is NULL (one sprite less, drawn nowhere
+  meaningful on the PS1); the state machine is unchanged, so the icon still ends on that frame. `tests/port/field.py`
+  walks the route and requires the event to end with no crash.
+
 ## What the host does not replay (by design, not findings)
 
 - Stack leftovers: `replay.c` zeroes 64 KB of stack before every call, so a local the C reads uninitialised is 0 on the

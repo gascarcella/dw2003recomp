@@ -390,6 +390,15 @@ void fieldstg_icon_draw(FieldstgIcon *obj) {
     FieldstgPos pos;
     s32 frame;
 
+#ifdef PC_PORT
+    /* PC_PORT: an icon without an actor (tests/host/FINDINGS.md 11): a script that sends the close message 0x326 to
+     * an icon object that has already ended (the Main Lobby's event 30, WSTAG210, closes its icon twice) starts a new
+     * one and closes it before its init found the player, so actor is NULL here. The PS1 reads the position from the
+     * kernel's low RAM (0x58, 0x5C, 0x64) and draws the sprite once wherever that points; the port draws nothing. */
+    if (obj->actor == NULL) {
+        return;
+    }
+#endif
     pos.x = obj->actor->pixel_pos.x;
     pos.y = obj->actor->pixel_pos.y - (obj->actor->height >> 8);
     sprite_init(&sprite);

@@ -211,6 +211,16 @@ llvm-symbolizer and the PDB beside the exe, and the minidump beside it is read b
 exception record (code 0xC0000005, a write at 0, the address equal to the report's pc inside `dw2003.exe`), the module
 list and the crashing thread's context. Needs `wine` and `tools/llvm-mingw` (~15 s).
 
+## Field events the replays do not reach (`field.py`; issue #98)
+`tests/port/field.py` runs field event scripts on the port alone (no emulator expectation: the port must reach the
+case's last checkpoint with exit 0 and write no crash report). A case is `first_battle_save`'s steps up to one of its
+checkpoints, derived at run time so the route stays the emulator's, then its own steps. `lobby_lab_exit` (~5 s): from
+`asuka_lobby`, the walk to the Main Lobby's exit towards the lab (WSTAG210's map-event tile 7) before progress 3 runs
+event 30, which turns the player back with a prompt icon it closes twice; the second close starts a new icon and closes
+it before its init found the player, and `fieldstg_icon_draw` crashed on the NULL actor (`tests/host/FINDINGS.md` 11).
+The script holds the direction until `fieldstg_stage.event_running` (`wait_mem` 0x80099DD8) and taps CROSS through the
+event until it ends. In `scripts/test.sh --layer port`.
+
 ## What it found (session 16)
 - **The overlay copy takes CPU time on the PS1.** The game copies FIELDSTG (0x19000 bytes) into its slot with LIBC2's
   byte-loop `memcpy`, about 1.8 frames, so the emulator samples FIELDSTG's stage with no stage file yet (`(2, -1)` in the
