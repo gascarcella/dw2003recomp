@@ -169,7 +169,10 @@ build/port/dw2003 --disc iso/dw2003.cue --script tests/replay/scripts/first_batt
 ```
 The adapter's part is `game_savestate` (`port/game/game_mods.c`): what the mods carry between vsyncs (save-anywhere's
 map, party experience's knocked-out slots, XP boost's tenths). The debug channel's `save_state`/`load_state` (MCP:
-`state_save`, `state_load`) use the same files.
+`state_save`, `state_load`) use the same files, and so do the player's hotkeys (psxstack v0.3.7): `save_state` (F5)
+writes the quick slot at the vsync's end, `load_state` (F9) resumes it, a paused game pausing again there; the slot is
+`quick.state` beside the settings file (`--quick-state FILE` elsewhere), one file per build. `--input-test` ends with
+the slot's round trips, running and paused.
 
 ## Known limitations
 - **Coverage of the game:** the replays reach 14 of 19 tier-1 overlays and a small share of the WSTAG files; the

@@ -95,7 +95,7 @@ The plan's milestones (`docs/PORT.md`):
   mods"). The `any`-CLUT replacement is [#77](https://github.com/gascarcella/dw2003recomp/issues/77).
 - **The port stack (psxstack):** the runtime, the Psy-Q shim, the build (`psxstack_add_game()`), the launcher and the
   debug tools live in the `psxstack` repository (gascarcella/psxstack; its `docs/PORT.md`, `docs/RUNTIME.md`,
-  `docs/LAUNCHER.md`), consumed as the `psxstack` submodule pinned at its tag `v0.3.0` (the replay runners `tools/replay/`, which
+  `docs/LAUNCHER.md`), consumed as the `psxstack` submodule pinned at its tag `v0.3.7` (v0.3.7: the quick save and load hotkeys; v0.3.0: the replay runners `tools/replay/`, which
   `tests/replay/replay.py`, `tests/replay/probes.lua` and `tests/port/run.py` configure; `memory.heap` optional; the
   stack's own Psy-Q declarations; fibers; `scripts/worktree_init.sh`
   checks it out; CI and release.yml fetch it with a plain `git submodule update --init`: psxstack is public). This
@@ -113,7 +113,8 @@ The plan's milestones (`docs/PORT.md`):
   `--load-state FILE` (and the debug channel's and MCP's save and load) put the whole machine, the game's native stack
   included, in a file of about 8 MB that the same binary resumes from; a run resumed at the first battle ends exactly as
   the straight replay (`-m64`, `-m32`, sanitizer, Windows under Wine; `tests/port/savestate.py`). The battle fixture:
-  `tests/port/savestate.py path` (`docs/PORT.md` "Save states").
+  `tests/port/savestate.py path` (`docs/PORT.md` "Save states"). For the player: the `save_state` (F5) and
+  `load_state` (F9) hotkeys and their quick slot beside the settings file (psxstack v0.3.7).
 - **Platforms:** Linux x86_64 and Windows x86_64 (cross-built from Linux; the board's Windows track,
   [#37](https://github.com/gascarcella/dw2003recomp/issues/37)):
   the cross toolchain (llvm-mingw, SDL3 for Windows, `scripts/build_windows.sh`) builds `dw2003.exe` and the
