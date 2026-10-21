@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "id": "level_up_recover",
+  "name": "Recover on level up",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "A Digimon that levels up after a won battle gets its HP and MP back in full, at the new maximums. In the game a level up only raises the maximums. Works with Party experience: a member that did not fight and levels up recovers too.",
+  "options": []
+}

@@ -181,6 +181,11 @@ s32 port_xp_boost(s32 kind, s32 amount);
  * records_state.encounters off. The battles events start (fieldstg_start_battle's other callers) are untouched. */
 extern int port_mod_random_encounters;
 void port_random_encounter_skipped(s32 map, s32 area);
+/* port_mod_level_up_recover: level_up_recover is on ("Recover on level up"): STFGTREP's report, when stfgtrep_add_exp
+ * says a party member went up (one level or more), calls port_level_up_recover(digimon), which sets the record's HP
+ * and MP (stats.values[2], [4]) to the new maximums ([3], [5]); the game itself only raises the maximums. */
+extern int port_mod_level_up_recover;
+void port_level_up_recover(s32 digimon);
 
 #endif /* PC_PORT */
 
