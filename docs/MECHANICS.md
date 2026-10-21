@@ -794,3 +794,61 @@ URLs to fetch from an unblocked machine, in priority order:
 6. https://www.neoseeker.com/digimon-world-3/ (FAQs tab) and an IGN "Digimon World 3" guide
 What to extract: the damage formula and the order of modifiers (compare with section 2), critical and hit chances (section 3), level-up/EXP table (section 6, the formula
 `(lv^3 + 5lv - 6) * curve / 10 + bonus`), element wheel (section 4), digivolution conditions (section 7), card game rules (section 10), item effect values (section 9).
+
+## 15. Transitions and the save screen's timing
+
+What decides how long the screen transitions and the save screen's animations take, and which of them wait on
+something other than frames. Everything here is [C] unless marked; the port's `fast_transitions` mod
+(`docs/LAUNCHER.md` "Faster transitions") shortens the frame-paced ones and nothing else.
+
+Units [C]: most animations advance once per update, i.e. once per game frame. A few holds count ticks:
+`gfx_module.funcs.get_time()` and `get_frame_ticks()` (`src/main/gfx.c`, `gfx_vsync_callback`) advance 1 per vsync at
+60 Hz and 1.2 (0x133 / 0x100) at 50 Hz, so a hold of N ticks is N frames at 60 Hz and about N / 1.2 at 50 Hz. None of the
+code below reads `records_60hz` itself, and none of it calls the RNG; but `pad_random` steps once a frame, so a
+transition that takes fewer frames moves every later roll (section 1).
+
+- **Full-screen fade** (`Fade`, `include/overlay_common.h`; one byte-identical copy per overlay: `inn_fade_start`
+  (EXE, `src/main/inn.c`; also FIELDSTG's warp), `fightstg_fade_start` (used by WFIGHTMN), and the `*_fade_start` /
+  `*_start_fade` of STGMCARD, STSTATUS, STCRDDEK, STCRDSHP, STCRDABM, STDGNAME, STGDGLAB, STFGTREP, STGTRAIN, STITSHOP)
+  [C]: `start(obj, dir, frames)` sets `step = 0xFF00 / frames`; each update adds it and sets the state to
+  `OBJECT_STATE_DONE` once the level passes the end (frames + 1 updates; 2 for `frames` 1). Callers wait for DONE.
+  Lengths: the inn 20 out and 20 in (with a 240-tick hold between them while the inn's jingle plays), FIELDSTG's warp
+  20 and 20 (after a 60-tick hold), WFIGHTMN's battle exit 10, the menus' exits 10 (STSTATUS, STCRDABM, STCRDDEK,
+  STCRDSHP's Back) or 30 (STGMCARD, STDGNAME, STGDGLAB, STITSHOP, STFGTREP, STGTRAIN, STCRDSHP's purchase).
+- **FIELDSTG's map change** (`fieldstg_manager_leave_map`, `src/fieldstg/fieldstg_80087DB0.c`) [C]: steps 0-1 shrink
+  layer 0x1002's clip window by 10 x 7 pixels a frame from 320 x 240 while `fade` grows by 0x400 up to 0x8000 (32
+  frames, both land together; `fade != 0x8000` is an equality test); step 2 closes layer 0x1001 with `window_w += 8`
+  until it passes 160 (21 frames, last value 168), then calls `set_next_map`. About 53 frames. [T] by
+  `tests/port/mods.py` (fast_transitions): a walk-driven map change on `global_save.json`'s route takes 26 frames fewer
+  at "fast" and 51 at "instant".
+- **The map's title** (`fieldstg_map_title_update`, `src/fieldstg/fieldstg_80085590.c`; created for every map by
+  `fieldstg_manager_start`, shown for the maps of `fieldstg_map_titles`) [C]: ten rectangles slide in at their
+  `speed` (`fieldstg_map_title_move_rect` stops each edge on its target), the two text windows type at `set_speed(5)`
+  (a character every 6 frames, `message_window_update`), then, once the manager calls `set_step(1)`, a 60-tick hold
+  and layer 0x1003's clip closing 8 pixels from each side a frame (`clip.h == 0` ends it: 15 frames). While it shows,
+  `fieldstg_stage.title_shown` keeps the player and the map's events still. [T] by `tests/port/mods.py`: map 0x203 to
+  0x204 (a title map) takes 754 frames off, 696 at "fast", 640 at "instant".
+- **FIELDSTG's warp** (`fieldstg_manager_warp`) [C]: a 60-tick hold (the warp effect and its sound), the fade out 20,
+  the warp picture (`fieldstg_warp_picture_anim`, about 160 frames) with the fade in 20, then the new map. **The battle
+  transition** (`fieldstg_manager_shatter`): tiles moved by `get_frame_ticks() * 40` on buffer-0 frames, 43 moves and
+  a 16-count.
+- **The field menu** (`fieldmenu_update`, `src/main/fieldmenu.c`) [C]: three `WindowAnim` panels (`include/window_anim.h`:
+  open `0x1000 / duration` a frame, close twice as fast; duration 10) opened one after another (3 x 11 frames) and
+  closed (3 x 6); choosing an entry that leaves the field (STSTATUS's map 0x1000, or the port's SAVE) plays a picture in
+  state DONE: 6 pictures x 8 palette steps, each when `get_time() - anim_time >= 2` (about 80 frames at 50 Hz), then
+  `set_next_map`. The inn's windows use the same `WindowAnim`. The other overlays' windows (STSTATUS, the shops, the
+  card menus, FIELDSTG's and the WSTAG event windows) have their own copies.
+- **STGMCARD, the save and load screen** (`src/stgmcard/stgmcard_80082CD0.c`, helpers in `stgmcard_80087C18.c`) [C]:
+  `stgmcard_start_value`/`stgmcard_step_value` move a value over N frames (step `((to - from) << 8) / N`, about N + 1
+  updates): the title's slide 10 (`title_y`), the slots bar in 10 and out 5, the icons in 10 and out 5, the cursor's drop
+  8 and its move between slots 5 (input waits for it). The contents panel is a `WindowAnim` of 8
+  (`stgmcard_start_fade`). The exit fades 30. The bar (`StgmcardFrame`, `stgmcard_frame_open`/`_update`) has two
+  modes: 1 creeps at `0x1000 / frames` a frame and stops at 95% (0xF33), never finishing by itself, while the card works
+  (frames 0x4C for the check, 0x4F3 a save, 0x4D8 a load, 0x90 a format or a new file); 2 (`open(2, 0x14)`) runs it to
+  full in 20 frames and sets `is_open`, which the screen waits for before it goes on. The card's own waits
+  (`memcard.c`: `wait_exist`/`accept`, the 0x80-byte read and write commands) and every prompt's button wait are
+  separate from these. There is no fade in on entry and no fixed-time text hold. [T] by `tests/port/mods.py`: from the
+  field menu's opening to back on the field after a save, 795 frames off, 707 at "fast", 608 at "instant", the slot's
+  bytes unchanged.
+- Not covered here: the battles' own scenes (FIGHTSTG's intro camera, the stage's fade in), CARDGAME's `CardgameFade`,
+  the CD and overlay loads (paced by the drive model) and the movies.

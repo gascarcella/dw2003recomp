@@ -63,6 +63,16 @@ back and forth across its plaza until encounter_timer runs out, with the mod off
     encounter logged on map 0x21D, and the frame log equals the mod-off run's up to the first skip (the mod changes
     nothing before the roll). The toggle is a key, not reached
     by a script.
+fast_transitions (scripts/global_save.json): global_save's run with global_save alone (off) and with the mod at speed
+normal, fast and instant (memory card 1: the run saves and loads):
+  - fast and instant: the run completes with its checkpoints and the slot's bytes are the same from the menu to the
+    load (the save and the load are the game's own); the speed is logged;
+  - fewer frames from the field menu's opening to back on the field after the save (the menu's windows and picture,
+    STGMCARD's slides, bar and fade) and from map 0x203 to 0x204 (the map's title, the walk out, the closing window):
+    off > fast > instant;
+  - normal: the frame log and the record equal the mod-off run's (nothing changes);
+  - instant twice: the same frame log and record (a run with the mod is deterministic with itself; it differs from
+    the mod-off run's after the first transition, since the random generator steps once a frame).
 Exit codes: 0 pass, 1 fail, 2 something missing.
 """
 import argparse
@@ -347,6 +357,56 @@ def global_save(binary, out):
           f"with the mod off the menu has no SAVE: the press opens STATUS (map 0x1000) and the wait for STGMCARD times out (exit {rc3})")
 
 
+FT_SPEEDS = ("normal", "fast", "instant")
+
+
+def fast_transitions(binary, out):
+    """fast_transitions: global_save's script with global_save alone and with the mod at each speed (the docstring)."""
+    print("mods: fast_transitions (tests/port/mods/scripts/global_save.json with global_save, the mod off and at each speed)")
+    runs = {}
+    for label, speed in (("ft_off", None), ("ft_normal", "normal"), ("ft_fast", "fast"), ("ft_instant", "instant"),
+                         ("ft_instant2", "instant")):
+        mods = {"global_save": {"enabled": True}}
+        if speed:
+            mods["fast_transitions"] = {"enabled": True, "speed": speed}
+        cfg = out / f"{label}.settings.json"
+        cfg.write_text(json.dumps({"schema": 1, "disc": {"path": str(DISC)}, "video": {"window": False},
+                                   "memcard1": f"{label}_1.mcd", "memcard2": None, "mods": mods}))
+        (out / f"{label}_1.mcd").unlink(missing_ok=True)
+        dumps = out / f"{label}_dumps"
+        dumps.mkdir()
+        rc, log, rec, err = run_port(binary, out, label, GS_SCRIPT, cfg, True, {"DW3_PORT_CHECKPOINT_DIR": str(dumps)})
+        if rc != 0 or rec is None:
+            print("    " + "\n    ".join(err.splitlines()[-5:]))
+        d = {f.name.split("_", 1)[1][:-4]: f.read_bytes() for f in dumps.glob("cp*.bin")}
+        runs[label] = (rc, log, rec, d, err)
+    names = ("menu_open", "saved_anywhere", "back_after_save", "loaded_anywhere", "loaded_settled")
+    span = {}  # label -> (frames from menu_open to back_after_save, frames from map 0x203 to 0x204)
+    for label in ("ft_off", "ft_fast", "ft_instant"):
+        rc, log, rec, d, err = runs[label]
+        ok = rc == 0 and rec is not None and all(n in d for n in names)
+        check(ok and gs_stable_slot(d["saved_anywhere"]) == gs_stable_slot(d["loaded_anywhere"]) ==
+              gs_stable_slot(d["back_after_save"]) == gs_stable_slot(d["menu_open"]),
+              f"{label}: the save and its load complete (exit {rc}) with the same slot bytes from the menu to the load")
+        if not ok:
+            return
+        cps = {c["name"]: c["frame"] for c in rec["checkpoints"]}
+        maps = [(m["map"], m["frame"]) for m in rec["map_sequence"]]
+        walk = next(b[1] - a[1] for a, b in zip(maps, maps[1:]) if (a[0], b[0]) == (0x203, 0x204))
+        span[label] = (cps["back_after_save"] - cps["menu_open"], walk)
+    for label, speed in (("ft_fast", "fast"), ("ft_instant", "instant")):
+        check(f"fast transitions: {speed}" in runs[label][4], f"{label}: the speed logged")
+    (off_save, off_map), (fast_save, fast_map), (inst_save, inst_map) = span["ft_off"], span["ft_fast"], span["ft_instant"]
+    check(off_save > fast_save > inst_save, f"the field menu, the save screen and back: {off_save} frames off, "
+          f"{fast_save} fast, {inst_save} instant")
+    check(off_map > fast_map > inst_map, f"map 0x203 to 0x204 (a walk out, the map's change and title): {off_map} "
+          f"frames off, {fast_map} fast, {inst_map} instant")
+    check(runs["ft_normal"][1] == runs["ft_off"][1] and runs["ft_normal"][2] == runs["ft_off"][2],
+          "speed normal: the frame log and the record equal the mod-off run's")
+    check(runs["ft_instant2"][1] == runs["ft_instant"][1] and runs["ft_instant2"][2] == runs["ft_instant"][2],
+          "instant twice: the same frame log and record (deterministic)")
+
+
 PL_CODES = {"english": 2, "french": 3, "german": 5, "italian": 4, "spanish": 6, "usa": 1, "japanese": 0}
 PL_DECKS = 0x628  # gamestate_data.decks[3]: GamestateDeck (0x66 bytes), its name first
 NEW_GAME = SCRIPTS / "new_game.json"
@@ -521,6 +581,7 @@ def level_up_recover(binary, out):
 MODS_TESTS = {
     "preset_language": lambda binary, out, record: preset_language(binary, out),
     "skip_dialogues": skip_dialogues,
+    "fast_transitions": lambda binary, out, record: fast_transitions(binary, out),
     "random_encounters": lambda binary, out, record: random_encounters(binary, out),
     "party_xp": lambda binary, out, record: party_xp(binary, out),
     "xp_boost": lambda binary, out, record: xp_boost(binary, out),

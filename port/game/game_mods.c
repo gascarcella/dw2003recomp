@@ -1,6 +1,7 @@
 /* The game's built-in mods (docs/LAUNCHER.md "Built-in mods"; psxstack/game.h game_mods): skip_dialogues,
- * battle_animations, global_save, preset_language, party_xp, xp_boost, level_up_recover, widescreen and
- * random_encounters, as PortMod records the runtime's engine (port/runtime/mods.c) reads the settings of, gives hotkeys to and runs every vsync. Each reaches the game's C through
+ * battle_animations, global_save, preset_language, party_xp, xp_boost, level_up_recover, widescreen,
+ * random_encounters and fast_transitions, as PortMod records the runtime's engine (port/runtime/mods.c) reads the
+ * settings of, gives hotkeys to and runs every vsync. Each reaches the game's C through
  * the port_mod_* flags and functions of include/port.h, read inside `#ifdef PC_PORT` blocks. The runtime's own mod,
  * fast_forward, is the engine's; skip_dialogues asks for it with port_fast_forward_request. */
 #include <stddef.h>
@@ -434,6 +435,59 @@ void port_random_encounter_skipped(s32 map, s32 area) {
     port_log("random encounters: frame %ld: map 0x%X, area %d: the encounter skipped", port_frames, (int)map, (int)area);
 }
 
+/* ---- fast_transitions (docs/LAUNCHER.md "Faster transitions"; docs/MECHANICS.md section 15): with `speed` "fast" or
+ * "instant", port_mod_fast_transitions makes the game's own transition and save-screen animations take fewer frames:
+ * the full-screen fades' lengths, FIELDSTG's map change (the closing window, the map title's rectangles, text and hold,
+ * the warp's hold), the field menu's panels and picture, STGMCARD's slides, panel and finishing bar. Each still runs
+ * through its own update to the end state the code waits for; only its frame count or per-frame step changes. The music
+ * plays on untouched (no fast-forward). "normal" leaves everything as the game's. The speed is read every vsync. */
+static const char *const ft_speeds[] = { "normal", "fast", "instant", NULL };
+enum { FT_SPEED };
+static const PortModOption ft_options[] = {
+    { .id = "speed", .type = PORT_MOD_ENUM, .def = "\"normal\"", .values = ft_speeds, .applies = "live" },
+};
+int port_mod_fast_transitions;
+
+static void ft_frame(struct PortMod *mod) {
+    port_mod_fast_transitions = (int)mod->values[FT_SPEED].number;
+}
+
+static void ft_start(struct PortMod *mod) {
+    ft_frame(mod);
+    port_log("fast transitions: %s", ft_speeds[port_mod_fast_transitions]);
+}
+
+/* The window's title while it is on. */
+static const char *ft_status(struct PortMod *mod) {
+    (void)mod;
+    return port_mod_fast_transitions == 1 ? "fast transitions"
+           : port_mod_fast_transitions == 2 ? "instant transitions" : NULL;
+}
+
+s32 port_transition_frames(s32 frames) {
+    if (frames <= 1 || port_mod_fast_transitions == 0) {
+        return frames;
+    }
+    return port_mod_fast_transitions == 1 ? (frames + 1) / 2 : 1;
+}
+
+s32 port_transition_extra(s32 left, s32 step) {
+    s32 rest; /* the steps after this frame's that the original takes to cover `left` */
+    if (port_mod_fast_transitions == 0 || step <= 0 || left <= step) {
+        return 0;
+    }
+    rest = (left + step - 1) / step - 1;
+    return port_mod_fast_transitions == 1 ? (rest < 1 ? rest : 1) : rest;
+}
+
+s32 port_transition_ticks(s32 ticks) {
+    return port_mod_fast_transitions == 0 ? ticks : port_mod_fast_transitions == 1 ? ticks / 2 : 0;
+}
+
+s32 port_transition_speed(s32 speed) {
+    return port_mod_fast_transitions == 0 ? speed : port_mod_fast_transitions == 1 ? speed * 2 : 1024;
+}
+
 static PortMod game_mod_table[] = {
     { .id = "skip_dialogues", .version = "0.1", .options = sd_options,
       .option_count = (int)(sizeof(sd_options) / sizeof(sd_options[0])), .start = sd_start, .frame = sd_frame,
@@ -453,6 +507,9 @@ static PortMod game_mod_table[] = {
     { .id = "random_encounters", .version = "0.1", .options = re_options,
       .option_count = (int)(sizeof(re_options) / sizeof(re_options[0])), .start = re_start, .frame = re_frame,
       .status = re_status },
+    { .id = "fast_transitions", .version = "0.1", .options = ft_options,
+      .option_count = (int)(sizeof(ft_options) / sizeof(ft_options[0])), .start = ft_start, .frame = ft_frame,
+      .status = ft_status },
 };
 
 int game_mod_count(void) {

@@ -274,6 +274,9 @@ OBJECT_V0(Object *) stgmcard_create_root(void) {
 
 /* Starts the fade. */
 void stgmcard_fade_start(Fade *obj, s32 from_black, s32 frames) {
+#ifdef PC_PORT
+    frames = port_transition_frames(frames); /* fast_transitions (docs/LAUNCHER.md "Faster transitions") */
+#endif
     obj->base.set_state(obj, OBJECT_STATE_RUN);
     obj->base.step = 1;
     obj->from_black = from_black;
@@ -563,6 +566,13 @@ void stgmcard_frame_close(StgmcardFrame *obj) {
 
 /* Starts opening it (`mode`) over `frames` frames. */
 void stgmcard_frame_open(StgmcardFrame *obj, s32 mode, s32 frames) {
+#ifdef PC_PORT
+    if (mode == 2) {
+        /* fast_transitions (docs/LAUNCHER.md "Faster transitions"): the bar's finish, once the card is done, sooner;
+         * mode 1, which creeps while the card works, is left as it is */
+        frames = port_transition_frames(frames);
+    }
+#endif
     obj->base.step = mode;
     obj->frames = frames;
     obj->step = 0;

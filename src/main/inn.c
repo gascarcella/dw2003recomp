@@ -330,6 +330,9 @@ Inn *inn_create(s32 layer) {
 }
 
 void inn_fade_start(Fade *obj, s32 arg1, s32 arg2) {
+#ifdef PC_PORT
+    arg2 = port_transition_frames(arg2); /* fast_transitions (docs/LAUNCHER.md "Faster transitions") */
+#endif
     obj->base.set_state(obj, OBJECT_STATE_RUN);
     obj->base.step = 1;
     obj->from_black = arg1;

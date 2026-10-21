@@ -1380,6 +1380,9 @@ void fieldstg_manager_leave_map(FieldstgManager *obj, FieldstgManagerData *data)
     s32 pos[2];
     s32 w;
     s32 h;
+#ifdef PC_PORT
+    s32 extra;
+#endif
 
     switch (obj->base.step) {
     case 0:
@@ -1398,6 +1401,16 @@ void fieldstg_manager_leave_map(FieldstgManager *obj, FieldstgManagerData *data)
     case 1:
         layer = gfx_module.funcs.get_layer(0x1002);
         layer->set_bg_color(layer, 1, 1, 1);
+#ifdef PC_PORT
+        /* fast_transitions (docs/LAUNCHER.md "Faster transitions"): more of the closing window's steps this frame;
+         * the window and the fade below move together (32 steps each) */
+        extra = port_transition_extra(obj->window_w, 10);
+        obj->window_w -= 10 * extra;
+        obj->window_h -= 7 * extra;
+        if (obj->fade != 0x8000) {
+            obj->fade += 0x400 * extra;
+        }
+#endif
         obj->window_w -= 10;
         obj->window_h -= 7;
         if (obj->window_w <= 0) {
@@ -1451,6 +1464,10 @@ void fieldstg_manager_leave_map(FieldstgManager *obj, FieldstgManagerData *data)
         case 1:
             break;
         }
+#ifdef PC_PORT
+        /* fast_transitions: more of the black window's steps this frame, up to the original's last value (168) */
+        obj->window_w += 8 * port_transition_extra(161 - obj->window_w, 8);
+#endif
         obj->window_w += 8;
         layer->set_clip_pos(layer, obj->window_w, obj->window_h);
         layer->set_clip_size(layer, (160 - obj->window_w) * 2, (120 - obj->window_h) * 2);
@@ -1606,10 +1623,18 @@ static inline void fieldstg_manager_warp(FieldstgManager *obj, FieldstgManagerDa
         sound_module.play(0x40004);
         obj->base.next_substep(obj);
     case 1:
+#ifdef PC_PORT
+        /* fast_transitions (docs/LAUNCHER.md "Faster transitions"): the hold before the fade, shorter */
+        if (obj->base.timer < port_transition_ticks(60)) {
+            obj->base.timer += gfx_module.funcs.get_frame_ticks();
+            break;
+        }
+#else
         if (obj->base.timer < 60) {
             obj->base.timer += gfx_module.funcs.get_frame_ticks();
             break;
         }
+#endif
         data->fade = inn_fade_create(0x1002);
         data->fade->start(data->fade, 0, 20);
         obj->base.next_substep(obj);

@@ -159,6 +159,30 @@ s32 fieldmenu_get_map_region(void) {
     return x >= 0x270;
 }
 
+#ifdef PC_PORT
+/* fast_transitions "instant" (docs/LAUNCHER.md "Faster transitions"): the picture's remaining palette steps (state
+ * DONE's steps 0-5, each as its update takes it) in one frame, so step 6 changes the map at once. */
+static void fieldmenu_finish_picture(Fieldmenu *obj) {
+    while (obj->base.step >= 0 && obj->base.step < 6) {
+        if (obj->base.step < 3) {
+            if (++obj->anim_palette >= 8) {
+                if (++obj->base.step == 3) {
+                    obj->anim_palette = 8;
+                } else {
+                    obj->anim_palette = 0;
+                }
+            }
+        } else if (++obj->anim_palette >= 16) {
+            if (++obj->base.step == 6) {
+                obj->anim_palette = 15;
+            } else {
+                obj->anim_palette = 8;
+            }
+        }
+    }
+}
+#endif
+
 /* The object's function. State 0 sets up; state 1 runs the menu (obj->base.step: open the windows,
  * choose, close them) and draws its frames; state 2 plays the picture animation, then changes the map. */
 void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
@@ -377,6 +401,11 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
         }
         break;
     case OBJECT_STATE_DONE:
+#ifdef PC_PORT
+        if (port_mod_fast_transitions == 2) {
+            fieldmenu_finish_picture(obj);
+        }
+#endif
         switch (obj->base.step) {
         default:
             obj->base.set_state(obj, OBJECT_STATE_DONE);
@@ -384,7 +413,12 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
         case 0:
         case 1:
         case 2:
+#ifdef PC_PORT
+            /* fast_transitions "fast" (docs/LAUNCHER.md "Faster transitions"): a palette step every tick, not 2 */
+            if (gfx_module.funcs.get_time() - obj->anim_time >= port_transition_ticks(2)) {
+#else
             if (gfx_module.funcs.get_time() - obj->anim_time >= 2) {
+#endif
                 obj->anim_time = gfx_module.funcs.get_time();
                 if (++obj->anim_palette >= 8) {
                     if (++obj->base.step == 3) {
@@ -398,7 +432,11 @@ void fieldmenu_update(Fieldmenu *obj, FieldmenuWindows *data) {
         case 3:
         case 4:
         case 5:
+#ifdef PC_PORT
+            if (gfx_module.funcs.get_time() - obj->anim_time >= port_transition_ticks(2)) {
+#else
             if (gfx_module.funcs.get_time() - obj->anim_time >= 2) {
+#endif
                 obj->anim_time = gfx_module.funcs.get_time();
                 if (++obj->anim_palette >= 16) {
                     if (++obj->base.step == 6) {

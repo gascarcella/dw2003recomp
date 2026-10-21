@@ -232,6 +232,44 @@ timer runs out: without the mod a random battle starts; with it the walk complet
 and the frame log equals the mod-off run's up to the first skip; the route's first story battle (an event's) still
 starts with the mod on. The toggle is a key and not reached by a script.
 
+### Faster transitions
+
+`fast_transitions`. Option: `speed` (enum `normal fast instant`, default `normal`). No hotkey; the speed is read every
+vsync (`port_mod_fast_transitions`; the window's title says "fast transitions" or "instant transitions").
+
+The game's own transition and save-screen animations take fewer frames: "fast" about half, "instant" about one frame
+each, "normal" the game's own (nothing changes: the frame log and the record are the mod-off run's). It is not
+fast-forward: the game runs at its normal pace and the music plays on untouched; only the animations' frame counts or
+per-frame steps change, and each still reaches its end state through its own update and reports done the way the code
+waits for. What it covers (`docs/MECHANICS.md` section 15 has the timings and the functions):
+
+- every full-screen `Fade` (the copy in each overlay's `*_fade_start`, and the EXE's `inn_fade_start`): its `frames`
+  through `port_transition_frames` (half rounded up, or 1). This is the fade out of the menus (status, shops, card
+  menus, the Digimon lab, naming, training, the battle report, the save screen), the battle's exit (WFIGHTMN) and the
+  inn's and the warp's fades;
+- FIELDSTG's map change (`fieldstg_manager_leave_map`): more of the closing window's 10 x 7-pixel steps and the black
+  window's 8-pixel steps a frame (`port_transition_extra`), landing on the same last values (window 0, fade 0x8000, 168);
+- the map's title (`fieldstg_map_title_update`): the rectangles' speed doubled (or the whole screen), the texts typed
+  every 3 frames ("instant": the page at once, as skip_dialogues shows it), the 60-tick hold halved (or none), the
+  closing clip's steps as the map change's; the warp's 60-tick hold the same;
+- the field menu's and the inn's windows (`include/window_anim.h`) and the field menu's picture before STATUS or SAVE
+  (a palette step every tick instead of every 2; "instant": all of them in one frame);
+- STGMCARD: its tweens (`stgmcard_start_value`: the title, the slots bar, the icons, the cursor), the contents panel
+  (`stgmcard_start_fade`) and the bar's finish (`stgmcard_frame_open` mode 2). The bar's mode 1, which creeps while the
+  card works, is left alone.
+
+Never shortened: anything that waits on the memory card, the CD or a button (the card's commands, the loads, the
+prompts), the inn's 240-tick hold (the inn's jingle plays through it), the warp's picture, the battle's shatter
+transition and the battles' own scenes, CARDGAME, the movies, and the other overlays' and the event scripts' windows.
+Saves are the game's own saves. As with skip_dialogues and battle_animations, the random generator steps once a frame,
+so fewer frames move the later rolls (a battle can go differently); a run with the mod is deterministic with itself.
+
+`tests/port/mods.py` runs `global_save.json` (a field-menu SAVE, STGMCARD's save, Back, a reset and Continue's load)
+with global_save alone and with the mod at each speed: fast and instant complete with the slot's bytes unchanged from
+the menu to the load; from the menu's opening to back on the field takes 795 frames off, 707 fast, 608 instant, and
+map 0x203 to 0x204 754, 696, 640; normal's frame log and record equal the mod-off run's; instant twice gives the same
+log and record.
+
 ## 50/60 Hz
 
 A setting, not a mod: `video.refresh: 60` or `--refresh 60` (default 50, PAL). It sets, before `port_overlay_init()`
