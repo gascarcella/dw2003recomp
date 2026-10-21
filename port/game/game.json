@@ -30,6 +30,7 @@
   "launcher": {
     "about": "Digimon World 2003 (Europe, SLES-03936) on the PC port.",
     "disc_hint": "Your own dump of the unpatched European disc: a .cue whose first FILE line names the .bin, or the .bin itself.",
-    "website": "https://github.com/gascarcella/dw2003recomp"
+    "website": "https://github.com/gascarcella/dw2003recomp",
+    "updates": { "github": "gascarcella/dw2003recomp" }
   }
 }
