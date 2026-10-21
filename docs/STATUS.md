@@ -95,7 +95,7 @@ The plan's milestones (`docs/PORT.md`):
   mods"). The `any`-CLUT replacement is [#77](https://github.com/gascarcella/dw2003recomp/issues/77).
 - **The port stack (psxstack):** the runtime, the Psy-Q shim, the build (`psxstack_add_game()`), the launcher and the
   debug tools live in the `psxstack` repository (gascarcella/psxstack; its `docs/PORT.md`, `docs/RUNTIME.md`,
-  `docs/LAUNCHER.md`), consumed as the `psxstack` submodule pinned at its tag `v0.3.8` (v0.3.8: the faster loading mod; v0.3.7: the quick save and load hotkeys; v0.3.0: the replay runners `tools/replay/`, which
+  `docs/LAUNCHER.md`), consumed as the `psxstack` submodule pinned at its tag `v0.3.10` (v0.3.9 and v0.3.10: the in-game menu, the launcher's screens inside the game's window on Escape or Back+Start, applied live, and the mods' `stop`; v0.3.8: the faster loading mod; v0.3.7: the quick save and load hotkeys; v0.3.0: the replay runners `tools/replay/`, which
   `tests/replay/replay.py`, `tests/replay/probes.lua` and `tests/port/run.py` configure; `memory.heap` optional; the
   stack's own Psy-Q declarations; fibers; `scripts/worktree_init.sh`
   checks it out; CI and release.yml fetch it with a plain `git submodule update --init`: psxstack is public). This

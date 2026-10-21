@@ -25,6 +25,15 @@ Code cites this file as `docs/LAUNCHER.md "<heading>"`; keep the headings stable
 - The self-test with the real disc and game: `DW3_SELFTEST_DISC=$PWD/iso/dw2003.cue
   DW3_SELFTEST_GAME=$PWD/build/port-sdl/dw2003 SDL_VIDEO_DRIVER=offscreen build/launcher/dw2003-launcher --self-test DIR`.
 
+**The in-game menu** (psxstack `docs/LAUNCHER.md` "In-game menu"): the window build is configured with
+`-DPSXSTACK_MENU=ON` (CI's launcher job, `scripts/package_appimage.sh`), so Escape or Back+Start pauses the game and
+opens the launcher's Settings, Controls and Mods inside its window, over the same `settings.json`; the runtime applies
+a change live and the page marks what waits for the next start. Each mod's `start` is a setter the menu may run again
+when its options change, and its `stop` clears the mod's `port_mod_*` flag (psxstack "Mod runtime" rule 6);
+`preset_language` and `widescreen` have no stop and say `"applies": "restart"` in their manifests (the language is
+chosen at the boot's select screen; the wide canvas is asked for before the window opens), so the menu switches them at
+the next start.
+
 ## Built-in mods
 
 ### Fast-forward

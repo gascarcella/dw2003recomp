@@ -4,6 +4,7 @@
   "name": "Preset language",
   "version": "0.1",
   "kind": "builtin",
+  "applies": "restart",
   "requires_port": 1,
   "description": "Starts the game in the chosen language and skips the language select screen. USA and Japanese are on the disc but the screen never offers them; Japanese also shows the Japanese release's intro screen.",
   "options": [

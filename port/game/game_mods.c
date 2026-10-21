@@ -488,27 +488,73 @@ s32 port_transition_speed(s32 speed) {
     return port_mod_fast_transitions == 0 ? speed : port_mod_fast_transitions == 1 ? speed * 2 : 1024;
 }
 
+/* ---- The stops (psxstack docs/LAUNCHER.md "Mod runtime" rule 6; the in-game menu switches a mod off live): each
+ * undoes what its start set, the flag the game's hooks test and the mod's own state. preset_language and widescreen
+ * have none and say `applies = "restart"`: the language is chosen at the boot's select screen, and the wide canvas
+ * must be asked for before the window opens. */
+static void sd_stop(struct PortMod *mod) {
+    (void)mod;
+    sd_toggled = 0;
+    port_mod_skip_dialogues = 0;
+    port_fast_forward_request(0);
+}
+
+static void ba_stop(struct PortMod *mod) {
+    (void)mod;
+    port_mod_battle_animations = 0;
+}
+
+static void gs_stop(struct PortMod *mod) {
+    (void)mod;
+    port_mod_global_save = 0;
+}
+
+static void px_stop(struct PortMod *mod) {
+    (void)mod;
+    port_mod_party_xp = 0;
+}
+
+static void xb_stop(struct PortMod *mod) {
+    (void)mod;
+    port_mod_xp_boost = 0;
+}
+
+static void lr_stop(struct PortMod *mod) {
+    (void)mod;
+    port_mod_level_up_recover = 0;
+}
+
+static void re_stop(struct PortMod *mod) {
+    (void)mod;
+    port_mod_random_encounters = 0;
+}
+
+static void ft_stop(struct PortMod *mod) {
+    (void)mod;
+    port_mod_fast_transitions = 0;
+}
+
 static PortMod game_mod_table[] = {
     { .id = "skip_dialogues", .version = "0.1", .options = sd_options,
-      .option_count = (int)(sizeof(sd_options) / sizeof(sd_options[0])), .start = sd_start, .frame = sd_frame,
+      .option_count = (int)(sizeof(sd_options) / sizeof(sd_options[0])), .start = sd_start, .stop = sd_stop, .frame = sd_frame,
       .status = sd_status },
     { .id = "battle_animations", .version = "0.1", .options = ba_options,
-      .option_count = (int)(sizeof(ba_options) / sizeof(ba_options[0])), .start = ba_start },
+      .option_count = (int)(sizeof(ba_options) / sizeof(ba_options[0])), .start = ba_start, .stop = ba_stop },
     { .id = "global_save", .version = "0.1", .options = gs_options,
-      .option_count = (int)(sizeof(gs_options) / sizeof(gs_options[0])), .start = gs_start },
+      .option_count = (int)(sizeof(gs_options) / sizeof(gs_options[0])), .start = gs_start, .stop = gs_stop },
     { .id = "preset_language", .version = "0.1", .options = pl_options,
-      .option_count = (int)(sizeof(pl_options) / sizeof(pl_options[0])), .start = pl_start },
+      .option_count = (int)(sizeof(pl_options) / sizeof(pl_options[0])), .start = pl_start, .applies = "restart" },
     { .id = "party_xp", .version = "0.1", .options = px_options,
-      .option_count = (int)(sizeof(px_options) / sizeof(px_options[0])), .start = px_start },
+      .option_count = (int)(sizeof(px_options) / sizeof(px_options[0])), .start = px_start, .stop = px_stop },
     { .id = "xp_boost", .version = "0.1", .options = xb_options,
-      .option_count = (int)(sizeof(xb_options) / sizeof(xb_options[0])), .start = xb_start },
-    { .id = "level_up_recover", .version = "0.1", .start = lr_start },
-    { .id = "widescreen", .version = "0.1", .start = ws_start, .frame = ws_frame },
+      .option_count = (int)(sizeof(xb_options) / sizeof(xb_options[0])), .start = xb_start, .stop = xb_stop },
+    { .id = "level_up_recover", .version = "0.1", .start = lr_start, .stop = lr_stop },
+    { .id = "widescreen", .version = "0.1", .start = ws_start, .applies = "restart", .frame = ws_frame },
     { .id = "random_encounters", .version = "0.1", .options = re_options,
-      .option_count = (int)(sizeof(re_options) / sizeof(re_options[0])), .start = re_start, .frame = re_frame,
+      .option_count = (int)(sizeof(re_options) / sizeof(re_options[0])), .start = re_start, .stop = re_stop, .frame = re_frame,
       .status = re_status },
     { .id = "fast_transitions", .version = "0.1", .options = ft_options,
-      .option_count = (int)(sizeof(ft_options) / sizeof(ft_options[0])), .start = ft_start, .frame = ft_frame,
+      .option_count = (int)(sizeof(ft_options) / sizeof(ft_options[0])), .start = ft_start, .stop = ft_stop, .frame = ft_frame,
       .status = ft_status },
 };
 

@@ -253,7 +253,8 @@ jobs:
 
   # The PC port's window (-DPSXSTACK_SDL=ON, SDL3 from tools/sdl3) and the launcher (launcher/README.md; Dear ImGui on
   # SDL3), disc-free, both on SDL's offscreen video driver (no display): the port's input self-test (injected key and
-  # virtual-gamepad events reach the pad, hotkeys never do, the pause stops and gives back the game; SDL's dummy audio
+  # virtual-gamepad events reach the pad, hotkeys never do, the pause stops and gives back the game, the in-game menu
+  # (-DPSXSTACK_MENU=ON) opens and closes and re-applies the settings; SDL's dummy audio
   # driver takes the audio device's path), also with rebound keys and pads, chord hotkeys and a mod's bindings
   # (docs/LAUNCHER.md "Input bindings"); the launcher's self-test (the settings directory's lookup, settings.json round
   # trips, every screen walked with injected keys and a virtual gamepad). With the disc, the launcher end to end: the
@@ -277,7 +278,7 @@ jobs:
 
       - name: PC port with the window (SDL3)
         run: |
-          cmake -S port -B build/port-sdl -G Ninja -DPSXSTACK_SDL=ON
+          cmake -S port -B build/port-sdl -G Ninja -DPSXSTACK_SDL=ON -DPSXSTACK_MENU=ON
           cmake --build build/port-sdl -j "$DW3_JOBS"
 
       - name: PC port, input self-test
