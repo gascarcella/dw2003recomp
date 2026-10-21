@@ -6,7 +6,7 @@ Every game file of the EU disc (SLES-03936) rebuilds byte-identical from this re
 compiles from matching C (Psy-Q's libraries stay split assembly). The PC port, built from the same C, runs on
 Linux: it boots the user's disc, plays the movies, the music and the effects, draws through a software GPU in an SDL3
 window, and saves to memory-card images that an emulator can also read. A launcher and the first built-in mods
-(fast-forward, a 60 Hz mode, skip dialogues, disable battle animations, save anywhere, a preset language, party experience, XP boost) are done. A Linux AppImage release pipeline is
+(fast-forward, a 60 Hz mode, skip dialogues, disable battle animations, save anywhere, a preset language, party experience, XP boost, disable random encounters) are done. A Linux AppImage release pipeline is
 ready; the release itself is still to be published.
 
 ## Decompilation
@@ -100,7 +100,7 @@ The plan's milestones (`docs/PORT.md`):
   stack's own Psy-Q declarations; fibers; `scripts/worktree_init.sh`
   checks it out; CI and release.yml fetch it with a plain `git submodule update --init`: psxstack is public). This
   repository keeps the game's side: `include/port.h`
-  (the hooks' PS1 side and the game's own hooks), `port/game/` (the adapter: `game.json`, the probes, the seven mods, the
+  (the hooks' PS1 side and the game's own hooks), `port/game/` (the adapter: `game.json`, the probes, the eight mods, the
   asm stand-ins), `port/mods/`, `tools/port_inputs.py` (the build inputs the stack takes), `tools/port_inventory.py`
   (the stack's inventory configured here), `tools/mcp_game.py` and `.mcp.json` (the debug tools' configuration); the
   launcher is built from `psxstack/launcher` with `port/game/game.json`. The extraction is complete (`docs/DECISIONS.md`
@@ -146,7 +146,8 @@ The plan's milestones (`docs/PORT.md`):
   map's state in the slot's unused tail, and still loads on a PS1), a preset language (skips the language select
   screen; also the disc's USA and Japanese text, which the screen never offers), party experience (members that did
   not fight get a share of the battle's experience; optional catch-up bonus), XP boost (a battle's experience, form
-  experience and Bits multiplied, up to 5x on sliders or 10x typed; presets Boost, Turbo, Ultra). With mods off, the
+  experience and Bits multiplied, up to 5x on sliders or 10x typed; presets Boost, Turbo, Ultra), disable random encounters (no random battles on the field;
+  story, trainer and event battles still start; an optional toggle key). With mods off, the
   binary's logs, records and audio are unchanged.
 - **Release:** `scripts/package_appimage.sh` builds one Linux AppImage, `scripts/package_windows.sh` the Windows zip
   (and its PDB symbols zip); a tag `vX.Y.Z` produces a draft release with both (`docs/RELEASE.md`). Publishing it

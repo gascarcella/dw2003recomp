@@ -198,6 +198,26 @@ is the tier-1 overlay; its start asks for the canvas and a 16:9 window (`port_vi
 its sides are drawn, the present is 16:9, the field stays 4:3, the frame log equals the run without the mod.
 `tests/port/mods.py` (headless): the frame log unchanged and the software path's 4:3 logged once.
 
+### Disable random encounters
+
+`random_encounters`. Option: `toggle` (binding, default none). While enabled it is on from the start; the toggle
+turns random encounters back on (for grinding) and off again (`port_mod_random_encounters`; the window's title says
+"no encounters" while it is on).
+
+FIELDSTG rolls a random battle while the player moves on a map's encounter area: every step takes the area's rate off
+`encounter_timer`, and when it runs out `fieldstg_encounter_step` starts a battle from the area's list and redraws
+the timer (`docs/MECHANICS.md` section 1, "Random encounters"). With the mod on, the step logs the skip
+(`port_random_encounter_skipped`, `port/game/game_mods.c`) and only redraws the timer, which is what the game does with
+its debug switch `records_state.encounters` off. The timer still runs and its redraw still takes its draw, so the
+mod changes nothing until the roll. The other battles do not go through that step and still start: the story's and
+the trainers' (event scripts), the spots' and the meters' (`fieldstg_start_listed_battle`) and the map events' of
+`fieldstg_start_battle_5`.
+
+`tests/port/mods.py` walks map 0x21D (first_battle_save's route, then back and forth across its plaza) until the
+timer runs out: without the mod a random battle starts; with it the walk completes, each skip is logged on map 0x21D,
+and the frame log equals the mod-off run's up to the first skip; the route's first story battle (an event's) still
+starts with the mod on. The toggle is a key and not reached by a script.
+
 ## 50/60 Hz
 
 A setting, not a mod: `video.refresh: 60` or `--refresh 60` (default 50, PAL). It sets, before `port_overlay_init()`

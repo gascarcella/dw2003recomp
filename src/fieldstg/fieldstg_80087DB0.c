@@ -4967,6 +4967,15 @@ void fieldstg_encounter_step(void) {
             rate = fieldstg_encounter_rates[list->rate];
             gamestate_data.encounter_timer -= rate;
             if (gamestate_data.encounter_timer <= 0) {
+#ifdef PC_PORT
+                if (port_mod_random_encounters != 0 && records_state.encounters != 0) {
+                    /* random_encounters (docs/LAUNCHER.md "Disable random encounters"): no battle, as with the
+                     * debug switch off; the timer is redrawn as the game's */
+                    port_random_encounter_skipped(gamestate_data.map, area + 1);
+                    fieldstg_encounter_reset();
+                    return;
+                }
+#endif
                 if (records_state.encounters != 0) {
                     fieldstg_encounter_start();
                 }

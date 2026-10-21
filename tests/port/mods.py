@@ -53,6 +53,13 @@ gives no form experience (member 0 fights as its own form), so `form_exp` is not
 widescreen (no script of its own): first_battle_save to back_on_field with the mod on, in the headless build
 (no GPU renderer): the frame log equals the run without the mod (the mod changes nothing the game does; the renderer
 draws its wide canvas, tests/port/render_gpu.py), and the run logs once that the picture stays 4:3.
+random_encounters (no script of its own): first_battle_save's route to map 0x21D (all encounter area but its ramps), then
+back and forth across its plaza until encounter_timer runs out, with the mod off and on (memory cards: the route saves):
+  - off: the walk ends in a random battle (map 0x600 after 0x21D);
+  - on: the story's first battle (an event's) still starts; the walk completes on 0x21D with no battle, each skipped
+    encounter logged on map 0x21D, and the frame log equals the mod-off run's up to the first skip (the mod changes
+    nothing before the roll). The toggle is a key, not reached
+    by a script.
 Exit codes: 0 pass, 1 fail, 2 something missing.
 """
 import argparse
@@ -228,6 +235,48 @@ def widescreen(binary, out):
     check(rc_on == rc_off == 0 and log_on == log_off and len(log_on) > 0,
           f"the frame log with the mod equals the one without (exit {rc_on}, {rc_off})")
     check("mods: widescreen on" in err and said == 1, f"the 4:3 picture logged once ({said} times)")
+
+
+def random_encounters(binary, out):
+    """random_encounters: a walk on map 0x21D long enough for a random battle, the mod off and on (the docstring)."""
+    print("mods: random_encounters (first_battle_save to map 0x21D, then back and forth across its plaza)")
+    fbs = json.loads((SCRIPTS / "first_battle_save.json").read_text())["steps"]
+    j = next(k for k, s in enumerate(fbs) if s.get("until", {}).get("map") == "0x21D")
+    # down the ramps to the plaza (encounter area 2), then 80 legs of ~48 frames: encounter_timer's 926 (since the new
+    # game) runs out about 2,300 frames in
+    walk = [{"type": "walk", "x": 1460, "y": 245}, {"type": "walk", "x": 1335, "y": 375}]
+    walk += [{"type": "walk", "x": x, "y": y, "tol": 6} for _ in range(40) for x, y in ((1170, 470), (1335, 375))]
+    script = derived(out, "re", fbs[:j + 1] + walk + [{"type": "checkpoint", "name": "walked"}])
+    runs = {}
+    for label, mods in (("re_off", {}), ("re_on", {"random_encounters": {"enabled": True}})):
+        cfg = out / f"{label}.settings.json"
+        cfg.write_text(json.dumps({"schema": 1, "disc": {"path": str(DISC)}, "video": {"window": False},
+                                   "memcard1": str(out / f"{label}_1.mcd"), "memcard2": str(out / f"{label}_2.mcd"),
+                                   "mods": mods}))
+        for card in (out / f"{label}_1.mcd", out / f"{label}_2.mcd"):
+            card.unlink(missing_ok=True)
+        runs[label] = run_port(binary, out, label, script, cfg, True)
+    rc, log_off, rec, err = runs["re_off"]
+    maps = [m["map"] for m in rec["map_sequence"]] if rec else []
+    check(rc == 5 and maps[-2:] == [0x21D, 0x600], f"off: the walk on map 0x21D ends in a random battle (map 0x600) "
+          f"(exit {rc}, the last maps {', '.join(hex(m) for m in maps[-2:])})")
+    rc, log_on, rec, err = runs["re_on"]
+    maps = [m["map"] for m in rec["map_sequence"]] if rec else []
+    skips = [line.split("frame ", 1)[1] for line in err.splitlines() if "random encounters: frame" in line]
+    walked = maps.index(0x21D) if 0x21D in maps else len(maps)
+    check(0x600 in maps[:walked], "on: the story's first battle (an event's, map 0x200) still starts")
+    check(rc == 0 and maps[-1] == 0x21D and 0x600 not in maps[walked:] and skips and
+          all("map 0x21D," in s for s in skips),
+          f"on: the walk completes on map 0x21D with no battle, {len(skips)} encounter(s) skipped (exit {rc}; "
+          f"{'; '.join(skips)})")
+    if not skips:
+        return
+    first = int(skips[0].split(":")[0])
+    on_lines, off_lines = log_on.decode().splitlines(), log_off.decode().splitlines()
+    differ = next((k for k, (a, b) in enumerate(zip(on_lines, off_lines)) if a != b), None)
+    at = int(on_lines[differ - 1].split()[1]) if differ else None
+    check(at is not None and at >= first, f"the frame log equals the mod-off run's up to the first skip (frame {first}; "
+          f"the first difference after frame {at})")
 
 
 GS_SCRIPT = MODS / "scripts/global_save.json"
@@ -444,6 +493,7 @@ def xp_boost(binary, out):
 MODS_TESTS = {
     "preset_language": lambda binary, out, record: preset_language(binary, out),
     "skip_dialogues": skip_dialogues,
+    "random_encounters": lambda binary, out, record: random_encounters(binary, out),
     "party_xp": lambda binary, out, record: party_xp(binary, out),
     "xp_boost": lambda binary, out, record: xp_boost(binary, out),
     "global_save": lambda binary, out, record: global_save(binary, out),

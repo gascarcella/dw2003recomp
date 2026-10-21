@@ -77,6 +77,20 @@ What a test should check:
   A new game sets `(next() & 0x1FF) + 0x200`. Entering a map keeps the timer. [T] by replay `first_battle_save`: 926 from the new game
   to map 0x21D (no encounter area before), 809 after the walk to its trainer (~20 steps at 6 in area 1 and 3 in area 2; both cores agree, the timer is still in the
   stable hash's volatile set since a redraw would depend on the RNG index).
+  Random battles versus the others [C]: `fieldstg_encounter_start` (the area's list `encounters[area]`, `next() & 7`) is
+  the only random-encounter start, and only `fieldstg_encounter_step` calls it; the step runs from
+  `fieldstg_actor_play_steps` with `encounters` 1 (`fieldstg_actor_run_state`'s steps 3 and 0x4B, the full-speed and
+  the accelerating move; not the quarter-speed step 2 nor the push, step 5) and not while an event runs, a battle
+  starts, the actor is busy or the map's title shows. Every other battle comes from the stage's `scripted` list
+  through `fieldstg_start_listed_battle(i)`: event scripts (the story's and the trainers' battles: a flag of type
+  0x74, `gamestate_set_flag` -> `fieldstg_start_listed_battle_func(index)`), the spots (`fieldstg_spots_update`:
+  opening the target spot starts battle 3, or 6 when `(next() & 0x7F) >= 0x66`), the meters (map event 7,
+  `fieldstg_meter_update`: 4 or 7 by where the cursor stops) and `fieldstg_start_battle_5` (a map event's start
+  function in WSTAG350/351/375/376/380/400/401/531). So skipping the battle in `fieldstg_encounter_step` while keeping
+  the timer's redraw, which is what the game does with `records_state.encounters` 0 (initially 1), removes the random
+  battles only: the port's `random_encounters` mod (`docs/LAUNCHER.md` "Disable random encounters"). [T] by
+  `tests/port/mods.py`: map 0x21D walked until the timer runs out gives a battle without the mod and none with it, and
+  the frame log is the same up to the roll.
 
 ## 2. Battle damage (physical): `fightstg_rules_get_damage` and `fightstg_rules_scale_damage`
 
