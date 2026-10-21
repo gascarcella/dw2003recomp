@@ -1011,6 +1011,13 @@ void fieldstg_map_title_create_windows(Object *obj, FieldstgMapTitleData *data) 
             data->window_1 = message_create_window(0x1003, 1, 0x28, 0x44);
             data->window_1->set_text(data->window_1, cdload_module.files.get_file(records_language + 0xB7), fieldstg_map_titles[i].text_1);
             data->window_1->set_speed(data->window_1, 5);
+#ifdef PC_PORT
+            if (port_mod_fast_transitions == 1) {
+                /* fast_transitions (docs/LAUNCHER.md "Faster transitions"): a character every 3 frames, not 6 */
+                data->window_0->set_speed(data->window_0, 2);
+                data->window_1->set_speed(data->window_1, 2);
+            }
+#endif
             break;
         }
     }
@@ -1131,6 +1138,11 @@ void fieldstg_map_title_update(FieldstgMapTitle *obj, FieldstgMapTitleData *data
         }
         for (j = 0; j < 10; j++) {
             obj->rects[j] = fieldstg_map_title_rects[j];
+#ifdef PC_PORT
+            /* fast_transitions (docs/LAUNCHER.md "Faster transitions"): the rectangles slide faster (move_rect stops
+             * each edge on its target) */
+            obj->rects[j].speed = port_transition_speed(obj->rects[j].speed);
+#endif
         }
         fieldstg_map_title_create_windows(&obj->base, data);
         obj->base.next_state(obj);
@@ -1170,6 +1182,13 @@ void fieldstg_map_title_update(FieldstgMapTitle *obj, FieldstgMapTitleData *data
             obj->base.next_step(obj);
             break;
         case 4:
+#ifdef PC_PORT
+            if (port_mod_fast_transitions == 2) {
+                /* fast_transitions "instant": the texts' page at once, as skip_dialogues shows it */
+                data->window_0->find_page_end(data->window_0);
+                data->window_1->find_page_end(data->window_1);
+            }
+#endif
             if (data->window_0->is_done(data->window_0) != 0 && data->window_1->is_done(data->window_1) != 0) {
                 obj->base.set_state(obj, OBJECT_STATE_DONE);
             }
@@ -1183,9 +1202,16 @@ void fieldstg_map_title_update(FieldstgMapTitle *obj, FieldstgMapTitleData *data
             break;
         case 1:
             obj->base.substep += gfx_module.funcs.get_frame_ticks();
+#ifdef PC_PORT
+            /* fast_transitions (docs/LAUNCHER.md "Faster transitions"): the title's hold, shorter */
+            if (obj->base.substep < port_transition_ticks(60)) {
+                break;
+            }
+#else
             if (obj->base.substep < 60) {
                 break;
             }
+#endif
             obj->base.next_step(obj);
             /* fallthrough */
         case 2:
@@ -1196,6 +1222,12 @@ void fieldstg_map_title_update(FieldstgMapTitle *obj, FieldstgMapTitleData *data
             obj->base.next_step(obj);
             /* fallthrough */
         case 3:
+#ifdef PC_PORT
+            /* fast_transitions: more of the closing steps this frame; clip.h still lands on 0 */
+            j = port_transition_extra(obj->clip.h, 16);
+            obj->clip.y += 8 * j;
+            obj->clip.h -= 16 * j;
+#endif
             obj->clip.y += 8;
             obj->clip.h -= 16;
             layer->set_clip_pos(layer, obj->clip.x, obj->clip.y);

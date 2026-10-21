@@ -139,6 +139,9 @@ Object *stcrddek_start(void) {
 
 /* Starts a fade in (out == 0) or out over `frames` frames. */
 void stcrddek_start_fade(Fade *obj, s32 out, s32 frames) {
+#ifdef PC_PORT
+    frames = port_transition_frames(frames); /* fast_transitions (docs/LAUNCHER.md "Faster transitions") */
+#endif
     obj->base.set_state(obj, OBJECT_STATE_RUN);
     obj->base.step = 1;
     obj->from_black = out;

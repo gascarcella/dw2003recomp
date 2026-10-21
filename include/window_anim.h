@@ -23,6 +23,13 @@ static void window_anim_start(WindowAnim *anim, s32 open) {
         anim->level = 0x1000;
         anim->step = -(0x1000 / anim->duration * 2);
     }
+#ifdef PC_PORT
+    /* fast_transitions (docs/LAUNCHER.md "Faster transitions"): the field menu's and the inn's windows in fewer frames */
+    if (port_mod_fast_transitions != 0) {
+        anim->step = open ? 0x1000 / port_transition_frames(anim->duration)
+                          : -(0x1000 / port_transition_frames(anim->duration) * 2);
+    }
+#endif
 }
 
 /* Steps the animation; returns 1 once it is finished (or not running). */

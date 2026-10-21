@@ -1815,6 +1815,9 @@ OBJECT_V0(Object *) fightstg_digivolve_create(s32 digimon, s32 blast) {
 
 /* Starts a fade up (down == 0) or down over `frames` frames. */
 void fightstg_fade_start(Fade *obj, s32 down, s32 frames) {
+#ifdef PC_PORT
+    frames = port_transition_frames(frames); /* fast_transitions (docs/LAUNCHER.md "Faster transitions") */
+#endif
     obj->base.set_state(obj, OBJECT_STATE_RUN);
     obj->base.step = 1;
     obj->from_black = down;

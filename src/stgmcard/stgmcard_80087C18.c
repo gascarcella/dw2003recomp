@@ -82,6 +82,13 @@ void stgmcard_start_fade(WindowAnim *anim, s32 open) {
         anim->level = 0x1000;
         anim->step = -(0x1000 / anim->duration * 2);
     }
+#ifdef PC_PORT
+    /* fast_transitions (docs/LAUNCHER.md "Faster transitions"): the contents panel in fewer frames */
+    if (port_mod_fast_transitions != 0) {
+        anim->step = open ? 0x1000 / port_transition_frames(anim->duration)
+                          : -(0x1000 / port_transition_frames(anim->duration) * 2);
+    }
+#endif
 }
 
 /* Steps the fade; returns 1 once it is finished (or not running) (window_anim_update). */
@@ -106,6 +113,9 @@ s32 stgmcard_update_fade(WindowAnim *anim) {
 
 /* Starts moving `v` from `from` to `to` in `frames` frames. */
 void stgmcard_start_value(Tween *v, s32 from, s32 to, s32 frames) {
+#ifdef PC_PORT
+    frames = port_transition_frames(frames); /* fast_transitions (docs/LAUNCHER.md "Faster transitions") */
+#endif
     if (from != to) {
         v->duration = frames;
         v->acc = from << 8;

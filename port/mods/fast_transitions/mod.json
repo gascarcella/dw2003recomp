@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "id": "fast_transitions",
+  "name": "Faster transitions",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "The game's own screen transitions and save-screen animations take fewer frames: the fades between maps and menus, the map change and the map's title, the field menu's windows and picture, the save screen's slides and bar. The music keeps playing as normal. Loading, memory card work and anything waiting for a button are not shortened.",
+  "options": [
+    { "id": "speed", "name": "Speed",
+      "description": "Normal: the game's own timing. Fast: about half the frames. Instant: each animation in about one frame.",
+      "type": "enum", "default": "normal", "applies": "live",
+      "values": [
+        { "id": "normal", "label": "Normal" }, { "id": "fast", "label": "Fast" },
+        { "id": "instant", "label": "Instant" }
+      ] }
+  ]
+}

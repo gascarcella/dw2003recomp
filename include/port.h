@@ -186,6 +186,21 @@ void port_random_encounter_skipped(s32 map, s32 area);
  * and MP (stats.values[2], [4]) to the new maximums ([3], [5]); the game itself only raises the maximums. */
 extern int port_mod_level_up_recover;
 void port_level_up_recover(s32 digimon);
+/* port_mod_fast_transitions: fast_transitions is on ("Faster transitions") with its speed: 0 "normal" (or the mod
+ * off: nothing changes), 1 "fast" (about half the frames), 2 "instant" (each animation in about one frame). The game's
+ * transition and save-screen animations then take fewer frames, each still reaching its end through its own update
+ * (docs/MECHANICS.md section 15); nothing that waits on the card, the CD or the pad is shortened.
+ * port_transition_frames(frames): an animation's length in frames (a Fade, a WindowAnim, STGMCARD's tweens and its
+ * frame's mode 2): `frames`, half of it rounded up, or 1.
+ * port_transition_extra(left, step): how many more of a per-frame step of `step` to take this frame, when `left` is
+ * still to go before this frame's (0; at most 1; all the rest), so the value lands where the original's last step does.
+ * port_transition_ticks(ticks): a hold in ticks: `ticks`, half of it, or 0.
+ * port_transition_speed(speed): a per-frame speed the code clamps at its target: `speed`, twice it, or 1024. */
+extern int port_mod_fast_transitions;
+s32 port_transition_frames(s32 frames);
+s32 port_transition_extra(s32 left, s32 step);
+s32 port_transition_ticks(s32 ticks);
+s32 port_transition_speed(s32 speed);
 
 #endif /* PC_PORT */
 
