@@ -1,5 +1,7 @@
 # Digimon World 2003 decompilation
 
+[![Listed on PlayPorted](https://playported.com/badge.svg)](https://playported.com/ports/210-digimon-world-3/)
+
 A decompilation of **Digimon World 2003** (PlayStation, Europe, SLES-03936), the PAL release of *Digimon World 3*, and
 a native **PC port** built from it.
 
