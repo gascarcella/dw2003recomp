@@ -41,6 +41,22 @@ record are those of an unthrottled run, which are byte-identical to a paced run'
 Test hook: `DW3_PORT_FAST_FORWARD=ON:OFF` (only while the mod is enabled) turns it on for ON vsyncs and off for OFF,
 repeating (`tests/port/settings.py`).
 
+### Faster loading
+
+`fast_loading` (runtime only, no game C; psxstack's `docs/RUNTIME.md` "Faster loading"). Option: `speed` (enum
+`2x 4x 8x instant`, default `4x`).
+
+The emulated drive reads the game's files (`cdload`'s reads: the overlays, the maps, the sound banks) at that multiple
+of a double-speed drive with its seeks shortened as much, or at once. The movies (`stdwtitl`'s stream, `CdRead2(0x1E0)`,
+XA audio on) keep the drive's rate, so they and their sound play as without the mod; the music plays from sound RAM
+and is never affected. A load ends in fewer frames, and the game's random generator steps once a frame, so later rolls
+differ from a run without the mod; every read still completes through the game's callbacks.
+
+On the global_save route (new game, the first battle, a save, a reset and Continue; 25,471 frames) the run ends 244,
+1,080, 1,239 and 1,505 frames earlier at 2x, 4x, 8x and instant (boot to the language screen: 85 frames, then 51, 35,
+27, 19). `--cd-speed instant` (the debug tools' default) times the data reads the same way and the movies at the
+drive's rate too.
+
 ### Skip dialogues
 
 `skip_dialogues`. Options: `toggle` (binding, default `F2`), `hold` (binding, unbound), `fast_forward_waits` (bool,

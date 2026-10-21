@@ -31,7 +31,7 @@ in `docs/SOUND.md`. The choices behind this design are in `docs/DECISIONS.md` (i
 | `port/game/state.c`, `game.c` | The adapter (psxstack's `include/psxstack/game.h`): the probes (`game_state_*`), the checkpoint image, `game_state_read`/`game_state_host` (the layout-identical ranges and the field tables), `game_apply_rate` (the 60 Hz mode) |
 | `port/game/game_mods.c`, `battle_scan.c` | The ten mods that change the game (`PortMod` records for psxstack's engine), the battle scripts' scanner |
 | `port/game/asmdata.c` | Weak stand-ins for the data the matching build keeps in asm, in FIELDSTG's section |
-| `port/mods/` | The game's mods' manifests (psxstack's `mods/fast_forward` joins them beside the binary) |
+| `port/mods/` | The game's mods' manifests (psxstack's `mods/fast_forward` and `mods/fast_loading` join them beside the binary) |
 | `tools/port_inputs.py` | The build inputs psxstack takes: the units, the overlays (slot, file ID, symbol file), the known tag sites, the volatile ranges |
 | `tools/port_inventory.py` | psxstack's inventory configured for this tree (`counts`, `probe`, `link`) plus this game's `structs` and `object-sizes` |
 | `tools/mcp_game.py`, `.mcp.json` | The debug tools' configuration: the MCP server's arguments, the Python module the tests use |

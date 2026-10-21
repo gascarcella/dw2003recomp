@@ -6,7 +6,7 @@ Every game file of the EU disc (SLES-03936) rebuilds byte-identical from this re
 compiles from matching C (Psy-Q's libraries stay split assembly). The PC port, built from the same C, runs on
 Linux: it boots the user's disc, plays the movies, the music and the effects, draws through a software GPU in an SDL3
 window, and saves to memory-card images that an emulator can also read. A launcher and the first built-in mods
-(fast-forward, a 60 Hz mode, skip dialogues, disable battle animations, save anywhere, a preset language, party experience, XP boost, disable random encounters, recover on level up, faster transitions) are done. A Linux AppImage release pipeline is
+(fast-forward, faster loading, a 60 Hz mode, skip dialogues, disable battle animations, save anywhere, a preset language, party experience, XP boost, disable random encounters, recover on level up, faster transitions) are done. A Linux AppImage release pipeline is
 ready; the release itself is still to be published.
 
 ## Decompilation
@@ -95,7 +95,7 @@ The plan's milestones (`docs/PORT.md`):
   mods"). The `any`-CLUT replacement is [#77](https://github.com/gascarcella/dw2003recomp/issues/77).
 - **The port stack (psxstack):** the runtime, the Psy-Q shim, the build (`psxstack_add_game()`), the launcher and the
   debug tools live in the `psxstack` repository (gascarcella/psxstack; its `docs/PORT.md`, `docs/RUNTIME.md`,
-  `docs/LAUNCHER.md`), consumed as the `psxstack` submodule pinned at its tag `v0.3.7` (v0.3.7: the quick save and load hotkeys; v0.3.0: the replay runners `tools/replay/`, which
+  `docs/LAUNCHER.md`), consumed as the `psxstack` submodule pinned at its tag `v0.3.8` (v0.3.8: the faster loading mod; v0.3.7: the quick save and load hotkeys; v0.3.0: the replay runners `tools/replay/`, which
   `tests/replay/replay.py`, `tests/replay/probes.lua` and `tests/port/run.py` configure; `memory.heap` optional; the
   stack's own Psy-Q declarations; fibers; `scripts/worktree_init.sh`
   checks it out; CI and release.yml fetch it with a plain `git submodule update --init`: psxstack is public). This
@@ -141,7 +141,8 @@ The plan's milestones (`docs/PORT.md`):
   (`tests/port/crash.py --wine`; `symbolize.py` reads the PDB through llvm-symbolizer).
 - **Game side:** `dw2003 --config FILE` (the settings file, schema 1), rebindable input, hotkeys, a pause key, the mod
   registry with manifests in `port/mods/`.
-- **Mods:** fast-forward (hold `Tab`, 4x), the 60 Hz mode (checked against the patched game in the emulator), skip
+- **Mods:** fast-forward (hold `Tab`, 4x), faster loading (the CD's data reads 2x to instant; movies at the drive's
+  rate), the 60 Hz mode (checked against the patched game in the emulator), skip
   dialogues (`F2`), disable battle animations, save anywhere (a SAVE entry in the field menu; the save carries the
   map's state in the slot's unused tail, and still loads on a PS1), a preset language (skips the language select
   screen; also the disc's USA and Japanese text, which the screen never offers), party experience (members that did
