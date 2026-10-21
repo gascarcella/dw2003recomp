@@ -101,9 +101,10 @@ quiet() { # quiet LOG CMD...: the command's output into LOG, its end shown when 
     "$@" >>"$logf" 2>&1 || { tail -n 40 "$logf" >&2; die "failed: $* (the whole output: $logf)"; }
 }
 rm -f "$work/port-sdl.log" "$work/launcher.log"
-log "building the game (SDL)"
+log "building the game (SDL, with the in-game menu)"
 quiet "$work/port-sdl.log" cmake -S "$ROOT/port" -B "$work/port-sdl" -G Ninja -DCMAKE_BUILD_TYPE=Release \
-    -DPSXSTACK_SDL=ON -DSDL3_DIR="$sdl/lib/cmake/SDL3" -DPSXSTACK_TOOLS_DIR="$ROOT/tools"
+    -DPSXSTACK_SDL=ON -DPSXSTACK_MENU=ON -DPSXSTACK_MENU_STATIC_RUNTIME="$static_cxx" -DPSXSTACK_IMGUI_DIR="$imgui" \
+    -DSDL3_DIR="$sdl/lib/cmake/SDL3" -DPSXSTACK_TOOLS_DIR="$ROOT/tools"
 quiet "$work/port-sdl.log" cmake --build "$work/port-sdl" -j "$JOBS"
 log "building the launcher"
 quiet "$work/launcher.log" cmake -S "$ROOT/psxstack/launcher" -B "$work/launcher" -G Ninja -DCMAKE_BUILD_TYPE=Release \

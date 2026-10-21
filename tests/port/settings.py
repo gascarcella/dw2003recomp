@@ -117,6 +117,10 @@ def mods_check(binary):
             for key in ("version", "kind", "requires_port"):
                 if man.get(key) != reg[key]:
                     problems.append(f"{key} {man.get(key)!r}, the game's {reg[key]!r}")
+            # the mod's own applies (psxstack docs/LAUNCHER.md "Mod manifest"): live unless the manifest says
+            # restart, and the registry prints the value in force (a start without a stop is restart)
+            if man.get("applies", "live") != reg.get("applies", "live"):
+                problems.append(f"applies {man.get('applies', 'live')!r}, the game's {reg.get('applies')!r}")
             got = [o.get("id") for o in man.get("options", [])]
             want = [o["id"] for o in reg["options"]]
             if got != want:
