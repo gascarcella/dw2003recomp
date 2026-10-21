@@ -22,6 +22,14 @@ Settings, Controls and Mods are the launcher's other screens. Keyboard defaults:
 circle, Z square, S triangle, Enter start, Backspace select, Q/E L1/R1, 1/3 L2/R2; P pauses, F11 fullscreen, Tab
 holds fast-forward; a gamepad works as on a PlayStation. Everything can be rebound on the Controls screen.
 
+Updates
+-------
+When it starts, the launcher asks GitHub for the latest release of dw2003recomp (one request to api.github.com with
+the launcher's name and version; nothing about you or your PC). When a newer one is out it offers to download and
+install it into this folder (Update now; the file is checked against GitHub's SHA-256 first) or to open its page.
+To turn the check off: untick "Check for updates when the launcher starts" on the Settings screen, or start
+dw2003-launcher.exe with --no-update-check.
+
 Where things are kept
 ---------------------
 %APPDATA%\dw2003\  (usually C:\Users\<you>\AppData\Roaming\dw2003\):

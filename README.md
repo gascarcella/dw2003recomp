@@ -46,6 +46,15 @@ your PC, runs the game natively, with a launcher and a few optional mods.
    The AppImage opens the **launcher**, which holds the game and its mods. Nothing needs installing or compiling. If
    your system has no FUSE, run it with `--appimage-extract-and-run`.
 
+**Updates:** when it starts, the launcher asks GitHub for this repository's latest release (one request to
+api.github.com's releases endpoint through your system's `curl`, with the launcher's name and version as the
+User-Agent: no identifiers, nothing about you or your machine). When a newer one is out it says so and can download
+and install it for you (**Update now**, checked against GitHub's SHA-256 of the file), or open its page. Drafts and
+prereleases are never offered. To turn the check off: untick "Check for updates when the launcher starts" on the
+**Settings** screen (`launcher.updates.check` in `settings.json`), or start the launcher with `--no-update-check`;
+the Settings screen's **Check now** still works. Details: [`docs/RELEASE.md`](docs/RELEASE.md) "The launcher's
+update check".
+
 ### Provide your disc image
 
 The game is read from **your own disc image** of *Digimon World 2003 (Europe) (En,Fr,De,Es,It)*:

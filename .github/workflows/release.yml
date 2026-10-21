@@ -245,5 +245,6 @@ jobs:
 
           **Linux x86_64**: \`dw2003-*-x86_64.AppImage\`: \`chmod +x\` it, then run it. Needs glibc 2.39 or newer (Ubuntu 24.04, Fedora 40, Debian 13 or later).
           **Windows x86_64**: \`dw2003-*-windows-x86_64.zip\`: unzip, run \`dw2003-launcher.exe\` (unsigned: SmartScreen's \"More info\", \"Run anyway\"). Windows 10 or newer. Tested on Linux under Wine and Proton only, not yet on real Windows: reports are welcome in the issues (#37).
+          The launcher asks GitHub for the latest release when it starts (one request to api.github.com with its name and version, no identifiers) and can download and install a newer one when you ask. To turn the check off: the Settings screen's checkbox, \`launcher.updates.check\` in settings.json, or \`--no-update-check\`.
           The .debug file and the -symbols.zip are the programs' debug info for crash reports (not needed to play)." \
             ./*.AppImage ./*.debug ./*-windows-x86_64.zip ./*-windows-x86_64-symbols.zip SHA256SUMS SHA256SUMS-windows
