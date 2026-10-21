@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "id": "random_encounters",
+  "name": "Disable random encounters",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "No random battles while walking on the field. Story battles, trainers and the other battles that events start still happen.",
+  "options": [
+    { "id": "toggle", "name": "Toggle", "description": "Turn random encounters back on, or off again (for grinding).",
+      "type": "binding", "default": "", "group": "Controls", "applies": "live" }
+  ]
+}

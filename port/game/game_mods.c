@@ -1,6 +1,6 @@
 /* The game's built-in mods (docs/LAUNCHER.md "Built-in mods"; psxstack/game.h game_mods): skip_dialogues,
- * battle_animations, global_save, preset_language, party_xp, xp_boost and widescreen, as PortMod records the
- * runtime's engine (port/runtime/mods.c) reads the settings of, gives hotkeys to and runs every vsync. Each reaches the game's C through
+ * battle_animations, global_save, preset_language, party_xp, xp_boost, widescreen and random_encounters, as PortMod
+ * records the runtime's engine (port/runtime/mods.c) reads the settings of, gives hotkeys to and runs every vsync. Each reaches the game's C through
  * the port_mod_* flags and functions of include/port.h, read inside `#ifdef PC_PORT` blocks. The runtime's own mod,
  * fast_forward, is the engine's; skip_dialogues asks for it with port_fast_forward_request. */
 #include <stddef.h>
@@ -380,6 +380,40 @@ static void ws_frame(struct PortMod *mod) {
     port_video_widescreen(ovl != NULL && strcmp(ovl->name, "FIGHTSTG") == 0);
 }
 
+/* ---- random_encounters (docs/LAUNCHER.md "Disable random encounters"; docs/MECHANICS.md section 1, "Random
+ * encounters"): while it is on, port_mod_random_encounters makes FIELDSTG's encounter step, when encounter_timer runs
+ * out, redraw the timer without starting the battle, as the game does with its debug switch (records_state.encounters)
+ * off: the timer still runs and its redraw takes its one draw, so only the battle is gone. On from the start; `toggle`
+ * turns it off and on again. The battles events start (the story's, the trainers', the spots' and the meters')
+ * are other callers of fieldstg_start_battle and still start. */
+enum { RE_TOGGLE };
+static const PortModOption re_options[] = {
+    { .id = "toggle", .type = PORT_MOD_BINDING, .def = "\"\"", .applies = "live" },
+};
+int port_mod_random_encounters;
+
+static void re_start(struct PortMod *mod) {
+    (void)mod;
+    port_mod_random_encounters = 1;
+}
+
+static void re_frame(struct PortMod *mod) {
+    if (port_input_pressed(mod->values[RE_TOGGLE].action)) {
+        port_mod_random_encounters = !port_mod_random_encounters;
+        port_log("random encounters: %s at frame %ld", port_mod_random_encounters ? "off" : "on", port_frames);
+    }
+}
+
+/* The window's title while it is on. */
+static const char *re_status(struct PortMod *mod) {
+    (void)mod;
+    return port_mod_random_encounters ? "no encounters" : NULL;
+}
+
+void port_random_encounter_skipped(s32 map, s32 area) {
+    port_log("random encounters: frame %ld: map 0x%X, area %d: the encounter skipped", port_frames, (int)map, (int)area);
+}
+
 static PortMod game_mod_table[] = {
     { .id = "skip_dialogues", .version = "0.1", .options = sd_options,
       .option_count = (int)(sizeof(sd_options) / sizeof(sd_options[0])), .start = sd_start, .frame = sd_frame,
@@ -395,6 +429,9 @@ static PortMod game_mod_table[] = {
     { .id = "xp_boost", .version = "0.1", .options = xb_options,
       .option_count = (int)(sizeof(xb_options) / sizeof(xb_options[0])), .start = xb_start },
     { .id = "widescreen", .version = "0.1", .start = ws_start, .frame = ws_frame },
+    { .id = "random_encounters", .version = "0.1", .options = re_options,
+      .option_count = (int)(sizeof(re_options) / sizeof(re_options[0])), .start = re_start, .frame = re_frame,
+      .status = re_status },
 };
 
 int game_mod_count(void) {

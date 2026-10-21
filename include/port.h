@@ -175,6 +175,12 @@ s32 port_party_xp_share(s32 slot, s32 took_part, s32 exp);
 extern int port_mod_xp_boost;
 enum { PORT_XP_BOOST_EXP, PORT_XP_BOOST_FORM_EXP, PORT_XP_BOOST_BITS };
 s32 port_xp_boost(s32 kind, s32 amount);
+/* port_mod_random_encounters: random_encounters is on ("Disable random encounters"): when FIELDSTG's encounter step
+ * (fieldstg_encounter_step) runs encounter_timer out, it tells port_random_encounter_skipped (the map, the encounter
+ * area 1..3) and redraws the timer instead of starting the battle, as the game does with
+ * records_state.encounters off. The battles events start (fieldstg_start_battle's other callers) are untouched. */
+extern int port_mod_random_encounters;
+void port_random_encounter_skipped(s32 map, s32 area);
 
 #endif /* PC_PORT */
 
