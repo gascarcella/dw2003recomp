@@ -62,6 +62,8 @@ launcher checks the SHA-1 once and remembers the disc; then press **Play**.
 
 - **Settings** (window scale, fullscreen, 50 or 60 Hz, mute, memory cards), **controls** (keyboard and gamepad
   rebinding, hotkeys) and **mods** (fast-forward, skip dialogues, disable battle animations) are all in the launcher.
+- **Quick save and load:** F5 saves the whole game to a quick slot, F9 goes on from it (one slot, `quick.state` beside
+  the settings; a slot is valid for the build that wrote it). Both keys are rebindable in the launcher's hotkeys.
 - Settings and memory cards (`card1.mcd`, `card2.mcd`, the same format as PCSX-Redux's) are kept in
   `~/.local/share/dw2003/`. A `portable.txt` file beside the launcher keeps them beside it instead.
 
