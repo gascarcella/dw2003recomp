@@ -175,6 +175,20 @@ The item won and the battle are unchanged. `tests/port/mods.py` runs the first s
 with the mod on, with `manual` and party_xp, and capped without `manual`; that battle gives no form experience, so
 `form_exp` is not reached by a scripted run.
 
+### Recover on level up
+
+`level_up_recover`. No options, no hotkey: it acts whenever enabled (`port_mod_level_up_recover`; issue #50).
+
+The game's level up (`stfgtrep_add_exp`, in the member's panel of STFGTREP's report: `docs/MECHANICS.md` section 6)
+raises only max HP and max MP; the member keeps the HP and MP it ended the battle with. With the mod on, the panel
+calls `port_level_up_recover` (`port/game/game_mods.c`) when `stfgtrep_add_exp` says the member went up (one level or
+several in one battle), which sets the record's HP and MP to the new maximums. WFIGHTMN has already written the
+battle's HP and MP back to the records, and nothing after the report writes them again, so the field gets the full
+values. A member that did not fight levels up only with party_xp's share, and recovers then too. The level up's stat
+draws, the report's text and the battle are unchanged.
+
+`tests/port/mods.py` runs the first story battle with xp_boost's 10x (40 experience: member 0 goes from level 1 to 3)
+with the mod on (HP 320/320, MP 207/207) and off (HP 93/320, MP 100/207).
 
 ### Widescreen battles
 

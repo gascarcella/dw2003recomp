@@ -339,6 +339,11 @@ Facts [C] (`stfgtrep_add_exp` and `stfgtrep_raise_stats`, `src/stfgtrep/`; table
   Each level also does `values[1] += 5` (cap 99) and calls `stfgtrep_raise_stats`. Several levels can happen in one call (the loop repeats).
 - HP/MP: `gain = hp_mp_gains[0 or 1] - cut[k] + random[next() % 9]` with `cut = {0, 5, 10, 15}`, `random = {-4..4}`; max HP and max MP
   capped 9999 (current HP/MP are not changed here).
+- Current HP/MP on a level up [C][T]: nothing raises them. `stfgtrep_add_exp` is the only level up of a member's record (the
+  report's member panel, step 40; STAGSLCT's debug level change aside), and neither it nor `stfgtrep_raise_stats` writes
+  `values[2]` or `values[4]`; WFIGHTMN wrote the battle's HP and MP back before the report and nothing after it does. The first
+  battle with xp_boost's 10x (40 experience, Digimon 0 level 1 -> 3) ends at HP 93/320, MP 100/207 (`tests/port/mods.py`
+  `level_up_recover`, whose mod sets them to the maximums there: issue #50).
 - Six stats (Power..Charisma): `gain = stat_gains[band][class + next() % 5]` with band by level (< 5, < 20, < 40, < 60, < 80, else) and
   `class = RecordsDigimon.stat_gains[i]`. Table rows (9 entries each) fall from `{2,3,4,6,8,10,12,13,14}` (band 0) to `{0,0,1,1,1,1,1,2,2}`
   (band 5). Cap 999.

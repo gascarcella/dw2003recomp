@@ -588,6 +588,11 @@ void stfgtrep_member_run(StfgtrepMember *obj, StfgtrepMemberData *data) {
         id = gamestate_data.funcs.get_party_member(obj->slot);
         if (stfgtrep_funcs.add_exp(id, obj->exp_gained) != 0) {
             rec = gamestate_data.funcs.get_record(id);
+#ifdef PC_PORT
+            if (port_mod_level_up_recover != 0) {
+                port_level_up_recover(id);
+            }
+#endif
             obj->level_up = 1;
             if (obj->voice != -1) {
                 sound_module.key_off(obj->sound_playing, obj->voice);

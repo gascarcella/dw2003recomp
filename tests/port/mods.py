@@ -50,6 +50,9 @@ xp_boost: the same route with the mod on: exp 3 and bits 2.5 (12 experience for 
 exp and bits 10 with `manual` and party_xp's default share (40, 20, 20 and 500 bits); and 10 without `manual`
 (capped at the sliders' 5x: 20 and 250 bits). Each run logs two boosts (the experience and the bits); the first battle
 gives no form experience (member 0 fights as its own form), so `form_exp` is not reached by a scripted run.
+level_up_recover: the same route with xp_boost's exp 10 (`manual`: 40 experience, member 0 from level 1 to 3), with
+the mod on: member 0 ends at its new max HP and MP, one recover logged; and off: it keeps the battle's HP (93) and MP
+under the raised maximums, nothing logged.
 widescreen (no script of its own): first_battle_save to back_on_field with the mod on, in the headless build
 (no GPU renderer): the frame log equals the run without the mod (the mod changes nothing the game does; the renderer
 draws its wide canvas, tests/port/render_gpu.py), and the run logs once that the picture stays 4:3.
@@ -430,8 +433,9 @@ def gs_money(dump):
 
 def first_battle_runs(binary, out, runs):
     """first_battle_save's route to back_on_field once per (label, mods) of `runs` (mods None: off). Yields (label,
-    mods, the party's exp gains and the money gain from battle_won to battle_end, stderr) for the runs that reach
-    back_on_field with battle_start and battle_won at the emulator's stable hashes (the mods act in the report only)."""
+    mods, the party's exp gains and the money gain from battle_won to battle_end, stderr, the battle_end dump) for the
+    runs that reach back_on_field with battle_start and battle_won at the emulator's stable hashes (the mods act in the
+    report only)."""
     fbs = json.loads((SCRIPTS / "first_battle_save.json").read_text())["steps"]
     j = next(k for k, s in enumerate(fbs) if s.get("type") == "checkpoint" and s.get("name") == "back_on_field")
     script = derived(out, "first_battle", fbs[:j + 1])
@@ -453,7 +457,7 @@ def first_battle_runs(binary, out, runs):
               f"{label}: battle_start and battle_won have the emulator's stable hashes")
         won, end = px_party_exp(d["battle_won"]), px_party_exp(d["battle_end"])
         gains = tuple(e[1] - w[1] for w, e in zip(won, end))
-        yield label, mods, won, gains, gs_money(d["battle_end"]) - gs_money(d["battle_won"]), err
+        yield label, mods, won, gains, gs_money(d["battle_end"]) - gs_money(d["battle_won"]), err, d["battle_end"]
 
 
 def party_xp(binary, out):
@@ -462,7 +466,7 @@ def party_xp(binary, out):
     runs = (("px_on", {"party_xp": {"enabled": True}}),
             ("px_full", {"party_xp": {"enabled": True, "share": 100, "catch_up": True}}),
             ("px_off", None))
-    for label, mods, won, gains, money, err in first_battle_runs(binary, out, runs):
+    for label, mods, won, gains, money, err, _ in first_battle_runs(binary, out, runs):
         shares = err.count("party xp: frame")
         check(gains == PX_GAINS[label] and shares == (3 if mods else 0),
               f"{label}: the party (Digimon {', '.join(str(w[0]) for w in won)}) gains {gains}, "
@@ -481,12 +485,36 @@ def xp_boost(binary, out):
             ("xb_party", {"xp_boost": {"enabled": True, "exp": 10, "bits": 10, "manual": True},
                           "party_xp": {"enabled": True}}),
             ("xb_capped", {"xp_boost": {"enabled": True, "exp": 10, "bits": 10}}))
-    for label, mods, won, gains, money, err in first_battle_runs(binary, out, runs):
+    for label, mods, won, gains, money, err, _ in first_battle_runs(binary, out, runs):
         want = XB_WANT[label]
         boosts = [line.split(": ", 2)[2] for line in err.splitlines() if "xp boost: frame" in line]
         check((gains, money) == want and len(boosts) == 2,
               f"{label}: the party gains {gains} and {money} bits, want {want[0]} and {want[1]} "
               f"({'; '.join(boosts)})")
+
+
+def lr_values(dump, digimon):
+    """digimon[i].record.stats.values[0..5] (level, TP, HP, max HP, MP, max MP) from a gamestate_data dump: at
+    0x75C + i * 0x3DC + 0xC + 0x1C."""
+    at = 0x784 + digimon * 0x3DC
+    return tuple(int.from_bytes(dump[at + 2 * k:at + 2 * k + 2], "little", signed=True) for k in range(6))
+
+
+def level_up_recover(binary, out):
+    """level_up_recover: the first battle's report with xp_boost's 10x (40 experience: member 0 levels up), with
+    the mod on and off (the docstring)."""
+    print("mods: level_up_recover (first_battle_save to back_on_field: the first battle, 10x experience)")
+    boost = {"xp_boost": {"enabled": True, "exp": 10, "manual": True}}
+    runs = (("lr_on", dict(boost, level_up_recover={"enabled": True})), ("lr_off", boost))
+    for label, mods, won, gains, money, err, end in first_battle_runs(binary, out, runs):
+        lv, _, hp, max_hp, mp, max_mp = lr_values(end, won[0][0])
+        logged = err.count("level up recover: frame")
+        if "level_up_recover" in mods:
+            check(lv > 1 and (hp, mp) == (max_hp, max_mp) and logged == 1,
+                  f"{label}: member 0 at level {lv}, HP {hp}/{max_hp}, MP {mp}/{max_mp} (full); {logged} recover(s) logged")
+        else:
+            check(lv > 1 and hp < max_hp and logged == 0,
+                  f"{label}: member 0 at level {lv}, HP {hp}/{max_hp}, MP {mp}/{max_mp} (the battle's HP kept)")
 
 
 # Every mod's test, the longest first (the parallel run's critical path): name -> function(binary, out, record).
@@ -496,6 +524,7 @@ MODS_TESTS = {
     "random_encounters": lambda binary, out, record: random_encounters(binary, out),
     "party_xp": lambda binary, out, record: party_xp(binary, out),
     "xp_boost": lambda binary, out, record: xp_boost(binary, out),
+    "level_up_recover": lambda binary, out, record: level_up_recover(binary, out),
     "global_save": lambda binary, out, record: global_save(binary, out),
     "battle_animations": lambda binary, out, record: battle_animations(binary, out),
     "widescreen": lambda binary, out, record: widescreen(binary, out),

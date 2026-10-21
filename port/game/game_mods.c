@@ -1,6 +1,6 @@
 /* The game's built-in mods (docs/LAUNCHER.md "Built-in mods"; psxstack/game.h game_mods): skip_dialogues,
- * battle_animations, global_save, preset_language, party_xp, xp_boost, widescreen and random_encounters, as PortMod
- * records the runtime's engine (port/runtime/mods.c) reads the settings of, gives hotkeys to and runs every vsync. Each reaches the game's C through
+ * battle_animations, global_save, preset_language, party_xp, xp_boost, level_up_recover, widescreen and
+ * random_encounters, as PortMod records the runtime's engine (port/runtime/mods.c) reads the settings of, gives hotkeys to and runs every vsync. Each reaches the game's C through
  * the port_mod_* flags and functions of include/port.h, read inside `#ifdef PC_PORT` blocks. The runtime's own mod,
  * fast_forward, is the engine's; skip_dialogues asks for it with port_fast_forward_request. */
 #include <stddef.h>
@@ -363,6 +363,26 @@ s32 port_xp_boost(s32 kind, s32 amount) {
     return (s32)r;
 }
 
+/* ---- level_up_recover (docs/LAUNCHER.md "Recover on level up"; docs/MECHANICS.md section 6): while enabled,
+ * port_mod_level_up_recover makes STFGTREP's report call port_level_up_recover when stfgtrep_add_exp says a party
+ * member went up, which sets the record's HP and MP to the new maximums. The game's level up raises only max HP and
+ * max MP (stfgtrep_raise_stats); WFIGHTMN has already written the battle's HP and MP back to the records, and nothing
+ * after the report writes them again, so the field gets the full values. */
+int port_mod_level_up_recover;
+
+static void lr_start(struct PortMod *mod) {
+    (void)mod;
+    port_mod_level_up_recover = 1;
+}
+
+void port_level_up_recover(s32 digimon) {
+    GamestateStats *st = &gamestate_data.digimon[digimon].record.stats;
+    port_log("level up recover: frame %ld: Digimon %d level %d: HP %d -> %d, MP %d -> %d", port_frames, digimon,
+             st->values[0], st->values[2], st->values[3], st->values[4], st->values[5]);
+    st->values[2] = st->values[3];
+    st->values[4] = st->values[5];
+}
+
 /* ---- widescreen (docs/LAUNCHER.md "Widescreen battles"): the battle at 16:9 through the hardware renderer's wide
  * canvas (psxstack render_gpu_wide.c). FIGHTSTG already sends the 3D a 16:9 frame needs: its only screen-space cull,
  * fightstg_model_mesh_is_visible, keeps a mesh with a bounding point within the clip plus 64 pixels (x within 224 of
@@ -428,6 +448,7 @@ static PortMod game_mod_table[] = {
       .option_count = (int)(sizeof(px_options) / sizeof(px_options[0])), .start = px_start },
     { .id = "xp_boost", .version = "0.1", .options = xb_options,
       .option_count = (int)(sizeof(xb_options) / sizeof(xb_options[0])), .start = xb_start },
+    { .id = "level_up_recover", .version = "0.1", .start = lr_start },
     { .id = "widescreen", .version = "0.1", .start = ws_start, .frame = ws_frame },
     { .id = "random_encounters", .version = "0.1", .options = re_options,
       .option_count = (int)(sizeof(re_options) / sizeof(re_options[0])), .start = re_start, .frame = re_frame,
