@@ -4,9 +4,9 @@ The launcher is psxstack's (`psxstack/launcher/`), built for this game from `por
 (`cmake -S psxstack/launcher -B build/launcher -G Ninja -DPSXSTACK_GAME_JSON=$PWD/port/game/game.json
 -DPSXSTACK_VERSION_ROOT=$PWD -DPSXSTACK_TOOLS_DIR=$PWD/tools`; `build/launcher/dw2003-launcher`). The contract between
 the launcher and the game, the settings directory and file (schema 1), the mod manifest and runtime, the launcher's
-screens and self-test, and the crash report are psxstack's `docs/LAUNCHER.md` and `launcher/README.md`. This page
-keeps what is this game's: its built-in mods and its 60 Hz mode. The decisions behind the design: DECISIONS
-"Launcher and mods (session 18)".
+screens and self-test, the update check and the crash report are psxstack's `docs/LAUNCHER.md` and
+`launcher/README.md`. This page keeps what is this game's: its built-in mods, its 60 Hz mode and its updates. The
+decisions behind the design: DECISIONS "Launcher and mods (session 18)".
 
 Code cites this file as `docs/LAUNCHER.md "<heading>"`; keep the headings stable.
 
@@ -312,3 +312,21 @@ everything up, music and the play-time clock included.
 
 `tests/port/hz60.py` compares the port at 60 Hz with the patched game in the emulator (`tests/port/ntsc_patch.lua`
 writes the two words at `main`'s entry; references in `tests/port/hz60/`).
+
+## Updates
+
+`port/game/game.json` names this repository (`launcher.updates: { "github": "gascarcella/dw2003recomp" }`), so the
+launcher has psxstack's update check (psxstack `docs/LAUNCHER.md` "Updates"): at start, one request for this
+repository's latest published release (drafts and prereleases left out), compared with the launcher's version stamp.
+
+- **The prompt:** a newer release opens a modal over the Play screen (never while the game runs): "Digimon World 2003
+  X.Y.Z is available (you have A.B.C)." with **Update now** (download this platform's package, check its SHA-256,
+  replace the AppImage or the Windows folder's files, start the new launcher), **Release page**, **Later** and **Skip
+  this version** (`launcher.updates.skipped`).
+- **The Settings screen's "Updates" area:** the checkbox "Check for updates when the launcher starts"
+  (`launcher.updates.check`, on by default), the launcher's version, the last check's result and time, the skipped
+  release (**Forget**), **Check now** (whatever the checkbox says) and **Release page**. `--no-update-check` skips the
+  check at start for one run.
+- **What it relies on here:** the packages' names (`dw2003-<version>-x86_64.AppImage`,
+  `dw2003-<version>-windows-x86_64.zip`) and the release tags `vX.Y.Z`: `docs/RELEASE.md` "The launcher's update
+  check".

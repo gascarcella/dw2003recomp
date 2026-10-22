@@ -18,7 +18,9 @@
 # Needs: scripts/setup.sh sdl3-desktop imgui appimage dxc; cmake, ninja, gcc/g++ (with libstdc++.a), binutils, python3.
 # Outputs: <out>/dw2003-<version>-x86_64.AppImage, <out>/dw2003-<version>-x86_64.debug (the game's debug info, which
 # symbolizes crash reports: scripts/symbolize.py, docs/PORT.md "Crash report"), <out>/SHA256SUMS; build trees and logs
-# under build/release/.
+# under build/release/. The AppImage's name is a contract: the launcher's update looks for exactly
+# dw2003-<version>-x86_64.AppImage among a release's assets (psxstack/docs/GAME_CONTRACT.md "Releases";
+# docs/RELEASE.md "The launcher's update check").
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -36,7 +38,7 @@ while [[ $# -gt 0 ]]; do
         --sdl3) sdl="$2"; shift 2 ;;
         --test) test=1; shift ;;
         --shared-libstdcxx) shared_cxx=1; shift ;;
-        -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,23p' "$0"; exit 0 ;;
         *) die "unknown argument: $1" ;;
     esac
 done

@@ -27,6 +27,7 @@ The Windows build is tested on Linux under Wine and Proton; real Windows comes f
    Windows zip under Wine or Proton the same way (or on a Windows machine when one is at hand), and **Publish** the
    release on GitHub when it is good (or delete the draft and the tag). Publishing puts binaries built from the
    decompiled code on the public page: the maintainer's decision each time (DECISIONS "Releases: tagged drafts, published by hand").
+   It also offers the release to every player's launcher at its next start ("The launcher's update check" below).
 
 A failed run creates no release. To retry after a fix, delete the tag (`git push --delete origin v0.1.0; git tag -d
 v0.1.0`), tag the fixed commit and push again.
@@ -39,6 +40,36 @@ lives in psxstack"). release.yml checks it out with a plain `git submodule updat
 `package_appimage.sh` and `package_windows.sh` export it as `PSXSTACK_VERSION`, which psxstack's `cmake/version.cmake`
 stamps into both programs (over `git describe` of this repository: `-DPSXSTACK_VERSION_ROOT`). A new runtime or
 launcher reaches a release by bumping the pin.
+
+## The launcher's update check
+
+`port/game/game.json` names this repository (`launcher.updates.github`), so the launcher asks GitHub for the latest
+release when it starts (psxstack `docs/LAUNCHER.md` "Updates"): one GET of
+`https://api.github.com/repos/gascarcella/dw2003recomp/releases/latest`, through the system's `curl`, on a worker
+thread, with the launcher's name and version as the User-Agent (`dw2003-launcher/0.5.0`) and nothing else: no
+identifier, no settings, nothing about the player or the machine. A newer release gets a prompt over the Play screen
+(never while the game runs): **Update now** downloads this platform's package, checks it against the SHA-256 GitHub
+gives for the asset, puts it in place of the running AppImage or of the Windows folder's files and starts the new
+launcher; **Release page** opens the release in the browser; **Later**; **Skip this version**. Where the launcher
+cannot replace itself (an extracted AppImage, a folder it cannot write to, no `tar.exe` on Windows) only the release
+page is offered. What a release must keep for this:
+
+- **The packages' names:** `dw2003-<version>-x86_64.AppImage` and `dw2003-<version>-windows-x86_64.zip`, `<version>`
+  the tag without its v, are what the launcher looks for among the release's assets (psxstack `docs/GAME_CONTRACT.md`
+  "Releases"; `package_appimage.sh` and `package_windows.sh` write them). A release whose package has another name is
+  still reported, but cannot be installed from the launcher.
+- **The tag** `vX.Y.Z`: it is compared with the launcher's version stamp as three integers. A launcher whose stamp is
+  not exactly `X.Y.Z` (a `dev-<commit>` or `X.Y.Z-N-g<hash>` build, an rc) is never offered an update; it only shows
+  the latest version.
+- **Only a published release that is not a prerelease is offered:** GitHub's `releases/latest` leaves drafts and
+  prereleases out. The draft of step 3 reaches no player until it is published, and an rc tag (`v0.5.0-rc1`) is safe
+  to publish as a **prerelease** for testers (`gh release edit v0.5.0-rc1 --draft=false --prerelease`): no launcher
+  is offered it.
+
+Releases up to 0.4.1 have no check and cannot update themselves: the first update a player is offered is the release
+after the one that ships the check. A player turns the check off with the Settings screen's checkbox "Check for
+updates when the launcher starts" (`launcher.updates.check: false` in `settings.json`) or by starting the launcher
+with `--no-update-check`; the Settings screen's **Check now** still asks when pressed.
 
 ## A local release
 

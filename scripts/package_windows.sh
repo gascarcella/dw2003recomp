@@ -18,7 +18,9 @@
 # Needs: scripts/setup.sh llvm-mingw sdl3-windows imgui dxc; cmake, ninja, python3 (tools/venv), the host's objdump.
 # Outputs: <out>/dw2003-<version>-windows-x86_64.zip, <out>/dw2003-<version>-windows-x86_64-symbols.zip,
 # <out>/SHA256SUMS-windows; the build trees in build/port-win and build/launcher-win, the staging under
-# build/release/windows/.
+# build/release/windows/. The zip's name is a contract: the launcher's update looks for exactly
+# dw2003-<version>-windows-x86_64.zip among a release's assets (psxstack/docs/GAME_CONTRACT.md "Releases";
+# docs/RELEASE.md "The launcher's update check").
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -35,7 +37,7 @@ while [[ $# -gt 0 ]]; do
         --out) out="$2"; shift 2 ;;
         --test) test=1; shift ;;
         --jobs) JOBS="$2"; shift 2 ;;
-        -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,23p' "$0"; exit 0 ;;
         *) die "unknown argument: $1" ;;
     esac
 done
