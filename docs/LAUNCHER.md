@@ -32,7 +32,9 @@ a change live and the page marks what waits for the next start. Each mod's `star
 when its options change, and its `stop` clears the mod's `port_mod_*` flag (psxstack "Mod runtime" rule 6);
 `preset_language` and `widescreen` have no stop and say `"applies": "restart"` in their manifests (the language is
 chosen at the boot's select screen; the wide canvas is asked for before the window opens), so the menu switches them at
-the next start.
+the next start. The menu fits the launcher's 960x620 canvas into the window (1.74 at 1920x1080, 1.29 on
+the Steam Deck), with `video.menu_size` ("Menu size": smaller, auto, larger) on top; the Mods page, XP boost's
+included, fits down to a 640x480 window (psxstack v0.3.12).
 
 ## Built-in mods
 
@@ -330,3 +332,13 @@ repository's latest published release (drafts and prereleases left out), compare
 - **What it relies on here:** the packages' names (`dw2003-<version>-x86_64.AppImage`,
   `dw2003-<version>-windows-x86_64.zip`) and the release tags `vX.Y.Z`: `docs/RELEASE.md` "The launcher's update
   check".
+
+## Steam
+
+The launcher's Settings screen has psxstack's **Steam** section (psxstack `docs/LAUNCHER.md` "Steam"; v0.3.13):
+**Add to Steam** adds the game to the player's Steam library as a non-Steam shortcut to the launcher (the AppImage, or
+`dw2003-launcher.exe`), named "Digimon World 2003" from `port/game/game.json`, for the account the player picks;
+**Remove from Steam** and **Update shortcut** (after the AppImage moved) act on what `launcher.steam` in
+`settings.json` recorded. Nothing looks for Steam before the button, and Steam must be closed (the launcher asks; it
+never stops Steam). `port/game/game.json` names no artwork yet (`launcher.steam_art`), so Steam shows its own
+placeholders: adding the game's capsule, hero, logo and icon is a change here, PNGs and that key.
