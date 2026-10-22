@@ -73,7 +73,11 @@ launcher checks the SHA-1 once and remembers the disc; then press **Play**.
   rebinding, hotkeys) and **mods** (fast-forward, faster loading, skip dialogues, disable battle animations) are all in the launcher.
 - **The in-game menu:** Escape, or Back (Select) held with Start on a gamepad, pauses the game and opens the same
   Settings, Controls and Mods inside its window (the Steam Deck's way: no switching windows). Changes apply at once,
-  except the few marked *(restart)*; Resume or the key again goes on, Quit returns to the launcher.
+  except the few marked *(restart)*; Resume or the key again goes on, Quit returns to the launcher. It fits itself to
+  the screen; **Menu size** in Settings makes it smaller or larger.
+- **Steam:** Settings > Steam > **Add to Steam** puts the game in your Steam library as a non-Steam game (for the Steam
+  Deck's Game Mode, Steam's controller settings and overlay); quit Steam first. **Remove from Steam** takes it out
+  again, and **Update shortcut** follows the AppImage when you move it.
 - **Quick save and load:** F5 saves the whole game to a quick slot, F9 goes on from it (one slot, `quick.state` beside
   the settings; a slot is valid for the build that wrote it). Both keys are rebindable in the launcher's hotkeys.
 - Settings and memory cards (`card1.mcd`, `card2.mcd`, the same format as PCSX-Redux's) are kept in
