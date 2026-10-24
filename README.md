@@ -70,7 +70,7 @@ launcher checks the SHA-1 once and remembers the disc; then press **Play**.
 ### Settings, controls and saves
 
 - **Settings** (window scale, fullscreen, 50 or 60 Hz, mute, memory cards), **controls** (keyboard and gamepad
-  rebinding, hotkeys) and **mods** (fast-forward, faster loading, skip dialogues, disable battle animations) are all in the launcher.
+  rebinding, hotkeys, a second gamepad as player 2) and **mods** (fast-forward, faster loading, skip dialogues, disable battle animations) are all in the launcher.
 - **The in-game menu:** Escape, or Back (Select) held with Start on a gamepad, pauses the game and opens the same
   Settings, Controls and Mods inside its window (the Steam Deck's way: no switching windows). Changes apply at once,
   except the few marked *(restart)*; Resume or the key again goes on, Quit returns to the launcher. It fits itself to
