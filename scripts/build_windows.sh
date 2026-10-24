@@ -130,7 +130,8 @@ fi
 
 # ---- The game under Wine, without the disc: the window's input self-test, which ends with the in-game menu's round
 # trip (shown in the pause, the settings re-applied live, closed), with the defaults and with rebound keys and pads (as
-# CI's Linux job). Wine drops SDL_VIDEO_DRIVER but needs no display: SDL's windows driver runs headless.
+# CI's Linux job). SDL's offscreen video: Ubuntu's Wine 9.0 (CI's) passes SDL_VIDEO_DRIVER on and cannot open a window
+# without a display (xvfb-run does not help it); wine-staging and Proton drop it, and their windows driver runs headless.
 if [[ $test -eq 1 && $configure_only -eq 0 && -x "$port_dir/dw2003.exe" ]]; then
     for config in "" "$ROOT/tests/port/settings/rebound.json"; do
         args=(--input-test --fps 0)
@@ -138,7 +139,7 @@ if [[ $test -eq 1 && $configure_only -eq 0 && -x "$port_dir/dw2003.exe" ]]; then
         what="${config:+with $(basename "$config")}"
         out="$port_dir/input-test${config:+-$(basename "$config" .json)}.log"
         log "game: the input self-test and the in-game menu under wine ${what:-with the defaults} (log: $out)"
-        if WINEPREFIX="$ROOT/build/wine-prefix" WINEDEBUG=-all SDL_AUDIO_DRIVER=dummy \
+        if WINEPREFIX="$ROOT/build/wine-prefix" WINEDEBUG=-all SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=dummy \
             timeout 300 wine "$port_dir/dw2003.exe" "${args[@]}" >"$out" 2>&1 &&
             grep -q 'input test: the menu: passed' "$out"; then
             log "game: $(grep -o '[0-9]* of [0-9]* checks passed' "$out" || true), the menu passed"
