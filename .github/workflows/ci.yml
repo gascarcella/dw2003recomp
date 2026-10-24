@@ -357,8 +357,9 @@ jobs:
           WINEPREFIX="$PWD/build/wine-prefix" wineboot --init
           wine --version
 
-      # The game (Release, the SDL build) and the launcher cross-compiled: every object, then the links; then the
-      # launcher's self-test under Wine (SDL's offscreen video: no display, no disc).
+      # The game (Release, the SDL build, with the in-game menu) and the launcher cross-compiled: every object, then the
+      # links; then the launcher's self-test and the game's input self-test, which ends with the in-game menu's round
+      # trip, under Wine (no display, no disc).
       - name: Windows cross-build and the launcher's self-test under Wine
         timeout-minutes: 25
         run: scripts/build_windows.sh --launcher --test --jobs "$DW3_JOBS"

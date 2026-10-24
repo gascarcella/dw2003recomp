@@ -118,7 +118,9 @@ The plan's milestones (`docs/PORT.md`):
 - **Platforms:** Linux x86_64 and Windows x86_64 (cross-built from Linux; the board's Windows track,
   [#37](https://github.com/gascarcella/dw2003recomp/issues/37)):
   the cross toolchain (llvm-mingw, SDL3 for Windows, `scripts/build_windows.sh`) builds `dw2003.exe` and the
-  launcher, which passes its self-test under Wine; the arena needs no alignment, fixed link address or linker-script
+  launcher, which passes its self-test under Wine, and the game with the in-game menu (as in the AppImage), which passes
+  the input self-test and the menu's round trip under Wine (issue [#111](https://github.com/gascarcella/dw2003recomp/issues/111):
+  the Windows build had been left without it); the arena needs no alignment, fixed link address or linker-script
   symbols, the overlay sections no linker script (the units' sections go to their overlay's: objcopy after each
   compile on ELF, `#pragma clang section` on PE, which keeps the units' unwind tables),
   the state tables no `nm -S`; the runtime's system calls are split into POSIX and Windows halves

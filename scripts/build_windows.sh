@@ -7,14 +7,15 @@
 #   --launcher        also the launcher into build/launcher-win (dw2003-launcher.exe and its PDB)
 #   --configure-only  stop after configuring
 #   --test            after the launcher: its --self-test under Wine (wine on PATH; SDL's offscreen video) in
-#                     build/launcher-win/selftest/, the prefix in build/wine-prefix/; and when the disc is there
+#                     build/launcher-win/selftest/, the prefix in build/wine-prefix/; the game's input self-test
+#                     under Wine, ending with the in-game menu's round trip (no disc); and when the disc is there
 #                     (iso/dw2003.cue) the game's crash report under Wine (tests/port/crash.py --wine) and its
 #                     layer-2 replays under Wine (tests/port/run.py --exe ... --wine: the log and the record must
 #                     equal the Linux build's). The same gate as CI's windows job; each Wine run under `timeout`.
-# Needs: scripts/setup.sh llvm-mingw sdl3-windows dxc (and imgui for the launcher; dxc: the hardware renderer's
-# shaders, compiled on this host); cmake and ninja (tools/venv's when the
-# system has none). Exit 0 when everything asked for built (and the test passed), else 1 with a summary: which objects
-# did not compile and whether the link failed. The game links since the overlay sections stopped needing a linker
+# Needs: scripts/setup.sh llvm-mingw sdl3-windows imgui dxc (imgui: the launcher and the game's in-game menu,
+# -DPSXSTACK_MENU=ON as in the AppImage; dxc: the hardware renderer's shaders, compiled on this host); cmake and ninja
+# (tools/venv's when the system has none). Exit 0 when everything asked for built (and the test passed), else 1 with
+# a summary: which objects did not compile and whether the link failed. The game links since the overlay sections stopped needing a linker
 # script (DECISIONS "Overlay sections by renaming"); tests/port/run.py --exe build/port-win/dw2003.exe --wine replays
 # the layer-2 scripts with it under Wine.
 set -euo pipefail
@@ -32,7 +33,7 @@ while [[ $# -gt 0 ]]; do
         --configure-only) configure_only=1; shift ;;
         --test) test=1; launcher=1; shift ;;
         --jobs) JOBS="$2"; shift 2 ;;
-        -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
         *) die "unknown argument: $1" ;;
     esac
 done
@@ -46,6 +47,8 @@ llvm="$(tool llvm-mingw)"
 sdl="$(tool sdl3-windows)"
 [[ -f "$sdl/lib/cmake/SDL3/SDL3Config.cmake" ]] || die "no SDL3 for Windows at $sdl: scripts/setup.sh sdl3-windows"
 [[ -x "$(tool dxc)/bin/dxc" ]] || die "no DXC for the hardware renderer's shaders: scripts/setup.sh dxc"
+imgui="$(tool imgui)"
+[[ -f "$imgui/imgui.cpp" ]] || die "no Dear ImGui (the launcher and the in-game menu): scripts/setup.sh imgui"
 PATH="$PATH:$(tool venv)/bin"
 for t in cmake ninja; do
     command -v "$t" >/dev/null || die "no $t on PATH (scripts/setup.sh cmake)"
@@ -59,7 +62,8 @@ mkdir -p "$ROOT/build"   # a fresh checkout has none: the logs below go beside t
 port_dir="$ROOT/build/port-win"
 log "game: configuring $port_dir"
 cmake -S "$ROOT/port" -B "$port_dir" -G Ninja -DCMAKE_TOOLCHAIN_FILE="$toolchain" -DCMAKE_BUILD_TYPE=Release \
-    -DPSXSTACK_SDL=ON -DPSXSTACK_TOOLS_DIR="$PSXSTACK_TOOLS_DIR" >"$port_dir.configure.log" 2>&1 ||
+    -DPSXSTACK_SDL=ON -DPSXSTACK_MENU=ON -DPSXSTACK_IMGUI_DIR="$imgui" -DPSXSTACK_TOOLS_DIR="$PSXSTACK_TOOLS_DIR" \
+    >"$port_dir.configure.log" 2>&1 ||
     { tail -30 "$port_dir.configure.log" >&2; die "game: configure failed (see $port_dir.configure.log)"; }
 if [[ $configure_only -eq 0 ]]; then
     log "game: building every object with $JOBS jobs (ninja -k 0; log: $port_dir.build.log)"
@@ -85,8 +89,6 @@ fi
 
 # ---- The launcher.
 if [[ $launcher -eq 1 ]]; then
-    imgui="$(tool imgui)"
-    [[ -f "$imgui/imgui.cpp" ]] || die "no Dear ImGui: scripts/setup.sh imgui"
     launcher_dir="$ROOT/build/launcher-win"
     log "launcher: configuring $launcher_dir"
     cmake -S "$ROOT/psxstack/launcher" -B "$launcher_dir" -G Ninja -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
@@ -124,6 +126,29 @@ if [[ $launcher -eq 1 ]]; then
             grep 'FAILED' "$selftest.log" | sed 's/^/    /' | head -20
         fi
     fi
+fi
+
+# ---- The game under Wine, without the disc: the window's input self-test, which ends with the in-game menu's round
+# trip (shown in the pause, the settings re-applied live, closed), with the defaults and with rebound keys and pads (as
+# CI's Linux job). SDL's offscreen video: Ubuntu's Wine 9.0 (CI's) passes SDL_VIDEO_DRIVER on and cannot open a window
+# without a display (xvfb-run does not help it); wine-staging and Proton drop it, and their windows driver runs headless.
+if [[ $test -eq 1 && $configure_only -eq 0 && -x "$port_dir/dw2003.exe" ]]; then
+    for config in "" "$ROOT/tests/port/settings/rebound.json"; do
+        args=(--input-test --fps 0)
+        [[ -z "$config" ]] || args=(--config "Z:$config" "${args[@]}")
+        what="${config:+with $(basename "$config")}"
+        out="$port_dir/input-test${config:+-$(basename "$config" .json)}.log"
+        log "game: the input self-test and the in-game menu under wine ${what:-with the defaults} (log: $out)"
+        if WINEPREFIX="$ROOT/build/wine-prefix" WINEDEBUG=-all SDL_VIDEO_DRIVER=offscreen SDL_AUDIO_DRIVER=dummy \
+            timeout 300 wine "$port_dir/dw2003.exe" "${args[@]}" >"$out" 2>&1 &&
+            grep -q 'input test: the menu: passed' "$out"; then
+            log "game: $(grep -o '[0-9]* of [0-9]* checks passed' "$out" || true), the menu passed"
+        else
+            status=1
+            log "game: the input self-test under wine FAILED"
+            grep -E 'FAILED|fatal|skipped' "$out" | sed 's/^/    /' | head -20
+        fi
+    done
 fi
 
 # ---- The game under Wine, with the disc: the crash report (tests/port/crash.py --wine: its crash run boots the game)

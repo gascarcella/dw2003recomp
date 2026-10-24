@@ -22,6 +22,10 @@ Settings, Controls and Mods are the launcher's other screens. Keyboard defaults:
 circle, Z square, S triangle, Enter start, Backspace select, Q/E L1/R1, 1/3 L2/R2; P pauses, F11 fullscreen, Tab
 holds fast-forward; a gamepad works as on a PlayStation. Everything can be rebound on the Controls screen.
 
+In the game, Escape (on a gamepad: Back held with Start) pauses it and opens the in-game menu: the same Settings,
+Controls and Mods inside the game's window. Changes apply at once, except the few marked (restart); Resume or the key
+again goes on, Quit returns to the launcher.
+
 Updates
 -------
 When it starts, the launcher asks GitHub for the latest release of dw2003recomp (one request to api.github.com with
