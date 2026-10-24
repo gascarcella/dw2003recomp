@@ -24,13 +24,13 @@ Builds build/port-sdl if needed (-DPSXSTACK_SDL=ON: tools/sdl3 and tools/dxc), t
     2D does not); the debug channel's screenshot with "renderer": "gpu" at the internal scale;
   - with a GPU device and the disc, widescreen (the `widescreen` mod; psxstack render_gpu_wide.c, issue #71):
     first_battle_save with the mod on (a settings file: no window, renderer gpu): a field frame stays the software image
-    (320x240); a battle frame is 428x240 whose middle 320 columns are the software image byte for byte and whose sides
+    (320x240); a battle frame is 426x240 (16:9 in whole columns) whose middle 320 columns are the software image byte for byte and whose sides
     show the arena (WIDE_SIDES: at least that share of the side pixels not black); its present into 1920x1080 is the
-    reference at 16:9; at internal scale 2 a battle frame is 856x480 and its middle, averaged back, within
+    reference at 16:9; at internal scale 2 a battle frame is 852x480 and its middle, averaged back, within
     SCALED_BUDGET of the software image; the frame log equals the run without the mod (the game draws the same);
   - with the disc: SDL_Renderer's own present (a 960x720 window on the offscreen driver, read back through
     DW3_PORT_PRESENT_READBACK) must be the same reference: the two present paths agree.
-The reference is video.c's placement (video_dest: 4:3, as tall as an integer multiple of the image's lines allows,
+The reference is video.c's placement (video_dest at video.scaling's default, fit: 4:3, as large as the output allows,
 centred) with target pixel p reading image pixel floor((p - x0 + 0.5) * w / dw) (render_gpu.c's present shader).
 --lavapipe runs on Mesa's software Vulkan driver (VK_DRIVER_FILES) instead of the default device.
 --exe BINARY tests that binary instead of building build/port-sdl: the device, the pictures, the VRAM checks and the
@@ -82,24 +82,28 @@ def ppm(path):
     return w, h, pixels
 
 
-def dest(ow, oh, w, h, an=4, ad=3):
-    """video.c video_dest, in whole pixels as video_dest_rect rounds it: (x, y, w, h); the aspect an:ad (4:3, or a
-    wide picture's 4 W : 3 w)."""
+def dest(ow, oh, w, h, an=4, ad=3, scaling="fit"):
+    """psxstack video.c video_dest (video.scaling), in whole pixels: (x, y, w, h); the aspect an:ad (4:3, or a wide
+    picture's: 16:9 without a window). fit: as large as the output allows; integer: as tall as a whole multiple of the
+    lines allows (fit below one); stretch: the whole output."""
     f = oh // h
-    while f > 0 and (h * f * an + ad - 1) // ad > ow:
+    while scaling == "integer" and f > 0 and (h * f * an + ad - 1) // ad > ow:
         f -= 1
-    if f > 0:
+    if scaling == "stretch":
+        dw, dh = ow, oh
+    elif scaling == "integer" and f > 0:
         dh, dw = h * f, (h * f * an + ad - 1) // ad
+    elif ow * ad >= oh * an:
+        dh, dw = oh, (oh * an + ad // 2) // ad
     else:
-        dh = min(float(oh), ow * ad / an)
-        dw = dh * an / ad
-    return int((ow - dw) / 2), int((oh - dh) / 2), int(dw + 0.5), int(dh + 0.5)
+        dw, dh = ow, (ow * ad + an // 2) // an
+    return (ow - dw) // 2, (oh - dh) // 2, dw, dh
 
 
-def present(image, ow, oh, aspect=(4, 3)):
+def present(image, ow, oh, aspect=(4, 3), scaling="fit"):
     """The reference present of image (w, h, RGB) into an ow x oh output, on black."""
     w, h, px = image
-    x0, y0, dw, dh = dest(ow, oh, w, h, *aspect)
+    x0, y0, dw, dh = dest(ow, oh, w, h, *aspect, scaling)
     out = bytearray(ow * oh * 3)
     xs = [((2 * (x - x0) + 1) * w) // (2 * dw) for x in range(ow)]
     for y in range(max(y0, 0), min(y0 + dh, oh)):
@@ -295,7 +299,7 @@ def widescreen(sdl, env, out):
     for f in WIDE_BATTLE:
         w, h, lo = ppm(out / f"w_sw{f}.ppm")
         image = ppm(out / f"w_hw{f}.ppm")
-        want = w + 2 * ((w + 5) // 6)
+        want = w + 2 * (w // 6)
         if image[:2] != (want, h):
             check(False, f"vsync {f} (the battle): {image[0]}x{image[1]}, not {want}x{h}")
             continue
@@ -304,7 +308,7 @@ def widescreen(sdl, env, out):
               f"software image byte for byte, {100 * lit:.0f} % of the sides drawn")
     image = ppm(out / f"w_hw{WIDE_BATTLE[1]}.ppm")
     got = ppm(out / "w_present.ppm")
-    n = differing(got[2], present(image, 1920, 1080, (4 * image[0], 3 * 320)))
+    n = differing(got[2], present(image, 1920, 1080, (16, 9)))
     check(got[:2] == (1920, 1080) and n == 0, f"vsync {WIDE_BATTLE[1]}: the present into 1920x1080 at 16:9"
           + (f" ({n} pixels differ)" if n else ""))
     f = WIDE_BATTLE[1]
@@ -316,7 +320,7 @@ def widescreen(sdl, env, out):
         return
     w, h, lo = ppm(out / "w2_sw.ppm")
     W, H, hi = ppm(out / "w2_hw.ppm")
-    want = (w + 2 * ((w + 5) // 6)) * 2
+    want = (w + 2 * (w // 6)) * 2
     if (W, H) != (want, h * 2):
         check(False, f"scale 2, vsync {f}: {W}x{H}, not {want}x{h * 2}")
         return

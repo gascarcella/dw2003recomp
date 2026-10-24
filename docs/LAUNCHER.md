@@ -221,8 +221,9 @@ with the mod on (HP 320/320, MP 207/207) and off (HP 93/320, MP 100/207).
 
 ### Widescreen battles
 
-`widescreen`. No options, no hotkey: while enabled, the battle (FIGHTSTG) is shown 16:9 through the GPU renderer's wide
-canvas (psxstack `runtime/render_gpu_wide.c`; issue #71). The game is unchanged: FIGHTSTG already sends the 3D a 16:9
+`widescreen`. No options, no hotkey: while enabled, the battle (FIGHTSTG) is shown at the screen's shape, up to 16:9
+(a 16:10 Steam Deck gets 16:10), through the GPU renderer's wide canvas (psxstack `runtime/render_gpu_wide.c`; issue
+#71). The game is unchanged: FIGHTSTG already sends the 3D a 16:9
 frame needs (its only screen-space cull, `fightstg_model_mesh_is_visible`, keeps a mesh with a bounding point within
 the clip plus 64 pixels: 224 from the centre, against the 213.5 of a 16:9 frame), and the GPU clipped it to the
 320-wide drawing area. The mod's frame callback (`port/game/game_mods.c`) calls `port_video_widescreen(1)` while FIGHTSTG

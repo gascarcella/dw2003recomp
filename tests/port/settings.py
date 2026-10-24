@@ -227,6 +227,7 @@ def main():
     _, s, _ = printed(binary, a / "settings.json")
     check(s["disc"]["path"] == "" and s["video"] == {"window": True, "scale": 2, "fullscreen": False, "refresh": 50,
                                                      "renderer": "software", "internal_scale": 1,
+                                                     "scaling": "fit",
                                                      "subpixel": "on",
                                                      "filter": "none",
                                                      "crt": {"scanlines": 50, "mask": 30, "curvature": 0}}
@@ -237,7 +238,7 @@ def main():
         "schema": 1,
         "disc": {"path": "../discs/dw2003.cue", "sha1": "457cb233" + "0" * 32},
         "video": {"window": False, "scale": 3, "fullscreen": True, "refresh": 60, "renderer": "gpu", "internal_scale": 4,
-                  "subpixel": "off"},
+                  "scaling": "integer", "subpixel": "off"},
         "audio": {"mute": True},
         "memcard1": "cards/one.mcd",
         "memcard2": None,
@@ -281,6 +282,9 @@ def main():
     _, s, _ = printed(binary, write(a / "perspective.json", {"schema": 1, "video": {"subpixel": "perspective"}}))
     check(s["video"]["subpixel"] == "perspective", "video.subpixel \"perspective\" read and printed back")
 
+    _, s, _ = printed(binary, a / "full.json", "--scaling", "stretch")
+    check(s["video"]["scaling"] == "stretch", "--scaling stretch overrides video.scaling \"integer\"")
+
     _, s, _ = printed(binary, a / "full.json", "--filter", "none")
     check(s["video"]["filter"] == "none", "--filter overrides video.filter")
     _, s, _ = printed(binary, a / "full.json", "--filter", "crt:mask=40")
@@ -323,6 +327,8 @@ def main():
         "an unknown subpixel": ({"schema": 1, "video": {"subpixel": "smooth"}},
                                 'video.subpixel: "off", "on" or "perspective", not "smooth"'),
         "subpixel not a string": ({"schema": 1, "video": {"subpixel": True}}, "video.subpixel: a string"),
+        "a bad scaling": ({"schema": 1, "video": {"scaling": "zoom"}},
+                          'video.scaling: "fit", "integer" or "stretch", not "zoom"'),
         "a card path not a string": ({"schema": 1, "memcard1": 3}, "memcard1: a path"),
         "an unknown filter": ({"schema": 1, "video": {"filter": "blur"}},
                               'video.filter: "none", "sharp", "scanlines", "crt" or "smooth", not "blur"'),

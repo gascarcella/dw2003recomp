@@ -12,7 +12,8 @@ Builds build/port-sdl if needed (-DPSXSTACK_SDL=ON: tools/sdl3 and tools/dxc), t
   - with a GPU device and the disc (otherwise skipped, with the reason): new_game replayed with each filter, its
     --gpu-screenshot F@WxH pictures against a reference computed here from the unfiltered picture (--gpu-screenshot F,
     which tests/port/render_gpu.py checks against the software image), at internal scales 1, 2 and 3 (RUNS: integer
-    and non-integer scales, letterboxing, a window smaller than the picture). A filter's reference mirrors its shader (psxstack/shaders/present_<filter>.frag.hlsl) in float64;
+    and non-integer scales, letterboxing, a window smaller than the picture; `--scaling integer`, the placement the
+    tolerances were measured at; render_gpu.py checks the default, fit). A filter's reference mirrors its shader (psxstack/shaders/present_<filter>.frag.hlsl) in float64;
     the GPU computes in float32, so each filter has a tolerance per channel (TOLERANCE: the largest difference, and
     the share of channels that may differ at all). `smooth` filters the 1x software image at every internal scale,
     so its reference starts from --screenshot's picture.
@@ -67,7 +68,7 @@ class Frame:
     def __init__(self, image, scale, ow, oh, aspect=(4, 3)):
         self.w, self.h, self.px = image
         self.lines = self.h // scale   # the display's lines
-        self.x0, self.y0, self.dw, self.dh = dest(ow, oh, self.w // scale, self.lines, *aspect)
+        self.x0, self.y0, self.dw, self.dh = dest(ow, oh, self.w // scale, self.lines, *aspect, "integer")
         self.shrink = self.dw < self.w or self.dh < self.h
 
     def fetch(self, x, y):
@@ -340,7 +341,8 @@ def pictures(sdl, env, out, spec):
             for w, h in sizes:
                 args += ["--gpu-screenshot", f"{f}@{w}x{h}:{out / f'{tag}{scale}_{f}_{w}x{h}.ppm'}"]
         rc, text = run([sdl, "--disc", DISC, "--script", SCRIPTS / "new_game.json", "--max-frames",
-                        str(max(frames) + 1), "--internal-scale", str(scale), "--filter", spec, *args], env)
+                        str(max(frames) + 1), "--internal-scale", str(scale), "--scaling", "integer", "--filter", spec,
+                        *args], env)
         check(rc == 0 and f"renderer: gpu: filter {name}" in text, f"internal scale {scale}: the run (exit {rc})")
         if rc != 0:
             print("\n".join(text.splitlines()[-10:]))
@@ -372,7 +374,8 @@ def widescreen_smooth(sdl, env, out):
     for scale in (1, 2):
         sw, img, got = out / f"ws{scale}_sw.ppm", out / f"ws{scale}_img.ppm", out / f"ws{scale}_1920x1080.ppm"
         rc, text = run([sdl, "--config", cfg, "--script", SCRIPTS / "first_battle_save.json", "--script-mods",
-                        "--max-frames", str(f + 1), "--internal-scale", str(scale), "--filter", "smooth",
+                        "--max-frames", str(f + 1), "--internal-scale", str(scale), "--scaling", "integer",
+                        "--filter", "smooth",
                         "--screenshot", f"{f}:{sw}", "--gpu-screenshot", f"{f}:{img}",
                         "--gpu-screenshot", f"{f}@1920x1080:{got}"], env, timeout=900)
         check(rc == 0 and "mods: widescreen on" in text, f"internal scale {scale}: the run (exit {rc})")
