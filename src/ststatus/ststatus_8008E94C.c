@@ -488,7 +488,18 @@ void ststatus_items_draw(StstatusItemsPage *obj) {
         } else {
             spr.set_scale(0x1000, 0x1000, 0x1000);
             spr.set_vram_pos(0x140, 0);
+#ifdef PC_PORT
+            /* PC_PORT: the counts window is open two frames before the item list (both take 10 frames) puts its
+             * cursor's item here, and on the page's first list that is still 0: records_get_item(0) is NULL. The PS1
+             * reads the type from the kernel's low RAM (address 9) and draws whatever icon that indexes for the two
+             * frames; the host faults. The port draws no icon until the item is set (issue #116; tests/host/FINDINGS.md
+             * 12). */
+            if (obj->item != 0) {
+                spr.draw(cdload_module.get_subfile_by_id(0x02860000), records_funcs.get_item_icon(obj->item), 0x16, 0xAE);
+            }
+#else
             spr.draw(cdload_module.get_subfile_by_id(0x02860000), records_funcs.get_item_icon(obj->item), 0x16, 0xAE);
+#endif
         }
         spr.set_vram_pos(0x280, 0x100);
         spr.draw(cdload_module.get_subfile_by_id(0x04040000), 0x2F, 0xF, 0xA5);

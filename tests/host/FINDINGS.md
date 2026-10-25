@@ -334,6 +334,24 @@ Not replayed by a golden (no case reaches these creators); found by the M0 agent
   meaningful on the PS1); the state machine is unchanged, so the icon still ends on that frame. `tests/port/field.py`
   walks the route and requires the event to end with no crash.
 
+## 12. `ststatus_items_draw` draws the icon of item 0 when the items page opens its first list (issue #116; crashes on the host)
+
+- **Where:** `src/ststatus/ststatus_8008E94C.c` `ststatus_items_draw` draws the counts window's item icon,
+  `records_funcs.get_item_icon(obj->item)`, once `counts_anim` is fully open. `ststatus_items_run` step 12 creates the
+  item list and opens the counts window in the same frame, both 10 frames long; the list sets `items_page->item` only
+  when its own windows have opened (`ststatus_item_list_run` step 1, `ststatus_item_list_show_page`), two frames after
+  the counts window. The page is zero-allocated, so on its first list `item` is 0 for those two frames, and
+  `records_get_item(0)` returns NULL. Every other icon draw in STSTATUS checks `item > 0` first.
+- **Original:** the type byte is read from the kernel's low RAM (address 9), and the icon it indexes in
+  `records_item_icons` is drawn for two frames, under the window's opening. A later list on the same page shows the
+  previous item's icon for those frames instead.
+- **Host:** a NULL dereference at 0xD (the host offset of `RecordsItem.type`), SIGSEGV on Linux and
+  `EXCEPTION_ACCESS_VIOLATION` on Windows, every time the field menu's Items page opens a category with items:
+  issue #116 (0.5.3, Windows, `STSTATUS` the last overlay loaded). The replays never open the item list (the
+  `first_battle_save` tour opens the party page).
+- **Port: done.** Under `PC_PORT`, `ststatus_items_draw` draws no icon while `item` is 0; nothing else changes.
+  `tests/port/field.py items_list` opens the list from `card_case` and uses a Power Charge.
+
 ## What the host does not replay (by design, not findings)
 
 - Stack leftovers: `replay.c` zeroes 64 KB of stack before every call, so a local the C reads uninitialised is 0 on the

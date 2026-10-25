@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Field event scripts that the layer-2 replays do not reach, run on the port alone (no emulator expectation).
+"""Field events and menus that the layer-2 replays do not reach, run on the port alone (no emulator expectation).
 Usage: tests/port/field.py [--out DIR]
 Needs build/port/dw2003 (tests/port/run.py builds it) and the disc. Each case is first_battle_save's steps up to a
 checkpoint, then its own steps (derived at run time, so the route stays the one the emulator recorded); the port must
@@ -9,6 +9,10 @@ reach the case's last checkpoint with exit 0, and no crash report may be written
     turned back with a prompt icon that the script closes twice (message 0x326 to object 0x323). The second close finds
     no icon, starts a new one and closes it before it found the player: fieldstg_icon_draw dereferenced its NULL actor
     (tests/host/FINDINGS.md 11). The port must survive the event and reach `turned_back`.
+  items_list (issue #116): from the `card_case` checkpoint, the field menu's Items (STSTATUS's items page) and its
+    first category's list: the counts window finishes opening two frames before the list puts its cursor's item in
+    the page, and ststatus_items_draw drew the icon of item 0 through records_get_item's NULL (tests/host/FINDINGS.md
+    12). The port must open the list and use a Power Charge (`power_charge_used`).
 Exit codes: 0 pass, 1 fail, 2 something missing.
 """
 import argparse
@@ -36,6 +40,19 @@ CASES = {
          "until": {"type": "wait_mem", "addr": "0x80099DD8", "size": 4, "value": 0},
          "comment": "through the event (the icon, the walk back, the second close, the dialogue) until it ends"},
         {"type": "checkpoint", "name": "turned_back"},
+    ]),
+    "items_list": ("first_battle_save", "card_case", [
+        {"type": "press", "buttons": ["START"], "frames": 2, "release": 10, "timeout": 600,
+         "until": {"type": "wait_mem", "addr": "0x80099DD0", "size": 4, "value": 1},
+         "comment": "open the field menu until fieldstg_stage.menu_open, as first_battle_save's status_open does"},
+        {"type": "wait_frames", "frames": 30, "comment": "the menu's opening animation, the cursor on option 0 (Items)"},
+        {"type": "press", "buttons": ["CROSS"], "frames": 2, "release": 10, "until": {"type": "wait_stage", "stage": 16},
+         "timeout": 600, "comment": "confirm: STSTATUS on the items page (ststatus_pages[1][0])"},
+        {"type": "press", "buttons": ["CROSS"], "frames": 2, "release": 20, "timeout": 3000,
+         "until": {"type": "wait_mem", "addr": "0x80048DDB", "size": 1, "value": 3},
+         "comment": "CROSS until a Power Charge is used (gamestate_data.items[43] 4 -> 3; the leader is not at full HP): "
+                    "the first category (usable items) opens its list and the counts, then the Power Charge, the member"},
+        {"type": "checkpoint", "name": "power_charge_used"},
     ]),
 }
 
