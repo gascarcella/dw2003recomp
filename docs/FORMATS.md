@@ -130,6 +130,19 @@ and `STTRNGCS`'s sub-file 3 fail the check, and the reason is not known yet.
 - Glyph metrics are in the EXE, not on disc: three fonts (`message_fonts[1..3]`, heights 14/11/9), each with 230
   glyphs for codes 4–0xE9 and 114 extra glyphs (`FontGlyph`, 0xB bytes: tpage x/64, u, v, CLUT x, CLUT y, w, h,
   x offset, y offset, advance, ?).
+- Drawing (`message_draw_window`): a glyph is a `w`×`h` sprite of 4-bit texels at VRAM x `0x140 + tpage_x*64 + u/4`
+  halfwords, y `v`, through the 16-colour CLUT at `(0x140 + clut_x, clut_y + palette)`; colour `0x0000` is
+  transparent. Every glyph of a font shares one CLUT row (14 px: 232, white with a dark outline; 11 px: 216, an orange
+  gradient; 9 px: 208), except the European fonts' icon glyphs. The pen moves `advance + x_offset` per glyph, which is
+  also what `font_get_text_width` adds; a glyph with `tpage_x` 0xFF does not exist in that font and is drawn as the
+  font's first glyph (`0`). `tools/dump_text.py --font-png` draws a font this way, each glyph labelled with its code.
+- What each font has: the 14 px font has every glyph. The 11 px font lacks 46 extra glyphs: `01 02`–`04`, `07`,
+  `08`, `0B`, `0C`, `0F`, `10`, `12`, `14`–`16`, `19`, `1B`–`3A` (no `、。,:;^_/\…”()+` and none of the symbols and
+  icons); it has the space, `.・?!ー―〜’−「」` and every European letter. The 9 px font has only `0`–`9`, `A`–`Z`,
+  `a`–`z`, `ー`, 3 katakana and the extra glyphs `01 07` `:`, `01 0D` `ー`, `01 0F` `/`, `01 1A` `−`: no space, no accents.
+- Who uses which (the text windows' `message_create_window` font argument): font 1 (14 px) for nearly all text;
+  font 2 (11 px) for the speaker's name in the speech bubble (`message_create_dialog`) and the partner Digimon's names
+  on the starter-pack screen (STPLNMET); font 3 (9 px) for small labels and numbers (LV/HP/MP, money, counts).
 - Character tables in the EXE: `font_chars` (`0x8004E010`) and `font_chars_ext` (`0x8004E3BC`), `{u16 sjis; u8
   glyph; u8 pad}`, ended by `0xFFFF`. They map the game's glyph codes to Shift-JIS (next section).
 
@@ -195,13 +208,36 @@ order, and `message_decode_char` builds `text[0] << 8 | text[1]` before comparin
 both directions (mode 0 glyph codes → Shift-JIS, mode 1 back). STGMCARD uses it for the save title.
 
 **European letters.** The extra glyphs `01 3B`–`01 72` are kanji in the tables (`亜`, `唖`, …, the first JIS
-level-1 kanji). The European fonts draw accented letters on them. From the words they occur in: `3B ¡`, `3F ¿`,
-`41 Ä`, `45 Ñ`, `47 Ö`, `49 Ü`, `4A ß`, `4B à`, `4C â`, `4E ä`, `4F ç`, `50 è`, `51 é`, `52 ê`, `54 ì`, `55 î`,
-`56 ï`, `57 ñ`, `58 ò`, `59 ô`, `5B ö`, `5C ù`, `5D û`, `5E ü`, `5F á`, `60 í`, `61 ó`, `62 ú`, `69 É`, `6A Í`, `6B Ó`,
-`6C Ú`, `72 º`. This is a reading from context, not yet checked against the font image. `6D`–`6F` and a few others
-occur once or twice and are unassigned. `tools/dump_text.py` uses this table.
+level-1 kanji). The European fonts draw accented letters on them, read off the font image (`dump_text.py --font-png`,
+the 14 and 11 px fonts; the 9 px font has none of them):
 
-Verified: all 91,059 entries of all 350 text files decode with no unknown byte (`tools/dump_text.py --check`).
+| | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | A | B | C | D | E | F |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `01 3x` | | | | | | | | | | | | `¡` | `£` | `§` | `µ` | `¿` |
+| `01 4x` | `Ã` | `Ä` | `Å` | `Æ` | `Ç` | `Ñ` | `Õ` | `Ö` | `Ø` | `Ü` | `ß` | `à` | `â` | `ã` | `ä` | `ç` |
+| `01 5x` | `è` | `é` | `ê` | `ë` | `ì` | `î` | `ï` | `ñ` | `ò` | `ô` | `õ` | `ö` | `ù` | `û` | `ü` | `á` |
+| `01 6x` | `í` | `ó` | `ú` | `Â` | `Ê` | `Ô` | `Ë` | `Ï` | `Á` | `É` | `Í` | `Ó` | `Ú` | `À` | `È` | `Ì` |
+| `01 7x` | `Ò` | `Ù` | `º` | | | | | | | | | | | | | |
+
+Portuguese needs `á à â ã ç é ê í ó ô õ ú` and their capitals: all there; `ª` is not. Below `01 3B` the European
+fonts draw most extra glyphs as their Shift-JIS reading, but `01 1F`–`01 36` are partly icons: `○ □ △ ×`
+(`2F 32 34 1B`) are the pad buttons, `1F`/`20` arrows (▶), `21` a dash, `23` a heart, `24` a note, and `25`–`29`,
+`2C`–`2E`, `30`, `31`, `33`, `35`, `36` item and element icons. `dump_text.py` prints `01 29` and `01 2C` (`£`, `§`
+in the tables) as `{01 29}` and `{01 2C}` so that `£` and `§` read one way only. A character with both a 1-byte and a
+`01 xx` glyph (`・?!ー〜`) is always the 1-byte one on the disc.
+
+**Layout.** In dialogue (TALK, DMG) an entry starts with the speaker tag `<7>Name<7>`; `message_create_dialog` puts
+the name in an 11 px window and the rest in the 14 px text window (`<7><9><7>`: the player's name). Lines end at
+`<1>`; a page ends with `<2,2>` (wait for the confirm button) and the next starts after `<3>`, so pages are separated
+by `<2,2><3>` and the entry ends with `<2,2>` (NAMEET's typed message separates pages with `<2,2><1><1><1>`). The
+windows hold 3 lines (`set_page_lines(3)`); a 4th line scrolls the window by one (`message_code_newline`). The speech
+bubble's fill is the text's widest line (`font_get_text_width`, every page) clamped to 0x5F–0x8B px, and the text
+starts 10 px left of the fill (`message_dialog_layouts`, `0x8004DCF4`), so a line of up to 149 px stays inside it;
+nothing wraps or clips text by width. Entries with no speaker may instead be shown in the full-width box
+(`message_box_create`, text at x 18). `<8,n><5,n>` puts the player's name in line n, then inserts it.
+
+Verified: all 91,059 entries of all 350 text files decode with no unknown byte (`tools/dump_text.py --check`), and
+re-encode to the same bytes (`tools/text_codec.py --roundtrip`).
 
 ## Sound (`sound.c`; `SOUND/<NAME>/MP<NAME>.BIN`, `MV<NAME>.BIN`)
 A **sound bank** is a pair of files. `sound_banks[id]` (72 entries, 0 = none) points to a `SoundBank` in the EXE:
@@ -602,7 +638,13 @@ further: no game code that reads them has been read for this document.
 ## Tools and verification scripts
 - `tools/disc_files.py`: file ID ↔ path (from the EXE's table and the disc's ISO path table), and `read(id)` /
   `subfile()` helpers for scripts.
-- `tools/dump_text.py`: prints any text file in any language (`--check` decodes all of them).
+- `tools/dump_text.py`: prints any text file in any language (`--check` decodes all of them; `--font-png` draws a
+  font's glyphs with their codes).
+- `tools/text_codec.py`: dump_text's notation back to bytes (`--roundtrip`: all 91,059 entries of every language
+  re-encode to the disc's bytes), glyph widths and the line/page split.
+- `tools/text_tools.py`: translation work files (one JSON per English text file: export with merge, fit, check,
+  build into a text pack with `tools/text_pack.py`); `--selftest` covers the round trip, fitting, the checker, the
+  merge and the build.
 - `tests/formats/run.sh` (layer 3 of `scripts/test.sh`) runs the repeatable checks: `disc_files.py --check`,
   `dump_text.py --check`, `overlay_layout.py --wstag-table` (WSTAG stage table), `flag_census.py --check` and
   `tests/sound/sound_formats.py --check` (the sound banks: VAB headers and bodies, SEPs; `--events` prints the SEPs'
