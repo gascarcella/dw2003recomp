@@ -139,7 +139,7 @@ for L in $LAYERS; do
             "$PY" "$ROOT/tests/port/debug.py"      # the debug channel (--debug) and tools/mcp's offline self-test
             "$PY" "$ROOT/tests/port/savestate.py" "${M32[@]}"   # save states: resumed at battle_start, the same run
             "$PY" "$ROOT/tests/port/crash.py"      # the crash report (DW3_PORT_CRASH_AT, a fatal error, --version)
-            "$PY" "$ROOT/tests/port/field.py"      # field events and menus the replays do not reach (the lobby's exit before progress 3, the item list)
+            "$PY" "$ROOT/tests/port/field.py"      # field events and menus the replays do not reach (the lobby's exit before progress 3, the item list, a dive, the swamp's flies)
         fi ;;
     *) echo "unknown layer $L" >&2; exit 2 ;;
     esac

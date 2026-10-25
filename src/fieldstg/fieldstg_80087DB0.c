@@ -1474,8 +1474,20 @@ void fieldstg_manager_leave_map(FieldstgManager *obj, FieldstgManagerData *data)
         if (obj->window_w > 160) {
             gamestate_data.funcs.set_next_map(obj->next_map, obj->map_entry);
             gamestate_data.field_map = gamestate_data.funcs.get_map();
+#ifdef PC_PORT
+            /* PC_PORT: a warp (map events 9 and 10; 10 is Submarimon's dive) ends the party's actors before it
+             * changes the map, and heap_run_children clears their slots, so party[0] is NULL here. The PS1 copies the
+             * kernel's low RAM into player_pos and player_dir, which nothing reads after a move between field maps
+             * (FIELDSTG takes them only when entered from outside the field); the host faults. The port keeps the
+             * previous values (issue #120; tests/host/FINDINGS.md 13). */
+            if (data->party[0] != NULL) {
+                gamestate_data.player_pos = data->party[0]->pos;
+                gamestate_data.player_dir = data->party[0]->dir;
+            }
+#else
             gamestate_data.player_pos = data->party[0]->pos;
             gamestate_data.player_dir = data->party[0]->dir;
+#endif
             obj->base.next_step(obj);
         }
         fieldstg_background_fill_layer(0x1001, 0x8000);

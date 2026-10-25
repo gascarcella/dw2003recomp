@@ -352,6 +352,40 @@ Not replayed by a golden (no case reaches these creators); found by the M0 agent
 - **Port: done.** Under `PC_PORT`, `ststatus_items_draw` draws no icon while `item` is 0; nothing else changes.
   `tests/port/field.py items_list` opens the list from `card_case` and uses a Power Charge.
 
+## 13. `fieldstg_manager_leave_map` reads the player through a NULL slot after a warp (issue #120; crashes on the host)
+
+- **Where:** `src/fieldstg/fieldstg_80087DB0.c` `fieldstg_manager_leave_map` step 2 saves `data->party[0]`'s position
+  and direction in `gamestate_data.player_pos`/`player_dir` as the black window closes. A warp (map events 9 and 10,
+  `fieldstg_map_events_run` → the player's `warp` → `fieldstg_manager_warp`: type 10 with flag 0x7093, condition 0x93,
+  progress 15..99, is Submarimon's dive, in 35 stages' `map_events`; type 9 with flag 0x7094, progress 30..99, in a few)
+  ends the party's actors (`fieldstg_manager_end_actors`) while its picture plays, then calls `fieldstg_goto_map`. An
+  ended object's slot is cleared by `heap_run_children` (`src/main/heap.c`), so `party[0]` is NULL by the time the map
+  is left.
+- **Original:** the reads go to the kernel's low RAM (the actor's `pos` and `dir` at 0x50 and 0x60), and those words
+  land in `player_pos`/`player_dir`. Harmless: FIELDSTG takes them (as `return_pos`) only when it is entered from
+  outside the field (`fieldstg_manager_start`), and a warp goes from one field map to another, whose start places the
+  player from the warp's own position.
+- **Host:** a NULL dereference at 0x80 (the host offset of `pos`), SIGSEGV on Linux, on every dive: issue #120 (0.5.3,
+  Steam Deck, map 0x234, WSTAG450), reproduced on the Linux build.
+- **Port: done.** Under `PC_PORT`, the copy is skipped when `party[0]` is NULL: `player_pos`/`player_dir` keep the
+  values saved when the field was last left (the menu, a battle), which nothing reads before they are saved again.
+  `tests/port/field.py swamp_dive` dives from map 0x234 to 0x2E5.
+
+## 14. WSTAG460's fly of type 4 has no sprite (issue #119; crashes on the host)
+
+- **Where:** `src/wstag/wstag460.c`: below progress 15, BIOS Swampland (map 0x236) starts `wstag460_group_update`,
+  which creates seven flies of types 1 to 7 (`wstag460_fly_new`). Each fly's init takes the entry of its type from
+  `fieldstg_stage.sprites`, and from then on writes that sprite's `shown`, `frame`, `x` and `y` every frame
+  (`wstag460_fly_update`, states RUN and DONE). `wstag460_sprites` (the disc's `WSTAG460.PRO`, at 0x1778) has types
+  8, 3, 2, 1, 7, 5, 6, 10 and 9: no 4, so the fourth fly's sprite stays NULL.
+- **Original:** the fly writes bytes 0x0 to 0xD of the kernel's low RAM every frame while it lives, with no visible
+  effect; the other six flies show. WSTAG455's event 360 (the TNT chip opens the shrine's door) enters the map, and
+  WSTAG460's event 370 there sets progress 15, so the swarm is met once, on that first entry.
+- **Host:** a NULL dereference at 0x0 (`shown`), SIGSEGV on Linux, on that entry: issue #119 (0.5.3, Steam Deck, map
+  0x236), reproduced on the Linux build with the issue's save.
+- **Port: done.** Under `PC_PORT`, a fly that finds no sprite gets one of its own that is in no list, so nothing draws
+  it; its state machine and timing are unchanged. `tests/port/field.py swamp_flies` enters map 0x236 below progress 15.
+
 ## What the host does not replay (by design, not findings)
 
 - Stack leftovers: `replay.c` zeroes 64 KB of stack before every call, so a local the C reads uninitialised is 0 on the

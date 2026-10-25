@@ -219,7 +219,11 @@ checkpoints, derived at run time so the route stays the emulator's, then its own
 event 30, which turns the player back with a prompt icon it closes twice; the second close starts a new icon and closes
 it before its init found the player, and `fieldstg_icon_draw` crashed on the NULL actor (`tests/host/FINDINGS.md` 11).
 The script holds the direction until `fieldstg_stage.event_running` (`wait_mem` 0x80099DD8) and taps CROSS through the
-event until it ends. In `scripts/test.sh --layer port`.
+event until it ends. `swamp_dive` and `swamp_flies` (issues #120 and #119) start from `status_open`: with the status
+screen up, `write_mem` sets `gamestate_data`'s `field_map`, `player_pos` and `player_dir` (and `progress`), so that
+Back puts the player on a map the route never reaches. `swamp_dive` lands on map 0x234's Submarimon dive and dives
+(`tests/host/FINDINGS.md` 13); `swamp_flies` enters BIOS Swampland while its fly swarm is out (`tests/host/FINDINGS.md`
+14). In `scripts/test.sh --layer port`.
 
 ## What it found (session 16)
 - **The overlay copy takes CPU time on the PS1.** The game copies FIELDSTG (0x19000 bytes) into its slot with LIBC2's

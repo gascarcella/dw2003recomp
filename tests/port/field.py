@@ -13,6 +13,14 @@ reach the case's last checkpoint with exit 0, and no crash report may be written
     first category's list: the counts window finishes opening two frames before the list puts its cursor's item in
     the page, and ststatus_items_draw drew the icon of item 0 through records_get_item's NULL (tests/host/FINDINGS.md
     12). The port must open the list and use a Power Charge (`power_charge_used`).
+  swamp_dive (issue #120): from the `status_open` checkpoint (STSTATUS, entered through the field menu), progress 15
+    and gamestate_data's field map and position are set so that Back returns to map 0x234 (WSTAG450) on its
+    Submarimon dive (map event 4, type 10). The warp ends the party's actors before it leaves the map, and
+    fieldstg_manager_leave_map read the player through their cleared slot (tests/host/FINDINGS.md 13). The port must
+    reach map 0x2E5 (`dived`).
+  swamp_flies (issue #119): the same way into BIOS Swampland (map 0x236, WSTAG460) below progress 15, where seven
+    flies are created and type 4 has no sprite (tests/host/FINDINGS.md 14). The port must run 100 frames there
+    (`flies_seen`).
 Exit codes: 0 pass, 1 fail, 2 something missing.
 """
 import argparse
@@ -53,6 +61,38 @@ CASES = {
          "comment": "CROSS until a Power Charge is used (gamestate_data.items[43] 4 -> 3; the leader is not at full HP): "
                     "the first category (usable items) opens its list and the counts, then the Power Charge, the member"},
         {"type": "checkpoint", "name": "power_charge_used"},
+    ]),
+    "swamp_dive": ("first_battle_save", "status_open", [
+        {"type": "write_mem", "addr": "0x8004B370", "value": 15,
+         "comment": "gamestate_data.progress 15: Submarimon's dives (map events with flag 0x7093: condition 0x93, "
+                    "progress 15..99) are open"},
+        {"type": "write_mem", "addr": "0x80048D68", "value": "0x234",
+         "comment": "gamestate_data.field_map: back from the menu on map 0x234 (WSTAG450), not 0x211"},
+        {"type": "write_mem", "addr": "0x80048D6C", "data": "0038030000c4010001000000",
+         "comment": "player_pos (824, 452) << 8 and player_dir 1: on its dive's region (attribute layer 7 value 0xA4, "
+                    "index 4, x 784..863, y 432..471: map event 4, type 10 to map 0x2E5)"},
+        {"type": "press", "buttons": ["TRIANGLE"], "frames": 2, "release": 10,
+         "until": {"type": "wait_stage", "stage": 2}, "timeout": 1500,
+         "comment": "Back from the status screen to the field, as first_battle_save does"},
+        {"type": "wait_map", "map": "0x234", "timeout": 300},
+        {"type": "press", "buttons": ["CROSS"], "frames": 2, "release": 10,
+         "until": {"type": "wait_map", "map": "0x2E5"}, "timeout": 3000,
+         "comment": "dive (CROSS on the warp's icon): the warp ends the party's actors, then leaves the map through "
+                    "fieldstg_manager_leave_map"},
+        {"type": "checkpoint", "name": "dived"},
+    ]),
+    "swamp_flies": ("first_battle_save", "status_open", [
+        {"type": "write_mem", "addr": "0x80048D68", "value": "0x236",
+         "comment": "gamestate_data.field_map: back from the menu on map 0x236 (WSTAG460, BIOS Swampland); progress "
+                    "stays below 15, so its fly swarm is created"},
+        {"type": "write_mem", "addr": "0x80048D6C", "data": "00d600000084000001000000",
+         "comment": "player_pos (214, 132) << 8 and player_dir 1: where WSTAG455's event 360 enters the map"},
+        {"type": "press", "buttons": ["TRIANGLE"], "frames": 2, "release": 10,
+         "until": {"type": "wait_stage", "stage": 2}, "timeout": 1500,
+         "comment": "Back from the status screen to the field, as first_battle_save does"},
+        {"type": "wait_map", "map": "0x236", "timeout": 300},
+        {"type": "wait_frames", "frames": 100, "comment": "the swarm's seven flies move (type 4 has no sprite)"},
+        {"type": "checkpoint", "name": "flies_seen"},
     ]),
 }
 
