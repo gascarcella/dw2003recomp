@@ -183,7 +183,10 @@ the game loads an English file the pack has entries for, the port rebuilds it: e
 else the disc's English bytes. A partly translated pack plays English for the rest.
 
 **Where it is found.** `pt_br.pack` in the mod's directory beside the binary, `mods/preset_language/` (where the build
-and the packages put the manifests; `port_exe_path`, psxstack's `platform.h`). `DW3_PORT_TEXT_PACK=FILE` (a test hook)
+and the packages put the manifests; `port_exe_path`, psxstack's `platform.h`). The packages carry it:
+`scripts/text_packs.sh` builds it from the data checkout's `translations/pt_br/` (the owner's work files, never in this
+repository) into the AppImage's and the Windows zip's `mods/preset_language/` (docs/RELEASE.md "Translations"); a
+local build has none until `tools/text_tools.py build` writes one there. `DW3_PORT_TEXT_PACK=FILE` (a test hook)
 names another file. A missing or invalid pack is logged (`text pack: ...`) and the game plays in English; a file whose
 English bytes are not the ones the pack was built against is logged and stays English.
 

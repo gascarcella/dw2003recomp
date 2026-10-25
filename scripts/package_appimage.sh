@@ -4,7 +4,7 @@
 # usr/bin/mods/, AppRun -> the launcher, a .desktop file, the icon and LICENSES/, then appimagetool with the pinned
 # static runtime (no libfuse2 needed to run it). Players supply their own disc in the launcher.
 #
-# Usage: scripts/package_appimage.sh [--version V] [--out DIR] [--sdl3 DIR] [--test] [--shared-libstdcxx]
+# Usage: scripts/package_appimage.sh [--version V] [--out DIR] [--sdl3 DIR] [--test] [--shared-libstdcxx] [--no-text-packs]
 #   --version V  the version in the file name (default: the release tag being built, vX.Y.Z..., else the last such
 #                tag by `git describe`, else dev-<commit>; a leading v dropped)
 #   --out DIR    where the AppImage and SHA256SUMS go (default build/release/)
@@ -12,9 +12,11 @@
 #                have the desktop backends (X11, Wayland, PipeWire, PulseAudio, ALSA): `scripts/setup.sh sdl3-desktop`
 #   --test       then run the AppImage's smoke test: the launcher's --self-test inside the AppImage (extract-and-run,
 #                offscreen) with DW3_SELFTEST_GAME=beside (the bundled game and mods, found by the launcher itself)
-#                and, when iso/dw2003.cue exists, the disc (the bundled game runs 300 frames from the launcher)
+#                and, when iso/dw2003.cue exists, the disc (the bundled game runs 300 frames from the launcher); the
+#                translations' text packs are in the AppImage
 #   --shared-libstdcxx  a local test build on a system without the static libstdc++ (Fedora: libstdc++-static): the
 #                launcher then needs the system's libstdc++, so this AppImage is not one to publish
+#   --no-text-packs  no translations (scripts/text_packs.sh needs the data checkout's translations/): not one to publish
 # Needs: scripts/setup.sh sdl3-desktop imgui appimage dxc; cmake, ninja, gcc/g++ (with libstdc++.a), binutils, python3.
 # Outputs: <out>/dw2003-<version>-x86_64.AppImage, <out>/dw2003-<version>-x86_64.debug (the game's debug info, which
 # symbolizes crash reports: scripts/symbolize.py, docs/PORT.md "Crash report"), <out>/SHA256SUMS; build trees and logs
@@ -29,7 +31,7 @@ JOBS="${DW3_JOBS:-$(nproc)}"
 log() { printf '\033[1;34m[package]\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m[package]\033[0m %s\n' "$*" >&2; exit 1; }
 
-version="${DW3_VERSION:-}" out="$ROOT/build/release" sdl="${DW3_SDL3_DIR:-}" test=0 shared_cxx=0
+version="${DW3_VERSION:-}" out="$ROOT/build/release" sdl="${DW3_SDL3_DIR:-}" test=0 shared_cxx=0 text_packs=1
 export PSXSTACK_VERSION="$version"   # psxstack/cmake/version.cmake reads it (DW3_VERSION stays the release's input)
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -38,7 +40,8 @@ while [[ $# -gt 0 ]]; do
         --sdl3) sdl="$2"; shift 2 ;;
         --test) test=1; shift ;;
         --shared-libstdcxx) shared_cxx=1; shift ;;
-        -h|--help) sed -n '2,23p' "$0"; exit 0 ;;
+        --no-text-packs) text_packs=0; shift ;;
+        -h|--help) sed -n '2,25p' "$0"; exit 0 ;;
         *) die "unknown argument: $1" ;;
     esac
 done
@@ -128,6 +131,12 @@ objcopy --only-keep-debug "$work/port-sdl/dw2003" "$out/$debug"
 strip -o "$appdir/usr/bin/dw2003-launcher" "$work/launcher/dw2003-launcher"
 [[ -d "$work/port-sdl/mods" ]] || die "the game's build has no mods/ (psxstack copies its mods/ and port/mods there)"
 cp -r "$work/port-sdl/mods" "$appdir/usr/bin/mods"
+# The translations (preset_language's packs, built from the data checkout: scripts/text_packs.sh)
+if [[ $text_packs -eq 1 ]]; then
+    "$ROOT/scripts/text_packs.sh" "$appdir/usr/bin/mods"
+else
+    log "--no-text-packs: no translations in this AppImage (not one to publish)"
+fi
 ln -s usr/bin/dw2003-launcher "$appdir/AppRun"
 cp "$pkg/dw2003recomp.desktop" "$appdir/dw2003recomp.desktop"
 cp "$pkg/dw2003recomp.desktop" "$appdir/usr/share/applications/"
@@ -176,5 +185,12 @@ if [[ $test -eq 1 ]]; then
     fi
     env -u DW3_GAME -u DW3_CONFIG_DIR "${vars[@]}" "$out/$name" --self-test "$scratch" ||
         die "the AppImage's self-test failed"
+    if [[ $text_packs -eq 1 ]]; then
+        # the packs are inside the AppImage itself, as scripts/text_packs.sh built them
+        (cd "$scratch" && "$out/$name" --appimage-extract 'usr/bin/mods/preset_language/*.pack' >/dev/null)
+        cmp -s "$scratch/squashfs-root/usr/bin/mods/preset_language/pt_br.pack" \
+            "$appdir/usr/bin/mods/preset_language/pt_br.pack" || die "the AppImage has no pt_br.pack (the translation)"
+        log "smoke test: the AppImage carries pt_br.pack"
+    fi
     log "smoke test passed"
 fi

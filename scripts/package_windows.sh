@@ -5,7 +5,7 @@
 # second zip with the two PDBs (the symbols of crash minidumps and reports: docs/PORT.md "Crash report"). Players
 # supply their own disc in the launcher.
 #
-# Usage: scripts/package_windows.sh [--version V] [--out DIR] [--test] [--jobs N]
+# Usage: scripts/package_windows.sh [--version V] [--out DIR] [--test] [--jobs N] [--no-text-packs]
 #   --version V  the version in the file names (default: the release tag being built, vX.Y.Z..., else the last such
 #                tag by `git describe`, else dev-<commit>; a leading v dropped)
 #   --out DIR    where the zips and SHA256SUMS-windows go (default build/release/)
@@ -13,8 +13,9 @@
 #                --self-test with DW3_SELFTEST_GAME=beside (the bundled game and mods, found by the launcher's own
 #                lookup) and, when iso/dw2003.cue exists, the disc (the bundled game runs 300 frames from the
 #                launcher's command) and a forced crash of the bundled game (tests/port/crash.py --wine) whose report
-#                symbolizes with the symbols zip's PDB
+#                symbolizes with the symbols zip's PDB; the translations' text packs are in the zip
 #   --jobs N     parallel compile jobs (default: every core)
+#   --no-text-packs  no translations (scripts/text_packs.sh needs the data checkout's translations/): not one to publish
 # Needs: scripts/setup.sh llvm-mingw sdl3-windows imgui dxc; cmake, ninja, python3 (tools/venv), the host's objdump.
 # Outputs: <out>/dw2003-<version>-windows-x86_64.zip, <out>/dw2003-<version>-windows-x86_64-symbols.zip,
 # <out>/SHA256SUMS-windows; the build trees in build/port-win and build/launcher-win, the staging under
@@ -29,7 +30,7 @@ JOBS="${DW3_JOBS:-$(nproc)}"
 log() { printf '\033[1;34m[windows-package]\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m[windows-package]\033[0m %s\n' "$*" >&2; exit 1; }
 
-version="${DW3_VERSION:-}" out="$ROOT/build/release" test=0
+version="${DW3_VERSION:-}" out="$ROOT/build/release" test=0 text_packs=1
 export PSXSTACK_VERSION="$version"   # psxstack/cmake/version.cmake reads it (DW3_VERSION stays the release's input)
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -37,7 +38,8 @@ while [[ $# -gt 0 ]]; do
         --out) out="$2"; shift 2 ;;
         --test) test=1; shift ;;
         --jobs) JOBS="$2"; shift 2 ;;
-        -h|--help) sed -n '2,23p' "$0"; exit 0 ;;
+        --no-text-packs) text_packs=0; shift ;;
+        -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
         *) die "unknown argument: $1" ;;
     esac
 done
@@ -112,6 +114,12 @@ rm -rf "$stage" "$syms"
 mkdir -p "$stage/LICENSES" "$syms"
 cp "$game_dir/dw2003.exe" "$launcher_dir/dw2003-launcher.exe" "$stage/"
 cp -r "$game_dir/mods" "$stage/mods"
+# The translations (preset_language's packs, built from the data checkout: scripts/text_packs.sh)
+if [[ $text_packs -eq 1 ]]; then
+    "$ROOT/scripts/text_packs.sh" "$stage/mods"
+else
+    log "--no-text-packs: no translations in this package (not one to publish)"
+fi
 sed "s/@VERSION@/$version/g" "$pkg/README.txt" > "$stage/README.txt"
 cp "$ROOT/LICENSE" "$stage/LICENSES/dw2003recomp.txt"
 cp "$sdl/share/licenses/SDL3/LICENSE.txt" "$stage/LICENSES/SDL3.txt"
@@ -143,6 +151,11 @@ if [[ $test -eq 1 ]]; then
     "$python" -m zipfile -e "$out/$symbols" "$unz"
     [[ -f "$unz/$base/dw2003-launcher.exe" && -f "$unz/$base/dw2003.exe" && -f "$unz/$base/mods/fast_forward/mod.json" &&
        -f "$unz/$base-symbols/dw2003.pdb" ]] || die "the zips do not unpack to $base/ and $base-symbols/"
+    if [[ $text_packs -eq 1 ]]; then
+        cmp -s "$unz/$base/mods/preset_language/pt_br.pack" "$stage/mods/preset_language/pt_br.pack" ||
+            die "the zip has no pt_br.pack (the translation)"
+        log "test: the zip carries pt_br.pack"
+    fi
     export WINEPREFIX="$ROOT/build/wine-prefix" WINEDEBUG=-all
     # The launcher's self-test from the unzipped folder: the game and the mods beside it, found by its own lookup.
     # Wine sees the Unix tree as drive Z:. DW3_SELFTEST_VIDEO_DRIVER: SDL's hint, since Wine may drop SDL_VIDEO_DRIVER
