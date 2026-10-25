@@ -143,8 +143,8 @@ and with the mod off; `tests/saves/run.py` loads the card it writes in the emula
 
 ### Preset language
 
-`preset_language`. Option: `language` (enum `english french german italian spanish usa japanese`, default `english`,
-`applies: restart`). No hotkey: it acts at boot whenever enabled (`port_mod_preset_language`).
+`preset_language`. Option: `language` (enum `english french german italian spanish usa japanese portuguese_br`,
+default `english`, `applies: restart`). No hotkey: it acts at boot whenever enabled (`port_mod_preset_language`).
 
 The game boots into CNTY_SEL (map 0x1600), whose menu sets `records_language` (the offset of every localized text
 file ID: 0 JPN, 1 USA, 2 ENG, 3 FRA, 4 ITA, 5 GER, 6 SPN) and goes on to the opening, map 0xE02 (0xE01 for Japanese).
@@ -155,6 +155,11 @@ are never loaded. Nothing else on the EU disc reads the choice; the title's New 
 offers only the five EU languages, but the USA and Japanese text sets are on the disc too (`docs/DISC_LAYOUT.md`) and
 the EU code handles them: Japanese takes the opening's 0xE01 path, with the Japanese release's intro art (both
 play-tested to the memory card screen).
+
+`portuguese_br` ("Português (Brasil)") is a fan translation, which cannot be a text set of its own (`records_language`
+has seven values): it boots as English (code 2) and opens the text pack `pt_br.pack` in the mod's directory beside the
+binary (`mods/preset_language/`), whose entries replace the English text files' as they load (`docs/PORT.md` "Text
+packs"). Without the pack, or with an invalid one, the log says so and the game plays in English.
 
 `tests/port/mods.py` boots each language (the opening's map and `records_language`, and the mod off still at the
 screen) and runs `new_game`'s route from the opening in French, whose new game has the French deck names.

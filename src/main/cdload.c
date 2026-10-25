@@ -195,6 +195,20 @@ void cdload_free_oldest(void) {
     entry->state = 0;
 }
 
+#ifdef PC_PORT
+/* PC_PORT: the text pack (docs/PORT.md "Text packs"; port/game/text_pack.c): a translation's entries laid over the
+ * English text files as they load. A file with pack entries can rebuild larger than its sectors on the disc, so a
+ * buffer's size is port_text_sectors(id) (the disc's sectors, or the rebuilt file's when more), here and where
+ * free_above computes a buffer's end; the read still reads the disc's sectors. Once the read has ended and before
+ * the entry is marked loaded (cdload_update), port_text_loaded rebuilds the file in its buffer, so the game never sees
+ * the English bytes. Without a pack both change nothing. */
+#define CDLOAD_BUFFER_SECTORS(id) port_text_sectors(id)
+#define CDLOAD_LOADED(entry) port_text_loaded((entry)->id, (entry)->buffer)
+#else
+#define CDLOAD_BUFFER_SECTORS(id) filetable_funcs.get_sectors(id)
+#define CDLOAD_LOADED(entry)
+#endif
+
 void cdload_queue_file(s32 id) {
     CdloadEntry *entry = cdload_find_entry(id);
 
@@ -213,7 +227,7 @@ void cdload_queue_file(s32 id) {
     }
 #endif
     entry->id = id;
-    entry->buffer = heap_funcs.alloc(filetable_funcs.get_sectors(id) << 11, 3);
+    entry->buffer = heap_funcs.alloc(CDLOAD_BUFFER_SECTORS(id) << 11, 3);
     entry->state = 1;
     entry->last_use = 0;
     entry->marked = 0;
@@ -241,6 +255,7 @@ void cdload_update(void) {
         if (entry->id != 0) {
             switch (entry->state) {
             case 2:
+                CDLOAD_LOADED(entry);
                 entry->state = 3;
                 pending = 1;
                 entry->last_use = gfx_module.funcs.get_time();
@@ -344,7 +359,7 @@ void cdload_free_above(u8 *addr) {
         if (entry->id != 0) {
             u8 *end = (u8 *)entry->buffer + 0x20;
 
-            end += filetable_funcs.get_sectors(entry->id) << 11;
+            end += CDLOAD_BUFFER_SECTORS(entry->id) << 11;
             if (end >= addr) {
                 CDLOAD_WAIT_READ(entry);
                 heap_funcs.free(entry->buffer);

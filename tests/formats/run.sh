@@ -7,6 +7,11 @@
 #         loads whole sectors), the 350 text files at JPN ID + records_language.
 #   text: tools/dump_text.py --check decodes every text file of every language (91,059 entries in 3,005 tables) and
 #         fails on an unknown byte, a file that is not a table, or a table whose entry 0 is not the empty string.
+#   text tools: tools/text_tools.py --selftest: every entry of every language re-encodes to its bytes
+#         (tools/text_codec.py), and the translation tools' fitting, checker, work-file merge and pack build.
+#   text packs: tools/text_pack.py --selftest: every English text file rebuilds to its disc bytes with no entry
+#         replaced, a pack's replaced entries (a plain table, a DMG container, a file grown past its sectors) read back
+#         as written, and bad packs are refused.
 #   WSTAG stage table: tools/overlay_layout.py --wstag-table: every WSTAG### overlay has a record in FIELDSTG's stage
 #         tables whose entry is a function start inside the overlay's .text; the table equals config/wstag.txt.
 #   flag ranges: tools/flag_census.py --check (reads src/): every flag of a bit-array type (gamestate save data) that
@@ -30,6 +35,12 @@ echo "--- file table: IDs against the ISO directories (tools/disc_files.py --che
 
 echo "--- text files: decode every one (tools/dump_text.py --check)"
 "$PY" "$ROOT/tools/dump_text.py" --check
+
+echo "--- text tools: encode round trip, fitting, checker, merge, build (tools/text_tools.py --selftest)"
+"$PY" "$ROOT/tools/text_tools.py" --selftest
+
+echo "--- text packs: rebuild, read back, refusals (tools/text_pack.py --selftest)"
+"$PY" "$ROOT/tools/text_pack.py" --selftest
 
 echo "--- WSTAG stage table: FIELDSTG's records against the overlays (tools/overlay_layout.py --wstag-table)"
 table="$("$PY" "$ROOT/tools/overlay_layout.py" --wstag-table)"

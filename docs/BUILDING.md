@@ -63,7 +63,7 @@ pad scripts from boot with hashes at checkpoints, and save **round trips**. The 
 
 ```sh
 scripts/setup.sh sdl3 imgui
-cmake -S port -B build/port-sdl -G Ninja -DDW3_PORT_SDL=ON && cmake --build build/port-sdl
+cmake -S port -B build/port-sdl -G Ninja -DPSXSTACK_SDL=ON && cmake --build build/port-sdl
 build/port-sdl/dw2003 --disc iso/dw2003.cue --window                 # the game in a window
 cmake -S psxstack/launcher -B build/launcher -G Ninja -DPSXSTACK_GAME_JSON=$PWD/port/game/game.json -DPSXSTACK_VERSION_ROOT=$PWD -DPSXSTACK_TOOLS_DIR=$PWD/tools && cmake --build build/launcher
 build/launcher/dw2003-launcher                                        # the launcher
