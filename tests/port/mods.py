@@ -522,9 +522,12 @@ def pl_text_pack(binary, out):
     gs, cd = syms.host("gamestate_data").addr, syms.host("cdload_module").addr
     name = enc(TP_NAME)
     g = Game.spawn([str(binary), "--config", str(cfg), "--script", str(script), "--script-mods"], cwd=str(ROOT),
-                   env=dict(os.environ, DW3_PORT_TEXT_PACK=str(pack)))
+                   hold=True, env=dict(os.environ, DW3_PORT_TEXT_PACK=str(pack)))
     try:
-        r = g.wait(addr=gs + 0x54, value=int.from_bytes(name[:4], "little"), timeout=6000)
+        # the last deck name is the new game's last write from ?SCRDSHP (the default name is written at boot);
+        # hold: the game waits for this request, so the wait sees the write while ?SCRDSHP is still in the cache
+        last = enc(TP_DECKS[-1])
+        r = g.wait(addr=gs + PL_DECKS + 0x66 * 2, value=int.from_bytes(last[:4], "little"), timeout=6000)
         g.pause()
         got_name = g.peek(gs + 0x54, 0x18).split(b"\0")[0] + b"\0"
         got_decks = [g.peek(gs + PL_DECKS + 0x66 * j, 0x16).split(b"\0")[0] + b"\0" for j in range(3)]
