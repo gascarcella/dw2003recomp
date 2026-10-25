@@ -474,6 +474,17 @@ void wstag460_fly_update(void *arg0) {
                 obj->pos_y = list->y << 8;
             }
         }
+#ifdef PC_PORT
+        /* PC_PORT: wstag460_sprites has no entry of type 4, so that fly (wstag460_group_update's fourth) finds no
+         * sprite. The PS1 writes its sprite's fields to the kernel's low RAM (0x0..0xD) every frame; the host faults.
+         * The port gives it a sprite of its own that is in no list, so nothing draws it, as nothing shows on the PS1
+         * (issue #119; tests/host/FINDINGS.md 14). */
+        if (obj->sprite.sprite == NULL) {
+            static FieldstgSprite unlisted;
+
+            obj->sprite.sprite = &unlisted;
+        }
+#endif
         obj->turn_period = 0x28;
         obj->turn_timer = obj->first_key;
         obj->speed = D_WSTAG460_800A7438[obj->speed_id];
