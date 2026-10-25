@@ -36,9 +36,16 @@ an inn's map), the field menu's SAVE entry, STGMCARD's save, Back to the field, 
     STGMCARD times out.
 tests/saves/run.py loads the card the mod writes in the emulator (the PS1 game ignores the record).
 preset_language (no script of its own):
-  - each of the seven languages, booted through the debug channel (tools/mcp/game.py), reaches the opening's map
-    (0xE02; 0xE01 for Japanese) with its records_language, without the language select screen; with the mod off the
-    game is still on that screen (map 0x1600) 600 frames in;
+  - each of the eight languages, booted through the debug channel (tools/mcp/game.py), reaches the opening's map
+    (0xE02; 0xE01 for Japanese) with its records_language (portuguese_br: 2, English), without the language select
+    screen; portuguese_br looks for its text pack beside the binary; with the mod off the game is still on that screen
+    (map 0x1600) 600 frames in;
+  - port/game/text_pack.c, compiled alone with tests/port/text_pack_driver.c, rebuilds all 50 English files of a pack
+    with two entries in each as tools/text_pack.py does, byte for byte;
+  - portuguese_br's text pack (docs/PORT.md "Text packs"): an invalid pack is logged and the game boots in English; a
+    test pack (tools/text_pack.py: the default name, the deck names, a long entry that grows ?SCRDSHP to two sectors,
+    an unreached DMG entry) through new_game.json's route from the opening to the title's New Game: the new game's
+    name and deck names are the pack's, and both files in cdload's cache are text_pack.py's rebuild byte for byte;
   - French through new_game.json's route from the opening (its CNTY_SEL steps replaced by a wait for map 0xE02) to
     the first field map: the opening well before the emulator's (which goes through the screen), and the new game's
     deck names (gamestate_init_records, at the title's New Game) are the French text file's.
@@ -407,28 +414,143 @@ def fast_transitions(binary, out):
           "instant twice: the same frame log and record (deterministic)")
 
 
-PL_CODES = {"english": 2, "french": 3, "german": 5, "italian": 4, "spanish": 6, "usa": 1, "japanese": 0}
+PL_CODES = {"english": 2, "french": 3, "german": 5, "italian": 4, "spanish": 6, "usa": 1, "japanese": 0,
+            "portuguese_br": 2}
 PL_DECKS = 0x628  # gamestate_data.decks[3]: GamestateDeck (0x66 bytes), its name first
 NEW_GAME = SCRIPTS / "new_game.json"
 NG_EXPECTED = ROOT / "tests/replay/expected/new_game.json"
 
 
-def pl_boot(binary, out, lang):
+def pl_boot(binary, out, lang, env=None, label=None):
     """One boot through the debug channel with preset_language on (lang) or off (None): (map, records_language,
-    frame) once the opening's map is reached, or after 600 frames on the language select screen."""
+    frame, the log) once the opening's map is reached, or after 600 frames on the language select screen."""
     sys.path.insert(0, str(ROOT / "tools"))
     import mcp_game  # noqa: E402
     from mcp_game import Game  # the debug channel's client (stdlib only)
     mods = {"preset_language": {"enabled": True, "language": lang}} if lang else {}
-    cfg = settings(out, f"pl_{lang or 'off'}", mods)
+    cfg = settings(out, label or f"pl_{lang or 'off'}", mods)
     rl = mcp_game.symbols(binary).host("records_language").addr
-    g = Game.spawn([str(binary), "--config", str(cfg), "--cd-speed", "instant"], cwd=str(ROOT), hold=True)
+    g = Game.spawn([str(binary), "--config", str(cfg), "--cd-speed", "instant"], cwd=str(ROOT), hold=True,
+                   env=dict(os.environ, **(env or {})))
     try:
         r = g.wait(ps1_map=0xE01 if lang == "japanese" else 0xE02, timeout=600)
         st = g.status()
-        return st["map"], int.from_bytes(g.peek(rl, 4), "little", signed=True), r["frame"]
+        return st["map"], int.from_bytes(g.peek(rl, 4), "little", signed=True), r["frame"], g.log_text(0)
     finally:
         g.stop()
+
+
+# The text pack's run: entries of two files the new game reads at the title's New Game (gamestate_init_records):
+# ?SNAMEDT entry 11 (the default name) and ?SCRDSHP entries 0x16-0x18 (the deck names), plus a long entry 0x19 that
+# grows CRDSHP past its one sector, and one DMG200 entry (table 1) the route does not reach.
+TP_NAMEDT, TP_CRDSHP, TP_DMG200 = 0x86 + 2, 0x32 + 2, 0x112 + 2
+TP_NAME, TP_DECKS = "Tiago", ["Pasta 1", "Pasta 2", "Pasta 3"]
+CDLOAD_ENTRY = 24  # the -m64 CdloadEntry: state s16, marked s16, id s32, last_use s32, 4 padding, buffer pointer
+
+
+def pl_text_pack_driver(binary, out, text_pack, enc):
+    """port/game/text_pack.c against tools/text_pack.py on all 50 English files: a pack with an entry in each (entry 1
+    and the last of a table; a container's first table's entry 1 and its last table's last entry), each file run
+    through port_text_loaded by tests/port/text_pack_driver.c (compiled with text_pack.c alone)."""
+    import disc_files
+    import dump_text
+    work = out / "tp_driver"
+    work.mkdir()
+    driver = work / "text_pack_driver"
+    gen = Path(binary).resolve().parent / "gen/include"
+    subprocess.run(["gcc", "-std=gnu99", "-O2", "-Wall", "-Wextra", "-Werror", "-DPC_PORT", "-DNON_MATCHING",
+                    "-I", str(gen), "-iquote", str(ROOT / "include"), "-iquote", str(ROOT), "-I", str(ROOT / "psxstack/include"),
+                    "-I", str(ROOT / "psxstack/include/psxstack"), "-I", str(ROOT / "port/game"),
+                    str(ROOT / "port/game/text_pack.c"), str(ROOT / "tests/port/text_pack_driver.c"), "-o", str(driver)],
+                   check=True)
+    ids = list(range(3, 0x15F, 7))
+    entries = {}
+    for fid in ids:
+        tabs = dump_text.tables_of(disc_files.read(fid))
+        (t0, o0), (t1, o1) = tabs[0], tabs[-1]
+        entries[(fid, text_pack.PLAIN if t0 is None else t0, 1)] = enc(f"Primeira {fid:#x}")
+        entries[(fid, text_pack.PLAIN if t1 is None else t1, len(o1) - 1)] = enc(f"Última {fid:#x} " * (fid % 9 * 40))
+    text_pack.write_pack(work / "all.pack", entries)
+    secs = b"".join(e.sectors.to_bytes(2, "little") for e in disc_files.files())
+    (work / "sectors.bin").write_bytes(secs)
+    for fid in ids:
+        (work / f"{fid}.in").write_bytes(disc_files.read(fid))
+    proc = subprocess.run([str(driver), str(work / "all.pack"), str(work / "sectors.bin"), str(work)] + [str(f) for f in ids],
+                          capture_output=True, text=True)
+    (work / "driver.stderr").write_text(proc.stderr)
+    got_secs = dict(tuple(map(int, line.split())) for line in proc.stdout.split("\n") if line)
+    wrong = []
+    for fid in ids:
+        want = text_pack.rebuild(fid, entries)
+        n = max(disc_files.files()[fid].sectors, -(-len(want) // 2048))
+        res = work / f"{fid}.out"
+        if got_secs.get(fid) != n or not res.exists() or res.read_bytes() != want + bytes(n * 2048 - len(want)):
+            wrong.append(hex(fid))
+    grown = sum(1 for fid in ids if got_secs.get(fid, 0) > disc_files.files()[fid].sectors)
+    check(proc.returncode == 0 and not wrong and proc.stderr.count("entries replaced") == len(ids),
+          f"port/game/text_pack.c rebuilds all {len(ids)} English files (11 containers, {grown} grown past their "
+          f"sectors) as tools/text_pack.py does, byte for byte{': not ' + ', '.join(wrong) if wrong else ''}")
+
+
+def pl_text_pack(binary, out):
+    """portuguese_br's text pack (docs/PORT.md "Text packs"): a test pack written by tools/text_pack.py, the opening
+    to the title's New Game through the debug channel with the route's script, and what the game read."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import mcp_game  # noqa: E402
+    import text_pack
+    from mcp_game import Game
+    enc = text_pack._encoder()
+    entries = {(TP_NAMEDT, text_pack.PLAIN, 11): enc(TP_NAME), (TP_CRDSHP, text_pack.PLAIN, 0x19): enc("Escolha " * 300),
+               (TP_DMG200, 1, 2): enc("Ação.")}
+    entries.update({(TP_CRDSHP, text_pack.PLAIN, 0x16 + j): enc(n) for j, n in enumerate(TP_DECKS)})
+    pack = out / "pt_br.pack"
+    text_pack.write_pack(pack, entries)
+    pl_text_pack_driver(binary, out, text_pack, enc)
+    # an invalid pack: logged, and the game boots in English
+    bad = out / "bad.pack"
+    bad.write_bytes(b"DW3T" + bytes(40))
+    m, rl, frame, log = pl_boot(binary, out, "portuguese_br", {"DW3_PORT_TEXT_PACK": str(bad)}, "pl_bad_pack")
+    check(m == 0xE02 and rl == 2 and "is not a valid pack" in log and "plays in English" in log,
+          f"portuguese_br, an invalid pack: logged, the opening's map {m:#x}, records_language {rl}")
+    # new_game.json from the opening to New Game, the pack named by DW3_PORT_TEXT_PACK
+    steps = json.loads(NEW_GAME.read_text())["steps"]
+    names = [s.get("name") for s in steps]
+    script = derived(out, "pl_text_pack", [{"type": "wait_map", "map": "0xE02", "timeout": 3000}] +
+                     steps[3:names.index("new_game_field") + 1] + [{"type": "wait_frames", "frames": 3000}])
+    cfg = settings(out, "pl_text_pack", {"preset_language": {"enabled": True, "language": "portuguese_br"}})
+    syms = mcp_game.symbols(binary)
+    gs, cd = syms.host("gamestate_data").addr, syms.host("cdload_module").addr
+    name = enc(TP_NAME)
+    g = Game.spawn([str(binary), "--config", str(cfg), "--script", str(script), "--script-mods"], cwd=str(ROOT),
+                   env=dict(os.environ, DW3_PORT_TEXT_PACK=str(pack)))
+    try:
+        r = g.wait(addr=gs + 0x54, value=int.from_bytes(name[:4], "little"), timeout=6000)
+        g.pause()
+        got_name = g.peek(gs + 0x54, 0x18).split(b"\0")[0] + b"\0"
+        got_decks = [g.peek(gs + PL_DECKS + 0x66 * j, 0x16).split(b"\0")[0] + b"\0" for j in range(3)]
+        cache = g.peek(cd + 8, 64 * CDLOAD_ENTRY)
+        loaded = {}
+        for k in range(64):
+            state, fid = int.from_bytes(cache[k * 24:k * 24 + 2], "little"), int.from_bytes(cache[k * 24 + 4:k * 24 + 8], "little")
+            if state == 3 and fid in (TP_NAMEDT, TP_CRDSHP):
+                loaded[fid] = int.from_bytes(cache[k * 24 + 16:k * 24 + 24], "little")
+        rebuilt = {}
+        for fid, buf in loaded.items():
+            want = text_pack.rebuild(fid, entries)
+            sectors = -(-len(want) // 2048)
+            rebuilt[fid] = (g.peek(buf, sectors * 2048) == want + bytes(sectors * 2048 - len(want)), sectors)
+        log = g.log_text(0)
+    finally:
+        g.stop()
+    check(r.get("hit") and got_name == name and got_decks == [enc(n) for n in TP_DECKS],
+          "portuguese_br with the pack: the title's New Game gives the pack's default name and deck names (?SNAMEDT "
+          "11, ?SCRDSHP 0x16-0x18)")
+    check(set(rebuilt) == {TP_NAMEDT, TP_CRDSHP} and all(ok for ok, _ in rebuilt.values()) and
+          rebuilt[TP_CRDSHP][1] == 2,
+          f"the two files in cdload's cache are tools/text_pack.py's rebuild byte for byte (CRDSHP in "
+          f"{rebuilt.get(TP_CRDSHP, (0, 0))[1]} sectors, 1 on the disc): {rebuilt}")
+    check("text pack: " + str(pack) in log and "file 0x034: 4 entries replaced" in log and
+          "file 0x088: 1 entries replaced" in log, "the pack's opening and both rebuilds logged")
 
 
 def preset_language(binary, out):
@@ -436,11 +558,15 @@ def preset_language(binary, out):
     game in French starts with the French text (the docstring)."""
     print("mods: preset_language (boots through the debug channel; new_game's route from the opening in French)")
     for lang, code in PL_CODES.items():
-        m, rl, frame = pl_boot(binary, out, lang)
+        m, rl, frame, log = pl_boot(binary, out, lang)
         want = 0xE01 if code == 0 else 0xE02
         check(m == want and rl == code, f"{lang}: the opening's map {m:#x} (want {want:#x}) at frame {frame}, "
               f"records_language {rl} (want {code}), no language select screen")
-    m, rl, frame = pl_boot(binary, out, None)
+        if lang == "portuguese_br":   # its pack is looked for beside the binary (none in a build tree: English)
+            where = str(Path(binary).resolve().parent / "mods/preset_language/pt_br.pack")
+            check("text pack: " + where in log, f"{lang}: the text pack looked for at {where}")
+    pl_text_pack(binary, out)
+    m, rl, frame, _ = pl_boot(binary, out, None)
     check(m == 0x1600 and rl == 2, f"the mod off: still on the language select screen (map {m:#x}) after {frame} "
           f"frames, records_language {rl}")
     # new_game.json from the opening on: its first three steps (CNTY_SEL, its checkpoint, the START that confirms

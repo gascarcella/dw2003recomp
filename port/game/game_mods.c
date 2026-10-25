@@ -14,6 +14,7 @@
 #include "port_harness.h"
 #include "port_runtime.h"
 #include "savestate.h"
+#include "text_pack.h"
 
 #define PORT_BATTLE_SCAN_MAX 4096 /* words: the longest script on the disc has 567 */
 
@@ -245,9 +246,14 @@ void port_global_save_restore(const void *slot) {
  * drawing the language select screen. It acts at boot only (and after a reset, which goes through CNTY_SEL again).
  * The codes are the text sets' (records_language: the offset of every localized file ID): the five the screen offers
  * in its order (cnty_sel_languages), then USA and JPN, whose sets are on the EU disc but which the screen never
- * reaches. */
-static const char *const pl_languages[] = { "english", "french", "german", "italian", "spanish", "usa", "japanese", NULL };
-static const s32 pl_codes[] = { 2, 3, 5, 4, 6, 1, 0 };
+ * reaches, then the fan translations. A translation is not a text set of its own (records_language has 7 values: the
+ * text files' IDs and several of the game's tables): it plays as English, with its text pack (pl_packs, in the mod's
+ * directory beside the binary; text_pack.c, docs/PORT.md "Text packs") laid over the English files' entries. Without
+ * a valid pack it plays in English. */
+static const char *const pl_languages[] = { "english", "french", "german", "italian", "spanish", "usa", "japanese",
+                                            "portuguese_br", NULL };
+static const s32 pl_codes[] = { 2, 3, 5, 4, 6, 1, 0, 2 };
+static const char *const pl_packs[] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, "pt_br.pack" };
 enum { PL_LANGUAGE };
 static const PortModOption pl_options[] = {
     { .id = "language", .type = PORT_MOD_ENUM, .def = "\"english\"", .values = pl_languages, .applies = "restart" },
@@ -261,6 +267,9 @@ static void pl_start(struct PortMod *mod) {
     port_preset_language = pl_codes[i];
     port_log("preset language: %s (records_language %d), no language select screen", pl_languages[i],
              (int)port_preset_language);
+    if (pl_packs[i] != NULL) {
+        port_text_pack_open(pl_packs[i]);
+    }
 }
 
 /* ---- party_xp (docs/LAUNCHER.md "Party experience"; docs/MECHANICS.md section 6, "Who gets a battle's experience"):

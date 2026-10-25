@@ -162,6 +162,12 @@ void port_global_save_restore(const void *slot);
  * the opening as the menu would, without drawing the screen. */
 extern int port_mod_preset_language;
 extern s32 port_preset_language;
+/* The text pack (docs/PORT.md "Text packs"; port/game/text_pack.c, opened by preset_language for a language with one):
+ * cdload's cache (src/main/cdload.c) sizes a file's buffer by port_text_sectors(id) (filetable_get_sectors(id), or the
+ * rebuilt file's sectors when larger) and calls port_text_loaded(id, buffer) when the read has ended, before it marks
+ * the entry loaded: a file with pack entries is rebuilt there. Both do nothing for other files or without a pack. */
+s32 port_text_sectors(s32 id);
+void port_text_loaded(s32 id, void *buffer);
 /* port_mod_party_xp: party_xp is on ("Party experience"): at the end of every battle WFIGHTMN tells
  * port_party_xp_knocked_out which party slots are at 0 HP (before it clears their took_part), and STFGTREP's report,
  * once it has created the members' panels, sets each panel's experience to port_party_xp_share(slot, took_part, exp)

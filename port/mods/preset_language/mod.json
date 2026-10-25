@@ -6,7 +6,7 @@
   "kind": "builtin",
   "applies": "restart",
   "requires_port": 1,
-  "description": "Starts the game in the chosen language and skips the language select screen. USA and Japanese are on the disc but the screen never offers them; Japanese also shows the Japanese release's intro screen.",
+  "description": "Starts the game in the chosen language and skips the language select screen. USA and Japanese are on the disc but the screen never offers them; Japanese also shows the Japanese release's intro screen. Português (Brasil) is a fan translation: the English game with the entries of its text pack (pt_br.pack in this mod's folder) in place of the English text; without the pack it plays in English.",
   "options": [
     { "id": "language", "name": "Language", "description": "The game's text language. Takes effect at the next start.",
       "type": "enum", "default": "english", "applies": "restart",
@@ -14,7 +14,8 @@
         { "id": "english", "label": "English" }, { "id": "french", "label": "French" },
         { "id": "german", "label": "German" }, { "id": "italian", "label": "Italian" },
         { "id": "spanish", "label": "Spanish" }, { "id": "usa", "label": "English (USA)" },
-        { "id": "japanese", "label": "Japanese" }
+        { "id": "japanese", "label": "Japanese" },
+        { "id": "portuguese_br", "label": "Português (Brasil)" }
       ] }
   ]
 }

@@ -29,7 +29,7 @@ in `docs/SOUND.md`. The choices behind this design are in `docs/DECISIONS.md` (i
 | `port/CMakeLists.txt` | The port's CMake project: runs `tools/port_inputs.py`, then `psxstack_add_game(dw2003 ...)`; builds out of tree into `build/port*/` |
 | `port/game/game.json` | The game's description (identity, the EU disc, the rate, the two slots, the heap, the BIOS stand-in), generated into `psxstack_game_gen.h` at configure time (psxstack's `tools/game_gen.py`): the runtime's only source of game facts |
 | `port/game/state.c`, `game.c` | The adapter (psxstack's `include/psxstack/game.h`): the probes (`game_state_*`), the checkpoint image, `game_state_read`/`game_state_host` (the layout-identical ranges and the field tables), `game_apply_rate` (the 60 Hz mode) |
-| `port/game/game_mods.c`, `battle_scan.c` | The ten mods that change the game (`PortMod` records for psxstack's engine), the battle scripts' scanner |
+| `port/game/game_mods.c`, `battle_scan.c`, `text_pack.c` | The ten mods that change the game (`PortMod` records for psxstack's engine), the battle scripts' scanner, the text pack ("Text packs") |
 | `port/game/asmdata.c` | Weak stand-ins for the data the matching build keeps in asm, in FIELDSTG's section |
 | `port/mods/` | The game's mods' manifests (psxstack's `mods/fast_forward` and `mods/fast_loading` join them beside the binary) |
 | `tools/port_inputs.py` | The build inputs psxstack takes: the units, the overlays (slot, file ID, symbol file), the known tag sites, the volatile ranges |
@@ -173,6 +173,51 @@ map, party experience's knocked-out slots, XP boost's tenths). The debug channel
 writes the quick slot at the vsync's end, `load_state` (F9) resumes it, a paused game pausing again there; the slot is
 `quick.state` beside the settings file (`--quick-state FILE` elsewhere), one file per build. `--input-test` ends with
 the slot's round trips, running and paused.
+
+## Text packs
+A fan translation runs as English: `records_language` cannot take an eighth value (the text files sit at JPN ID +
+language, 7 consecutive IDs, and several of the game's tables and switches have 7 entries), so the translation's
+`preset_language` value (`portuguese_br`, docs/LAUNCHER.md "Preset language") sets the code 2 and opens a **text
+pack**, which holds only the translated entries of the English text files (`ES*.BIN`, docs/FORMATS.md "Text"). When
+the game loads an English file the pack has entries for, the port rebuilds it: each entry the pack's when it has one,
+else the disc's English bytes. A partly translated pack plays English for the rest.
+
+**Where it is found.** `pt_br.pack` in the mod's directory beside the binary, `mods/preset_language/` (where the build
+and the packages put the manifests; `port_exe_path`, psxstack's `platform.h`). `DW3_PORT_TEXT_PACK=FILE` (a test hook)
+names another file. A missing or invalid pack is logged (`text pack: ...`) and the game plays in English; a file whose
+English bytes are not the ones the pack was built against is logged and stays English.
+
+**An entry** is `(file_id, table, index)`: the English file's ID; `0xFFFF` when the file is one counted string table,
+else the table's sub-file index in the `?SDMG###` container (JPN IDs 0x112 and up); the `i` of
+`font_get_entry(table, i)`, as `tools/dump_text.py` numbers the entries (0 is the empty string).
+
+**The rebuild** (`port/game/text_pack.c`, the same in `tools/text_pack.py`): a table keeps its count and gets its
+entries in order, each starting 4-aligned in the table (zero padding), each the pack's bytes or the disc's up to and
+with its first 0. A container keeps its sub-file count and order: its tables rebuilt, an empty slot (0) kept, any other
+sub-file copied up to the next; each sub-file and the whole container 4-aligned. With no entry replaced this gives
+every English file back byte for byte (`tools/text_pack.py --selftest` checks all 50).
+
+**The hooks** (`src/main/cdload.c`, under `PC_PORT`): text files reach the game only through cdload's cache.
+`port_text_sectors(id)` sizes a buffer (the allocation in `cdload_queue_file`, a buffer's end in `cdload_free_above`):
+the disc's sectors, or the rebuilt file's when more (the port's heap is 4 MB). The read still reads the disc's sectors;
+`port_text_loaded` then runs in `cdload_update` when the read has ended and before the entry's state becomes 3 (loaded,
+the only way there), so the game never sees the English bytes. It checks the file's CRC-32, measures the rebuild
+against the size the pack records, and writes it (never past the heap block) only when they agree.
+
+**The format** (little-endian, version 1; `tools/text_pack.py` writes it, `--dump PACK` lists it):
+
+| Part | Layout |
+|---|---|
+| Header, 20 bytes | `"DW3T"`, u16 version 1, u16 language 2 (the `records_language` it covers), u32 file count, u32 entry count, u32 blob size |
+| File records, 20 bytes each, by file ID | u16 file ID, u16 the file's sectors on the disc, u32 CRC-32 of those sectors as loaded, u32 rebuilt size in bytes (at most 0x80000), u32 first entry record, u32 entry count (1 or more) |
+| Entry records, 16 bytes each, by (file ID, table, index) | u16 file ID, u16 table, u16 index, u16 0, u32 offset in the blob, u32 length (with the final 0) |
+| Blob | The entries' bytes (the game's glyph code, docs/FORMATS.md "Text"), each ending in 0 |
+
+The file's size must be the header's sum; every record is checked when the pack is opened, and the file IDs and their
+sector counts against the game's file table. The pack embeds no disc data: the sizes and CRCs are computed from the
+user's disc by the writer. `tests/port/mods.py` (preset_language) checks `text_pack.c` against `text_pack.py` on all 50
+English files (`tests/port/text_pack_driver.c`), and a test pack through the title's New Game: the new game's name and
+deck names are the pack's, and the two files in cdload's cache are the writer's rebuild byte for byte.
 
 ## Known limitations
 - **Coverage of the game:** the replays reach 14 of 19 tier-1 overlays and a small share of the WSTAG files; the
