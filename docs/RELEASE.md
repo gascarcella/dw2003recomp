@@ -85,8 +85,9 @@ It builds in a Docker `ubuntu:24.04` container (the runner's base, so the same g
 Windows package's test) with the appimage and windows jobs' own steps: the tools, the disc, the game's Release build
 through the port's M1 test, `package_appimage.sh --test`, `package_windows.sh --test`. Then it pushes the tag,
 cancels the release.yml run the tag starts and creates the same draft with the local files. It does **not** run the
-whole CI: check that `main`'s CI is green for that commit first. Needs `docker`, `gh` and the disc (`iso/dw2003.bin`
-or `DW3_DISC_BIN`); the container's tools stay in `build/release-local/`. Step 4 above (test, then Publish) is
+whole CI: check that `main`'s CI is green for that commit first. Needs `docker`, `gh`, the disc (`iso/dw2003.bin`
+or `DW3_DISC_BIN`) and the translations (the data checkout's `translations/`, or `DW3_TRANSLATIONS`; mounted read-only
+into the container, "Translations" below); the container's tools stay in `build/release-local/`. Step 4 above (test, then Publish) is
 unchanged.
 
 ## Trying a branch's packages
@@ -108,7 +109,19 @@ scripts/package_appimage.sh --test             # build/release/dw2003-<version>-
 `--test` runs the smoke test (below) with `iso/dw2003.cue` when it exists. On a system without the static libstdc++
 (Fedora: `libstdc++-static`) add `--shared-libstdcxx`: the launcher then needs the system's libstdc++, fine for a test
 on that machine, not for a release. `--version V` names the file; the default is the tag being built, else
-`git describe` over the release tags, else `dev-<commit>`.
+`git describe` over the release tags, else `dev-<commit>`. Without the data checkout add `--no-text-packs` (both
+package scripts): no translations, so not a package to publish ("Translations").
+
+## Translations
+
+The packages carry the translations' text packs (docs/PORT.md "Text packs"): `scripts/text_packs.sh`, called by
+`package_appimage.sh` and `package_windows.sh`, builds `mods/preset_language/pt_br.pack` from the data checkout's
+`translations/pt_br/` (`scripts/gamedata_dir.sh`: release.yml's jobs check it out at `DW3_GAMEDATA`;
+`DW3_TRANSLATIONS` names another `translations/`) with `tools/text_tools.py build` and the disc. It fails when the
+translation is missing or does not build with 0 errors, so a release never ships without it; `--no-text-packs` builds
+a package without (a local test without the data checkout). `--test` checks that the AppImage and the unzipped Windows
+package hold the pack that was built. A change to the translation reaches players with the next release: merge it to
+the data checkout's `main` first.
 
 ## What the AppImage holds
 
@@ -116,6 +129,7 @@ on that machine, not for a release. `--version V` names the file; the default is
 AppRun -> usr/bin/dw2003-launcher        the launcher starts when the AppImage is opened
 usr/bin/dw2003                           the game (the SDL build), found by the launcher beside itself
 usr/bin/mods/<id>/mod.json               the mods' manifests (port/mods/), listed by the launcher
+usr/bin/mods/preset_language/pt_br.pack  the Portuguese translation (scripts/text_packs.sh, "Translations")
 dw2003recomp.desktop, dw2003recomp.svg   packaging/appimage/ (the icon is our own drawing)
 LICENSES/                                ours, SDL3, Dear ImGui, its two fonts, the AppImage runtime (README.txt)
 ```
@@ -148,6 +162,7 @@ dw2003-<version>-windows-x86_64/
   dw2003-launcher.exe        the launcher (run this)
   dw2003.exe                 the game, found by the launcher beside itself
   mods/<id>/mod.json         the mods' manifests (port/mods/)
+  mods/preset_language/pt_br.pack   the Portuguese translation (scripts/text_packs.sh, "Translations")
   README.txt                 packaging/windows/README.txt: the disc, SmartScreen, where settings and crash reports live
   LICENSES/                  ours, SDL3, Dear ImGui, its two fonts, LLVM's runtime, the mingw-w64 runtime, winpthreads
                              (packaging/windows/LICENSES/README.txt)

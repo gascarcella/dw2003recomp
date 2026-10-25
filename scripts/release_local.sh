@@ -10,7 +10,9 @@
 #   --commit REF   what to release (default origin/main; it must be pushed: the tag goes to origin)
 #   --build-only   build and test the packages only: no tag, no release
 # Needs: docker, gh (logged in, with push rights), the disc (iso/dw2003.bin here or in the main checkout, or
-# DW3_DISC_BIN in tools/local.env). The container's tools stay in build/release-local/ between runs (~10 min cold).
+# DW3_DISC_BIN in tools/local.env), the translations (the data checkout's translations/, scripts/gamedata_dir.sh, or
+# $DW3_TRANSLATIONS: the packages carry their text packs, scripts/text_packs.sh). The container's tools stay in
+# build/release-local/ between runs (~10 min cold).
 # Output: build/release-local/src/build/release/: dw2003-<version>-x86_64.AppImage, the .debug file, SHA256SUMS,
 # dw2003-<version>-windows-x86_64.zip, its -symbols.zip and SHA256SUMS-windows.
 set -euo pipefail
@@ -27,7 +29,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --commit) ref="$2"; shift 2 ;;
         --build-only) build_only=1; shift ;;
-        -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
         v*) tag="$1"; shift ;;
         *) die "unknown argument: $1" ;;
     esac
@@ -44,6 +46,12 @@ if [[ -z "$disc" && -f "$MAIN/tools/local.env" ]]; then
     source "$MAIN/tools/local.env"; disc="${DW3_DISC_BIN:-}"
 fi
 [[ -f "$disc" ]] || die "no disc: set DW3_DISC_BIN in tools/local.env (see local.env.example)"
+
+# ---- The translations (mounted read-only into the container; scripts/text_packs.sh builds the packages' packs).
+translations="${DW3_TRANSLATIONS:-}"
+if [[ -z "$translations" ]] && gd="$("$ROOT/scripts/gamedata_dir.sh" 2>/dev/null)"; then translations="$gd/translations"; fi
+[[ -d "$translations" ]] || die "no translations: the data checkout (scripts/gamedata_dir.sh) or DW3_TRANSLATIONS"
+translations="$(readlink -f "$translations")"
 
 # ---- What to release.
 git -C "$ROOT" fetch -q origin --tags
@@ -81,6 +89,7 @@ EOF
 # container's Wine, headless, as on the runner).
 log "building and testing (log: $WORK/build.log)"
 docker run --rm --user "$(id -u):$(id -g)" -e HOME=/work/.home -e "DW3_VERSION=$tag" -e WINEDEBUG=-all \
+    -e DW3_TRANSLATIONS=/translations -v "$translations:/translations:ro" \
     -v "$WORK/src:/work" -v "$disc:/disc/dw2003.bin:ro" -w /work "$IMAGE" bash -c '
 set -euxo pipefail
 mkdir -p "$HOME"; git config --global --add safe.directory "*"
