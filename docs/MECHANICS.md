@@ -384,7 +384,9 @@ Facts [C] (`stfgtrep_add_exp` and `stfgtrep_raise_stats`, `src/stfgtrep/`; table
     and when the first 3 all succeed the player is asked whether to play the bonus round instead of rounds 4-5: its chance is 50, or 0
     when this training won the previous bonus (`GamestateRecord.last_bonus_training`). Either way a won bonus round sets
     `last_bonus_training` to the training and a lost one clears it; winning sets `bonus = 1` before the round's gain, so that gain
-    already uses the bonus rows.
+    already uses the bonus rows. The port's `training_success` mod raises these chances to 100 where the session sets them
+    (`docs/LAUNCHER.md` "Training success", issue #124); [T] by `tests/port/mods.py` (training_success): a Punch session at
+    level 0 with the mod wins its 3 rounds and the bonus round (`last_bonus_training` 1).
   - Menus [T]: `stgtrain_get_menu(menu)` keeps 1..14 and maps anything else to 0; `stgtrain_menus` has rows 0..13 only, so menu 14
     reads 16 entries past the table (the start of `stgtrain_trainings`; the original counts 12 IDs there, and the host build agrees
     only because the linker put the same table next). Menu 14 is never reached: STGTRAIN's `map_entry` is a trainer talk flag's index

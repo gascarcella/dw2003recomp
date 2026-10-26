@@ -1,6 +1,6 @@
 /* The game's built-in mods (docs/LAUNCHER.md "Built-in mods"; psxstack/game.h game_mods): skip_dialogues,
  * battle_animations, global_save, preset_language, party_xp, xp_boost, level_up_recover, widescreen,
- * random_encounters, fast_transitions and fast_travel, as PortMod records the runtime's engine (port/runtime/mods.c) reads the
+ * random_encounters, fast_transitions, fast_travel and training_success, as PortMod records the runtime's engine (port/runtime/mods.c) reads the
  * settings of, gives hotkeys to and runs every vsync. Each reaches the game's C through
  * the port_mod_* flags and functions of include/port.h, read inside `#ifdef PC_PORT` blocks. The runtime's own mod,
  * fast_forward, is the engine's; skip_dialogues asks for it with port_fast_forward_request. */
@@ -605,6 +605,39 @@ s32 port_fast_travel_images(void) {
     return tr_images;
 }
 
+/* ---- training_success (docs/LAUNCHER.md "Training success"; docs/MECHANICS.md section 6): while enabled,
+ * port_mod_training_success makes STGTRAIN's session pass the trainee's chance of success through
+ * port_training_chance when it sets it: 100 for every round (rounds 1 to 5), so the roll (chance >= next() % 100) always
+ * succeeds and every round gains. The bonus round by `bonus_round`: "game" keeps the game's chance (the rounds' own
+ * below training 13, else 50, 0 for the same bonus twice in a row); "always" makes it 100 but keeps the 0 of the twice
+ * in a row; "repeat" makes it 100 in every case. The roll is drawn as before; only the chance it is compared with
+ * changes, so a session draws what the game's would with the same results. */
+static const char *const ts_bonus_rounds[] = { "game", "always", "repeat", NULL };
+enum { TS_BONUS_ROUND };
+static const PortModOption ts_options[] = {
+    { .id = "bonus_round", .type = PORT_MOD_ENUM, .def = "\"always\"", .values = ts_bonus_rounds, .applies = "live" },
+};
+enum { TS_GAME, TS_ALWAYS, TS_REPEAT };
+int port_mod_training_success;
+static int ts_bonus_round;
+
+static void ts_start(struct PortMod *mod) {
+    port_mod_training_success = 1;
+    ts_bonus_round = (int)mod->values[TS_BONUS_ROUND].number;
+    port_log("training success: bonus round %s", ts_bonus_rounds[ts_bonus_round]);
+}
+
+s32 port_training_chance(s32 chance, s32 kind) {
+    static const char *const kinds[] = { "round", "bonus round", "bonus round (twice in a row)" };
+    s32 r = chance;
+    if (kind == PORT_TRAINING_ROUND || (kind == PORT_TRAINING_BONUS && ts_bonus_round != TS_GAME) ||
+        (kind == PORT_TRAINING_BONUS_REPEAT && ts_bonus_round == TS_REPEAT)) {
+        r = 100;
+    }
+    port_log("training success: frame %ld: %s chance %d -> %d", port_frames, kinds[kind], (int)chance, (int)r);
+    return r;
+}
+
 /* ---- The stops (psxstack docs/LAUNCHER.md "Mod runtime" rule 6; the in-game menu switches a mod off live): each
  * undoes what its start set, the flag the game's hooks test and the mod's own state. preset_language and widescreen
  * have none and say `applies = "restart"`: the language is chosen at the boot's select screen, and the wide canvas
@@ -656,6 +689,11 @@ static void tr_stop(struct PortMod *mod) {
     port_mod_fast_travel = 0;
 }
 
+static void ts_stop(struct PortMod *mod) {
+    (void)mod;
+    port_mod_training_success = 0;
+}
+
 static PortMod game_mod_table[] = {
     { .id = "skip_dialogues", .version = "0.1", .options = sd_options,
       .option_count = (int)(sizeof(sd_options) / sizeof(sd_options[0])), .start = sd_start, .stop = sd_stop, .frame = sd_frame,
@@ -681,6 +719,8 @@ static PortMod game_mod_table[] = {
       .option_count = (int)(sizeof(ft_options) / sizeof(ft_options[0])), .start = ft_start, .stop = ft_stop, .frame = ft_frame,
       .status = ft_status },
     { .id = "fast_travel", .version = "0.1", .start = tr_start, .stop = tr_stop },
+    { .id = "training_success", .version = "0.1", .options = ts_options,
+      .option_count = (int)(sizeof(ts_options) / sizeof(ts_options[0])), .start = ts_start, .stop = ts_stop },
 };
 
 int game_mod_count(void) {

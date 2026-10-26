@@ -352,6 +352,36 @@ presses □ twice and ✕, and leaves the menus: with the mod the pick sets map 
 enters Asuka City there (the menu's `player_pos` when it opens again); without it the same presses come back to the
 lab.
 
+### Training success
+
+`training_success`. One option, no hotkey: while enabled (`port_mod_training_success`; issue #124), every round of a
+gym training (STGTRAIN) succeeds.
+
+A round is a roll, not a test of the player: it succeeds when `chance >= next() % 100` (`stgtrain_trainee_update`;
+`docs/MECHANICS.md` section 6), chance 75 plus the equipped item's 3 or 6. With the mod on, STGTRAIN's session
+(`src/stgtrain/stgtrain_800861BC.c`, `#ifdef PC_PORT`) passes the chance through `port_training_chance`
+(`port/game/game_mods.c`) where it sets it, which makes it 100: every one of the 3 rounds (5 from training 13 on)
+gains. The roll is still drawn; the TP cost, the gains, the result screen and the bonus round's question for
+trainings 13 and up are the game's.
+
+`bonus_round` (enum, default `always`) is the bonus round's chance. A training below 13 plays it by itself after 3
+won rounds, at the rounds' chance; from 13 on the player is asked, and it is 50, or 0 when the same training won the
+previous bonus (`last_bonus_training`; 0 still wins 1 roll in 100).
+
+| Value | The bonus round |
+|---|---|
+| `game` | The game's chance |
+| `always` | 100, except the same training's bonus twice in a row (0, the game's rule) |
+| `repeat` | 100 every time |
+
+A won bonus round sets `last_bonus_training` and its gain uses the bonus rows, as in the game. The chance is set when
+a session starts its rounds, so switching the mod in the in-game menu takes effect from the next session.
+
+`tests/port/mods.py` takes first_battle_save's route to the trainer of map 0x21D, sets member 0's TP to 1 and plays
+one Punch session at level 0: with the mod on, the 3 rounds and the bonus round win (Power +5..8,
+`last_bonus_training` 1); with `bonus_round` `game` the rounds win and the bonus round's chance stays 75; off, the
+session is the game's and nothing is logged.
+
 ## 50/60 Hz
 
 A setting, not a mod: `video.refresh: 60` or `--refresh 60` (default 50, PAL). It sets, before `port_overlay_init()`

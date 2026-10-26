@@ -231,6 +231,15 @@ s32 port_fast_travel_images(void);
 #define PORT_FIELD_WIDE_MAX 64 /* 5 tile columns, within the 6 the field streams, cover a picture up to 448 wide */
 extern s32 port_field_wide;
 extern s32 port_field_slots[3][3];
+/* port_mod_training_success: training_success is on ("Training success"): STGTRAIN's session
+ * (src/stgtrain/stgtrain_800861BC.c), after it sets the trainee's chance of success (75 plus the equipped item's bonus
+ * for the rounds, the same for the bonus round of a training below 13; 50 for the bonus round of a training from 13
+ * on, 0 for that bonus twice in a row), replaces it with port_training_chance(chance, kind): 100 (a round succeeds
+ * when chance >= next() % 100, so always) for a round, and for a bonus round as the mod's `bonus_round` says; else
+ * `chance`. The roll is still drawn. */
+extern int port_mod_training_success;
+enum { PORT_TRAINING_ROUND, PORT_TRAINING_BONUS, PORT_TRAINING_BONUS_REPEAT };
+s32 port_training_chance(s32 chance, s32 kind);
 
 #endif /* PC_PORT */
 
