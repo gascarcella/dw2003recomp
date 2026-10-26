@@ -393,21 +393,40 @@ void port_level_up_recover(s32 digimon) {
     st->values[4] = st->values[5];
 }
 
-/* ---- widescreen (docs/LAUNCHER.md "Widescreen battles"): the battle at 16:9 through the hardware renderer's wide
- * canvas (psxstack render_gpu_wide.c). FIGHTSTG already sends the 3D a 16:9 frame needs: its only screen-space cull,
- * fightstg_model_mesh_is_visible, keeps a mesh with a bounding point within the clip plus 64 pixels (x within 224 of
- * the centre; 16:9 reaches 213.5), and the GPU clips the rest to the 320-wide drawing area (issue #71). Nothing in the
- * game changes: the mod only tells the renderer which scenes to widen. The field and the menus are 320-wide 2D and stay
- * 4:3 (pillarboxed in a 16:9 window). */
+/* ---- widescreen (docs/LAUNCHER.md "Widescreen"): the battle, and with `field` the field, at the screen's shape up to
+ * 16:9 through the hardware renderer's wide canvas (psxstack render_gpu_wide.c), which draws what the game sends past
+ * the 320-wide screen's edges.
+ *  - The battle: FIGHTSTG already sends the 3D a 16:9 frame needs: its only screen-space cull,
+ *    fightstg_model_mesh_is_visible, keeps a mesh with a bounding point within the clip plus 64 pixels (x within 224
+ *    of the centre; 16:9 reaches 213.5), and the GPU clips the rest to the 320-wide drawing area (issue #71). Nothing in
+ *    the game changes: the mod only tells the renderer which scenes to widen.
+ *  - The field (issue #78): its map is streamed tiles, and the tile objects in RAM already cover a 426-wide view, but
+ *    it draws only the tiles a 320-wide screen shows. port_field_wide (include/port.h) is the canvas's columns past
+ *    each side while FIELDSTG runs; the field's hooks then draw that far, in 3 more tile slots (port_field_slots) in
+ *    the VRAM's extra rows (port_video_vram_extend). The game's state changes with it (the camera stops at the
+ *    picture's edge), so a run's record differs from the 4:3 one; with the software renderer it is 0 and nothing does.
+ * The menus and the other overlays are 320-wide 2D whose art ends at the screen's edge: they stay 4:3 (pillarboxed). */
+enum { WS_FIELD };
+static const PortModOption ws_options[] = {
+    { .id = "field", .type = PORT_MOD_BOOL, .def = "true", .applies = "restart" },
+};
+s32 port_field_wide;
+s32 port_field_slots[3][3];
+
 static void ws_start(struct PortMod *mod) {
     (void)mod;
     port_video_widescreen_enable();
+    port_video_vram_extend();
 }
 
 static void ws_frame(struct PortMod *mod) {
     const PortOverlay *ovl = port_overlay_current(1);
-    (void)mod;
-    port_video_widescreen(ovl != NULL && strcmp(ovl->name, "FIGHTSTG") == 0);
+    int field = mod->values[WS_FIELD].number != 0 && ovl != NULL && strcmp(ovl->name, "FIELDSTG") == 0;
+    int pad;
+
+    port_video_widescreen(ovl != NULL && (strcmp(ovl->name, "FIGHTSTG") == 0 || field));
+    pad = field ? port_video_widescreen_pad() : 0;
+    port_field_wide = pad < PORT_FIELD_WIDE_MAX ? pad : PORT_FIELD_WIDE_MAX;
 }
 
 /* ---- random_encounters (docs/LAUNCHER.md "Disable random encounters"; docs/MECHANICS.md section 1, "Random
@@ -652,7 +671,9 @@ static PortMod game_mod_table[] = {
     { .id = "xp_boost", .version = "0.1", .options = xb_options,
       .option_count = (int)(sizeof(xb_options) / sizeof(xb_options[0])), .start = xb_start, .stop = xb_stop },
     { .id = "level_up_recover", .version = "0.1", .start = lr_start, .stop = lr_stop },
-    { .id = "widescreen", .version = "0.1", .start = ws_start, .applies = "restart", .frame = ws_frame },
+    { .id = "widescreen", .version = "0.2", .options = ws_options,
+      .option_count = (int)(sizeof(ws_options) / sizeof(ws_options[0])), .start = ws_start, .applies = "restart",
+      .frame = ws_frame },
     { .id = "random_encounters", .version = "0.1", .options = re_options,
       .option_count = (int)(sizeof(re_options) / sizeof(re_options[0])), .start = re_start, .stop = re_stop, .frame = re_frame,
       .status = re_status },
@@ -672,10 +693,14 @@ PortMod *game_mods(void) {
 
 /* A save state (psxstack/game.h game_savestate): what the mods carry from one vsync to the next about the game (the
  * map a save-anywhere was opened from, the last battle's knocked-out party slots, the boost's tenths, the region whose
- * map images are in VRAM). Their options and toggles are settings: the loading run's own. */
+ * map images are in VRAM, widescreen's three field tile slots and the field's width in force, which the next vsync's
+ * camera and culling read before the mod's frame sets it again). Their options and toggles are settings: the loading
+ * run's own. */
 void game_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, gs_opened_from);
     PORT_STATE_VAR(s, px_ko);
     PORT_STATE_VAR(s, xb_tenths);
     PORT_STATE_VAR(s, tr_images);
+    PORT_STATE_VAR(s, port_field_slots);
+    PORT_STATE_VAR(s, port_field_wide);
 }

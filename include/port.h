@@ -218,6 +218,19 @@ extern int port_mod_fast_travel;
 s32 port_fast_travel_select(s32 region, s32 area);
 void port_fast_travel_images_loaded(s32 region);
 s32 port_fast_travel_images(void);
+/* port_field_wide: widescreen's field ("Widescreen", its Field option): the columns the picture shows past each side of
+ * the 320-wide screen while FIELDSTG runs (53 at 16:9, 32 at 16:10, at most PORT_FIELD_WIDE_MAX), 0 while the field
+ * is 4:3 (the option or the mod off, the software renderer, a 4:3 window, another overlay). The GPU renderer's wide
+ * canvas shows what the field draws past the screen's edges, so with it non-zero the field draws that far:
+ *  - fieldstg_camera_apply keeps the map's edges at the picture's (and centres a map narrower than the picture);
+ *  - fieldstg_background_draw draws up to 5 x 3 tiles instead of 4 x 3, in 15 VRAM slots instead of 12: slots 12-14
+ *    are port_field_slots, their images and CLUTs in the extended VRAM's rows (psxstack port_video_vram_extend,
+ *    which the mod's start asks for);
+ *  - fieldstg_background_fill_layer covers the width (the fades);
+ *  - gfx_get_view_rect's rectangle is that much wider (the field's and the stages' culling). */
+#define PORT_FIELD_WIDE_MAX 64 /* 5 tile columns, within the 6 the field streams, cover a picture up to 448 wide */
+extern s32 port_field_wide;
+extern s32 port_field_slots[3][3];
 
 #endif /* PC_PORT */
 

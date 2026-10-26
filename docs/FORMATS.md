@@ -489,7 +489,8 @@ The map is made of 128×128 tiles. Only the tiles around the view are in memory 
 | sector `1 + n × slot / 0x800` | | tile `n` (`fieldstg_tile_load` reads it with `cdload_read`) |
 
 A tile is RLEN-packed (or raw). `fieldstg_tile_unpack` unpacks 0x2800 bytes per frame. Unpacked, it is an offset
-table whose sub-file 0 is an 8-bit TIM, loaded into the tile's VRAM slot with CLUT row `0xF0 + slot`. Words 1… hold
+table whose sub-file 0 is an 8-bit TIM, loaded into the tile's VRAM slot with CLUT row `0xF0 + slot` (the port's
+widescreen field adds slots 12-14 in the extended VRAM, CLUT rows 512-514: docs/LAUNCHER.md "Widescreen"). Words 1… hold
 three layers (OT depths `fieldstg_tile_ot_depths`), each `{s32 count; count × {s16 x, y, u, v, w, h}}`, one SPRT
 per entry (`fieldstg_tile_upload`). The tile object keeps 5 SPRTs per layer. In 5 files (`S202`, `S203`, `S370`,
 `S371`, `S530`), one or two tiles have 6 in layer 0. The sixth overwrites layer 1's first slot and is lost when

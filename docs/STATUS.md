@@ -80,10 +80,12 @@ The plan's milestones (`docs/PORT.md`):
   only). Done: `none` (the default, the picture unchanged), `sharp` (sharp bilinear), `scanlines` and `crt` (beams,
   aperture grille, curvature), `smooth` (xBR level 2 on the 1x software image at any internal scale), each a shader
   pass in psxstack's present. The filters' look (the CRT's beams, grille, curvature) awaits the owner's play-test.
-- **Widescreen battles** ([#71](https://github.com/gascarcella/dw2003recomp/issues/71)): the `widescreen` mod shows
-  the battle at the screen's aspect, up to 16:9 (16:10 on a Steam Deck), through the GPU renderer's wide canvas (psxstack `render_gpu_wide.c`): more of the arena at the
-  sides, the HUD centred as drawn, the game's output unchanged. Everything else stays 4:3 (the field: #78). Not
-  play-tested yet.
+- **Widescreen** ([#71](https://github.com/gascarcella/dw2003recomp/issues/71),
+  [#78](https://github.com/gascarcella/dw2003recomp/issues/78)): the `widescreen` mod shows the battle and (its `field`
+  option) the field at the screen's aspect, up to 16:9 (16:10 on a Steam Deck), through the GPU renderer's wide canvas
+  (psxstack `render_gpu_wide.c`): more of the arena and of the map at the sides, the HUD centred as drawn. The battle's
+  output is unchanged; the field draws 3 more tile slots in psxstack's extended VRAM. The menus stay 4:3
+  (pillarboxed). Not play-tested yet.
 - **Texture replacement** ([#70](https://github.com/gascarcella/dw2003recomp/issues/70), the research and the plan
   there): done (three phases). `--dump-textures DIR` (the SDL build, either renderer) writes every texture the game
   samples as a PNG named by its key (the loaded image's and its CLUT's content, not the VRAM place) and an
