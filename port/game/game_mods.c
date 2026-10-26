@@ -1,6 +1,6 @@
 /* The game's built-in mods (docs/LAUNCHER.md "Built-in mods"; psxstack/game.h game_mods): skip_dialogues,
  * battle_animations, global_save, preset_language, party_xp, xp_boost, level_up_recover, widescreen,
- * random_encounters and fast_transitions, as PortMod records the runtime's engine (port/runtime/mods.c) reads the
+ * random_encounters, fast_transitions and fast_travel, as PortMod records the runtime's engine (port/runtime/mods.c) reads the
  * settings of, gives hotkeys to and runs every vsync. Each reaches the game's C through
  * the port_mod_* flags and functions of include/port.h, read inside `#ifdef PC_PORT` blocks. The runtime's own mod,
  * fast_forward, is the engine's; skip_dialogues asks for it with port_fast_forward_request. */
@@ -497,6 +497,95 @@ s32 port_transition_speed(s32 speed) {
     return port_mod_fast_transitions == 0 ? speed : port_mod_fast_transitions == 1 ? speed * 2 : 1024;
 }
 
+/* ---- fast_travel (docs/LAUNCHER.md "Fast travel"; docs/MECHANICS.md section 16): while enabled, port_mod_fast_travel
+ * makes STSTATUS's map page (MAP in the field menu) a travel map, as Flawe's Mod 2.0 does on the PS1 (docs/THIRD_PARTY.md):
+ * confirm on a visited area (an area lights up once any of its maps has been entered: flag 0x2000 + map) picks it, the
+ * square button shows the other server's map, and leaving the menus enters the destination. The pick sets
+ * gamestate_data.field_map and player_pos; the menu's way back to the field already enters field_map at player_pos
+ * (FIELDSTG takes return_pos from them when it comes from outside the field), so no map change is made here. The
+ * player's direction, route and room are left as they were, as Flawe's are. */
+int port_mod_fast_travel;
+static s32 tr_images = -1; /* the region whose map images STSTATUS last uploaded (port_fast_travel_images) */
+
+/* Each area's destination (Flawe's Mod 2.0's table, by STSTATUS's area 1..46): the map on the Asuka (region 0) and
+ * the Amaterasu (region 1) server, and the place in it (24.8, the same on both servers). Mod 2.0 has Amaterasu's
+ * Swamp Inn at 0x2A6 and Tranquil Swamp at 0x2A5, one map off (Shaman House's and Swamp Inn's: ststatus_map_areas, the
+ * inns' maps); these are its 1.x maps, the areas' own. */
+static const struct { s16 map[2]; s32 x, y; } tr_destinations[46] = {
+    { { 0x267, 0x2CF }, 38686, 178983 },  /*  1 Legendary Gym */
+    { { 0x266, 0x2CE }, 135635, 114668 }, /*  2 Lake of Ice */
+    { { 0x265, 0x2CD }, 175891, 76459 },  /*  3 Kulon Mine */
+    { { 0x262, 0x2CA }, 221247, 143146 }, /*  4 Snow Mountain */
+    { { 0x264, 0x2CC }, 140088, 114794 }, /*  5 Freeze Mountain */
+    { { 0x26F, 0x2D6 }, 190842, 170543 }, /*  6 Genbu City / Xuan Wu City */
+    { { 0x228, 0x297 }, 79728, 206286 },  /*  7 Duel Island */
+    { { 0x24D, 0x2B7 }, 200458, 176851 }, /*  8 Dum Dum Factory */
+    { { 0x268, 0x2D0 }, 32520, 87528 },   /*  9 Kulon Pit */
+    { { 0x261, 0x2C9 }, 209802, 104242 }, /* 10 Boot Mountain */
+    { { 0x263, 0x2CB }, 66356, 74958 },   /* 11 Mountain Inn */
+    { { 0x223, 0x292 }, 103672, 85128 },  /* 12 Forest Inn */
+    { { 0x238, 0x2A5 }, 124294, 91646 },  /* 13 Swamp Inn */
+    { { 0x225, 0x294 }, 245462, 124066 }, /* 14 Protocol Ruins, Protocol Forest */
+    { { 0x22E, 0x29C }, 139226, 119768 }, /* 15 Seiryu City / Qing Long City */
+    { { 0x22B, 0x29A }, 131158, 208544 }, /* 16 Tyranno Valley */
+    { { 0x24C, 0x2B6 }, 119592, 214191 }, /* 17 Bullet Valley */
+    { { 0x220, 0x28F }, 160127, 175488 }, /* 18 Plug Cape */
+    { { 0x23D, 0x2AA }, 67512, 121476 },  /* 19 South Cape */
+    { { 0x200, 0x270 }, 186824, 102500 }, /* 20 Asuka City / Amaterasu City */
+    { { 0x222, 0x291 }, 87454, 66170 },   /* 21 Wire Forest */
+    { { 0x21E, 0x28D }, 111434, 91323 },  /* 22 Wire Forest Entrance */
+    { { 0x227, 0x296 }, 93870, 160229 },  /* 23 Divermon's Lake */
+    { { 0x229, 0x298 }, 202275, 140071 }, /* 24 Wind Prairie */
+    { { 0x22A, 0x299 }, 124997, 169747 }, /* 25 Kicking Forest */
+    { { 0x249, 0x2B3 }, 84211, 84884 },   /* 26 Pelche Oasis */
+    { { 0x24B, 0x2B5 }, 177438, 134580 }, /* 27 North Badland E */
+    { { 0x247, 0x2B1 }, 165214, 175746 }, /* 28 South Badland */
+    { { 0x24A, 0x2B4 }, 238112, 147459 }, /* 29 North Badland W */
+    { { 0x21D, 0x28C }, 225700, 164434 }, /* 30 Central Park */
+    { { 0x22C, 0x29B }, 121278, 67293 },  /* 31 East Station */
+    { { 0x232, 0x2A0 }, 88798, 70093 },   /* 32 South Station */
+    { { 0x21F, 0x28E }, 152401, 96119 },  /* 33 Shell Beach */
+    { { 0x25D, 0x2C6 }, 137276, 186980 }, /* 34 Byakko City / Bai Hu City */
+    { { 0x248, 0x2B2 }, 151850, 133014 }, /* 35 Noise Desert */
+    { { 0x242, 0x2AF }, 168262, 121823 }, /* 36 Jungle Shrine */
+    { { 0x239, 0x2A6 }, 43514, 70079 },   /* 37 Shaman House */
+    { { 0x235, 0x2A3 }, 234910, 67359 },  /* 38 Bios Swamp */
+    { { 0x25A, 0x2C3 }, 125323, 133383 }, /* 39 Mirage Tower */
+    { { 0x258, 0x2C1 }, 134408, 109539 }, /* 40 Mobius Desert */
+    { { 0x23C, 0x2A9 }, 153707, 128746 }, /* 41 Ether Jungle */
+    { { 0x23E, 0x2AB }, 151383, 184308 }, /* 42 Suzaku City / Zhu Que City */
+    { { 0x234, 0x2A2 }, 253014, 128892 }, /* 43 Bulk Swamp, Bulk Bridge */
+    { { 0x237, 0x2A4 }, 184837, 67238 },  /* 44 Tranquil Swamp */
+    { { 0x23A, 0x2A7 }, 168058, 229804 }, /* 45 Jungle Grave */
+    { { 0x23B, 0x2A8 }, 276466, 169065 }, /* 46 Phoenix Bay */
+};
+
+static void tr_start(struct PortMod *mod) {
+    (void)mod;
+    port_mod_fast_travel = 1;
+}
+
+s32 port_fast_travel_select(s32 region, s32 area) {
+    if (region < 0 || region > 1 || area < 1 || area > 46) {
+        return 0;
+    }
+    gamestate_data.field_map = tr_destinations[area - 1].map[region];
+    gamestate_data.player_pos.x = tr_destinations[area - 1].x;
+    gamestate_data.player_pos.y = tr_destinations[area - 1].y;
+    port_log("fast travel: frame %ld: area %d of region %d: map 0x%X at (%d, %d) on leaving the menus", port_frames,
+             (int)area, (int)region, (int)gamestate_data.field_map, (int)(gamestate_data.player_pos.x >> 8),
+             (int)(gamestate_data.player_pos.y >> 8));
+    return 1;
+}
+
+void port_fast_travel_images_loaded(s32 region) {
+    tr_images = region;
+}
+
+s32 port_fast_travel_images(void) {
+    return tr_images;
+}
+
 /* ---- The stops (psxstack docs/LAUNCHER.md "Mod runtime" rule 6; the in-game menu switches a mod off live): each
  * undoes what its start set, the flag the game's hooks test and the mod's own state. preset_language and widescreen
  * have none and say `applies = "restart"`: the language is chosen at the boot's select screen, and the wide canvas
@@ -543,6 +632,11 @@ static void ft_stop(struct PortMod *mod) {
     port_mod_fast_transitions = 0;
 }
 
+static void tr_stop(struct PortMod *mod) {
+    (void)mod;
+    port_mod_fast_travel = 0;
+}
+
 static PortMod game_mod_table[] = {
     { .id = "skip_dialogues", .version = "0.1", .options = sd_options,
       .option_count = (int)(sizeof(sd_options) / sizeof(sd_options[0])), .start = sd_start, .stop = sd_stop, .frame = sd_frame,
@@ -565,6 +659,7 @@ static PortMod game_mod_table[] = {
     { .id = "fast_transitions", .version = "0.1", .options = ft_options,
       .option_count = (int)(sizeof(ft_options) / sizeof(ft_options[0])), .start = ft_start, .stop = ft_stop, .frame = ft_frame,
       .status = ft_status },
+    { .id = "fast_travel", .version = "0.1", .start = tr_start, .stop = tr_stop },
 };
 
 int game_mod_count(void) {
@@ -576,10 +671,11 @@ PortMod *game_mods(void) {
 }
 
 /* A save state (psxstack/game.h game_savestate): what the mods carry from one vsync to the next about the game (the
- * map a save-anywhere was opened from, the last battle's knocked-out party slots, the boost's tenths). Their options
- * and toggles are settings: the loading run's own. */
+ * map a save-anywhere was opened from, the last battle's knocked-out party slots, the boost's tenths, the region whose
+ * map images are in VRAM). Their options and toggles are settings: the loading run's own. */
 void game_savestate(struct PortState *s) {
     PORT_STATE_VAR(s, gs_opened_from);
     PORT_STATE_VAR(s, px_ko);
     PORT_STATE_VAR(s, xb_tenths);
+    PORT_STATE_VAR(s, tr_images);
 }

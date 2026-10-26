@@ -305,6 +305,37 @@ the menu to the load; from the menu's opening to back on the field takes 795 fra
 map 0x203 to 0x204 754, 696, 640; normal's frame log and record equal the mod-off run's; instant twice gives the same
 log and record.
 
+### Fast travel
+
+`fast_travel`. No options: enabling it is the switch (`port_mod_fast_travel`). Flawe's Mod 2.0 for the PS1 disc does
+the same (its behaviour and destinations; credited in `docs/THIRD_PARTY.md`); the port's code is its own.
+
+MAP in the field menu becomes a travel map. Confirm (✕) on an area that is lit, one the player has entered any map
+of, picks it as the destination: the confirm sound plays and the current-area marker moves there. Square (□) shows the
+other server's map (Asuka's, Amaterasu's), with its own visited areas and area names; the marker shows only on the
+server the destination is on. Nothing moves until the menus are left: leaving them (Back from the page, Back from the
+menu) enters the destination. Picking again replaces the destination; there is no undo other than picking the area
+the player is in.
+
+How (`docs/MECHANICS.md` section 16): the pick (`port_fast_travel_select`, `port/game/game_mods.c`) sets
+`gamestate_data.field_map` and `player_pos` to the area's destination, one map and place per area and server (46
+areas, Flawe's table). The menu already returns to the field by `set_next_map(field_map)`, and FIELDSTG, coming from
+a map outside the field, enters at `player_pos`; the travel is that return. The map page's own code
+(`src/ststatus/ststatus_80096590.c`, `#ifdef PC_PORT`) shows the other server: its map images (uploaded where the menu
+puts the player's, then put back when the page is opened again), sprites, names and visited areas. The page queues
+the other server's files when it opens, so □ does not wait for the CD.
+
+The player's direction, the route and room (`gamestate_data.route`, `room`) are kept, as Flawe's are. As on the PS1,
+arriving out of the story's order can skip a map's arrival event, and talking to people out of their order can
+softlock; after the post-game the mod leads out of its areas, where people are missing (Flawe's notes). Maps with no
+MAP page (Kusanagi City, the Undersea Base, the Spy Satellite, the Underground) are not destinations, and MAP stays
+greyed out there.
+
+`tests/port/mods.py` takes global_save's route to the lab's field menu (map 0x206, in Asuka City's area), opens MAP,
+presses □ twice and ✕, and leaves the menus: with the mod the pick sets map 0x200 at (186824, 102500) and the field
+enters Asuka City there (the menu's `player_pos` when it opens again); without it the same presses come back to the
+lab.
+
 ## 50/60 Hz
 
 A setting, not a mod: `video.refresh: 60` or `--refresh 60` (default 50, PAL). It sets, before `port_overlay_init()`

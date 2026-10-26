@@ -80,6 +80,14 @@ normal, fast and instant (memory card 1: the run saves and loads):
   - normal: the frame log and the record equal the mod-off run's (nothing changes);
   - instant twice: the same frame log and record (a run with the mod is deterministic with itself; it differs from
     the mod-off run's after the first transition, since the random generator steps once a frame).
+fast_travel (global_save.json's route to the field menu on the lab, map 0x206, area 20 Asuka City): MAP, SQUARE twice
+(the Amaterasu map, nothing visited there, and back), CROSS on the area under the cursor (the lab's own, Asuka City),
+TRIANGLE twice (the page, then the menu), START once back on the field (the menu saves the player's place), with the
+mod on and off:
+  - on: the pick sets field_map 0x200 and player_pos to the table's (186824, 102500) and is logged; leaving the menus
+    enters Asuka City (map 0x200 after 0x1000) at that place (player_pos when the menu opens again); both region
+    switches upload the other region's images and back without a crash;
+  - off: the presses change nothing: back on the lab (map 0x206), nothing logged.
 Exit codes: 0 pass, 1 fail, 2 something missing.
 """
 import argparse
@@ -365,6 +373,70 @@ def global_save(binary, out):
 
 
 FT_SPEEDS = ("normal", "fast", "instant")
+
+# gamestate_data's field_map and player_pos (x, y) in a checkpoint dump
+TR_FIELDS = {"field_map": 0x34, "x": 0x38, "y": 0x3C}
+
+
+def tr_field(dump, name):
+    return int.from_bytes(dump[TR_FIELDS[name]:TR_FIELDS[name] + 4], "little", signed=True)
+
+
+def fast_travel(binary, out):
+    """fast_travel: MAP from the lab's field menu, Asuka City picked, the menus left (the docstring)."""
+    print("mods: fast_travel (global_save.json's route to the lab's field menu, MAP, Asuka City picked)")
+    gs = json.loads(GS_SCRIPT.read_text())["steps"]
+    j = next(k for k, s in enumerate(gs) if s.get("type") == "checkpoint" and s.get("name") == "menu_open")
+    tap = {"type": "press", "frames": 2, "release": 40}
+    steps = gs[:j + 1] + [
+        {"type": "press", "buttons": ["DOWN"], "frames": 2, "release": 8, "repeat": 2,
+         "comment": "cursor 0 (ITEMS) to 2 (MAP)"},
+        {"type": "press", "buttons": ["CROSS"], "frames": 2, "release": 8, "until": {"type": "wait_stage", "stage": 16},
+         "timeout": 1500, "comment": "MAP: STSTATUS (map 0x1000) opens the map page"},
+        {"type": "wait_frames", "frames": 400, "comment": "the files load and the page sets up: the cursor on the current area"},
+        dict(tap, buttons=["SQUARE"], comment="the Amaterasu map"),
+        dict(tap, buttons=["SQUARE"], comment="the Asuka map again"),
+        dict(tap, buttons=["CROSS"], comment="the area under the cursor: Asuka City"),
+        {"type": "checkpoint", "name": "picked"},
+        dict(tap, buttons=["TRIANGLE"], comment="close the page: the field menu"),
+        {"type": "press", "buttons": ["TRIANGLE"], "frames": 2, "release": 8, "until": {"type": "wait_stage", "stage": 2},
+         "timeout": 1500, "comment": "leave the menu: back to the field"},
+        {"type": "wait_frames", "frames": 400, "comment": "the map title fades; the menu needs no event running"},
+        {"type": "press", "buttons": ["START"], "frames": 2, "release": 150, "comment": "the field menu again"},
+        {"type": "checkpoint", "name": "menu_again"},
+    ]
+    script = derived(out, "tr", steps)
+    runs = {}
+    for label, mods in (("tr_on", {"fast_travel": {"enabled": True}}), ("tr_off", {})):
+        cfg = out / f"{label}.settings.json"
+        cfg.write_text(json.dumps({"schema": 1, "disc": {"path": str(DISC)}, "video": {"window": False},
+                                   "memcard1": str(out / f"{label}_1.mcd"), "memcard2": str(out / f"{label}_2.mcd"),
+                                   "mods": mods}))
+        dumps = out / f"{label}_dumps"
+        dumps.mkdir()
+        rc, _, rec, err = run_port(binary, out, label, script, cfg, True, {"DW3_PORT_CHECKPOINT_DIR": str(dumps)})
+        if rc != 0 or rec is None:
+            print("    " + "\n    ".join(err.splitlines()[-5:]))
+        d = {f.name.split("_", 1)[1][:-4]: f.read_bytes() for f in dumps.glob("cp*.bin")}
+        runs[label] = (rc, rec, d, err)
+    rc, rec, d, err = runs["tr_on"]
+    check(rc == 0 and "picked" in d and "menu_again" in d, f"on: the run completes with its checkpoints (exit {rc})")
+    if "picked" not in d or "menu_again" not in d:
+        return
+    maps = [m["map"] for m in rec["map_sequence"]]
+    picked = (tr_field(d["picked"], "field_map"), tr_field(d["picked"], "x"), tr_field(d["picked"], "y"))
+    check(picked == (0x200, 186824, 102500) and "area 20 of region 0: map 0x200" in err,
+          f"on: the pick sets field_map 0x200 and player_pos (186824, 102500), logged ({picked[0]:#x}, {picked[1:]})")
+    again = (tr_field(d["menu_again"], "field_map"), tr_field(d["menu_again"], "x"), tr_field(d["menu_again"], "y"))
+    check(maps[-2:] == [0x1000, 0x200] and again == (0x200, 186824, 102500),
+          f"on: leaving the menus enters Asuka City (map 0x200 after 0x1000) at the destination "
+          f"({', '.join(hex(m) for m in maps[-2:])}; {again[0]:#x} {again[1:]})")
+    rc, rec, d, err = runs["tr_off"]
+    maps = [m["map"] for m in rec["map_sequence"]] if rec else []
+    check(rc == 0 and maps[-2:] == [0x1000, 0x206] and "menu_again" in d and
+          tr_field(d["menu_again"], "field_map") == 0x206 and "fast travel:" not in err,
+          f"off: the presses change nothing, back on the lab (map 0x206) (exit {rc}; "
+          f"{', '.join(hex(m) for m in maps[-2:])})")
 
 
 def fast_transitions(binary, out):
@@ -718,6 +790,7 @@ MODS_TESTS = {
     "global_save": lambda binary, out, record: global_save(binary, out),
     "battle_animations": lambda binary, out, record: battle_animations(binary, out),
     "widescreen": lambda binary, out, record: widescreen(binary, out),
+    "fast_travel": lambda binary, out, record: fast_travel(binary, out),
 }
 
 

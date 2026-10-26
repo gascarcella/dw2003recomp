@@ -852,3 +852,56 @@ transition that takes fewer frames moves every later roll (section 1).
   bytes unchanged.
 - Not covered here: the battles' own scenes (FIGHTSTG's intro camera, the stage's fade in), CARDGAME's `CardgameFade`,
   the CD and overlay loads (paced by the drive model) and the movies.
+
+## 16. Map changes, visited areas and fast travel
+
+How the game moves the player between maps, what it records about the places visited, and where a fast travel can
+hook in (issue #52; the port's `fast_travel` mod, `docs/LAUNCHER.md` "Fast travel"). Everything here is [C] unless
+marked.
+
+- **The request** (`src/main/gamestate.c`): `gamestate_set_next_map(map, entry)` stores `next_map` and `map_entry`,
+  nothing else. `overlay_run_object` (`src/main/overlay.c`) ends the stage's root object once `is_map_changing()`
+  (`next_map != 0`); the main loop (`src/main/main.c`) then calls `gamestate_change_map` (`prev_map = map`,
+  `map = next_map`, `next_map = 0`) and creates the new root, which loads the overlay `overlay_files[map >> 8]`. Field
+  maps are 0x200..0x2EE (FIELDSTG, stage 2); STSTATUS is 0x1000, STGMCARD 0xC00.., FIGHTSTG 0x600 (section 11 has the
+  rest of `map >> 8`).
+- **Where the player appears** (`fieldstg_manager_start`, `src/fieldstg/fieldstg_80087DB0.c`): when the previous map is
+  not a field map (`prev_map & 0xFF00` not 0x200, 0x300 or 0xE00, and not 0x1500 or 0x500) FIELDSTG sets
+  `map_entry = -1` and takes `fieldstg_stage.return_pos`/`return_dir` from `gamestate_data.player_pos`/`player_dir`;
+  the player actor then starts at `return_pos` when `map_entry == -1`, else at the stage's `start_pos`/`start_dir`
+  (there is no table of entry points). A map different from `field_last_map` is entered fresh (`map_is_new`: section 12).
+- **Changing map from the field**: `fieldstg_goto_map(map, entry, x, y, dir)` (and `_delayed`) hands `next_map` and
+  `map_entry` to the manager and sets `return_pos`/`return_dir` (24.8); `fieldstg_manager_leave_map` closes the window
+  (section 15), saves `field_map`, `player_pos` and `player_dir`, and calls `set_next_map`. Every exit passes `entry`
+  -1 with the place in the next map. The exits (map event type 1, type 14 the launch pad), the warps (types 9 and 10:
+  `fieldstg_manager_warp`, its effect, fades and picture, then `route`/`room` from the event) and event scripts'
+  `FIELDSTG_EVENT_GOTO_MAP` (opcode 0x304, `src/fieldstg/fieldstg_event.c`) all end there; the exits and warps also
+  set `gamestate_data.route`/`room`, which the Underground's maze maps (0x2E0..0x2EE) read to pick their exits.
+- **Through a menu**: opening the field menu saves `field_map`, `player_pos` and `player_dir`
+  (`fieldstg_manager_open_menu`); STSTATUS (map 0x1000) returns with `set_next_map(field_map, 0)` (`fieldmenu.c`,
+  step 6), and since 0x1000 is not a field map the player comes back at `player_pos`. A menu can therefore send the
+  player anywhere by writing `field_map` and `player_pos` before the return: the fast travel's hook. [T] by
+  `tests/port/mods.py` (fast_travel): the pick on the lab (0x206) sets `field_map` 0x200 and `player_pos`
+  (186824, 102500), and leaving the menus enters map 0x200 there.
+- **Visited maps**: entering a field map sets flag `0x1E00 + map` (`fieldstg_manager_start`): type 0x20, index
+  `map - 0x200`, `gamestate_data.flags_20` (saved with the slot; section 11). Only STSTATUS's map reads it.
+- **The map page** (`ststatus_create_map_page`, `src/ststatus/ststatus_80096590.c`; helpers in
+  `ststatus_80099B6C.c`): two regions, the Asuka server (maps 0x200..0x26F, `ststatus_map_get_region` 0) and its
+  Amaterasu mirror (0x270..0x2D6, region 1); from 0x2D7 (Kusanagi City, the Undersea Base, the Spy Satellite, the
+  Underground) there is none and MAP is greyed (`fieldmenu_get_map_region`). `ststatus_map_areas[map & 0xFF]` gives a
+  map's area (0..45, bit 7 in region 1); the page shows 46 area icons (`ststatus_area_layout`, from 1) and lights the
+  ones with any map visited (`ststatus_map_mark_visited`); the cursor stops only on lit icons
+  (`ststatus_map_find_area`: `on_area`, `area`); the area names are ASKMAP (`records_language + 8`) and AMTMAP
+  (`+ 1`). The region's images come from STSTATUS's root: file 0x79A (Asuka) or 0x79C (Amaterasu), subfiles 0-2
+  uploaded to VRAM (0x280,0 with its CLUT at 0x140,0x100; 0x380,0x100; 0x300,0x100), and the page draws them through
+  0x799 or 0x79B. The page reads only the cursor and cancel; confirm and square do nothing.
+- **Flawe's Mod 2.0** (the PS1 patch; `docs/THIRD_PARTY.md`), read from its code: it hooks the map page's draw. Confirm
+  with the cursor on an area writes `field_map` and `player_pos` from a table of 46 areas (one map per server, one
+  place shared by both) and moves the page's current-area marker; square uploads the other region's images, and sets
+  `field_map` to one of its maps for a moment so `mark_visited` fills the other region's icons. Its code runs from RAM
+  it copies to 0x8000C000 (1.x; 2.0 appends it to STSTATUS.PRO). It leaves `player_dir`, `route` and `room`. 2.0 moved
+  Jungle Shrine's and Mirage Tower's places (Mirage Tower to map 0x25A/0x2C3), and has Amaterasu's Swamp Inn and
+  Tranquil Swamp one map off (0x2A6, Shaman House's, and 0x2A5, Swamp Inn's); the port keeps the areas' own maps there.
+  Its notes: arriving out of the story's order can skip events, talking to people early can softlock, and after the
+  post-game it leads out of the post-game's areas, where people are missing and going underground or underwater
+  crashed the PS1 game.
