@@ -207,6 +207,17 @@ s32 port_transition_frames(s32 frames);
 s32 port_transition_extra(s32 left, s32 step);
 s32 port_transition_ticks(s32 ticks);
 s32 port_transition_speed(s32 speed);
+/* port_mod_fast_travel: fast_travel is on ("Fast travel"): on STSTATUS's map page (src/ststatus/ststatus_80096590.c)
+ * the confirm button on a visited area calls port_fast_travel_select(region, area), which sets gamestate_data.field_map
+ * and player_pos to the area's destination on that region's server (1 if it has one); leaving the menus then enters
+ * that map at that place, as the game does after any menu. The square button shows the other region's map.
+ * port_fast_travel_images: the region whose map images are in VRAM (0x280,0, 0x300,0x100, 0x380,0x100): STSTATUS's
+ * root says which it uploaded (port_fast_travel_images_loaded, whether the mod is on or not), the map page reloads
+ * them when it shows another. */
+extern int port_mod_fast_travel;
+s32 port_fast_travel_select(s32 region, s32 area);
+void port_fast_travel_images_loaded(s32 region);
+s32 port_fast_travel_images(void);
 
 #endif /* PC_PORT */
 

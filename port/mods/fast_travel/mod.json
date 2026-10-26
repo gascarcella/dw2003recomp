@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "id": "fast_travel",
+  "name": "Fast travel",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "MAP in the field menu becomes a travel map: press Confirm on an area you have visited, then leave the menus to arrive there. Square shows the other server's map. Based on Flawe's Mod 2.0 for the PS1. Arriving out of the story's order can skip events, and talking to people early can get you stuck.",
+  "options": []
+}

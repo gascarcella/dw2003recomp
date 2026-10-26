@@ -689,6 +689,76 @@ void ststatus_move_map_cursor(StstatusMapPage *obj, s32 dx, s32 dy) {
     }
 }
 
+#ifdef PC_PORT
+extern u8 ststatus_map_areas[0xF0];
+
+/* PC_PORT: fast_travel (docs/LAUNCHER.md "Fast travel"): uploads `region`'s map images where ststatus_update_root
+ * puts the region the player is in, unless they are already there (blocking: the files load if they are not cached). */
+static void ststatus_map_upload_images(s32 region) {
+    Tim tim;
+    s32 files = region == 0 ? 0x79A : 0x79C;
+
+    if (port_fast_travel_images() == region) {
+        return;
+    }
+    tim_init(&tim);
+    tim.set_image_pos(0x380, 0x100);
+    tim.load_all(cdload_module.get_subfile_by_id((files << 16) | 1));
+    tim.set_image_pos(0x300, 0x100);
+    tim.load_all(cdload_module.get_subfile_by_id((files << 16) | 2));
+    tim.set_image_pos(0x280, 0);
+    tim.set_clut_pos(0x140, 0x100);
+    tim.load_all(cdload_module.get_subfile_by_id(files << 16));
+    port_fast_travel_images_loaded(region);
+}
+
+/* PC_PORT: fast_travel: the page shows `region`'s map, as ststatus_create_root and ststatus_create_map_page set it up
+ * for the region the player is in: its images, sprites and area names, its visited areas (ststatus_map_mark_visited's
+ * test for that region's maps), and the current area's marker, hidden in the region the player is not in
+ * (ststatus_map_draw). */
+static void ststatus_map_show_region(StstatusMapPage *obj, s32 region) {
+    s32 first = region == 0 ? 0x200 : 0x270;
+    s32 last = region == 0 ? 0x26F : 0x2D6;
+    s32 area;
+    s32 i;
+
+    ststatus_map_upload_images(region);
+    obj->region = region;
+    obj->file = region == 0 ? 0x799 : 0x79B;
+    obj->images = obj->file << 16;
+    obj->mark_sprites = (obj->file << 16) | 1;
+    obj->cursor_sprites = (obj->file << 16) | 2;
+    obj->names_file = records_language + (region == 0 ? 8 : 1);
+    for (i = 0; i < 0x2F; i++) {
+        obj->visited[i] = 0;
+    }
+    for (i = first; i <= last; i++) {
+        if (gamestate_flags.get_flag((i & 0xFF) | 0x2000, 1) == 1) {
+            obj->visited[ststatus_map_areas[i & 0xFF] & 0x7F] = 1;
+        }
+    }
+    if (region == ststatus_map.get_region()) {
+        area = ststatus_map.get_area() + 1;
+        obj->current_pos = ststatus_module.area_layout[area].x + 0xC;
+        obj->current_y = ststatus_module.area_layout[area].y + 0xC;
+    }
+}
+
+/* PC_PORT: fast_travel: confirm on a visited area picks it as the destination (its marker moves there); the square
+ * button shows the other region's map. */
+static void ststatus_map_fast_travel_pad(StstatusMapPage *obj) {
+    if (PAD_PRESSED(13) && obj->on_area != 0 && port_fast_travel_select(obj->region, obj->area)) {
+        sound_module.play(0x8004503C);
+        obj->current_pos = ststatus_module.area_layout[obj->area].x + 0xC;
+        obj->current_y = ststatus_module.area_layout[obj->area].y + 0xC;
+    }
+    if (PAD_PRESSED(15)) {
+        sound_module.play(0x8004513E);
+        ststatus_map_show_region(obj, obj->region == 0);
+    }
+}
+#endif
+
 /* The pad: the d-pad moves the cursor (faster while held), cancel closes the page. */
 void ststatus_map_handle_pad(StstatusMapPage *obj, StstatusMapPageData *data) {
     if (PAD_HELD(7) || PAD_HELD(5)) {
@@ -723,6 +793,11 @@ void ststatus_map_handle_pad(StstatusMapPage *obj, StstatusMapPageData *data) {
     } else if (PAD_HELD(6)) {
         ststatus_move_map_cursor(obj, 0, 1);
     }
+#ifdef PC_PORT
+    if (port_mod_fast_travel) {
+        ststatus_map_fast_travel_pad(obj);
+    }
+#endif
     if (PAD_PRESSED(14)) {
         sound_module.play(0x800450BD);
         obj->base.state = OBJECT_STATE_END;
@@ -779,6 +854,10 @@ void ststatus_map_draw(StstatusMapPage *obj) {
         if (x < obj->current_pos + obj->scroll) {
             frame = 0x35;
         }
+#ifdef PC_PORT
+        /* fast_travel: the other region's map (ststatus_map_show_region) has no current area */
+        if (obj->region == ststatus_map.get_region())
+#endif
         spr.draw(cdload_module.get_subfile_by_id(obj->cursor_sprites), frame + obj->marker_frame, obj->current_pos + obj->scroll,
                    obj->current_y + obj->scroll_y + obj->map_y);
     }
@@ -884,7 +963,20 @@ StstatusMapPage *ststatus_create_map_page(s32 arg0) {
         obj->file = 0x79B;
         obj->names_file = records_language + 1;
     }
+#ifdef PC_PORT
+    /* fast_travel: the root uploaded the images of the region the player was in when the menu opened; the page last
+     * shown (the other region's), or a destination picked in it, can have changed which region that is */
+    ststatus_map_upload_images(obj->region);
+#endif
     cdload_module.queue_file(obj->names_file);
+#ifdef PC_PORT
+    /* fast_travel: the other region's files load after the names, so that showing it does not wait for the CD */
+    if (port_mod_fast_travel) {
+        cdload_module.queue_file(obj->region == 0 ? 0x79C : 0x79A);
+        cdload_module.queue_file(obj->region == 0 ? 0x79B : 0x799);
+        cdload_module.queue_file(records_language + (obj->region == 0 ? 1 : 8));
+    }
+#endif
     obj->screen_h = 0xF0;
     obj->map_y = 0x10;
     return obj;
@@ -1086,6 +1178,9 @@ void ststatus_update_root(StstatusRoot *obj, StstatusRootData *data) {
                 tim.set_image_pos(0x280, 0);
                 tim.set_clut_pos(0x140, 0x100);
                 tim.load_all(cdload_module.get_subfile_by_id(obj->images));
+#ifdef PC_PORT
+                port_fast_travel_images_loaded(obj->map_region); /* fast_travel: the map page compares its region */
+#endif
                 obj->base.next_state(obj);
             }
             break;

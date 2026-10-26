@@ -6,7 +6,7 @@ Every game file of the EU disc (SLES-03936) rebuilds byte-identical from this re
 compiles from matching C (Psy-Q's libraries stay split assembly). The PC port, built from the same C, runs on
 Linux: it boots the user's disc, plays the movies, the music and the effects, draws through a software GPU in an SDL3
 window, and saves to memory-card images that an emulator can also read. A launcher and the first built-in mods
-(fast-forward, faster loading, a 60 Hz mode, skip dialogues, disable battle animations, save anywhere, a preset language, party experience, XP boost, disable random encounters, recover on level up, faster transitions) are done. A Linux AppImage release pipeline is
+(fast-forward, faster loading, a 60 Hz mode, skip dialogues, disable battle animations, save anywhere, a preset language, party experience, XP boost, disable random encounters, recover on level up, faster transitions, fast travel) are done. A Linux AppImage release pipeline is
 ready; the release itself is still to be published.
 
 ## Decompilation
@@ -100,7 +100,7 @@ The plan's milestones (`docs/PORT.md`):
   stack's own Psy-Q declarations; fibers; `scripts/worktree_init.sh`
   checks it out; CI and release.yml fetch it with a plain `git submodule update --init`: psxstack is public). This
   repository keeps the game's side: `include/port.h`
-  (the hooks' PS1 side and the game's own hooks), `port/game/` (the adapter: `game.json`, the probes, the ten mods, the
+  (the hooks' PS1 side and the game's own hooks), `port/game/` (the adapter: `game.json`, the probes, the eleven mods, the
   asm stand-ins), `port/mods/`, `tools/port_inputs.py` (the build inputs the stack takes), `tools/port_inventory.py`
   (the stack's inventory configured here), `tools/mcp_game.py` and `.mcp.json` (the debug tools' configuration); the
   launcher is built from `psxstack/launcher` with `port/game/game.json`. The extraction is complete (`docs/DECISIONS.md`
@@ -152,7 +152,8 @@ The plan's milestones (`docs/PORT.md`):
   experience and Bits multiplied, up to 5x on sliders or 10x typed; presets Boost, Turbo, Ultra), disable random encounters (no random battles on the field;
   story, trainer and event battles still start; an optional toggle key), recover on level up (a level up restores HP
   and MP to the new maximums), faster transitions (the fades, the map change, the field menu and the save screen's
-  animations in about half the frames, or one; the music untouched). With mods off, the
+  animations in about half the frames, or one; the music untouched), fast travel (MAP in the field menu picks a
+  visited area on either server, Flawe's PS1 destinations; leaving the menus travels there). With mods off, the
   binary's logs, records and audio are unchanged.
 - **Release:** `scripts/package_appimage.sh` builds one Linux AppImage, `scripts/package_windows.sh` the Windows zip
   (and its PDB symbols zip); a tag `vX.Y.Z` produces a draft release with both (`docs/RELEASE.md`). Publishing it
