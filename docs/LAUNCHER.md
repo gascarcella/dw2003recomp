@@ -5,7 +5,7 @@ The launcher is psxstack's (`psxstack/launcher/`), built for this game from `por
 -DPSXSTACK_VERSION_ROOT=$PWD -DPSXSTACK_TOOLS_DIR=$PWD/tools`; `build/launcher/dw2003-launcher`). The contract between
 the launcher and the game, the settings directory and file (schema 1), the mod manifest and runtime, the launcher's
 screens and self-test, the update check and the crash report are psxstack's `docs/LAUNCHER.md` and
-`launcher/README.md`. This page keeps what is this game's: its built-in mods, its 60 Hz mode and its updates. The
+`launcher/README.md`. This page keeps what is this game's: its built-in mods, its two filter sets, its 60 Hz mode and its updates. The
 decisions behind the design: DECISIONS "Launcher and mods (session 18)".
 
 Code cites this file as `docs/LAUNCHER.md "<heading>"`; keep the headings stable.
@@ -381,6 +381,28 @@ a session starts its rounds, so switching the mod in the in-game menu takes effe
 one Punch session at level 0: with the mod on, the 3 rounds and the bonus round win (Power +5..8,
 `last_bonus_training` 1); with `bonus_round` `game` the rounds win and the bonus round's chance stays 75; off, the
 session is the game's and nothing is logged.
+
+## Filters for the field and battles
+
+The game opts in to psxstack's two present-filter sets (psxstack `docs/GAME_CONTRACT.md` "1. game.json", `video.scenes`;
+issue #122): one for its 2D scenes, one for its 3D scenes. A set is a filter and its crt values (scanlines, mask,
+curvature); the scale, fullscreen, the scaling, the 3D vertices and the internal scale stay one for both. GPU renderer
+only, like the filters themselves.
+
+- **The scenes:** `game_state_scene()` (`port/game/state.c`) says 3D while the tier-1 overlay is FIGHTSTG (the battle,
+  with its sub-overlays WFIGHTMN and WFIGHTTS), 2D otherwise: the field, the menus, the title and the other overlays.
+  It is the widescreen mod's battle test (`port/game/game_mods.c` `ws_frame`). The runtime reads it once per vsync and
+  binds the scene's pipeline at the vsync where it changes, with no crossfade; the switch falls on the battle's fade in
+  and out.
+- **The launcher's Video rows:** two Filter rows, "Filter: battles" and "Filter: the field and the menus" (labels from
+  `video.scenes`), each with its own sliders; the in-game menu marks the set on screen "(on screen now)".
+- **The defaults:** the field and the menus `smooth` (`video.scenes.2d.filter` in `port/game/game.json`), the battles
+  `none`.
+- **The settings:** `video.filter` and `video.crt` are the battles' set, `video.scene_2d` (`{ "filter", "crt" }`) the
+  field's. For one run, `--filter` gives both sets the same filter and values, `--filter-2d NAME[:KEY=V,...]` sets
+  the field's alone. A settings file from before the two sets has no `scene_2d`: the filter it chose stays the
+  battles', and the field shows `smooth` until the field's row is changed. `tests/port/settings.py` checks the round
+  trip, `--filter-2d` and a bad `scene_2d.filter`.
 
 ## 50/60 Hz
 

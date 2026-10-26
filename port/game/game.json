@@ -16,7 +16,9 @@
   "video": {
     "rate": 50,
     "rates": [50, 60],
-    "rate_note": "The game's own 60 Hz mode, as the NTSC patch gives it: time, walking and music keep their speed, other things run 20% faster. A game built before its 60 Hz mode runs at 50 Hz."
+    "rate_note": "The game's own 60 Hz mode, as the NTSC patch gives it: time, walking and music keep their speed, other things run 20% faster. A game built before its 60 Hz mode runs at 50 Hz.",
+    "scenes": { "2d": { "label": "the field and the menus", "filter": "smooth" },
+                "3d": { "label": "battles" } }
   },
   "memory": {
     "ram": { "base": "0x80000000", "size": "0x200000" },
