@@ -224,28 +224,44 @@ draws, the report's text and the battle are unchanged.
 `tests/port/mods.py` runs the first story battle with xp_boost's 10x (40 experience: member 0 goes from level 1 to 3)
 with the mod on (HP 320/320, MP 207/207) and off (HP 93/320, MP 100/207).
 
-### Widescreen battles
+### Widescreen
 
-`widescreen`. No options, no hotkey: while enabled, the battle (FIGHTSTG) is shown at the screen's shape, up to 16:9
-(a 16:10 Steam Deck gets 16:10), through the GPU renderer's wide canvas (psxstack `runtime/render_gpu_wide.c`; issue
-#71). The game is unchanged: FIGHTSTG already sends the 3D a 16:9
-frame needs (its only screen-space cull, `fightstg_model_mesh_is_visible`, keeps a mesh with a bounding point within
-the clip plus 64 pixels: 224 from the centre, against the 213.5 of a 16:9 frame), and the GPU clipped it to the
-320-wide drawing area. The mod's frame callback (`port/game/game_mods.c`) calls `port_video_widescreen(1)` while FIGHTSTG
-is the tier-1 overlay; its start asks for the canvas and a 16:9 window (`port_video_widescreen_enable`).
+`widescreen`. One option, `field` (on by default; applies at restart), no hotkey: while enabled, the battle (FIGHTSTG)
+and, with `field`, the field (FIELDSTG) are shown at the screen's shape, up to 16:9 (a 16:10 Steam Deck gets 16:10),
+through the GPU renderer's wide canvas (psxstack `runtime/render_gpu_wide.c`; issues #71, #78), which draws what the
+game sends past the 320-wide screen's edges. The mod's frame callback (`port/game/game_mods.c`) calls
+`port_video_widescreen(1)` while FIGHTSTG (or FIELDSTG) is the tier-1 overlay; its start asks for the canvas and a
+16:9 window (`port_video_widescreen_enable`) and for the larger VRAM (`port_video_vram_extend`).
 
-- **What widens:** the battle's stage and models (more of the arena at both sides); the background clear, fades and
-  flashes cover the whole width. The HUD, the menus and the portrait window stay as drawn, in the middle 4:3.
-- **What stays 4:3:** the field, the menus and every other overlay (320-wide 2D whose art ends at the screen's edge;
-  the field's widening is issue #78), the movies, and everything with the software renderer (logged once).
+- **The battle:** the game is unchanged. FIGHTSTG already sends the 3D a 16:9 frame needs (its only screen-space cull,
+  `fightstg_model_mesh_is_visible`, keeps a mesh with a bounding point within the clip plus 64 pixels: 224 from the
+  centre, against the 213.5 of a 16:9 frame), and the GPU clipped it to the 320-wide drawing area. More of the arena
+  shows at both sides; the background clear, fades and flashes cover the whole width. The HUD, the menus and the
+  portrait window stay as drawn, in the middle 4:3.
+- **The field:** the map is streamed 128x128 tiles, and the 30 tile objects in RAM already cover a 426-wide view, but
+  FIELDSTG draws only the 4 x 3 a 320-wide screen shows, from 12 VRAM slots. With `field` on, `port_field_wide`
+  (`include/port.h`) is the canvas's columns past each side (53 at 16:9, 32 at 16:10) and the field's hooks draw that
+  far: the camera stops with the map's edge at the picture's (`fieldstg_camera_apply`; a map narrower than the picture
+  is centred, black at the sides), the background draws up to 5 x 3 tiles from 15 slots (`fieldstg_background_draw`;
+  slots 12-14 and their CLUTs in the extended VRAM's rows 512-1023), its fills cover the width (the map's fades and
+  closing window), the map title's bars reach the picture's edge, and `gfx_get_view_rect` is that much wider (the
+  culling of FIELDSTG's sprites and of the stages'). The HUD, the message windows and the menus stay in the middle.
+  Unlike the battle this changes the game's state (the camera's clamp, what is culled): a run's record differs from
+  the 4:3 one. With the software renderer `port_field_wide` is 0 and the field is the original's.
+- **What stays 4:3:** the menus and every other overlay (320-wide 2D whose art ends at the screen's edge;
+  pillarboxed), the movies, and everything with the software renderer (logged once).
 - **The window** keeps its size; the picture switches between 4:3 and 16:9 inside it. A new window opens 16:9
   (`video.scale` x 427 x 240) when the mod is on and `video.renderer` is `gpu`.
 - **Known limits:** the digivolution's 2D effects are 320-wide art and may show their edges at the sides; a stage
-  modelled only at the front (stage kind 4) may show its back at the sides. Both are for the play-test.
+  modelled only at the front (stage kind 4) may show its back at the sides. In the field, something an event keeps just
+  off the 320-wide screen now shows, a stage's own backdrop (WSTAG375 and WSTAG949 have parallax layers) may not cover
+  the sides, and the closing window's first step drops the sides at once. All are for the play-test.
 
-`tests/port/render_gpu.py` (a GPU device): a battle frame's middle 320 columns equal the software image byte for byte,
-its sides are drawn, the present is 16:9, the field stays 4:3, the frame log equals the run without the mod.
-`tests/port/mods.py` (headless): the frame log unchanged and the software path's 4:3 logged once.
+`tests/port/render_gpu.py` (a GPU device): with `field` off, a battle frame's middle 320 columns equal the software
+image byte for byte, its sides are drawn, the present is 16:9, the field stays 4:3, the frame log equals the run
+without the mod; with `field` on, field frames are 426 wide, their middle the run's software image and their sides
+drawn. `tests/port/mods.py` (headless, `field` on): the frame log unchanged (the field's hooks do nothing without the
+canvas) and the software path's 4:3 logged once.
 
 ### Disable random encounters
 

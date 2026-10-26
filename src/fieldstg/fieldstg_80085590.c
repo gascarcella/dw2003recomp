@@ -235,6 +235,27 @@ typedef struct FieldstgBackgroundData {
     /* 0x04 */ FieldstgTile *tiles[30];
 } FieldstgBackgroundData; /* size 0x7C */
 
+/* widescreen's field (include/port.h port_field_wide): while the picture is wider than the screen the background
+ * draws from its left edge (FIELDSTG_BG_LEFT), up to 5 columns of tiles (FIELDSTG_BG_COLS, FIELDSTG_BG_CELLS), and
+ * picks among 15 slots (FIELDSTG_BG_SLOTS): FIELDSTG_BG_SLOT is the object's slot i, or the port's (port_field_slots)
+ * for 12-14; all 15 start free with every map (FIELDSTG_BG_SLOTS_ALL). The PS1 build reads as the original. */
+#ifdef PC_PORT
+#define FIELDSTG_BG_LEFT(obj) ((obj)->x - port_field_wide)
+#define FIELDSTG_BG_COLS (port_field_wide != 0 ? 5 : 4)
+#define FIELDSTG_BG_CELLS 15
+#define FIELDSTG_BG_SLOTS (port_field_wide != 0 ? 15 : 12)
+#define FIELDSTG_BG_SLOTS_ALL 15
+#define FIELDSTG_BG_SLOT(obj, i) \
+    (*((i) < 12 ? &(obj)->slots[i] : &((FieldstgBackgroundSlot *)port_field_slots)[(i) - 12]))
+#else
+#define FIELDSTG_BG_LEFT(obj) ((obj)->x)
+#define FIELDSTG_BG_COLS 4
+#define FIELDSTG_BG_CELLS 12
+#define FIELDSTG_BG_SLOTS 12
+#define FIELDSTG_BG_SLOTS_ALL 12
+#define FIELDSTG_BG_SLOT(obj, i) ((obj)->slots[i])
+#endif
+
 /* A visible map cell of fieldstg_background_draw (up to 4 x 3). */
 typedef struct FieldstgBackgroundCell {
     /* 0x00 */ s16 loaded; /* its tile is loaded in a tile object */
@@ -555,7 +576,7 @@ FieldstgTile *fieldstg_background_find_tile(FieldstgBackgroundData *data, s32 ti
 
 void fieldstg_background_draw(FieldstgBackground *obj, FieldstgBackgroundData *data) {
     s32 origin[2];
-    FieldstgBackgroundCell cells[12];
+    FieldstgBackgroundCell cells[FIELDSTG_BG_CELLS];
     FieldstgTile *tile;
     GfxLayer *layer = gfx_module.funcs.get_layer(0x1002);
     s32 count = 0;
@@ -569,13 +590,13 @@ void fieldstg_background_draw(FieldstgBackground *obj, FieldstgBackgroundData *d
     s32 i;
     s32 j;
 
-    origin[0] = obj->x < 0x20 ? 0 : (obj->x - 0x20) / 128;
+    origin[0] = FIELDSTG_BG_LEFT(obj) < 0x20 ? 0 : (FIELDSTG_BG_LEFT(obj) - 0x20) / 128;
     origin[1] = obj->y < 8 ? 0 : (obj->y - 8) / 128;
     for (row = 0; row < 3; row++) {
         if (row + origin[1] >= obj->height) {
             break;
         }
-        for (col = 0; col < 4; col++) {
+        for (col = 0; col < FIELDSTG_BG_COLS; col++) {
             tx = col + origin[0];
             if (tx >= obj->width) {
                 break;
@@ -598,21 +619,21 @@ void fieldstg_background_draw(FieldstgBackground *obj, FieldstgBackgroundData *d
     }
     for (i = 0; i < count; i++) {
         if (cells[i].loaded != 0 && cells[i].slot != -1) {
-            fade = obj->slots[cells[i].slot].fade;
+            fade = FIELDSTG_BG_SLOT(obj, cells[i].slot).fade;
             if (fade != 0) {
                 if (fade == 0xFFFF && cells[i].tile->loaded_time < gfx_module.funcs.get_time() - 10) {
-                    obj->slots[cells[i].slot].fade = 0;
+                    FIELDSTG_BG_SLOT(obj, cells[i].slot).fade = 0;
                 } else {
                     fieldstg_background_draw_blank(layer, cells[i].x, cells[i].y, fade);
                     fade -= 0x2AAA;
                     if (fade <= 0) {
                         fade = 0;
                     }
-                    obj->slots[cells[i].slot].fade = fade;
+                    FIELDSTG_BG_SLOT(obj, cells[i].slot).fade = fade;
                 }
             }
             cells[i].tile->draw(cells[i].tile, layer, cells[i].x, cells[i].y);
-            obj->slots[cells[i].slot].last_used = gfx_module.funcs.get_time();
+            FIELDSTG_BG_SLOT(obj, cells[i].slot).last_used = gfx_module.funcs.get_time();
         } else if (cells[i].exists != 0) {
             fieldstg_background_draw_blank(layer, cells[i].x, cells[i].y, 0xFFFF);
         }
@@ -622,22 +643,22 @@ void fieldstg_background_draw(FieldstgBackground *obj, FieldstgBackgroundData *d
                 if (cells[i].loaded != 0 && cells[i].slot == -1 && cells[i].tile->is_loaded(cells[i].tile) != 0) {
                 best = 0;
                 oldest = gfx_module.funcs.get_time();
-                for (j = 0; j < 12; j++) {
-                    if (obj->slots[j].last_used < oldest) {
-                        oldest = obj->slots[j].last_used;
+                for (j = 0; j < FIELDSTG_BG_SLOTS; j++) {
+                    if (FIELDSTG_BG_SLOT(obj, j).last_used < oldest) {
+                        oldest = FIELDSTG_BG_SLOT(obj, j).last_used;
                         best = j;
                     }
                 }
                 cells[i].tile->unpack(cells[i].tile, best, data->unpacker);
-                if (obj->slots[best].tile != -1) {
-                    tile = fieldstg_background_find_tile(data, obj->slots[best].tile);
+                if (FIELDSTG_BG_SLOT(obj, best).tile != -1) {
+                    tile = fieldstg_background_find_tile(data, FIELDSTG_BG_SLOT(obj, best).tile);
                     if (tile != NULL) {
                         tile->free_slot(tile);
                     }
                 }
-                obj->slots[best].tile = cells[i].number;
-                obj->slots[best].last_used = gfx_module.funcs.get_time();
-                obj->slots[best].fade = 0xFFFF;
+                FIELDSTG_BG_SLOT(obj, best).tile = cells[i].number;
+                FIELDSTG_BG_SLOT(obj, best).last_used = gfx_module.funcs.get_time();
+                FIELDSTG_BG_SLOT(obj, best).fade = 0xFFFF;
                 break;
             }
         }
@@ -748,9 +769,9 @@ void fieldstg_background_update(FieldstgBackground *obj, FieldstgBackgroundData 
                 for (i = 0; i < 30; i++) {
                     data->tiles[i] = fieldstg_tile_create(obj->sectors << 11, obj->file);
                 }
-                for (i = 0; i < 12; i++) {
-                    obj->slots[i].tile = -1;
-                    obj->slots[i].last_used = 0;
+                for (i = 0; i < FIELDSTG_BG_SLOTS_ALL; i++) {
+                    FIELDSTG_BG_SLOT(obj, i).tile = -1;
+                    FIELDSTG_BG_SLOT(obj, i).last_used = 0;
                 }
                 data->unpacker = message_rlen_create();
                 obj->base.next_state(obj);
@@ -799,7 +820,12 @@ void fieldstg_background_fill_layer(s32 layer_id, s32 alpha) {
 
     if (layer != NULL) {
         for (y = 0; y < 0xF0; y += 0x80) {
+#ifdef PC_PORT
+            /* widescreen's field (include/port.h port_field_wide): one more 128-pixel column at each side */
+            for (x = port_field_wide != 0 ? -0x80 : 0; x < (port_field_wide != 0 ? 0x1C0 : 0x140); x += 0x80) {
+#else
             for (x = 0; x < 0x140; x += 0x80) {
+#endif
                 fieldstg_background_draw_blank(layer, x, y, alpha);
             }
         }
@@ -897,10 +923,26 @@ void fieldstg_tile_upload(FieldstgTile *obj) {
         }
     }
     obj->slot = slot;
+#ifdef PC_PORT
+    if (slot >= 12) {
+        /* widescreen's field (include/port.h port_field_wide): slots 12-14 at (640, 512), (640, 640) and (768, 512),
+         * their CLUTs on rows 512-514, all in the extended VRAM (getTPage and getClut carry y's bit 9) */
+        obj->tpage_x = 640 + (slot - 12) / 2 * 128;
+        obj->tpage_y = 512 + (slot - 12) % 2 * 128;
+        obj->clut_x = 0;
+        obj->clut_y = 512 + slot - 12;
+    } else {
+        obj->tpage_x = fieldstg_tile_vram_pos[slot].x;
+        obj->tpage_y = fieldstg_tile_vram_pos[slot].y;
+        obj->clut_x = 0;
+        obj->clut_y = slot + 0xF0;
+    }
+#else
     obj->tpage_x = fieldstg_tile_vram_pos[slot].x;
     obj->tpage_y = fieldstg_tile_vram_pos[slot].y;
     obj->clut_x = 0;
     obj->clut_y = slot + 0xF0;
+#endif
     tim_init(&tim);
     tim.set_image_pos(obj->tpage_x, obj->tpage_y);
     tim.set_clut_pos(obj->clut_x, obj->clut_y);
@@ -1121,6 +1163,14 @@ void fieldstg_map_title_draw_rect(Object *obj, u32 *ot, RECT rect, u32 color) {
     poly->y1 = rect.y;
     poly->y2 = rect.y + rect.h;
     poly->y3 = rect.y + rect.h;
+#ifdef PC_PORT
+    /* widescreen's field (include/port.h port_field_wide): a bar that reaches the screen's right edge (they slide in
+     * from there) reaches the picture's; one across the screen the renderer stretches itself */
+    if (rect.x > 0 && rect.w > 0 && rect.x + rect.w == 320) {
+        poly->x1 += port_field_wide;
+        poly->x3 += port_field_wide;
+    }
+#endif
     addPrim(ot, poly);
     gfx_module.funcs.set_packet(poly + 1);
 }

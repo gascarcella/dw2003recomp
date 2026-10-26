@@ -60,9 +60,10 @@ gives no form experience (member 0 fights as its own form), so `form_exp` is not
 level_up_recover: the same route with xp_boost's exp 10 (`manual`: 40 experience, member 0 from level 1 to 3), with
 the mod on: member 0 ends at its new max HP and MP, one recover logged; and off: it keeps the battle's HP (93) and MP
 under the raised maximums, nothing logged.
-widescreen (no script of its own): first_battle_save to back_on_field with the mod on, in the headless build
-(no GPU renderer): the frame log equals the run without the mod (the mod changes nothing the game does; the renderer
-draws its wide canvas, tests/port/render_gpu.py), and the run logs once that the picture stays 4:3.
+widescreen (no script of its own): first_battle_save to back_on_field with the mod on (`field` too, its default), in
+the headless build (no GPU renderer): the frame log equals the run without the mod (the battle's canvas changes nothing
+the game does, and the field's hooks and the extended VRAM do nothing without the canvas; the renderer's pictures are
+tests/port/render_gpu.py's), and the run logs once that the picture stays 4:3.
 random_encounters (no script of its own): first_battle_save's route to map 0x21D (all encounter area but its ramps), then
 back and forth across its plaza until encounter_timer runs out, with the mod off and on (memory cards: the route saves):
   - off: the walk ends in a random battle (map 0x600 after 0x21D);
@@ -250,8 +251,8 @@ def battle_animations(binary, out):
 
 
 def widescreen(binary, out):
-    """widescreen: the battle with the mod on in the headless build: the game's frame log unchanged, the software
-    picture's 4:3 logged once."""
+    """widescreen: the battle and the field with the mod on in the headless build: the game's frame log unchanged,
+    the software picture's 4:3 logged once."""
     print("mods: widescreen (first_battle_save to back_on_field, the headless build: no GPU renderer)")
     fbs = json.loads((SCRIPTS / "first_battle_save.json").read_text())["steps"]
     j = next(k for k, s in enumerate(fbs) if s.get("type") == "checkpoint" and s.get("name") == "back_on_field")

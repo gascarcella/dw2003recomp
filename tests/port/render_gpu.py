@@ -22,12 +22,15 @@ Builds build/port-sdl if needed (-DPSXSTACK_SDL=ON: tools/sdl3 and tools/dxc), t
     pictures of field and battle frames are the display's size times the scale and, averaged back over each N x N
     block, close to the software image (SCALED_BUDGET: the 3D's edges and textures sampled between texels differ, the
     2D does not); the debug channel's screenshot with "renderer": "gpu" at the internal scale;
-  - with a GPU device and the disc, widescreen (the `widescreen` mod; psxstack render_gpu_wide.c, issue #71):
-    first_battle_save with the mod on (a settings file: no window, renderer gpu): a field frame stays the software image
-    (320x240); a battle frame is 426x240 (16:9 in whole columns) whose middle 320 columns are the software image byte for byte and whose sides
-    show the arena (WIDE_SIDES: at least that share of the side pixels not black); its present into 1920x1080 is the
-    reference at 16:9; at internal scale 2 a battle frame is 852x480 and its middle, averaged back, within
-    SCALED_BUDGET of the software image; the frame log equals the run without the mod (the game draws the same);
+  - with a GPU device and the disc, widescreen (the `widescreen` mod; psxstack render_gpu_wide.c, issues #71, #78):
+    first_battle_save with the mod on and its `field` off (a settings file: no window, renderer gpu): a field frame
+    stays the software image (320x240); a battle frame is 426x240 (16:9 in whole columns) whose middle 320 columns are
+    the software image byte for byte and whose sides show the arena (WIDE_SIDES: at least that share of the side pixels
+    not black); its present into 1920x1080 is the reference at 16:9; at internal scale 2 a battle frame is 852x480 and
+    its middle, averaged back, within SCALED_BUDGET of the software image; the frame log equals the run without the mod
+    (the game draws the same); then with `field` on (its default) a field frame is 426x240 too, the middle the run's
+    software image byte for byte and the sides the map (the field draws past the screen's edges, so the game's frame
+    log differs from 4:3);
   - with the disc: SDL_Renderer's own present (a 960x720 window on the offscreen driver, read back through
     DW3_PORT_PRESENT_READBACK) must be the same reference: the two present paths agree.
 The reference is video.c's placement (video_dest at video.scaling's default, fit: 4:3, as large as the output allows,
@@ -61,6 +64,7 @@ SCALED_FRAMES = (10000, 15000, 19900, 20300)   # first_battle_save: the field, a
 # a field event's translucent bands in 8-bit colour 1.1 / 0.00 %, the battle's 3D up to 9.5 / 9.1 %).
 SCALED_BUDGET = (12.0, 0.12)   # new_game: CNTY_SEL's 320x576 screen, the title's menus, the field
 WIDE_FIELD, WIDE_BATTLE = 15000, (19900, 20300, 20600)   # first_battle_save: the field, the first battle (FIGHTSTG)
+WIDE_MAP = (16500, 18000)   # first_battle_save: the Asuka lobby (map 0x204), the camera away from the map's edges
 WIDE_SIDES = 0.25   # measured 0.52 (NVIDIA): the arena's floor and pillars; the sky is the clear colour
 SIZES = ((960, 720), (1366, 768), (1920, 1080), (1280, 1024), (1000, 700), (300, 200))
 LAVAPIPE = Path("/usr/share/vulkan/icd.d/lvp_icd.x86_64.json")
@@ -275,10 +279,11 @@ def middle(image, w):
 
 
 def widescreen(sdl, env, out):
-    print("render_gpu: widescreen (the widescreen mod: the battle at 16:9 from the wide canvas)")
+    print("render_gpu: widescreen (the widescreen mod: the battle at 16:9 from the wide canvas, then the field)")
     cfg = out / "wide.settings.json"
     cfg.write_text(json.dumps({"schema": 1, "disc": {"path": str(DISC)}, "video": {"window": False, "renderer": "gpu"},
-                               "memcard1": None, "memcard2": None, "mods": {"widescreen": {"enabled": True}}}))
+                               "memcard1": None, "memcard2": None,
+                               "mods": {"widescreen": {"enabled": True, "field": False}}}))
     last = WIDE_BATTLE[-1] + 1
     args = []
     for f in (WIDE_FIELD, *WIDE_BATTLE):
@@ -329,6 +334,27 @@ def widescreen(sdl, env, out):
     check(mean <= SCALED_BUDGET[0] and far <= SCALED_BUDGET[1] and lit >= WIDE_SIDES,
           f"scale 2, vsync {f}: {W}x{H}, the middle averaged back: mean |diff| {mean:.2f}, {100 * far:.2f} % of the "
           f"channels off by more than 32; {100 * lit:.0f} % of the sides drawn")
+    field_cfg = out / "wide_field.settings.json"
+    field_cfg.write_text(json.dumps({**json.loads(cfg.read_text()), "mods": {"widescreen": {"enabled": True}}}))
+    args = []
+    for f in WIDE_MAP:
+        args += ["--screenshot", f"{f}:{out / f'wf_sw{f}.ppm'}", "--gpu-screenshot", f"{f}:{out / f'wf_hw{f}.ppm'}"]
+    rc, text = run([sdl, "--config", field_cfg, "--script", SCRIPTS / "first_battle_save.json", "--script-mods",
+                    "--max-frames", str(WIDE_MAP[-1] + 1), "--log", out / "wf_mod.log", *args], env, timeout=900)
+    if rc != 0:
+        check(False, f"the field: the run (exit {rc})")
+        print("\n".join(text.splitlines()[-10:]))
+        return
+    for f in WIDE_MAP:
+        w, h, lo = ppm(out / f"wf_sw{f}.ppm")
+        image = ppm(out / f"wf_hw{f}.ppm")
+        want = w + 2 * (w // 6)
+        if image[:2] != (want, h):
+            check(False, f"vsync {f} (the field): {image[0]}x{image[1]}, not {want}x{h}")
+            continue
+        mid, lit = middle(image, w)
+        check(mid == lo and lit >= WIDE_SIDES, f"vsync {f} (the field): {want}x{h}, the middle {w} columns the "
+              f"software image byte for byte, {100 * lit:.0f} % of the sides drawn")
 
 
 def debug_channel(sdl, env, out):

@@ -428,3 +428,14 @@ changes nothing in the game: it names the battle as the scene to widen and psxst
 canvas (psxstack DECISIONS "Widescreen: a wide canvas beside the VRAM"). The HUD stays centred as drawn, the software
 renderer stays 4:3, the window keeps its size (a new one opens 16:9). The field (2D tile map, 12 VRAM tile slots) and
 the menus (2D art cut at 320) stay 4:3 until the owner decides otherwise (#78).
+
+## Widescreen field: the game draws past the edges, the menus stay pillarboxed
+_Decided: 2026-10-26_ (issue #78)
+
+The field widens through the same canvas: it keeps its 320-wide screen and layers, and `PC_PORT` hooks make it draw
+past the edges while the canvas shows them (`port_field_wide`, from psxstack's `port_video_widescreen_pad`): the
+camera's clamp, a fifth tile column, the fills, the culling rectangle. A wider drawing area was rejected (it would draw
+over the textures right of the display buffers). The 3 more tile slots go in psxstack's extended VRAM (DECISIONS
+there: "More texture room"). It is the `widescreen` mod's `field` option, on by default; a map narrower than the
+picture is centred with black sides; the menus' bars stay black (filling them would show the panels that slide in from
+the edges).

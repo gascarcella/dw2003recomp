@@ -404,6 +404,12 @@ void gfx_get_view_rect(GfxLayer *obj, GfxRect *out) {
     out->y = obj->env.clip.y - obj->draw_y + (obj->scroll_y >> 8);
     out->w = obj->env.clip.w;
     out->h = obj->env.clip.h;
+#ifdef PC_PORT
+    /* widescreen's field (include/port.h port_field_wide): the picture's width. Only FIELDSTG and its stages ask, and
+     * only to cull what lies outside the view. */
+    out->x -= port_field_wide;
+    out->w += 2 * port_field_wide;
+#endif
 }
 
 /* Frees the layer's ordering tables and callback nodes. */

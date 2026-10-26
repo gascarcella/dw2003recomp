@@ -1,11 +1,15 @@
 {
   "schema": 1,
   "id": "widescreen",
-  "name": "Widescreen battles",
-  "version": "0.1",
+  "name": "Widescreen",
+  "version": "0.2",
   "kind": "builtin",
   "applies": "restart",
   "requires_port": 1,
-  "description": "Battles fill a widescreen (16:9, 16:10): more of the arena shows at both sides, the menus and the HUD stay as drawn in the middle. Needs the GPU renderer (Video); with the software renderer the picture stays 4:3. The field, the menus and the movies stay 4:3. A new window opens 16:9.",
-  "options": []
+  "description": "Battles and the field fill a widescreen (16:9, 16:10): more of the arena and of the map shows at both sides, the menus and the HUD stay as drawn in the middle. Needs the GPU renderer (Video); with the software renderer the picture stays 4:3. The menus and the movies stay 4:3. A new window opens 16:9.",
+  "options": [
+    { "id": "field", "name": "The field",
+      "description": "The field map widens too. Maps narrower than the screen show black at the sides. Off: only battles widen.",
+      "type": "bool", "default": true, "applies": "restart" }
+  ]
 }

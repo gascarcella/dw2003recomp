@@ -2886,6 +2886,19 @@ void fieldstg_camera_apply(FieldstgCamera *obj) {
             obj->map_size.y = 0x400;
         }
     }
+#ifdef PC_PORT
+    /* widescreen's field (include/port.h port_field_wide): the map's edges at the picture's; a map at least as wide as
+     * the screen and narrower than the picture centred in it */
+    if (port_field_wide != 0 && obj->map_size.x >= 320) {
+        if (obj->map_size.x < 320 + 2 * port_field_wide) {
+            x = (obj->map_size.x - 320) / 2;
+        } else if (x < port_field_wide) {
+            x = port_field_wide;
+        } else if (x > obj->map_size.x - 320 - port_field_wide) {
+            x = obj->map_size.x - 320 - port_field_wide;
+        }
+    }
+#endif
     if (x < 0) {
         x = 0;
     }
