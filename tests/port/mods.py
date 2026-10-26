@@ -89,6 +89,14 @@ mod on and off:
     enters Asuka City (map 0x200 after 0x1000) at that place (player_pos when the menu opens again); both region
     switches upload the other region's images and back without a crash;
   - off: the presses change nothing: back on the lab (map 0x206), nothing logged.
+training_success (first_battle_save's route to map 0x21D's trainer, then member 0's TP set to 1 and one Punch
+session at level 0: the first party member, Punch, level 0, YES until the TP is spent; CROSS through the result and
+the refused trainings after it; first_battle_save's way out), with the mod on (bonus_round `always`), with
+bonus_round `game`, and off (memory cards: the route saves):
+  - on: the round chance and the bonus round's are logged as 75 -> 100; Power gains 3 rounds of 1..2 and the won
+    bonus round's 2 (5..8), last_bonus_training 1 (Punch), TP 0;
+  - game: the rounds' chance 75 -> 100, the bonus round's stays 75;
+  - off: the session runs (TP 0), nothing logged.
 Exit codes: 0 pass, 1 fail, 2 something missing.
 """
 import argparse
@@ -779,6 +787,68 @@ def level_up_recover(binary, out):
                   f"{label}: member 0 at level {lv}, HP {hp}/{max_hp}, MP {mp}/{max_mp} (the battle's HP kept)")
 
 
+TS_TP = 0x80048D34 + 0x784 + 2   # gamestate_data.digimon[0].record.stats.values[1] (TP): member 0 is Digimon 0
+TS_POWER = 0x790                 # its stats.stats[0] (Power) in a dump
+TS_LAST_BONUS = 0xB34            # its last_bonus_training in a dump
+
+
+def ts_byte_le(dump, at, size):
+    return int.from_bytes(dump[at:at + size], "little", signed=True)
+
+
+def training_success(binary, out):
+    """training_success: one Punch session at level 0 on map 0x21D's trainer, the mod on and off (the docstring)."""
+    print("mods: training_success (first_battle_save to map 0x21D's trainer, one Punch session at level 0)")
+    fbs = json.loads((SCRIPTS / "first_battle_save.json").read_text())["steps"]
+    j = next(k for k, s in enumerate(fbs) if s.get("type") == "checkpoint" and s.get("name") == "train_open")
+    session = [
+        {"type": "write_mem", "addr": hex(TS_TP), "size": 2, "value": 1,
+         "comment": "TP 1: one level-0 training (stgtrain_tp_costs[0]), the next one refused"},
+        {"type": "press", "buttons": ["CROSS"], "frames": 2, "release": 60,
+         "until": {"type": "wait_mem", "addr": hex(TS_TP), "size": 2, "value": 0}, "timeout": 3000,
+         "comment": "the first party member, Punch (cursor 0), level 0, YES: the TP spent, the session starts"},
+        {"type": "checkpoint", "name": "train_start"},
+        {"type": "press", "buttons": ["CROSS"], "frames": 2, "release": 60, "repeat": 30,
+         "comment": "the rounds play by themselves; CROSS shows the result and closes it; the later presses start "
+                    "another training, refused (no TP), and close the warning"},
+    ]
+    # first_battle_save's way out of STGTRAIN (from its 14 CROSS presses on), whichever screen the presses ended on
+    script = derived(out, "ts", fbs[:j + 1] + session + fbs[j + 2:])
+    for label, mods in (("ts_on", {"training_success": {"enabled": True}}),
+                        ("ts_game", {"training_success": {"enabled": True, "bonus_round": "game"}}), ("ts_off", {})):
+        cfg = out / f"{label}.settings.json"
+        cfg.write_text(json.dumps({"schema": 1, "disc": {"path": str(DISC)}, "video": {"window": False},
+                                   "memcard1": str(out / f"{label}_1.mcd"), "memcard2": str(out / f"{label}_2.mcd"),
+                                   "mods": mods}))
+        d = out / f"{label}_dumps"
+        d.mkdir()
+        rc, _, rec, err = run_port(binary, out, label, script, cfg, True, {"DW3_PORT_CHECKPOINT_DIR": str(d)})
+        cps = {f.name.split("_", 1)[1][:-4]: f.read_bytes() for f in d.glob("cp*.bin")}
+        chances = [line.split("frame ", 1)[1].split(": ", 1)[1] for line in err.splitlines()
+                   if "training success: frame" in line]
+        if rc != 0 or "train_left" not in cps:
+            check(False, f"{label}: the run leaves STGTRAIN after the session (exit {rc})")
+            print("    " + "\n    ".join(err.splitlines()[-5:]))
+            continue
+        start, end = cps["train_start"], cps["train_left"]
+        gain = ts_byte_le(end, TS_POWER, 2) - ts_byte_le(start, TS_POWER, 2)
+        bonus = ts_byte_le(end, TS_LAST_BONUS, 1)
+        tp = ts_byte_le(end, TS_TP - 0x80048D34, 2)
+        if label == "ts_game":
+            check(chances == ["round chance 75 -> 100", "bonus round chance 75 -> 75"] and tp == 0 and gain >= 3,
+                  f"{label}: the rounds succeed (Power +{gain}), the bonus round keeps the game's chance "
+                  f"(last_bonus_training {bonus}); chances {chances}")
+        elif mods:
+            # three rounds of 1 + r2 and the won bonus round's 2 (stgtrain_stat_gains rows 0 and 3)
+            check(chances == ["round chance 75 -> 100", "bonus round chance 75 -> 100"] and bonus == 1 and
+                  5 <= gain <= 8 and tp == 0,
+                  f"{label}: every round succeeds: Power +{gain} (want 5..8), last_bonus_training {bonus} (want 1, "
+                  f"Punch), TP {tp}; chances {chances}")
+        else:
+            check(not chances and tp == 0 and 0 <= gain <= 8,
+                  f"{label}: the game's session: Power +{gain}, last_bonus_training {bonus}, TP {tp}, nothing logged")
+
+
 # Every mod's test, the longest first (the parallel run's critical path): name -> function(binary, out, record).
 MODS_TESTS = {
     "preset_language": lambda binary, out, record: preset_language(binary, out),
@@ -792,6 +862,7 @@ MODS_TESTS = {
     "battle_animations": lambda binary, out, record: battle_animations(binary, out),
     "widescreen": lambda binary, out, record: widescreen(binary, out),
     "fast_travel": lambda binary, out, record: fast_travel(binary, out),
+    "training_success": lambda binary, out, record: training_success(binary, out),
 }
 
 

@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "id": "training_success",
+  "name": "Training success",
+  "version": "0.1",
+  "kind": "builtin",
+  "requires_port": 1,
+  "description": "Every round of a gym training succeeds, so each one raises the stat. The TP cost, the gains and the bonus round's question are the game's. Takes effect from the next training session.",
+  "options": [
+    { "id": "bonus_round", "name": "Bonus round",
+      "description": "Game: the bonus round keeps the game's chance (about 3 in 4 for trainings that start it by themselves, 1 in 2 for those that ask, almost none for the same bonus twice in a row). Always: it succeeds too, except the same training's bonus twice in a row. Always, even twice: it succeeds every time.",
+      "type": "enum", "default": "always", "applies": "live",
+      "values": [
+        { "id": "game", "label": "Game" }, { "id": "always", "label": "Always" },
+        { "id": "repeat", "label": "Always, even twice" }
+      ] }
+  ]
+}

@@ -361,6 +361,11 @@ void stgtrain_session_run(StgtrainSession *obj, StgtrainSessionData *data) {
             obj->base.step++;
             data->trainee->start_round(data->trainee);
             data->trainee->set_chance(data->trainee, stgtrain_session_get_bonus(obj) + 75);
+#ifdef PC_PORT
+            if (port_mod_training_success) { /* training_success (docs/LAUNCHER.md "Training success") */
+                data->trainee->chance = port_training_chance(data->trainee->chance, PORT_TRAINING_ROUND);
+            }
+#endif
         }
         break;
     case 2:
@@ -520,6 +525,11 @@ void stgtrain_session_run(StgtrainSession *obj, StgtrainSessionData *data) {
             obj->bonus_running = 1;
             data->trainee->start_round(data->trainee);
             obj->sound = sound_module.play(0xA084603C);
+#ifdef PC_PORT
+            if (port_mod_training_success) { /* the bonus round keeps the rounds' chance: the game's, for `game` */
+                data->trainee->chance = port_training_chance(stgtrain_session_get_bonus(obj) + 75, PORT_TRAINING_BONUS);
+            }
+#endif
             break;
         }
         obj->base.step++;
@@ -589,9 +599,19 @@ void stgtrain_session_run(StgtrainSession *obj, StgtrainSessionData *data) {
                 digimon = gamestate_data.funcs.get_record(obj->digimon);
                 if (digimon->last_bonus_training != 0 && digimon->last_bonus_training == obj->training) {
                     data->trainee->set_chance(data->trainee, 0); /* not the same bonus training twice in a row */
+#ifdef PC_PORT
+                    if (port_mod_training_success) {
+                        data->trainee->chance = port_training_chance(data->trainee->chance, PORT_TRAINING_BONUS_REPEAT);
+                    }
+#endif
                 } else {
                     digimon->last_bonus_training = 0;
                     data->trainee->set_chance(data->trainee, 50);
+#ifdef PC_PORT
+                    if (port_mod_training_success) {
+                        data->trainee->chance = port_training_chance(data->trainee->chance, PORT_TRAINING_BONUS);
+                    }
+#endif
                 }
             } else {
                 data->trainee->start_round(data->trainee);
