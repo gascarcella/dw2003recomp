@@ -394,15 +394,15 @@ only, like the filters themselves.
   It is the widescreen mod's battle test (`port/game/game_mods.c` `ws_frame`). The runtime reads it once per vsync and
   binds the scene's pipeline at the vsync where it changes, with no crossfade; the switch falls on the battle's fade in
   and out.
-- **The launcher's Video rows:** two Filter rows, "Filter (the field and the menus)" and "Filter (battles)", each with
-  its own sliders; the in-game menu marks the set in use.
+- **The launcher's Video rows:** two Filter rows, "Filter: battles" and "Filter: the field and the menus" (labels from
+  `video.scenes`), each with its own sliders; the in-game menu marks the set on screen "(on screen now)".
 - **The defaults:** the field and the menus `smooth` (`video.scenes.2d.filter` in `port/game/game.json`), the battles
   `none`.
 - **The settings:** `video.filter` and `video.crt` are the battles' set, `video.scene_2d` (`{ "filter", "crt" }`) the
-  field's. `--filter` sets both for a run, `--filter-2d NAME[:KEY=V,...]` only the field's. A settings file from
-  before the two sets has no `scene_2d`: the filter it chose stays the battles', and the field shows `smooth` until
-  the field's row is changed. `tests/port/settings.py` checks the round trip, `--filter-2d` and a bad
-  `scene_2d.filter`.
+  field's. For one run, `--filter` gives both sets the same filter and values, `--filter-2d NAME[:KEY=V,...]` sets
+  the field's alone. A settings file from before the two sets has no `scene_2d`: the filter it chose stays the
+  battles', and the field shows `smooth` until the field's row is changed. `tests/port/settings.py` checks the round
+  trip, `--filter-2d` and a bad `scene_2d.filter`.
 
 ## 50/60 Hz
 
