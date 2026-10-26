@@ -215,6 +215,14 @@ int32_t game_state_random_index(void) {
     return pad_random.index;
 }
 
+/* The scene (game.json video.scenes: the present-filter set): 3D while the tier-1 overlay is FIGHTSTG (its
+ * sub-overlays WFIGHTMN and WFIGHTTS run under it), 2D otherwise: the field, the menus and the other overlays. The
+ * same test as the widescreen mod's battle (port/game/game_mods.c ws_frame). The runtime reads it once per vsync. */
+int32_t game_state_scene(void) {
+    const PortOverlay *o = port_overlay_current(1);
+    return o != NULL && strcmp(o->name, "FIGHTSTG") == 0 ? PORT_SCENE_3D : PORT_SCENE_2D;
+}
+
 /* The host byte of PS1 address `addr` for a `size`-byte read, or NULL outside a layout-identical range. */
 static const u8 *port_state_map_addr(u32 addr, u32 size) {
     int i;

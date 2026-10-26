@@ -79,7 +79,10 @@ The plan's milestones (`docs/PORT.md`):
   decisions there): `--filter`, `video.filter`, `video.crt`, the launcher's Filter combo and sliders (GPU renderer
   only). Done: `none` (the default, the picture unchanged), `sharp` (sharp bilinear), `scanlines` and `crt` (beams,
   aperture grille, curvature), `smooth` (xBR level 2 on the 1x software image at any internal scale), each a shader
-  pass in psxstack's present. The filters' look (the CRT's beams, grille, curvature) awaits the owner's play-test.
+  pass in psxstack's present. The filters' look (the CRT's beams, grille, curvature) awaits the owner's play-test. Two sets
+  ([#122](https://github.com/gascarcella/dw2003recomp/issues/122)): one for the field and the menus (default `smooth`)
+  and one for battles (default `none`), switched at the vsync the battle starts and ends (`video.scene_2d`,
+  `--filter-2d`; docs/LAUNCHER.md "Filters for the field and battles").
 - **Widescreen** ([#71](https://github.com/gascarcella/dw2003recomp/issues/71),
   [#78](https://github.com/gascarcella/dw2003recomp/issues/78)): the `widescreen` mod shows the battle and (its `field`
   option) the field at the screen's aspect, up to 16:9 (16:10 on a Steam Deck), through the GPU renderer's wide canvas

@@ -11,6 +11,8 @@ Builds the headless port if needed (tests/port/run.py's build), then checks, wit
     under --script unless --script-mods;
   - the defaults (every key absent), relative paths resolved against the file's directory, null memory cards;
   - the command line overriding the file (--disc, --scale, --memcard1 none, --watchdog);
+  - the two filter sets (game.json video.scenes, issue #122): video.scene_2d read and printed back, --filter on both
+    sets and --filter-2d on the field's, an older file without scene_2d (the field smooth);
   - the errors: exit 64 with the key named (no schema, a newer schema, a wrong type, out of range, not JSON, a missing
     file, --print-settings without --config); an unknown key is logged and ignored;
 the input and binding errors; with build/port-sdl, --input-test (offscreen) with the defaults and with
@@ -64,6 +66,7 @@ REBOUND = ROOT / "tests/port/settings/rebound.json"
 OPTION_KEYS = {"id", "name", "description", "type", "default", "group", "applies", "min", "max", "step", "values",
                "slider_max", "input_toggle"}
 PRESET_KEYS = {"id", "name", "description", "values"}
+CRT_DEFAULT = {"scanlines": 50, "mask": 30, "curvature": 0}
 
 
 def presets_problems(presets, options):
@@ -230,7 +233,8 @@ def main():
                                                      "scaling": "fit",
                                                      "subpixel": "on",
                                                      "filter": "none",
-                                                     "crt": {"scanlines": 50, "mask": 30, "curvature": 0}}
+                                                     "crt": CRT_DEFAULT,
+                                                     "scene_2d": {"filter": "smooth", "crt": CRT_DEFAULT}}
           and s["audio"] == {"mute": False} and s["watchdog"] == 0, "the defaults of an empty file")
     check(s["memcard1"] == str(a / "card1.mcd") and s["memcard2"] == str(a / "card2.mcd"),
           "the cards default to card1.mcd and card2.mcd beside the file")
@@ -250,6 +254,8 @@ def main():
     }
     full["video"]["filter"] = "sharp"   # the hardware renderer's present filter (issue #69)
     full["video"]["crt"] = {"scanlines": 80, "mask": 0, "curvature": 100}
+    # the field's and the menus' set (game.json video.scenes; issue #122): video.filter and video.crt are the battles'
+    full["video"]["scene_2d"] = {"filter": "scanlines", "crt": {"scanlines": 20, "mask": 60, "curvature": 10}}
     write(a / "full.json", full)
     text1, s, _ = printed(binary, a / "full.json")
     check(s["disc"]["path"] == str(a / "../discs/dw2003.cue") and s["memcard1"] == str(a / "cards/one.mcd"),
@@ -290,6 +296,28 @@ def main():
     _, s, _ = printed(binary, a / "full.json", "--filter", "crt:mask=40")
     check(s["video"]["filter"] == "crt" and s["video"]["crt"] == {"scanlines": 80, "mask": 40, "curvature": 100},
           "--filter crt:mask=40 overrides video.filter and the one parameter it names")
+    check(s["video"]["scene_2d"] == {"filter": "crt", "crt": {"scanlines": 80, "mask": 40, "curvature": 100}},
+          "--filter crt:mask=40 is the field's set too: the same filter and values as the battles'")
+    _, s, _ = printed(binary, a / "full.json", "--filter-2d", "smooth")
+    check(s["video"]["scene_2d"]["filter"] == "smooth" and s["video"]["filter"] == "sharp"
+          and s["video"]["crt"] == full["video"]["crt"], "--filter-2d smooth overrides the field's set alone")
+    _, s, _ = printed(binary, a / "full.json", "--filter-2d", "crt:curvature=70")
+    check(s["video"]["scene_2d"] == {"filter": "crt", "crt": {"scanlines": 20, "mask": 60, "curvature": 70}}
+          and s["video"]["filter"] == "sharp", "--filter-2d crt:curvature=70: the field's filter and the one parameter")
+    _, s, _ = printed(binary, a / "full.json", "--filter", "none", "--filter-2d", "sharp")
+    check(s["video"]["filter"] == "none" and s["video"]["scene_2d"]["filter"] == "sharp",
+          "--filter none --filter-2d sharp: the battles none, the field sharp")
+    rc, _, err = run(binary, "--config", a / "full.json", "--print-settings", "--filter-2d", "blur")
+    check(rc == 64 and "--filter-2d" in err and "blur" in err, f"--filter-2d blur: exit 64 with the choices (exit {rc})")
+    # a file from before the two sets: the filter it chose is the battles', the field gets game.json's smooth
+    _, s, _ = printed(binary, write(a / "old_crt.json", {"schema": 1, "video": {
+        "filter": "crt", "crt": {"scanlines": 70, "mask": 50, "curvature": 30}}}))
+    check(s["video"]["filter"] == "crt" and s["video"]["crt"] == {"scanlines": 70, "mask": 50, "curvature": 30}
+          and s["video"]["scene_2d"] == {"filter": "smooth", "crt": CRT_DEFAULT},
+          "an older file with crt chosen: crt for battles, smooth with the default crt values for the field")
+    text1, _, _ = printed(binary, a / "old_crt.json")
+    text2, _, _ = printed(binary, write(out / "b/old_crt.json", text1))
+    check(text1 == text2, "the older file's printed settings, scene_2d included, load back to the same text")
 
     print("settings: the mods and their manifests")
     mods_check(binary)
@@ -335,6 +363,12 @@ def main():
         "crt not an object": ({"schema": 1, "video": {"crt": 50}}, "video.crt: an object, not a number"),
         "a crt value out of range": ({"schema": 1, "video": {"crt": {"mask": 101}}},
                                      "video.crt.mask: an integer from 0 to 100"),
+        "an unknown 2D filter": ({"schema": 1, "video": {"scene_2d": {"filter": "blur"}}},
+                                 'video.scene_2d.filter: "none", "sharp", "scanlines", "crt" or "smooth", not "blur"'),
+        "scene_2d not an object": ({"schema": 1, "video": {"scene_2d": "smooth"}},
+                                   "video.scene_2d: an object, not a string"),
+        "a 2D crt value out of range": ({"schema": 1, "video": {"scene_2d": {"crt": {"curvature": -1}}}},
+                                        "video.scene_2d.crt.curvature: an integer from 0 to 100"),
         "mods not an object": ({"schema": 1, "mods": []}, "mods: an object, not an array"),
         "mod_order not a list": ({"schema": 1, "mod_order": "a"}, "mod_order: an array, not a string"),
         "mod_order not of ids": ({"schema": 1, "mod_order": ["a", 1]}, "mod_order: a list of data mods' ids"),
