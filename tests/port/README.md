@@ -223,7 +223,11 @@ event until it ends. `swamp_dive` and `swamp_flies` (issues #120 and #119) start
 screen up, `write_mem` sets `gamestate_data`'s `field_map`, `player_pos` and `player_dir` (and `progress`), so that
 Back puts the player on a map the route never reaches. `swamp_dive` lands on map 0x234's Submarimon dive and dives
 (`tests/host/FINDINGS.md` 13); `swamp_flies` enters BIOS Swampland while its fly swarm is out (`tests/host/FINDINGS.md`
-14). In `scripts/test.sh --layer port`.
+14). `level_ups` (issue #130) starts from `battle_won`: `write_mem` sets Digimon 0's experience to 50000, and the
+report levels it from 1 to 39 in one `stfgtrep_add_exp`, 38 draws of the seven resists; the test reads the checkpoints'
+`gamestate_data` dumps and requires every resist to gain 0..2 a level-up (Kotemon's class-5 Water read past
+`stfgtrep_resist_gains`, `tests/host/FINDINGS.md` 2: 999 on the 0.6.0 Windows build). In `scripts/test.sh --layer
+port`; `--wine [--exe PATH]` runs the cases with the Windows build under Wine, headless (CI's `windows` job, ~90 s).
 
 ## What it found (session 16)
 - **The overlay copy takes CPU time on the PS1.** The game copies FIELDSTG (0x19000 bytes) into its slot with LIBC2's

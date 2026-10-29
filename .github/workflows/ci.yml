@@ -378,6 +378,13 @@ jobs:
         timeout-minutes: 30
         run: tools/venv/bin/python tests/port/run.py new_game first_battle_save --exe build/port-win/dw2003.exe --wine
 
+      # The field events the replays do not reach (tests/port/field.py) with the Windows build: its crashes were
+      # Windows reports (issue #116), and the level-ups' resists depend on the build's data layout (issue #130).
+      - name: The Windows game under Wine, the field events
+        if: needs.areas.outputs.data == 'true' && needs.areas.outputs.port == 'true'
+        timeout-minutes: 15
+        run: tools/venv/bin/python tests/port/field.py --wine --exe build/port-win/dw2003.exe
+
       - name: Crash reports
         if: failure()
         uses: actions/upload-artifact@v4
