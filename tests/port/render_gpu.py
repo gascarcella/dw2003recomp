@@ -34,7 +34,8 @@ Builds build/port-sdl if needed (-DPSXSTACK_SDL=ON: tools/sdl3 and tools/dxc), t
   - with the disc: SDL_Renderer's own present (a 960x720 window on the offscreen driver, read back through
     DW3_PORT_PRESENT_READBACK) must be the same reference: the two present paths agree.
 The reference is video.c's placement (video_dest at video.scaling's default, fit: 4:3, as large as the output allows,
-centred) with target pixel p reading image pixel floor((p - x0 + 0.5) * w / dw) (render_gpu.c's present shader).
+centred) with target pixel p reading image pixel floor((p - x0 + 0.5) * w / dw) (render_gpu.c's present shader,
+unfiltered: new_game runs with --filter none, its frames being 2D scenes, whose default filter is smooth).
 --lavapipe runs on Mesa's software Vulkan driver (VK_DRIVER_FILES) instead of the default device.
 --exe BINARY tests that binary instead of building build/port-sdl: the device, the pictures, the VRAM checks and the
 internal scales (the fallback, the window, the debug channel and SDL_Renderer's present are the Linux build's parts).
@@ -179,7 +180,9 @@ def screenshots(sdl, env, out):
         args += ["--screenshot", f"{f}:{out / f'sw{f}.ppm'}", "--gpu-screenshot", f"{f}:{out / f'hw{f}.ppm'}"]
         for w, h in SIZES:
             args += ["--gpu-screenshot", f"{f}@{w}x{h}:{out / f'hw{f}_{w}x{h}.ppm'}"]
-    rc, text = run([sdl, "--disc", DISC, "--script", SCRIPTS / "new_game.json", *args], env)
+    # The reference is the unfiltered present: --filter none for both sets (the 2D scenes' default is smooth since
+    # psxstack v0.3.18, and new_game's frames are 2D; tests/port/render_filters.py tests the filters; issue #129).
+    rc, text = run([sdl, "--disc", DISC, "--script", SCRIPTS / "new_game.json", "--filter", "none", *args], env)
     check(rc == 0, f"the run: exit {rc}")
     if rc != 0:
         print("\n".join(text.splitlines()[-10:]))
