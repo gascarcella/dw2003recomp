@@ -1181,6 +1181,9 @@ void stfgtrep_raise_stats(s32 digimon, s32 lv) {
     s32 i;
     s32 base;
     s32 gain;
+#ifdef PC_PORT
+    s32 j;
+#endif
 
     rec = gamestate_data.funcs.get_record(digimon);
     d = &records_digimon[digimon];
@@ -1221,7 +1224,16 @@ void stfgtrep_raise_stats(s32 digimon, s32 lv) {
     }
     for (i = 0; i < 6; i++) {
         base = d->stat_gains[i];
+#ifdef PC_PORT
+        /* PC_PORT: class 5 with residue 4 reads entry 9 of a 9-entry row, the next row's first entry; past the last
+         * row (levels >= 80) the original reads stfgtrep_resist_gains[0], 0, and the host whatever its linker put
+         * there. The port reads the rows as one table and gives 0 past its end, with the same draw
+         * (tests/host/FINDINGS.md 2). */
+        j = k * 9 + base + pad_random.next() % 5;
+        gain = j < 6 * 9 ? stfgtrep_stat_gains[j / 9][j % 9] : 0;
+#else
         gain = stfgtrep_stat_gains[k][base + pad_random.next() % 5];
+#endif
         stats->stats[i] += gain;
         if (stats->stats[i] >= 1000) {
             stats->stats[i] = 999;
@@ -1230,7 +1242,17 @@ void stfgtrep_raise_stats(s32 digimon, s32 lv) {
     if (lv <= 40) {
         for (i = 0; i < 7; i++) {
             base = d->resist_gains[i];
+#ifdef PC_PORT
+            /* PC_PORT: class 5 with residue 3 reads entry 8 of the 8-entry table. The table ends STFGTREP.PRO, so the
+             * original reads the zeros of the file's last sector and gains nothing; the host reads the next unit's
+             * data (0.6.0 on Windows: stgdglab_chart_icons[0], 383, two such level-ups and the resist is 999). Seven
+             * of the eight starters have a class-5 resist. The port gives 0 there, with the same draw (issue #130;
+             * tests/host/FINDINGS.md 2). */
+            j = base + pad_random.next() % 4;
+            gain = j < 8 ? stfgtrep_resist_gains[j] : 0;
+#else
             gain = stfgtrep_resist_gains[base + pad_random.next() % 4];
+#endif
             stats->resists[i] += gain;
             if (stats->resists[i] >= 1000) {
                 stats->resists[i] = 999;
