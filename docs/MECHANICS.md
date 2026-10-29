@@ -347,9 +347,10 @@ Facts [C] (`stfgtrep_add_exp` and `stfgtrep_raise_stats`, `src/stfgtrep/`; table
 - Six stats (Power..Charisma): `gain = stat_gains[band][class + next() % 5]` with band by level (< 5, < 20, < 40, < 60, < 80, else) and
   `class = RecordsDigimon.stat_gains[i]`. Table rows (9 entries each) fall from `{2,3,4,6,8,10,12,13,14}` (band 0) to `{0,0,1,1,1,1,1,2,2}`
   (band 5). Cap 999.
-- Resists (only when `lv <= 40`): `resist_gains[class + next() % 4]`, `{0,0,0,1,1,1,2,2}`; cap 999. Class 5 (Kotemon's Water,
-  Digimon 7's Dark) with residue 3 indexes entry 8, past the table and past the overlay file: the original reads 0 from `.bss`
-  (`tests/host/FINDINGS.md` 2). Likewise `stat_gains[k][class + next() % 5]` with class 5 and residue 4 reads the next row's
+- Resists (only when `lv <= 40`): `resist_gains[class + next() % 4]`, `{0,0,0,1,1,1,2,2}`; cap 999. Class 5 (one resist
+  of every starter but Kumamon: Kotemon's Water, Patamon's Dark, ...) with residue 3 indexes entry 8, past the table and
+  past the overlay file: the original reads 0 from the file's last sector, and the port gives 0 there
+  (`tests/host/FINDINGS.md` 2, issue #130). Likewise `stat_gains[k][class + next() % 5]` with class 5 and residue 4 reads the next row's
   first entry (`resist_gains[0]`, 0, after the last row).
 - Draw order per level: HP gain (1 draw), MP gain (1), six stats (6), resists (7 when `lv <= 40`).
 - Setters `gamestate_set_stat/_add_stat`: stat index 0..18 on `values[]`: `< 0` -> 0; indices 0-1 capped 99, 2-5 capped 9999, the rest 999; out of range

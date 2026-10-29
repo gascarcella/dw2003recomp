@@ -52,7 +52,9 @@ handles 7, 8 and 9 (a-c) in `src/` under `PC_PORT`; the harness builds without `
 - **Where:** `src/stfgtrep/stfgtrep_80082E70.c` `stfgtrep_raise_stats(digimon, lv)`, for `lv <= 40`:
   `stfgtrep_resist_gains[class + pad_random.next() % 4]` with `class = records_digimon[digimon].resist_gains[i]`. The table
   has 8 entries (`{0, 0, 0, 1, 1, 1, 2, 2}`) and the index reaches 8 when the class is 5 and the draw's residue is 3.
-  Two party Digimon have a class-5 resist: Digimon 0 (Kotemon, Water, `resist_gains[1]`) and Digimon 7 (Dark, `[6]`).
+  Seven of the eight starters have one class-5 resist: Digimon 0 Kotemon (Water), 2 Monmon (Machine), 3 Agumon (Fire),
+  4 Veemon (Ice), 5 Guilmon (Wind), 6 Renamon (Thunder), 7 Patamon (Dark); only Digimon 1 Kumamon has none. The goldens
+  cover Digimon 0 and 7.
 - **Original:** the table ends the overlay file (`STFGTREP.PRO` is `0x65F8` bytes and `stfgtrep_resist_gains` ends at
   `0x80089288 + 0x20 = 0x800892A8`, the file's end), so entry 8 is the rest of the file's last sector, which is zeros
   on the disc and is loaded with it (`overlay_load_stage` copies whole sectors), and the gain is 0:
@@ -62,13 +64,21 @@ handles 7, 8 and 9 (a-c) in `src/` under `PC_PORT`; the harness builds without `
   bytes only, the word came from the overlay the previous family had left in the slot, and the golden held only because
   that was FIGHTSTG (a zero there); with `shop_rules`' STCRDSHP before it, the word was 999.
 - **Host:** the word after the table is whatever the host linker placed there: the resist gets a garbage gain
-  (`-6528` in this build).
+  (`-6528` in this build). The 0.6.0 packages: on Windows the next word in `.psxdata` is the next unit's data,
+  `stgdglab_chart_icons[0]` = 383, so one level-up in four adds 383 and two of them cap the resist at 999 (issue #130:
+  Patamon's Dark at 999 by level 11); on Linux it is `stfgtrep_stat_gains[0][0]` = 2, which looks like a normal gain.
 - **Related, in bounds:** `stfgtrep_stat_gains[k][class + next() % 5]` with class 5 and residue 4 reads entry 9 of a
   9-entry row: the next row's first entry, and for the last row (levels >= 80) `stfgtrep_resist_gains[0]`, which follows
   it in both the original's and the host's layout, so the host agrees there (the Digimon 1 cases at levels >= 80). The
   port must keep the two tables adjacent or bounds-check both.
 - **For the port:** emulate the original (a gain of 0 for the overrun) or bounds-check; either way the level-up draws must
   stay identical to the original's for the replay tests, so the draw count must not change.
+- **Port: done** (issue #130). Under `PC_PORT`, `stfgtrep_raise_stats` takes the same draws and gives 0 for a resist index
+  past the 8 entries, and reads `stfgtrep_stat_gains` as one 54-entry table (entry 9 of a row is the next row's first)
+  with 0 past its end, the original's `stfgtrep_resist_gains[0]`, whatever the layout. The harness builds without
+  `PC_PORT`, so the 34 calls stay in `known_mismatches.json`; built with `-DPC_PORT` for `stfgtrep_80082E70.c` (a local
+  experiment, `port_mod_*` stubbed to 0) all 169 `stfgtrep_exp` cases match and every other family is unchanged. A save
+  whose resist already took the garbage gain keeps it: it is in the Digimon's record.
 
 ## 3. `stgtrain_get_menu(14)` reads past `stgtrain_menus` (agrees on the host by accident)
 
